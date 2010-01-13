@@ -10,7 +10,7 @@
 import py
 import sys
 import execnet
-from py.impl.test.session import Session
+from py._test.session import Session
 from xdist import util
 
 class LooponfailingSession(Session):

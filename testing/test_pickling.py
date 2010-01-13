@@ -66,7 +66,7 @@ class TestImmutablePickling:
 
 class TestConfigPickling:
     def test_config_getstate_setstate(self, testdir):
-        from py.impl.test.config import Config
+        from py._test.config import Config
         testdir.makepyfile(__init__="", conftest="x=1; y=2")
         hello = testdir.makepyfile(hello="")
         tmp = testdir.tmpdir

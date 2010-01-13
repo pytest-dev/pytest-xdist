@@ -20,6 +20,7 @@ program source code to the remote place.  All test results
 are reported back and displayed to your local test session.  
 You may specify different Python versions and interpreters.
 
+.. _`pytest-xdist`: http://pytest.org/plugin/xdist.html
 
 Usage examples
 ---------------------
@@ -202,7 +203,7 @@ def pytest_runtest_protocol(item):
 def forked_run_report(item):
     # for now, we run setup/teardown in the subprocess 
     # XXX optionally allow sharing of setup/teardown 
-    from py.plugin.pytest_runner import runtestprotocol
+    from py._plugin.pytest_runner import runtestprotocol
     EXITSTATUS_TESTEXIT = 4
     from xdist.mypickle import ImmutablePickler
     ipickle = ImmutablePickler(uneven=0)
@@ -230,6 +231,6 @@ def report_process_crash(item, result):
     path, lineno = item._getfslineno()
     info = "%s:%s: running the test CRASHED with signal %d" %(
             path, lineno, result.signal)
-    from py.plugin.pytest_runner import ItemTestReport
+    from py._plugin.pytest_runner import ItemTestReport
     return ItemTestReport(item, excinfo=info, when="???")
 

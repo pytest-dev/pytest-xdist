@@ -1,6 +1,6 @@
 import py
-from py.impl.test.session import Session
-from py.impl.test import outcome 
+from py._test.session import Session
+from py._test import outcome 
 from xdist.nodemanage import NodeManager
 queue = py.builtin._tryimport('queue', 'Queue')
 

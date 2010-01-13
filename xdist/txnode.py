@@ -3,7 +3,7 @@
 """
 import py
 from xdist.mypickle import PickleChannel
-from py.impl.test import outcome
+from py._test import outcome
 
 class TXNode(object):
     """ Represents a Test Execution environment in the controlling process. 

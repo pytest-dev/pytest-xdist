@@ -1,8 +1,8 @@
 import py
 import os
 from xdist.gwmanage import GatewayManager, HostRSync
-from py.impl.test.pluginmanager import HookRelay, Registry
-from py.plugin import hookspec
+from py._test.pluginmanager import HookRelay, Registry
+from py._plugin import hookspec
 import execnet
 
 def pytest_funcarg__hookrecorder(request):
