@@ -383,6 +383,33 @@ class TestDSession:
         assert node.gateway.spec.popen
         #XXX eq.geteventargs("pytest_sessionfinish")
 
+    def test_rsync_printing(self, testdir, linecomp):
+        config = testdir.parseconfig()
+        from py._plugin.pytest_terminal import TerminalReporter
+        rep = TerminalReporter(config, file=linecomp.stringio)
+        config.pluginmanager.register(rep, "terminalreporter")
+        dsession = DSession(config)
+        class gw1:
+            id = "X1"
+            spec = execnet.XSpec("popen")
+        class gw2:
+            id = "X2"
+            spec = execnet.XSpec("popen")
+        #class rinfo:
+        #    version_info = (2, 5, 1, 'final', 0)
+        #    executable = "hello"
+        #    platform = "xyz"
+        #    cwd = "qwe"
+        
+        #dsession.pytest_gwmanage_newgateway(gw1, rinfo)
+        #linecomp.assert_contains_lines([
+        #    "*X1*popen*xyz*2.5*"
+        #])
+        dsession.pytest_gwmanage_rsyncstart(source="hello", gateways=[gw1, gw2])
+        linecomp.assert_contains_lines([
+            "[X1,X2] rsyncing: hello",
+        ])
+
 def test_collected_function_causes_remote_skip(testdir):
     sub = testdir.mkpydir("testing")
     sub.join("test_module.py").write(py.code.Source("""

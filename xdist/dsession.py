@@ -70,22 +70,38 @@ class DSession(Session):
         self.node2pending = {}
         self.item2nodes = {}
         super(DSession, self).__init__(config=config)
+        try:
+            self.terminal = config.pluginmanager.getplugin("terminalreporter")
+        except KeyError:
+            self.terminal = None
+
+    def report_line(self, line):
+        if self.terminal:
+            self.terminal.write_line(line)
+
+    def pytest_gwmanage_rsyncstart(self, source, gateways):
+        targets = ",".join([gw.id for gw in gateways])
+        msg = "[%s] rsyncing: %s" %(targets, source)
+        self.report_line(msg)
+
+    #def pytest_gwmanage_rsyncfinish(self, source, gateways):
+    #    targets = ", ".join(["[%s]" % gw.id for gw in gateways])
+    #    self.write_line("rsyncfinish: %s -> %s" %(source, targets))
 
     def main(self, colitems):
         self.sessionstarts()
         self.setup()
         allitems = self.collect_all_items(colitems)
         self.nodemanager.wait_nodesready(5.0)
-        #for x in allitems:
-        #    print x.listnames()
         exitstatus = self.loop(allitems)
         self.teardown()
         self.sessionfinishes(exitstatus=exitstatus) 
         return exitstatus
 
     def collect_all_items(self, colitems):
+        self.report_line("[master] starting full item collection ...")
         allitems = list(self.collect(colitems))
-        print ("collected %d items" %(len(allitems)))
+        self.report_line("[master] collected %d items" %(len(allitems)))
         return allitems
 
     def loop_once(self, loopstate):
