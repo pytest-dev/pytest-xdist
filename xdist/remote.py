@@ -63,12 +63,21 @@ class RemoteControl(object):
         self.trace("setting up slave session")
         self.gateway = self.initgateway()
         self.channel = channel = self.gateway.remote_exec("""
-            import os
+            import os, sys
             import py
             chdir = channel.receive()
             outchannel = channel.gateway.newchannel()
             channel.send(outchannel)
+            # prune sys.path to not contain relative paths
+            newpaths = []
+            for p in sys.path:
+                if p:
+                    if not os.path.isabs(p):
+                        p = os.path.abspath(p)
+                    newpaths.append(p)
+            sys.path[:] = newpaths     
             os.chdir(chdir) # unpickling config uses cwd as topdir
+            
             config_state = channel.receive()
             fullwidth, hasmarkup = channel.receive()
             py.test.config.__setstate__(config_state)
@@ -126,7 +135,10 @@ def slave_runsession(channel, config, fullwidth, hasmarkup):
     #config.option.session = None
     config.option.looponfail = False 
     config.option.usepdb = False 
-    trails = channel.receive()
+    try:
+        trails = channel.receive()
+    except KeyboardInterrupt:
+        return # in the slave we can't do much about this
     config.pluginmanager.do_configure(config)
     DEBUG("SLAVE: initsession()")
     session = config.initsession()

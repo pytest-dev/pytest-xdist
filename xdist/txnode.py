@@ -152,7 +152,7 @@ class SlaveNode(object):
             self.sendevent("slavefinished")
 
     def run_single(self, item):
-        call = self.runner.CallInfo(item._checkcollectable, when='setup')
+        call = self.runner.CallInfo(item._reraiseunpicklingproblem, when='setup')
         if call.excinfo:
             # likely it is not collectable here because of
             # platform/import-dependency induced skips 

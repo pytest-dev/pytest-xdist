@@ -54,7 +54,7 @@ class LoopState(object):
                     self.colitems.extend(pending[1:])
 
     def pytest_rescheduleitems(self, items):
-        self.colitems.extend(items)
+        self.colitems[:] = items + self.colitems
         self.dowork = False # avoid busywait
 
 class DSession(Session):
@@ -62,8 +62,9 @@ class DSession(Session):
         Session drives the collection and running of tests
         and generates test events for reporters. 
     """ 
-    MAXITEMSPERHOST = 15
-    
+    LOAD_THRESHOLD_NEWITEMS = 5
+    ITEM_CHUNKSIZE = 10
+
     def __init__(self, config):
         self.queue = queue.Queue()
         self.node2pending = {}
@@ -73,10 +74,19 @@ class DSession(Session):
     def main(self, colitems):
         self.sessionstarts()
         self.setup()
-        exitstatus = self.loop(colitems)
+        allitems = self.collect_all_items(colitems)
+        self.nodemanager.wait_nodesready(5.0)
+        #for x in allitems:
+        #    print x.listnames()
+        exitstatus = self.loop(allitems)
         self.teardown()
         self.sessionfinishes(exitstatus=exitstatus) 
         return exitstatus
+
+    def collect_all_items(self, colitems):
+        allitems = list(self.collect(colitems))
+        print ("collected %d items" %(len(allitems)))
+        return allitems
 
     def loop_once(self, loopstate):
         if loopstate.shuttingdown:
@@ -180,15 +190,10 @@ class DSession(Session):
         return pending
 
     def triggertesting(self, colitems):
-        colitems = self.filteritems(colitems)
-        senditems = []
+        # for now we don't allow sending collectors 
         for next in colitems:
-            if isinstance(next, py.test.collect.Item):
-                senditems.append(next)
-            else:
-                self.config.hook.pytest_collectstart(collector=next)
-                colrep = self.config.hook.pytest_make_collect_report(collector=next)
-                self.queueevent("pytest_collectreport", report=colrep)
+            assert isinstance(next, py.test.collect.Item), next
+        senditems = list(colitems)
         if self.config.option.dist == "each":
             self.senditems_each(senditems)
         else:
@@ -201,42 +206,36 @@ class DSession(Session):
     def senditems_each(self, tosend):
         if not tosend:
             return 
-        room = self.MAXITEMSPERHOST
         for node, pending in self.node2pending.items():
-            room = min(self.MAXITEMSPERHOST - len(pending), room)
-        sending = tosend[:room]
-        if sending:
-            for node, pending in self.node2pending.items():
-                node.sendlist(sending)
-                pending.extend(sending)
-                for item in sending:
-                    nodes = self.item2nodes.setdefault(item, [])
-                    assert node not in nodes
-                    nodes.append(node)
-                    item.ihook.pytest_itemstart(item=item, node=node)
-            tosend[:] = tosend[room:]  # update inplace
-        if tosend:
-            # we have some left, give it to the main loop
-            self.queueevent("pytest_rescheduleitems", items=tosend)
+            node.sendlist(tosend)
+            pending.extend(tosend)
+            for item in tosend:
+                nodes = self.item2nodes.setdefault(item, [])
+                assert node not in nodes
+                nodes.append(node)
+                item.ihook.pytest_itemstart(item=item, node=node)
+        tosend[:] = []
 
     def senditems_load(self, tosend):
         if not tosend:
             return 
+        available = []
         for node, pending in self.node2pending.items():
-            room = self.MAXITEMSPERHOST - len(pending)
-            if room > 0:
-                sending = tosend[:room]
-                node.sendlist(sending)
-                for item in sending:
-                    #assert item not in self.item2node, (
-                    #    "sending same item %r to multiple "
-                    #    "not implemented" %(item,))
-                    self.item2nodes.setdefault(item, []).append(node)
-                    item.ihook.pytest_itemstart(item=item, node=node)
-                pending.extend(sending)
-                tosend[:] = tosend[room:]  # update inplace
-                if not tosend:
+            if len(pending) < self.LOAD_THRESHOLD_NEWITEMS:
+                available.append((node, pending))
+        num_available = len(available)
+        max_one_round = num_available * self.ITEM_CHUNKSIZE -1
+        if num_available:
+            for i, item in enumerate(tosend):
+                nodeindex = i % num_available
+                node, pending = available[nodeindex]
+                node.send(item)
+                self.item2nodes.setdefault(item, []).append(node)
+                item.ihook.pytest_itemstart(item=item, node=node)
+                pending.append(item)
+                if i >= max_one_round:
                     break
+            del tosend[:i+1]
         if tosend:
             # we have some left, give it to the main loop
             self.queueevent("pytest_rescheduleitems", items=tosend)
@@ -263,8 +262,6 @@ class DSession(Session):
         """ setup any neccessary resources ahead of the test run. """
         self.nodemanager = NodeManager(self.config)
         self.nodemanager.setup_nodes(putevent=self.queue.put)
-        if self.config.option.dist == "each":
-            self.nodemanager.wait_nodesready(5.0)
 
     def teardown(self):
         """ teardown any resources after a test run. """ 

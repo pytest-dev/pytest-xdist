@@ -16,8 +16,11 @@ class MockNode:
     def __init__(self):
         self.sent = []
 
+    def send(self, item):
+        self.sent.append(item)
+
     def sendlist(self, items):
-        self.sent.append(items)
+        self.sent.extend(items)
 
     def shutdown(self):
         self._shutdown=True
@@ -79,24 +82,28 @@ class TestDSession:
                 pass
         """)
         session = DSession(modcol.config)
-        session.triggertesting([modcol])
-        name, args, kwargs = session.queue.get(block=False)
-        assert name == 'pytest_collectreport'
-        report = kwargs['report']  
-        assert len(report.result) == 1
+        reprec = testdir.getreportrecorder(session)
+        items = session.collect_all_items([modcol])
+        assert len(items) == 1
+        calls= reprec.getcalls("pytest_collectreport")
+        assert len(calls) == 1
+        call = calls[0]
+        assert len(call.report.result) == 1
 
-    def test_triggertesting_item(self, testdir):
+    def test_senditems_load(self, testdir, monkeypatch):
         item = testdir.getitem("def test_func(): pass")
         session = DSession(item.config)
         node1 = MockNode()
         node2 = MockNode()
         session.addnode(node1)
         session.addnode(node2)
-        session.triggertesting([item] * (session.MAXITEMSPERHOST*2 + 1))
-        sent1 = node1.sent[0]
-        sent2 = node2.sent[0]
-        assert sent1 == [item] * session.MAXITEMSPERHOST
-        assert sent2 == [item] * session.MAXITEMSPERHOST
+        monkeypatch.setattr(session, 'ITEM_CHUNKSIZE', 3)
+        session.senditems_load([item] * (2*session.ITEM_CHUNKSIZE +1))
+        sent1 = node1.sent
+        sent2 = node2.sent
+        chunkitems = [item] * session.ITEM_CHUNKSIZE
+        assert sent1 == chunkitems
+        assert sent2 == chunkitems
         assert session.node2pending[node1] == sent1
         assert session.node2pending[node2] == sent2
         name, args, kwargs = session.queue.get(block=False)
@@ -134,7 +141,7 @@ class TestDSession:
         session.loop_once(loopstate)
         session.queueevent(None)
         session.loop_once(loopstate)
-        assert node.sent == [[item]]
+        assert node.sent == [item]
         session.queueevent("pytest_runtest_logreport", report=run(item, node))
         session.loop_once(loopstate)
         assert loopstate.shuttingdown 
@@ -195,38 +202,6 @@ class TestDSession:
         session.loop_once(loopstate)
         assert len(session.item2nodes[item1]) == 1
 
-    def test_testnodedown_causes_reschedule_pending(self, testdir):
-        modcol = testdir.getmodulecol("""
-            def test_crash(): 
-                assert 0
-            def test_fail(): 
-                x
-        """)
-        item1, item2 = modcol.collect()
-
-        # setup a session with two nodes
-        session = DSession(item1.config)
-        node1, node2 = MockNode(), MockNode()
-        session.addnode(node1)
-        session.addnode(node2)
-      
-        # have one test pending for a node that goes down 
-        session.senditems_load([item1, item2])
-        node = session.item2nodes[item1] [0]
-        item1.config.option.dist = "load"
-        session.queueevent("pytest_testnodedown", node=node, error="xyz")
-        reprec = testdir.getreportrecorder(session)
-        print(session.item2nodes)
-        loopstate = session._initloopstate([])
-        session.loop_once(loopstate)
-
-        assert loopstate.colitems == [item2] # do not reschedule crash item
-        rep = reprec.matchreport(names="pytest_runtest_logreport")
-        assert rep.failed
-        assert rep.item == item1
-        assert str(rep.longrepr).find("crashed") != -1
-        #assert str(testrep.longrepr).find(node.gateway.spec) != -1
-
     def test_testnodeready_adds_to_available(self, testdir):
         item = testdir.getitem("def test_func(): pass")
         # setup a session with two nodes
@@ -248,7 +223,7 @@ class TestDSession:
         session.queueevent(None)
         session.loop_once(loopstate)
 
-        assert node.sent == [[item]]
+        assert node.sent == [item]
         ev = run(item, node, excinfo=excinfo) 
         session.queueevent("pytest_runtest_logreport", report=ev)
         session.loop_once(loopstate)
@@ -501,5 +476,20 @@ def test_funcarg_teardown_failure(testdir):
         "*ValueError*42*",
         "*1 passed*1 error*",
     ])
+
+def test_crashing_item(testdir):
+    p = testdir.makepyfile("""
+        import os
+        def test_crash():
+            os.kill(os.getpid(), 15)
+        def test_noncrash():
+            pass
+    """)
+    result = testdir.runpytest("-n2", p)
+    result.stdout.fnmatch_lines([
+        "*crashed*test_crash*",
+        "*1 failed*1 passed*"
+    ])
+
 
     

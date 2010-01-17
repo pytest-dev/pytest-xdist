@@ -3,8 +3,8 @@
 The `pytest-xdist`_ plugin extends py.test with some unique 
 test execution modes:
 
-* Looponfail: run your tests in a subprocess.  After it finishes py.test
-  waits until a file in your project changes and then re-runs only the 
+* Looponfail: run your tests repeatedly in a subprocess.  After each run py.test
+  waits until a file in your project changes and then re-runs the previously
   failing tests.  This is repeated until all tests pass after which again
   a full run is performed. 
 
