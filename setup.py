@@ -1,7 +1,7 @@
 """
 py.test 'xdist' plugin for distributed testing and loop-on-failing modes. 
 
-See http://codespeak.net/pytest-xdist for documentation and, after
+See http://pytest.org/plugin/xdist.html for documentation and, after
 installation, "py.test -h" for the new options. 
 """
 
@@ -20,7 +20,7 @@ setup(
     packages = ['xdist'],
     entry_points = {'pytest11': ['xdist = xdist.plugin'],},
     zip_safe=False,
-    install_requires = ['execnet', 'py>=1.2.0a1'],
+    install_requires = ['execnet', 'py>=1.2.0'],
     classifiers=[
     'Development Status :: 4 - Beta',
     'Intended Audience :: Developers',
