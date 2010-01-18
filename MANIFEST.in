@@ -1,0 +1,10 @@
+include CHANGELOG
+include LICENSE 
+include README.txt
+include setup.py
+graft testing
+exclude *.orig 
+exclude *.rej 
+recursive-exclude testing *.pyc *$py.class
+prune .svn 
+prune .hg 
