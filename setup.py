@@ -2,7 +2,8 @@
 py.test 'xdist' plugin for distributed testing and loop-on-failing modes. 
 
 See http://pytest.org/plugin/xdist.html for documentation and, after
-installation of the ``pytest-xdist`` package, "py.test -h" for the new options. 
+installation of the ``pytest-xdist`` PyPI package, ``py.test -h`` 
+for the new options. 
 """
 
 from setuptools import setup
