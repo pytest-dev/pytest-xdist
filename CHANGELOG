@@ -1,0 +1,11 @@
+1.0
+-------------------------
+
+- moved code out of py-1.1.1 into its own plugin
+- use a new, faster and more sensible model to do load-balancing 
+  of tests - now no magic "MAXITEMSPERHOST" is needed and load-testing
+  works effectively even with very few tests. 
+- cleaned up termination handling 
+- make -x cause hard killing of test nodes to decrease wait time 
+  until the traceback shows up on first failure
+

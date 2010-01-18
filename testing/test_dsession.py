@@ -266,9 +266,10 @@ class TestDSession:
         session.queueevent("pytest_runtest_logreport", report=ev2)
         # now call the loop
         loopstate = session._initloopstate(items)
-        session.loop_once(loopstate)
+        from xdist.dsession import ExitFirstInterrupt
+        py.test.raises(ExitFirstInterrupt, "session.loop_once(loopstate)")
         assert loopstate.testsfailed
-        assert loopstate.shuttingdown
+        #assert loopstate.shuttingdown
 
     def test_shuttingdown_filters(self, testdir):
         item = testdir.getitem("def test_func(): pass")

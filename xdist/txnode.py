@@ -74,8 +74,11 @@ class TXNode(object):
     def sendlist(self, itemlist):
         self.channel.send(itemlist)
 
-    def shutdown(self):
-        self.channel.send(None)
+    def shutdown(self, kill=False):
+        if kill:
+            self.gateway.exit()
+        else:
+            self.channel.send(None)
 
 # setting up slave code 
 def install_slave(gateway, config):

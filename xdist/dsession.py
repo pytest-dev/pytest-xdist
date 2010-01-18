@@ -57,6 +57,9 @@ class LoopState(object):
         self.colitems[:] = items + self.colitems
         self.dowork = False # avoid busywait
 
+class ExitFirstInterrupt(KeyboardInterrupt):
+    pass
+
 class DSession(Session):
     """ 
         Session drives the collection and running of tests
@@ -129,6 +132,8 @@ class DSession(Session):
         # termination conditions
         if ((loopstate.testsfailed and self.config.option.exitfirst) or 
             (not self.item2nodes and not colitems and not self.queue.qsize())):
+            if self.config.option.exitfirst:
+                raise ExitFirstInterrupt()
             self.triggershutdown()
             loopstate.shuttingdown = True
         elif not self.node2pending:
@@ -174,8 +179,11 @@ class DSession(Session):
                     break 
         except KeyboardInterrupt:
             excinfo = py.code.ExceptionInfo()
-            self.config.hook.pytest_keyboard_interrupt(excinfo=excinfo)
-            exitstatus = outcome.EXIT_INTERRUPTED
+            if excinfo.errisinstance(ExitFirstInterrupt):
+                exitstatus = outcome.EXIT_TESTSFAILED
+            else:
+                self.config.hook.pytest_keyboard_interrupt(excinfo=excinfo)
+                exitstatus = outcome.EXIT_INTERRUPTED
         except:
             self.config.pluginmanager.notify_exception()
             exitstatus = outcome.EXIT_INTERNALERROR
