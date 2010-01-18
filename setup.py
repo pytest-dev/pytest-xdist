@@ -2,7 +2,7 @@
 py.test 'xdist' plugin for distributed testing and loop-on-failing modes. 
 
 See http://pytest.org/plugin/xdist.html for documentation and, after
-installation, "py.test -h" for the new options. 
+installation of the ``pytest-xdist`` package, "py.test -h" for the new options. 
 """
 
 from setuptools import setup
@@ -15,7 +15,7 @@ setup(
     license='GPLv2 or later',
     author='holger krekel and contributors',
     author_email='py-dev@codespeak.net,holger@merlinux.eu', 
-    url='http://bitbucket.org/hpk42/pytest-figleaf',
+    url='http://bitbucket.org/hpk42/pytest-xdist',
     platforms=['linux', 'osx', 'win32'],
     packages = ['xdist'],
     entry_points = {'pytest11': ['xdist = xdist.plugin'],},
