@@ -506,9 +506,10 @@ def test_funcarg_teardown_failure(testdir):
 
 def test_crashing_item(testdir):
     p = testdir.makepyfile("""
+        import py
         import os
         def test_crash():
-            os.kill(os.getpid(), 15)
+            py.process.kill(os.getpid())
         def test_noncrash():
             pass
     """)
