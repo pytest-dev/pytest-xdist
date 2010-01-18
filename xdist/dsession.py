@@ -74,6 +74,7 @@ class DSession(Session):
             self.terminal = config.pluginmanager.getplugin("terminalreporter")
         except KeyError:
             self.terminal = None
+        self._nodesready = py.std.threading.Event()
 
     def report_line(self, line):
         if self.terminal:
@@ -92,7 +93,6 @@ class DSession(Session):
         self.sessionstarts()
         self.setup()
         allitems = self.collect_all_items(colitems)
-        self.nodemanager.wait_nodesready(5.0)
         exitstatus = self.loop(allitems)
         self.teardown()
         self.sessionfinishes(exitstatus=exitstatus) 
@@ -108,7 +108,7 @@ class DSession(Session):
         if loopstate.shuttingdown:
             return self.loop_once_shutdown(loopstate)
         colitems = loopstate.colitems 
-        if loopstate.dowork and colitems:
+        if self._nodesready.isSet() and loopstate.dowork and colitems:
             self.triggertesting(loopstate.colitems) 
             colitems[:] = []
         # we use a timeout here so that control-C gets through 
@@ -191,6 +191,9 @@ class DSession(Session):
     def addnode(self, node):
         assert node not in self.node2pending
         self.node2pending[node] = []
+        if (not hasattr(self, 'nodemanager') or 
+          len(self.node2pending) == len(self.nodemanager.gwmanager.group)):
+            self._nodesready.set()
 
     def removenode(self, node):
         try:

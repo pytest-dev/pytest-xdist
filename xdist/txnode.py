@@ -13,12 +13,11 @@ class TXNode(object):
     """
     ENDMARK = -1
 
-    def __init__(self, gateway, config, putevent, slaveready=None):
+    def __init__(self, gateway, config, putevent):
         self.config = config 
         self.putevent = putevent 
         self.gateway = gateway
         self.channel = install_slave(gateway, config)
-        self._sendslaveready = slaveready
         self.channel.setcallback(self.callback, endmarker=self.ENDMARK)
         self._down = False
 
@@ -50,8 +49,6 @@ class TXNode(object):
                 return
             eventname, args, kwargs = eventcall 
             if eventname == "slaveready":
-                if self._sendslaveready:
-                    self._sendslaveready(self)
                 self.notify("pytest_testnodeready", node=self)
             elif eventname == "slavefinished":
                 self._down = True

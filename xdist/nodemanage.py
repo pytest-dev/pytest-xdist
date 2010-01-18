@@ -12,7 +12,6 @@ class NodeManager(object):
             specs = self._getxspecs()
         self.roots = self._getrsyncdirs()
         self.gwmanager = GatewayManager(specs, config.hook)
-        self.nodes = []
         self._nodesready = py.std.threading.Event()
 
     def trace(self, msg):
@@ -59,25 +58,11 @@ class NodeManager(object):
         self.rsync_roots()
         self.trace("setting up nodes")
         for gateway in self.gwmanager.group:
-            node = TXNode(gateway, self.config, putevent, slaveready=self._slaveready)
+            node = TXNode(gateway, self.config, putevent)
             gateway.node = node  # to keep node alive 
             self.trace("started node %r" % node)
 
-    def _slaveready(self, node):
-        #assert node.gateway == node.gateway
-        #assert node.gateway.node == node
-        self.nodes.append(node)
-        self.trace("%s slave node ready %r" % (node.gateway.id, node))
-        if len(self.nodes) == len(list(self.gwmanager.group)):
-            self._nodesready.set()
-   
-    def wait_nodesready(self, timeout=None):
-        self._nodesready.wait(timeout)
-        if not self._nodesready.isSet():
-            raise IOError("nodes did not get ready for %r secs" % timeout)
-
     def teardown_nodes(self):
-        # XXX do teardown nodes? 
         self.gwmanager.exit()
 
     def _getxspecs(self):

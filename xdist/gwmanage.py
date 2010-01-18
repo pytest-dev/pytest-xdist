@@ -8,6 +8,7 @@ import execnet
 from execnet.gateway_base import RemoteError
 
 class GatewayManager:
+    EXIT_TIMEOUT = 10
     RemoteError = RemoteError
     def __init__(self, specs, hook, defaultchdir="pyexecnetcache"):
         self.specs = []
@@ -61,7 +62,7 @@ class GatewayManager:
             )
 
     def exit(self):
-        self.group.terminate()
+        self.group.terminate(self.EXIT_TIMEOUT)
 
 class HostRSync(execnet.RSync):
     """ RSyncer that filters out common files 

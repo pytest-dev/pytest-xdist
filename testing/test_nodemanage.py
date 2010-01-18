@@ -25,13 +25,6 @@ class TestNodeManager:
         assert p.join("dir1").check()
         assert p.join("dir1", "file1").check()
 
-    def test_popen_nodes_are_ready(self, testdir):
-        nodemanager = NodeManager(testdir.parseconfig(
-            "--tx", "3*popen"))
-        
-        nodemanager.setup_nodes([].append)
-        nodemanager.wait_nodesready(timeout=10.0)
-
     def test_popen_rsync_subdir(self, testdir, mysetup):
         source, dest = mysetup.source, mysetup.dest 
         dir1 = mysetup.source.mkdir("dir1")
