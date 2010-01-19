@@ -110,6 +110,7 @@ class TestDSession:
         assert name == "pytest_rescheduleitems"
         assert kwargs['items'] == [item]
 
+    
     def test_keyboardinterrupt(self, testdir):
         item = testdir.getitem("def test_func(): pass")
         session = DSession(item.config)
@@ -134,14 +135,22 @@ class TestDSession:
         loopstate = session._initloopstate([])
         session.queueevent("pytest_rescheduleitems", items=[item])
         session.loop_once(loopstate)
-        # check that RescheduleEvents are not immediately
-        # rescheduled if there are no nodes
+        # we need to do work because nothing is pending / we would not wake up
+        assert loopstate.dowork == True
+
+        session.node2pending[node].append(item)
+        session.queueevent("pytest_rescheduleitems", items=[item])
+        session.loop_once(loopstate)
+        # now we want to not directly trigger work again to avoid busy-wait
         assert loopstate.dowork == False 
+        
         session.queueevent(None)
         session.loop_once(loopstate)
         session.queueevent(None)
         session.loop_once(loopstate)
-        assert node.sent == [item]
+        assert node.sent == [item, item]
+        session.queueevent("pytest_runtest_logreport", report=run(item, node))
+        session.loop_once(loopstate)
         session.queueevent("pytest_runtest_logreport", report=run(item, node))
         session.loop_once(loopstate)
         assert loopstate.shuttingdown 

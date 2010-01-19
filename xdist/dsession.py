@@ -55,7 +55,9 @@ class LoopState(object):
 
     def pytest_rescheduleitems(self, items):
         self.colitems[:] = items + self.colitems
-        self.dowork = False # avoid busywait
+        for pending in self.dsession.node2pending.values():
+            if pending:
+                self.dowork = False # avoid busywait, nodes still have work
 
 class ExitFirstInterrupt(KeyboardInterrupt):
     pass

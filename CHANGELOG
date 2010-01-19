@@ -1,3 +1,11 @@
+1.1
+-------------------------
+
+- fix an indefinite hang which would wait for events although no events
+  are pending - this happened if items arrive very quickly while 
+  the "reschedule-event" tried unconditionally avoiding a busy-loop
+  and not schedule new work. 
+
 1.0
 -------------------------
 
