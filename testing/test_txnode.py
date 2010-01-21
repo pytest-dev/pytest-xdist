@@ -12,7 +12,7 @@ class EventQueue:
         self.queue = queue
         registry.register(self)
 
-    def geteventargs(self, eventname, timeout=2.0):
+    def geteventargs(self, eventname, timeout=10.0):
         events = []
         while 1:
             try:
@@ -38,7 +38,7 @@ class MySetup:
         self.id = 0
         self.request = request
 
-    def geteventargs(self, eventname, timeout=2.0):
+    def geteventargs(self, eventname, timeout=10.0):
         eq = EventQueue(self.config.pluginmanager, self.queue)
         return eq.geteventargs(eventname, timeout=timeout)
 
