@@ -117,3 +117,29 @@ class TestDistribution:
         s = result.stdout.str()
         assert "2.4" in s
         assert "2.5" in s
+
+    def test_data_exchange(self, testdir):
+        c1 = testdir.makeconftest("""
+                # This hook only called on master.
+                def pytest_testnodeready(node):
+                    node.slavedata['data'] = 42
+
+                # This hook take action on slave only.
+                def pytest_sessionstart(session):
+                    if session.__class__.__name__ == 'SlaveNode':
+                        assert session.slavedata['data'] == 42
+                        session.slavereport['result'] = 7
+
+                # This hook only called on master.
+                def pytest_testnodedown(node, error):
+                    result = node.slavereport['result']
+                    assert result == 7
+        """)
+
+        p1 = testdir.makepyfile("def test_func(): pass")
+        result = testdir.runpytest(p1, '-d', '--tx=popen')
+        result.stdout.fnmatch_lines([
+            "*popen*Python*",
+            "*1 passed*"
+        ])
+        assert result.ret == 0

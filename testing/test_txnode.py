@@ -52,7 +52,8 @@ class MySetup:
         self.gateway = execnet.makegateway(self.xspec)
         self.id += 1
         self.gateway.id = str(self.id)
-        self.node = TXNode(self.gateway, self.config, putevent=self.queue.put)
+        self.nodemanager = None
+        self.node = TXNode(self.nodemanager, self.gateway, self.config, putevent=self.queue.put)
         assert not self.node.channel.isclosed()
         return self.node 
 

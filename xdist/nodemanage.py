@@ -58,7 +58,7 @@ class NodeManager(object):
         self.rsync_roots()
         self.trace("setting up nodes")
         for gateway in self.gwmanager.group:
-            node = TXNode(gateway, self.config, putevent)
+            node = TXNode(self, gateway, self.config, putevent)
             gateway.node = node  # to keep node alive 
             self.trace("started node %r" % node)
 
