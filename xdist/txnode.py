@@ -21,9 +21,9 @@ class TXNode(object):
         self.channel = install_slave(gateway, config)
         self.channel.setcallback(self.callback, endmarker=self.ENDMARK)
         self._down = False
-        self.slavedatasent = False
-        self.slavedata = {}
-        self.slavereport = {}
+        self.slaveinputsent = False
+        self.slaveinput = {}
+        self.slaveoutput = {}
 
     def __repr__(self):
         id = self.gateway.id
@@ -56,7 +56,7 @@ class TXNode(object):
                 self.notify("pytest_testnodeready", node=self)
             elif eventname == "slavefinished":
                 self._down = True
-                self.slavereport = kwargs['slavereport']
+                self.slaveoutput = kwargs['slaveoutput']
                 self.notify("pytest_testnodedown", error=None, node=self)
             elif eventname in ("pytest_runtest_logreport", 
                                "pytest__teardown_final_logerror"):
@@ -72,25 +72,25 @@ class TXNode(object):
             py.builtin.print_("!" * 20, excinfo)
             self.config.pluginmanager.notify_exception(excinfo)
 
+    def sendslaveinput(self):
+        if not self.slaveinputsent:
+            self.channel.send(self.slaveinput)
+            self.slaveinputsent = True
+
     def send(self, item):
-        if not self.slavedatasent:
-            self.channel.send(self.slavedata)
-            self.slavedatasent = True
         assert item is not None
+        self.sendslaveinput()
         self.channel.send(item)
 
     def sendlist(self, itemlist):
-        if not self.slavedatasent:
-            self.channel.send(self.slavedata)
-            self.slavedatasent = True
+        self.sendslaveinput()
         self.channel.send(itemlist)
 
     def shutdown(self, kill=False):
         if kill:
             self.gateway.exit()
         else:
-            if not self.slavedatasent:
-                self.channel.send(None)
+            self.sendslaveinput()
             self.channel.send(None)
 
 # setting up slave code 
@@ -119,8 +119,6 @@ def install_slave(gateway, config):
 class SlaveNode(object):
     def __init__(self, channel):
         self.channel = channel
-        self.slavedata = {}
-        self.slavereport = {}
 
     def __repr__(self):
         return "<%s channel=%s>" %(self.__class__.__name__, self.channel)
@@ -143,7 +141,8 @@ class SlaveNode(object):
         self.config.pluginmanager.register(self)
         self.runner = self.config.pluginmanager.getplugin("pytest_runner")
         self.sendevent("slaveready")
-        self.slavedata = channel.receive()
+        self.config.slaveinput = channel.receive()
+        self.config.slaveoutput = {}
         try:
             self.config.hook.pytest_sessionstart(session=self)
             while 1:
@@ -165,7 +164,7 @@ class SlaveNode(object):
             self.sendevent("pytest_internalerror", excrepr=er)
             raise
         else:
-            self.sendevent("slavefinished", slavereport=self.slavereport)
+            self.sendevent("slavefinished", slaveoutput=self.config.slaveoutput)
 
     def run_single(self, item):
         call = self.runner.CallInfo(item._reraiseunpicklingproblem, when='setup')

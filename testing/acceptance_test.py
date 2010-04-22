@@ -122,24 +122,33 @@ class TestDistribution:
         c1 = testdir.makeconftest("""
                 # This hook only called on master.
                 def pytest_testnodeready(node):
-                    node.slavedata['data'] = 42
+                    node.slaveinput['a'] = 42
+                    node.slaveinput['b'] = 7
 
-                # This hook take action on slave only.
+                # This hook only take action on slave.
                 def pytest_sessionstart(session):
-                    if session.__class__.__name__ == 'SlaveNode':
-                        assert session.slavedata['data'] == 42
-                        session.slavereport['result'] = 7
+                    if hasattr(session.config, 'slaveinput'):
+                        a = session.config.slaveinput['a']
+                        b = session.config.slaveinput['b']
+                        r = a + b
+                        session.config.slaveoutput['r'] = r
 
                 # This hook only called on master.
                 def pytest_testnodedown(node, error):
-                    result = node.slavereport['result']
-                    assert result == 7
+                    node.config.calc_result = node.slaveoutput['r']
+
+                # This hook only take action on master.
+                def pytest_terminal_summary(terminalreporter):
+                    if not hasattr(terminalreporter.config, 'slaveinput'):
+                        calc_result = terminalreporter.config.calc_result
+                        terminalreporter._tw.sep('-', 'calculated result is %s' % calc_result)
         """)
 
         p1 = testdir.makepyfile("def test_func(): pass")
         result = testdir.runpytest(p1, '-d', '--tx=popen')
         result.stdout.fnmatch_lines([
             "*popen*Python*",
+            "*calculated result is 49*",
             "*1 passed*"
         ])
         assert result.ret == 0
