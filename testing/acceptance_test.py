@@ -120,30 +120,30 @@ class TestDistribution:
 
     def test_data_exchange(self, testdir):
         c1 = testdir.makeconftest("""
-                # This hook only called on master.
-                def pytest_testnodeready(node):
-                    node.slaveinput['a'] = 42
-                    node.slaveinput['b'] = 7
+            # This hook only called on master.
+            def pytest_configure_node(node):
+                node.slaveinput['a'] = 42
+                node.slaveinput['b'] = 7
 
-                # This hook only take action on slave.
-                def pytest_sessionstart(session):
-                    if hasattr(session.config, 'slaveinput'):
-                        a = session.config.slaveinput['a']
-                        b = session.config.slaveinput['b']
-                        r = a + b
-                        session.config.slaveoutput['r'] = r
+            # This hook only takes action on slave.
+            def pytest_configure(config):
+                if hasattr(config, 'slaveinput'):
+                    a = config.slaveinput['a']
+                    b = config.slaveinput['b']
+                    r = a + b
+                    config.slaveoutput['r'] = r
 
-                # This hook only called on master.
-                def pytest_testnodedown(node, error):
-                    node.config.calc_result = node.slaveoutput['r']
+            # This hook only called on master.
+            def pytest_testnodedown(node, error):
+                node.config.calc_result = node.slaveoutput['r']
 
-                # This hook only take action on master.
-                def pytest_terminal_summary(terminalreporter):
-                    if not hasattr(terminalreporter.config, 'slaveinput'):
-                        calc_result = terminalreporter.config.calc_result
-                        terminalreporter._tw.sep('-', 'calculated result is %s' % calc_result)
+            # This hook only takes action on master.
+            def pytest_terminal_summary(terminalreporter):
+                if not hasattr(terminalreporter.config, 'slaveinput'):
+                    calc_result = terminalreporter.config.calc_result
+                    terminalreporter._tw.sep('-', 
+                        'calculated result is %s' % calc_result)
         """)
-
         p1 = testdir.makepyfile("def test_func(): pass")
         result = testdir.runpytest(p1, '-d', '--tx=popen')
         result.stdout.fnmatch_lines([

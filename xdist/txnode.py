@@ -18,12 +18,10 @@ class TXNode(object):
         self.config = config 
         self.putevent = putevent 
         self.gateway = gateway
-        self.channel = install_slave(gateway, config)
+        self.slaveinput = {}
+        self.channel = install_slave(self)
         self.channel.setcallback(self.callback, endmarker=self.ENDMARK)
         self._down = False
-        self.slaveinputsent = False
-        self.slaveinput = {}
-        self.slaveoutput = {}
 
     def __repr__(self):
         id = self.gateway.id
@@ -72,30 +70,22 @@ class TXNode(object):
             py.builtin.print_("!" * 20, excinfo)
             self.config.pluginmanager.notify_exception(excinfo)
 
-    def sendslaveinput(self):
-        if not self.slaveinputsent:
-            self.channel.send(self.slaveinput)
-            self.slaveinputsent = True
-
     def send(self, item):
         assert item is not None
-        self.sendslaveinput()
         self.channel.send(item)
 
     def sendlist(self, itemlist):
-        self.sendslaveinput()
         self.channel.send(itemlist)
 
     def shutdown(self, kill=False):
         if kill:
             self.gateway.exit()
         else:
-            self.sendslaveinput()
             self.channel.send(None)
 
-# setting up slave code 
-def install_slave(gateway, config):
-    channel = gateway.remote_exec(source="""
+# configuring and setting up slave node 
+def install_slave(node):
+    channel = node.gateway.remote_exec(source="""
         import os, sys 
         sys.path.insert(0, os.getcwd()) 
         from xdist.mypickle import PickleChannel
@@ -108,12 +98,14 @@ def install_slave(gateway, config):
     channel.receive()
     channel = PickleChannel(channel)
     basetemp = None
-    if gateway.spec.popen:
+    config = node.config 
+    config.hook.pytest_configure_node(node=node)
+    if node.gateway.spec.popen:
         popenbase = config.ensuretemp("popen")
         basetemp = py.path.local.make_numbered_dir(prefix="slave-", 
             keep=0, rootdir=popenbase)
         basetemp = str(basetemp)
-    channel.send((config, basetemp, gateway.id))
+    channel.send((config, node.slaveinput, basetemp, node.gateway.id))
     return channel
 
 class SlaveNode(object):
@@ -134,15 +126,15 @@ class SlaveNode(object):
 
     def run(self):
         channel = self.channel
-        self.config, basetemp, self.nodeid = channel.receive()
+        self.config, slaveinput, basetemp, self.nodeid = channel.receive()
         if basetemp:
             self.config.basetemp = py.path.local(basetemp)
+        self.config.slaveinput = slaveinput 
+        self.config.slaveoutput = {}
         self.config.pluginmanager.do_configure(self.config)
         self.config.pluginmanager.register(self)
         self.runner = self.config.pluginmanager.getplugin("pytest_runner")
         self.sendevent("slaveready")
-        self.config.slaveinput = channel.receive()
-        self.config.slaveoutput = {}
         try:
             self.config.hook.pytest_sessionstart(session=self)
             while 1:
