@@ -3,6 +3,7 @@ import os
 from xdist.gwmanage import GatewayManager, HostRSync
 from py._test.pluginmanager import HookRelay, Registry
 from py._plugin import hookspec
+from xdist import newhooks
 import execnet
 
 def pytest_funcarg__hookrecorder(request):
@@ -11,7 +12,7 @@ def pytest_funcarg__hookrecorder(request):
     return _pytest.gethookrecorder(hook)
 
 def pytest_funcarg__hook(request):
-    return HookRelay(hookspec, Registry())
+    return HookRelay([hookspec, newhooks], Registry())
 
 class TestGatewayManagerPopen:
     def test_popen_no_default_chdir(self, hook):

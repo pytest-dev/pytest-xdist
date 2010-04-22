@@ -173,6 +173,16 @@ def pytest_addoption(parser):
     group.addoption('--rsyncdir', action="append", default=[], metavar="dir1", 
            help="add directory for rsyncing to remote tx nodes.")
 
+# -------------------------------------------------------------------------
+# distributed testing hooks
+# -------------------------------------------------------------------------
+def pytest_registerhooks(pluginmanager):
+    from xdist import newhooks
+    pluginmanager.registerhooks(newhooks)
+
+# -------------------------------------------------------------------------
+# distributed testing initialization
+# -------------------------------------------------------------------------
 def pytest_configure(config):
     if config.option.numprocesses:
         config.option.dist = "load"

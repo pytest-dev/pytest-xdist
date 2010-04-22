@@ -7,10 +7,11 @@ for the new options.
 """
 
 from setuptools import setup
+from xdist import __version__
 
 setup(
     name="pytest-xdist",
-    version="1.1",
+    version=__version__,
     description='py.test figleaf coverage plugin',
     long_description=__doc__,
     license='GPLv2 or later',
@@ -21,7 +22,7 @@ setup(
     packages = ['xdist'],
     entry_points = {'pytest11': ['xdist = xdist.plugin'],},
     zip_safe=False,
-    install_requires = ['execnet>=1.0.4', 'py>=1.2.0'],
+    install_requires = ['execnet>=1.0.6', 'py>=1.2.2'],
     classifiers=[
     'Development Status :: 4 - Beta',
     'Intended Audience :: Developers',
