@@ -164,7 +164,7 @@ class TestDistribution:
                     session.config.slaveoutput['s2'] = 42
             def pytest_testnodedown(node, error):
                 assert node.slaveoutput['s2'] == 42
-                print "s2call-finished"
+                print ("s2call-finished")
         """)
         args = ["-n1"]
         result = testdir.runpytest(*args)
