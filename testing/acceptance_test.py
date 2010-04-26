@@ -152,3 +152,23 @@ class TestDistribution:
             "*1 passed*"
         ])
         assert result.ret == 0
+
+    def test_keyboardinterrupt_hooks_issue79(self, testdir):
+        testdir.makepyfile(__init__="", test_one="""
+            def test_hello():
+                raise KeyboardInterrupt()
+        """)
+        testdir.makeconftest("""
+            def pytest_sessionfinish(session):
+                if hasattr(session.config, 'slaveoutput'):
+                    session.config.slaveoutput['s2'] = 42
+            def pytest_testnodedown(node, error):
+                assert node.slaveoutput['s2'] == 42
+                print "s2call-finished"
+        """)
+        args = ["-n1"]
+        result = testdir.runpytest(*args)
+        s = result.stdout.str()
+        assert result.ret 
+        assert 'SIGINT' in s
+        assert 's2call' in s

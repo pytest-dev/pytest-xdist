@@ -1,6 +1,9 @@
 1.2
 -------------------------
 
+- fix issue79: sessionfinish/teardown hooks more systematically 
+  on the slave side 
+
 - introduce a new data input/output mechanism to allow the master side 
   to send and receive data from a slave. 
 

@@ -3,7 +3,7 @@
 """
 import py
 from xdist.mypickle import PickleChannel
-from py._test import outcome
+from py._test.session import Session
 
 class TXNode(object):
     """ Represents a Test Execution environment in the controlling process. 
@@ -45,7 +45,7 @@ class TXNode(object):
                 err = self.channel._getremoteerror()
                 if not self._down:
                     if not err or isinstance(err, EOFError):
-                        err = "Not properly terminated"
+                        err = "Not properly terminated" # lost connection? 
                     self.notify("pytest_testnodedown", node=self, error=err)
                     self._down = True
                 return
@@ -55,7 +55,8 @@ class TXNode(object):
             elif eventname == "slavefinished":
                 self._down = True
                 self.slaveoutput = kwargs['slaveoutput']
-                self.notify("pytest_testnodedown", error=None, node=self)
+                error = kwargs['error']
+                self.notify("pytest_testnodedown", error=error, node=self)
             elif eventname in ("pytest_runtest_logreport", 
                                "pytest__teardown_final_logerror"):
                 kwargs['report'].node = self
@@ -92,8 +93,16 @@ def install_slave(node):
         from xdist.txnode import SlaveSession
         channel.send("basicimport")
         channel = PickleChannel(channel)
-        session = SlaveSession(channel)
-        session.run()
+        import py
+        config, slaveinput, basetemp, nodeid = channel.receive()
+        config.slaveinput = slaveinput
+        config.slaveoutput = {}
+        if basetemp:
+            config.basetemp = py.path.local(basetemp)
+        config.nodeid = nodeid
+        config.pluginmanager.do_configure(config)
+        session = SlaveSession(config, channel, nodeid)
+        session.dist_main()
     """)
     channel.receive()
     channel = PickleChannel(channel)
@@ -108,9 +117,11 @@ def install_slave(node):
     channel.send((config, node.slaveinput, basetemp, node.gateway.id))
     return channel
 
-class SlaveSession(object):
-    def __init__(self, channel):
+class SlaveSession(Session):
+    def __init__(self, config, channel, nodeid):
         self.channel = channel
+        self.nodeid = nodeid
+        super(SlaveSession, self).__init__(config=config)
 
     def __repr__(self):
         return "<%s channel=%s>" %(self.__class__.__name__, self.channel)
@@ -124,39 +135,31 @@ class SlaveSession(object):
     def pytest__teardown_final_logerror(self, report):
         self.sendevent("pytest__teardown_final_logerror", report=report)
 
-    def run(self):
-        channel = self.channel
-        self.config, slaveinput, basetemp, self.nodeid = channel.receive()
-        if basetemp:
-            self.config.basetemp = py.path.local(basetemp)
-        self.config.slaveinput = slaveinput 
-        self.config.slaveoutput = {}
-        self.config.pluginmanager.do_configure(self.config)
-        self.config.pluginmanager.register(self)
+    def pytest_keyboard_interrupt(self, excinfo):
+        self._slaveerror = "SIGINT"
+
+    def pytest_internalerror(self, excrepr):
+        self._slaveerror = "internal-error"
+        self.sendevent("pytest_internalerror", excrepr=excrepr)
+
+    def dist_main(self):
         self.runner = self.config.pluginmanager.getplugin("pytest_runner")
         self.sendevent("slaveready")
-        try:
-            self.config.hook.pytest_sessionstart(session=self)
-            while 1:
-                task = channel.receive()
-                if task is None: 
-                    break
-                if isinstance(task, list):
-                    for item in task:
-                        self.run_single(item=item)
-                else:
-                    self.run_single(item=task)
-            self.config.hook.pytest_sessionfinish(
-                session=self, 
-                exitstatus=outcome.EXIT_OK)
-        except KeyboardInterrupt:
-            raise
-        except:
-            er = py.code.ExceptionInfo().getrepr(funcargs=True, showlocals=True)
-            self.sendevent("pytest_internalerror", excrepr=er)
-            raise
-        else:
-            self.sendevent("slavefinished", slaveoutput=self.config.slaveoutput)
+        self.main(None)
+        error = getattr(self, '_slaveerror', None)
+        self.sendevent("slavefinished", error=error, 
+                       slaveoutput=self.config.slaveoutput)
+        
+    def _mainloop(self, colitems):
+        while 1:
+            task = self.channel.receive()
+            if task is None: 
+                break
+            if isinstance(task, list):
+                for item in task:
+                    self.run_single(item=item)
+            else:
+                self.run_single(item=task)
 
     def run_single(self, item):
         call = self.runner.CallInfo(item._reraiseunpicklingproblem, when='setup')

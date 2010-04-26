@@ -132,15 +132,16 @@ class DSession(Session):
             call(**kwargs)
 
         # termination conditions
-        if ((loopstate.testsfailed and self.config.option.exitfirst) or 
+        if (not self.node2pending or 
+            (loopstate.testsfailed and self.config.option.exitfirst) or 
             (not self.item2nodes and not colitems and not self.queue.qsize())):
             if self.config.option.exitfirst:
                 raise ExitFirstInterrupt()
             self.triggershutdown()
             loopstate.shuttingdown = True
-        elif not self.node2pending:
-            loopstate.exitstatus = outcome.EXIT_NOHOSTS
-           
+            if not self.node2pending:
+                loopstate.exitstatus = outcome.EXIT_NOHOSTS
+                
     def loop_once_shutdown(self, loopstate):
         # once we are in shutdown mode we dont send 
         # events other than HostDown upstream 
