@@ -1,3 +1,11 @@
+1.2
+-------------------------
+
+- introduce a new data input/output mechanism to allow the master side 
+  to send and receive data from a slave. 
+
+- fix PyPI description 
+
 1.1
 -------------------------
 
