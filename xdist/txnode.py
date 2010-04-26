@@ -89,11 +89,11 @@ def install_slave(node):
         import os, sys 
         sys.path.insert(0, os.getcwd()) 
         from xdist.mypickle import PickleChannel
-        from xdist.txnode import SlaveNode
+        from xdist.txnode import SlaveSession
         channel.send("basicimport")
         channel = PickleChannel(channel)
-        slavenode = SlaveNode(channel)
-        slavenode.run()
+        session = SlaveSession(channel)
+        session.run()
     """)
     channel.receive()
     channel = PickleChannel(channel)
@@ -108,7 +108,7 @@ def install_slave(node):
     channel.send((config, node.slaveinput, basetemp, node.gateway.id))
     return channel
 
-class SlaveNode(object):
+class SlaveSession(object):
     def __init__(self, channel):
         self.channel = channel
 
