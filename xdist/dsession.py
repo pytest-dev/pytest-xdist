@@ -1,6 +1,5 @@
 import py
-from py._test.session import Session
-from py._test import outcome 
+from py._test import session 
 from xdist.nodemanage import NodeManager
 queue = py.builtin._tryimport('queue', 'Queue')
 
@@ -62,7 +61,7 @@ class LoopState(object):
 class ExitFirstInterrupt(KeyboardInterrupt):
     pass
 
-class DSession(Session):
+class DSession(session.Session):
     """ 
         Session drives the collection and running of tests
         and generates test events for reporters. 
@@ -140,7 +139,7 @@ class DSession(Session):
             self.triggershutdown()
             loopstate.shuttingdown = True
             if not self.node2pending:
-                loopstate.exitstatus = outcome.EXIT_NOHOSTS
+                loopstate.exitstatus = session.EXIT_NOHOSTS
                 
     def loop_once_shutdown(self, loopstate):
         # once we are in shutdown mode we dont send 
@@ -154,16 +153,16 @@ class DSession(Session):
             self.config.hook.pytest_runtest_logreport(**kwargs)
         elif eventname == "pytest_internalerror":
             self.config.hook.pytest_internalerror(**kwargs)
-            loopstate.exitstatus = outcome.EXIT_INTERNALERROR
+            loopstate.exitstatus = session.EXIT_INTERNALERROR
         elif eventname == "pytest__teardown_final_logerror":
             self.config.hook.pytest__teardown_final_logerror(**kwargs)
-            loopstate.exitstatus = outcome.EXIT_TESTSFAILED
+            loopstate.exitstatus = session.EXIT_TESTSFAILED
         if not self.node2pending:
             # finished
             if loopstate.testsfailed:
-                loopstate.exitstatus = outcome.EXIT_TESTSFAILED
+                loopstate.exitstatus = session.EXIT_TESTSFAILED
             else:
-                loopstate.exitstatus = outcome.EXIT_OK
+                loopstate.exitstatus = session.EXIT_OK
         #self.config.pluginmanager.unregister(loopstate)
 
     def _initloopstate(self, colitems):
@@ -183,16 +182,16 @@ class DSession(Session):
         except KeyboardInterrupt:
             excinfo = py.code.ExceptionInfo()
             if excinfo.errisinstance(ExitFirstInterrupt):
-                exitstatus = outcome.EXIT_TESTSFAILED
+                exitstatus = session.EXIT_TESTSFAILED
             else:
                 self.config.hook.pytest_keyboard_interrupt(excinfo=excinfo)
-                exitstatus = outcome.EXIT_INTERRUPTED
+                exitstatus = session.EXIT_INTERRUPTED
         except:
             self.config.pluginmanager.notify_exception()
-            exitstatus = outcome.EXIT_INTERNALERROR
+            exitstatus = session.EXIT_INTERNALERROR
         self.config.pluginmanager.unregister(loopstate)
         if exitstatus == 0 and self._testsfailed:
-            exitstatus = outcome.EXIT_TESTSFAILED
+            exitstatus = session.EXIT_TESTSFAILED
         return exitstatus
 
     def triggershutdown(self):

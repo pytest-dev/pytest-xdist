@@ -1,5 +1,5 @@
 from xdist.dsession import DSession
-from py._test import outcome
+from py._test import session as outcome
 import py
 import execnet
 
