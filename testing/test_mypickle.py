@@ -252,3 +252,10 @@ class TestPickleChannelFunctional:
         channel.waitclose(timeout=2)
 
 
+
+def test_explode():
+    from xdist.mypickle import explode
+    assert isinstance(explode({}.values()), list)
+    l = []
+    assert isinstance(explode(l), list)
+    assert explode(l) is l

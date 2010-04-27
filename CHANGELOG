@@ -7,6 +7,10 @@
 - introduce a new data input/output mechanism to allow the master side 
   to send and receive data from a slave. 
 
+- use new register hooks facility of py.test>=1.2.2 
+
+- fix some python3 related pickling related race conditions 
+
 - fix PyPI description 
 
 1.1

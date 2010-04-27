@@ -100,15 +100,24 @@ class ImmutablePickler:
         return res
 
     def _updatepicklememo(self):
-        for x, obj in self._unpicklememo.items():
+        for x, obj in explode(self._unpicklememo.items()):
             self._picklememo[id(obj)] = (fromkey(x), obj)
 
     def _updateunpicklememo(self):
-        for key,obj in self._picklememo.values():
+        for key,obj in explode(self._picklememo.values()):
             key = makekey(key) 
             if key in self._unpicklememo:
                 assert self._unpicklememo[key] is obj
             self._unpicklememo[key] = obj
+
+def explode(obj):
+    try:
+        obj[0]
+    except TypeError:
+        return list(obj)
+    except IndexError:
+        pass
+    return obj
 
 NO_ENDMARKER_WANTED = object()
 
