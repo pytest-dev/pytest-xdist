@@ -8,7 +8,7 @@ def test_functional_boxed(testdir):
             os.kill(os.getpid(), 15)
     """)
     result = testdir.runpytest(p1, "--boxed")
-    assert result.stdout.fnmatch_lines([
+    result.stdout.fnmatch_lines([
         "*CRASHED*",
         "*1 failed*"
     ])
