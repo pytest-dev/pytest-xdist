@@ -31,13 +31,12 @@ class MyPickler(Pickler):
     """ Pickler with a custom memoize()
         to take care of unique ID creation. 
         See the usage in ImmutablePickler
-        XXX we could probably extend Pickler 
-            and Unpickler classes to directly
-            update the other'S memos. 
     """
-    def __init__(self, file, protocol, uneven):
+    def __init__(self, immo, file, protocol, uneven):
         Pickler.__init__(self, file, protocol)
         self.uneven = uneven
+        self._unpicklememo = immo._unpicklememo
+        self.memo = immo._picklememo
         
     def memoize(self, obj):
         if self.fast:
@@ -47,13 +46,26 @@ class MyPickler(Pickler):
         key = memo_len * 2 + self.uneven
         self.write(self.put(key))
         self.memo[id(obj)] = key, obj
+        key = makekey(key)
+        if key in self._unpicklememo:
+            assert self._unpicklememo[key] is obj
+        dict.__setitem__(self._unpicklememo, key, obj)
 
     #if sys.version_info < (3,0):
     #    def save_string(self, obj, pack=struct.pack):
     #        obj = unicode(obj)
     #        self.save_unicode(obj, pack=pack)
     #    Pickler.dispatch[str] = save_string 
-
+  
+class UnpicklingDict(dict):
+    def __init__(self, picklememo):
+        super(UnpicklingDict, self).__init__()
+        self._picklememo = picklememo
+   
+    def __setitem__(self, key, obj):
+        super(UnpicklingDict, self).__setitem__(key, obj)
+        self._picklememo[id(obj)] = (fromkey(key), obj)
+    
 class ImmutablePickler:
     def __init__(self, uneven, protocol=0):
         """ ImmutablePicklers are instantiated in Pairs. 
@@ -64,7 +76,7 @@ class ImmutablePickler:
             parameter.
         """
         self._picklememo = {}
-        self._unpicklememo = {}
+        self._unpicklememo = UnpicklingDict(self._picklememo)
         self._protocol = protocol
         self.uneven = uneven and 1 or 0
 
@@ -73,18 +85,13 @@ class ImmutablePickler:
         # which be the case e.g. if you want to pickle 
         # from a forked process back to the original 
         f = py.io.BytesIO()
-        pickler = MyPickler(f, self._protocol, uneven=self.uneven)
-        pickler.memo = self._picklememo
+        pickler = MyPickler(self, f, self._protocol, uneven=self.uneven)
         pickler.memoize(obj)
-        self._updateunpicklememo()
 
     def dumps(self, obj):
         f = py.io.BytesIO()
-        pickler = MyPickler(f, self._protocol, uneven=self.uneven)
-        pickler.memo = self._picklememo
+        pickler = MyPickler(self, f, self._protocol, uneven=self.uneven)
         pickler.dump(obj)
-        if obj is not None:
-            self._updateunpicklememo()
         #print >>debug, "dumped", obj 
         #print >>debug, "picklememo", self._picklememo
         return f.getvalue()
@@ -94,30 +101,10 @@ class ImmutablePickler:
         unpickler = Unpickler(f)
         unpickler.memo = self._unpicklememo
         res = unpickler.load()
-        self._updatepicklememo()
         #print >>debug, "loaded", res
         #print >>debug, "unpicklememo", self._unpicklememo
         return res
 
-    def _updatepicklememo(self):
-        for x, obj in explode(self._unpicklememo.items()):
-            self._picklememo[id(obj)] = (fromkey(x), obj)
-
-    def _updateunpicklememo(self):
-        for key,obj in explode(self._picklememo.values()):
-            key = makekey(key) 
-            if key in self._unpicklememo:
-                assert self._unpicklememo[key] is obj
-            self._unpicklememo[key] = obj
-
-def explode(obj):
-    try:
-        obj[0]
-    except TypeError:
-        return list(obj)
-    except IndexError:
-        pass
-    return obj
 
 NO_ENDMARKER_WANTED = object()
 
