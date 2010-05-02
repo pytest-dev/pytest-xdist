@@ -176,9 +176,9 @@ def pytest_addoption(parser):
 # -------------------------------------------------------------------------
 # distributed testing hooks
 # -------------------------------------------------------------------------
-def pytest_registerhooks(pluginmanager):
+def pytest_addhooks(pluginmanager):
     from xdist import newhooks
-    pluginmanager.registerhooks(newhooks)
+    pluginmanager.addhooks(newhooks)
 
 # -------------------------------------------------------------------------
 # distributed testing initialization
