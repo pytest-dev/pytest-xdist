@@ -1,12 +1,14 @@
 1.2
 -------------------------
 
-- fix issue79: sessionfinish/teardown hooks more systematically 
+- fix issue79: sessionfinish/teardown hooks are now called systematically 
   on the slave side 
 - introduce a new data input/output mechanism to allow the master side 
   to send and receive data from a slave. 
 - fix race condition in underlying pickling/unpickling handling 
-- use and require new register hooks facility of py.test>=1.2.2 
+- use and require new register hooks facility of py.test>=1.3.0 
+- require improved execnet>=1.0.6 because of various race conditions 
+  that can arise in xdist testing modes. 
 - fix some python3 related pickling related race conditions 
 - fix PyPI description 
 
