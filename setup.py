@@ -34,5 +34,6 @@ setup(
     'Topic :: Software Development :: Quality Assurance',
     'Topic :: Utilities',
     'Programming Language :: Python',
+    'Programming Language :: Python :: 3',
     ],
 )
