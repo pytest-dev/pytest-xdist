@@ -20,7 +20,7 @@ class LoopState(object):
         # waiting for a host to become ready.  
         self.dowork = True
         self.shuttingdown = False
-        self.testsfailed = False
+        self.testsfailed = 0
 
     def __repr__(self):
         return "<LoopState exitstatus=%r shuttingdown=%r len(colitems)=%d>" % (
@@ -31,7 +31,7 @@ class LoopState(object):
             if report.when != "teardown": # otherwise we already managed it
                 self.dsession.removeitem(report.item, report.node)
         if report.failed:
-            self.testsfailed = True
+            self.testsfailed += 1
 
     def pytest_collectreport(self, report):
         if report.passed:
@@ -57,9 +57,6 @@ class LoopState(object):
         for pending in self.dsession.node2pending.values():
             if pending:
                 self.dowork = False # avoid busywait, nodes still have work
-
-class ExitFirstInterrupt(KeyboardInterrupt):
-    pass
 
 class DSession(session.Session):
     """ 
@@ -131,11 +128,14 @@ class DSession(session.Session):
             call(**kwargs)
 
         # termination conditions
+        maxfail = self.config.getvalue("maxfail")
         if (not self.node2pending or 
-            (loopstate.testsfailed and self.config.option.exitfirst) or 
+            (loopstate.testsfailed and maxfail and 
+             loopstate.testsfailed >= maxfail) or 
             (not self.item2nodes and not colitems and not self.queue.qsize())):
-            if self.config.option.exitfirst:
-                raise ExitFirstInterrupt()
+            if maxfail and loopstate.testsfailed >= maxfail:
+                raise self.Interrupted("stopping after %d failures" % (
+                    loopstate.testsfailed))
             self.triggershutdown()
             loopstate.shuttingdown = True
             if not self.node2pending:
@@ -181,11 +181,8 @@ class DSession(session.Session):
                     break 
         except KeyboardInterrupt:
             excinfo = py.code.ExceptionInfo()
-            if excinfo.errisinstance(ExitFirstInterrupt):
-                exitstatus = session.EXIT_TESTSFAILED
-            else:
-                self.config.hook.pytest_keyboard_interrupt(excinfo=excinfo)
-                exitstatus = session.EXIT_INTERRUPTED
+            self.config.hook.pytest_keyboard_interrupt(excinfo=excinfo)
+            exitstatus = session.EXIT_INTERRUPTED
         except:
             self.config.pluginmanager.notify_exception()
             exitstatus = session.EXIT_INTERNALERROR

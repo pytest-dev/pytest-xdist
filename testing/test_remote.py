@@ -61,7 +61,6 @@ class TestLooponFailing:
         """)
         session = LooponfailingSession(modcol.config)
         loopstate = LoopState()
-        session.remotecontrol.setup()
         session.loop_once(loopstate)
         assert len(loopstate.colitems) == 1
  
@@ -83,7 +82,6 @@ class TestLooponFailing:
         """)
         session = LooponfailingSession(modcol.config)
         loopstate = LoopState()
-        session.remotecontrol.setup()
         loopstate.colitems = []
         session.loop_once(loopstate)
         assert len(loopstate.colitems) == 1
@@ -110,7 +108,6 @@ class TestLooponFailing:
         """)
         session = LooponfailingSession(modcol.config)
         loopstate = LoopState()
-        session.remotecontrol.setup()
         loopstate.colitems = []
         session.loop_once(loopstate)
         assert len(loopstate.colitems) == 2

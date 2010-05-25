@@ -24,7 +24,6 @@ class LooponfailingSession(Session):
     def main(self, initialitems):
         try:
             self.loopstate = loopstate = LoopState([])
-            self.remotecontrol.setup()
             while 1:
                 self.loop_once(loopstate)
                 if not loopstate.colitems and loopstate.wasfailing:
@@ -34,10 +33,10 @@ class LooponfailingSession(Session):
             print
 
     def loop_once(self, loopstate):
+        self.remotecontrol.setup()
         colitems = loopstate.colitems
         loopstate.wasfailing = colitems and len(colitems)
         loopstate.colitems = self.remotecontrol.runsession(colitems or ())
-        self.remotecontrol.setup()
 
 class LoopState:
     def __init__(self, colitems=None):
