@@ -259,7 +259,7 @@ class TestDSession:
             def test_pass(): 
                 pass
         """)
-        modcol.config.option.exitfirst = True
+        modcol.config.option.maxfail = 1
         session = DSession(modcol.config)
         node = MockNode()
         session.addnode(node)
@@ -271,12 +271,44 @@ class TestDSession:
         # run tests ourselves and produce reports 
         ev1 = run(items[0], node, "fail")
         ev2 = run(items[1], node, None)
+        session.queueevent("pytest_runtest_logreport", report=ev1) 
+        session.queueevent("pytest_runtest_logreport", report=ev2)
+        # now call the loop
+        loopstate = session._initloopstate(items)
+        py.test.raises(session.Interrupted, "session.loop_once(loopstate)")
+        assert loopstate.testsfailed
+        #assert loopstate.shuttingdown
+
+    def test_maxfail(self, testdir):
+        modcol = testdir.getmodulecol("""
+            def test_fail1(): 
+                assert 0
+            def test_fail2(): 
+                assert 0
+            def test_pass(): 
+                pass
+        """)
+        modcol.config.option.maxfail = 2
+        session = DSession(modcol.config)
+        node = MockNode()
+        session.addnode(node)
+        items = modcol.config.hook.pytest_make_collect_report(collector=modcol).result
+
+        # trigger testing  - this sends tests to the node
+        session.triggertesting(items)
+
+        # run tests ourselves and produce reports 
+        ev1 = run(items[0], node, "fail")
+        ev2 = run(items[1], node, "fail")
         session.queueevent("pytest_runtest_logreport", report=ev1) # a failing one
         session.queueevent("pytest_runtest_logreport", report=ev2)
         # now call the loop
         loopstate = session._initloopstate(items)
-        from xdist.dsession import ExitFirstInterrupt
-        py.test.raises(ExitFirstInterrupt, "session.loop_once(loopstate)")
+        try:
+            session.loop_once(loopstate)
+        except session.Interrupted:
+            py.test.fail("raised Interrupted but shouildn't")
+        py.test.raises(session.Interrupted, "session.loop_once(loopstate)")
         assert loopstate.testsfailed
         #assert loopstate.shuttingdown
 

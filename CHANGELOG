@@ -4,6 +4,8 @@
 - fix --looponfailing - it would not actually run against the fully changed
   source tree when initial conftest files load application state. 
 
+- adapt for py-1.3.1's new --maxfailure option 
+
 1.2
 -------------------------
 
