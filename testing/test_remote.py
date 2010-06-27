@@ -146,3 +146,16 @@ class TestLooponFailing:
         child.expect(".*1 passed.*")
         child.kill(15)
 
+    def test_looponfail_xfail_passes(self, testdir):
+        p = testdir.makepyfile("""
+            import py
+            @py.test.mark.xfail
+            def test_one():
+                pass
+        """)
+        child = testdir.spawn_pytest("-f %s" % p)
+        child.expect("1 xpass")
+        child.expect("### LOOPONFAILING ####")
+        child.expect("waiting for changes")
+        child.kill(15)
+
