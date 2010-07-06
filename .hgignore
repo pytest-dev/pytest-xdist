@@ -19,3 +19,4 @@ dist/
 pytest_xdist.egg-info
 issue/
 3rdparty/
+.tox
