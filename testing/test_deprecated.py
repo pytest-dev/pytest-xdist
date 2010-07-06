@@ -1,5 +1,6 @@
 import py
 
+@py.test.mark.xfail("sys.version_info[:2] == (2,7)")
 def test_dist_conftest_options(testdir, recwarn):
     p1 = testdir.tmpdir.ensure("dir", 'p1.py')
     p1.dirpath("__init__.py").write("")
