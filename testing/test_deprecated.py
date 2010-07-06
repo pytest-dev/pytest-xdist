@@ -1,6 +1,6 @@
 import py
 
-def test_dist_conftest_options(testdir):
+def test_dist_conftest_options(testdir, recwarn):
     p1 = testdir.tmpdir.ensure("dir", 'p1.py')
     p1.dirpath("__init__.py").write("")
     p1.dirpath("conftest.py").write(py.code.Source("""

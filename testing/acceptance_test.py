@@ -47,6 +47,7 @@ class TestDistribution:
         ])
         assert result.ret == 1
 
+    @py.test.mark.xfail("sys.platform.startswith('java')")
     def test_dist_tests_with_crash(self, testdir):
         if not hasattr(py.std.os, 'kill'):
             py.test.skip("no os.kill")
