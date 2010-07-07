@@ -132,7 +132,7 @@ class TestLooponFailing:
                 x = 0
                 assert x == 1
         """)
-        child = testdir.spawn_pytest("-f %s" % p)
+        child = testdir.spawn_pytest("-f %s --traceconfig" % p)
         child.expect("def test_one")
         child.expect("x == 1")
         child.expect("1 failed")

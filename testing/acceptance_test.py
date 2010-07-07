@@ -1,4 +1,5 @@
 import py
+import sys
 
 class TestDistribution:
     def test_manytests_to_one_popen(self, testdir):
@@ -173,3 +174,57 @@ class TestDistribution:
         assert result.ret 
         assert 'SIGINT' in s
         assert 's2call' in s
+
+    def test_keyboard_interrupt_dist(self, testdir):
+        # xxx could be refined to check for return code 
+        p = testdir.makepyfile("""
+            def test_sleep():
+                import time
+                time.sleep(10)
+        """)
+        child = testdir.spawn_pytest("-n1")
+        child.expect(".*test session starts.*")
+        child.kill(2) # keyboard interrupt
+        child.expect(".*KeyboardInterrupt.*")
+        #child.expect(".*seconds.*")
+        child.close()
+        #assert ret == 2 
+
+class TestTerminalReporting:
+    def test_pass_skip_fail(self, testdir):
+        p = testdir.makepyfile("""
+            import py
+            def test_ok():
+                pass
+            def test_skip():
+                py.test.skip("xx")
+            def test_func():
+                assert 0
+        """)
+        result = testdir.runpytest("-n1", "-v")
+        expected = [
+            "*PASS*test_pass_skip_fail.py:2: *test_ok*", 
+            "*SKIP*test_pass_skip_fail.py:4: *test_skip*", 
+            "*FAIL*test_pass_skip_fail.py:6: *test_func*", 
+        ]
+        for line in expected:
+            result.stdout.fnmatch_lines([line])
+        result.stdout.fnmatch_lines([
+            "    def test_func():",
+            ">       assert 0",
+            "E       assert 0",
+        ])
+
+    def test_fail_platinfo(self, testdir):
+        p = testdir.makepyfile("""
+            def test_func():
+                assert 0
+        """)
+        result = testdir.runpytest("-n1", "-v")
+        result.stdout.fnmatch_lines([
+            "*FAIL*test_fail_platinfo.py:1: *test_func*", 
+            "*popen*Python*",
+            "    def test_func():",
+            ">       assert 0",
+            "E       assert 0",
+        ])

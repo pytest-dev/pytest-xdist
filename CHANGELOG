@@ -1,3 +1,10 @@
+1.4a1
+-------------------------
+
+- perform distributed testing related reporting in the plugin 
+  rather than having dist-related code in the generic py.test 
+  distribution
+
 1.3
 -------------------------
 

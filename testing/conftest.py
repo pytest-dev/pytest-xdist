@@ -2,7 +2,6 @@ import py
 import execnet
 
 pytest_plugins = "pytester"
-option_report = 'skipped'
     
 #rsyncdirs = ['.', '../xdist', py.path.local(execnet.__file__).dirpath()]
 

@@ -197,11 +197,23 @@ def pytest_configure(config):
                 raise config.Error("--pdb incompatible with --looponfail.")
             from xdist.remote import LooponfailingSession
             config.setsessionclass(LooponfailingSession)
+            config._isdistsession = True
         elif val("dist") != "no":
             if usepdb:
                 raise config.Error("--pdb incompatible with distributing tests.")
             from xdist.dsession import DSession
             config.setsessionclass(DSession)
+            config._isdistsession = True
+
+
+def pytest_sessionstart(session):
+    config = session.config
+    if hasattr(config, '_isdistsession'):
+        if not config.pluginmanager.hasplugin("terminal") or \
+           not config.pluginmanager.hasplugin("terminalreporter"):
+            return
+        trdist = TerminalDistReporter(config)
+        config.pluginmanager.register(trdist, "terminaldistreporter")
 
 def pytest_runtest_protocol(item):
     if item.config.getvalue("boxed"):
@@ -243,4 +255,57 @@ def report_process_crash(item, result):
             path, lineno, result.signal)
     from py._plugin.pytest_runner import ItemTestReport
     return ItemTestReport(item, excinfo=info, when="???")
+
+class TerminalDistReporter:
+    def __init__(self, config):
+        self.gateway2info = {}
+        self.config = config
+        self.tplugin = config.pluginmanager.getplugin("terminal")
+        self.tr = config.pluginmanager.getplugin("terminalreporter")
+
+    def write_line(self, msg):
+        self.tr.write_line(msg)
+
+    def pytest_itemstart(self, __multicall__):
+        try:
+            __multicall__.methods.remove(self.tr.pytest_itemstart)
+        except KeyError:
+            pass
+
+    def pytest_runtest_logreport(self, report):
+        if hasattr(report, 'node'):
+            report.headerlines.append(self.gateway2info.get(
+                report.node.gateway, 
+                "node %r (platinfo not found? strange)"))
+        
+    def pytest_gwmanage_newgateway(self, gateway, platinfo):
+        #self.write_line("%s instantiated gateway from spec %r" %(gateway.id, gateway.spec._spec))
+        d = {}
+        d['version'] = self.tplugin.repr_pythonversion(platinfo.version_info)
+        d['id'] = gateway.id
+        d['spec'] = gateway.spec._spec 
+        d['platform'] = platinfo.platform 
+        if self.config.option.verbose:
+            d['extra'] = "- " + platinfo.executable
+        else:
+            d['extra'] = ""
+        d['cwd'] = platinfo.cwd
+        infoline = ("[%(id)s] %(spec)s -- platform %(platform)s, "
+                        "Python %(version)s "
+                        "cwd: %(cwd)s"
+                        "%(extra)s" % d)
+        self.write_line(infoline)
+        self.gateway2info[gateway] = infoline
+
+    def pytest_testnodeready(self, node):
+        self.write_line("[%s] txnode ready to receive tests" %(node.gateway.id,))
+
+    def pytest_testnodedown(self, node, error):
+        if not error:
+            return
+        self.write_line("[%s] node down, error: %s" %(node.gateway.id, error))
+
+    def pytest_rescheduleitems(self, items):
+        if self.config.option.debug:
+            self.write_sep("!", "RESCHEDULING %s " %(items,))
 

@@ -20,6 +20,4 @@ def pytest_testnodedown(node, error):
 def pytest_rescheduleitems(items):
     """ reschedule Items from a node that went down. """
 
-def pytest_looponfailinfo(failreports, rootdirs):
-    """ info for repeating failing tests. """
 

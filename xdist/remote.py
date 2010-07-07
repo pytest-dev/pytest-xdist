@@ -169,8 +169,21 @@ def slave_runsession(channel, config, fullwidth, hasmarkup):
 
     DEBUG("SLAVE: starting session.main()")
     session.main(colitems)
-    session.config.hook.pytest_looponfailinfo(
+    repr_pytest_looponfailinfo(
         failreports=list(failreports), 
         rootdirs=[config.topdir])
     rootcol = session.config._rootcol
     channel.send([rootcol.totrail(rep.getnode()) for rep in failreports])
+
+
+def repr_pytest_looponfailinfo(failreports, rootdirs):
+    tr = py.io.TerminalWriter()
+    if failreports:
+        tr.sep("#", "LOOPONFAILING", red=True)
+        for report in failreports:
+            loc = report._getcrashline()
+            if loc:
+                tr.line(loc, red=True)
+    tr.sep("#", "waiting for changes")
+    for rootdir in rootdirs:
+        tr.line("### Watching:   %s" %(rootdir,), bold=True)
