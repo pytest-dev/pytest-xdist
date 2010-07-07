@@ -294,11 +294,14 @@ class TerminalDistReporter:
                         "Python %(version)s "
                         "cwd: %(cwd)s"
                         "%(extra)s" % d)
-        self.write_line(infoline)
+        if self.config.getvalue("verbose"):
+            self.write_line(infoline)
         self.gateway2info[gateway] = infoline
 
     def pytest_testnodeready(self, node):
-        self.write_line("[%s] txnode ready to receive tests" %(node.gateway.id,))
+        if self.config.getvalue("verbose"):
+            self.write_line(
+                "[%s] txnode ready to receive tests" %(node.gateway.id,))
 
     def pytest_testnodedown(self, node, error):
         if not error:

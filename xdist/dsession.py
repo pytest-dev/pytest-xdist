@@ -100,9 +100,12 @@ class DSession(session.Session):
         return exitstatus
 
     def collect_all_items(self, colitems):
-        self.report_line("[master] starting full item collection ...")
+        verbose = self.config.getvalue("verbose")
+        if verbose:
+            self.report_line("[master] starting full item collection ...")
         allitems = list(self.collect(colitems))
-        self.report_line("[master] collected %d items" %(len(allitems)))
+        if verbose:
+            self.report_line("[master] collected %d items" %(len(allitems)))
         return allitems
 
     def loop_once(self, loopstate):
@@ -286,6 +289,9 @@ class DSession(session.Session):
 
     def setup(self):
         """ setup any neccessary resources ahead of the test run. """
+        if not self.config.getvalue("verbose"):
+            self.report_line("instantiating gateways (use -v for details): %s" % 
+                ",".join(self.config.option.tx))
         self.nodemanager = NodeManager(self.config)
         self.nodemanager.setup_nodes(putevent=self.queue.put)
 

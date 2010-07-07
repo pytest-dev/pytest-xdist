@@ -8,6 +8,9 @@
 - depend on execnet-1.0.7 which adds "env1:NAME=value" keys to 
   gateway specification strings. 
 
+- show detailed gateway setup and platform information only when 
+  "-v" or "--verbose" is specified. 
+
 1.3
 -------------------------
 

@@ -15,7 +15,7 @@ class TestDistribution:
                     py.test.skip("hello")
             """, 
         )
-        result = testdir.runpytest(p1, '-d', '--tx=popen', '--tx=popen')
+        result = testdir.runpytest(p1, "-v", '-d', '--tx=popen', '--tx=popen')
         result.stdout.fnmatch_lines([
             "*0*popen*Python*",
             "*1*popen*Python*",
@@ -39,7 +39,7 @@ class TestDistribution:
         testdir.makeconftest("""
             option_tx = 'popen popen popen'.split()
         """)
-        result = testdir.runpytest(p1, '-d')
+        result = testdir.runpytest(p1, '-d', "-v")
         result.stdout.fnmatch_lines([
             "*0*popen*Python*",
             "*1*popen*Python*",
@@ -70,7 +70,7 @@ class TestDistribution:
                     os.kill(os.getpid(), 15)
             """
         )
-        result = testdir.runpytest(p1, '-d', '--tx=3*popen')
+        result = testdir.runpytest(p1, "-v", '-d', '--tx=3*popen')
         result.stdout.fnmatch_lines([
             "*popen*Python*",
             "*popen*Python*",
@@ -87,7 +87,7 @@ class TestDistribution:
         subdir.ensure("__init__.py")
         p = subdir.join("test_one.py")
         p.write("def test_5(): assert not __file__.startswith(%r)" % str(p))
-        result = testdir.runpytest("-d", "--rsyncdir=%(subdir)s" % locals(), 
+        result = testdir.runpytest("-v", "-d", "--rsyncdir=%(subdir)s" % locals(), 
             "--tx=popen//chdir=%(dest)s" % locals(), p)
         assert result.ret == 0
         result.stdout.fnmatch_lines([
@@ -112,7 +112,7 @@ class TestDistribution:
                 print("%s...%s" % sys.version_info[:2])
                 assert 0
         """)
-        args = ["--dist=each"]
+        args = ["--dist=each", "-v"]
         args += ["--tx", "popen//python=%s" % interpreters[0]]
         args += ["--tx", "popen//python=%s" % interpreters[1]]
         result = testdir.runpytest(*args)
@@ -147,7 +147,7 @@ class TestDistribution:
                         'calculated result is %s' % calc_result)
         """)
         p1 = testdir.makepyfile("def test_func(): pass")
-        result = testdir.runpytest(p1, '-d', '--tx=popen')
+        result = testdir.runpytest("-v", p1, '-d', '--tx=popen')
         result.stdout.fnmatch_lines([
             "*popen*Python*",
             "*calculated result is 49*",
