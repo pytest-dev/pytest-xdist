@@ -42,13 +42,13 @@ class MySetup:
         eq = EventQueue(self.config.pluginmanager, self.queue)
         return eq.geteventargs(eventname, timeout=timeout)
 
-    def makenode(self, config=None):
+    def makenode(self, config=None, xspec="popen"):
         if config is None:
             testdir = self.request.getfuncargvalue("testdir")
             config = testdir.reparseconfig([])
         self.config = config
         self.queue = Queue()
-        self.xspec = execnet.XSpec("popen")
+        self.xspec = execnet.XSpec(xspec)
         self.gateway = execnet.makegateway(self.xspec)
         self.id += 1
         self.gateway.id = str(self.id)
@@ -147,3 +147,26 @@ class TestMasterSlaveConnection:
         for outcome in "passed failed skipped".split():
             rep = mysetup.geteventargs("pytest_runtest_logreport")['report']
             assert getattr(rep, outcome) 
+
+    def test_send_one_with_env(self, testdir, mysetup, monkeypatch):
+        if execnet.XSpec("popen").env is None:
+            py.test.skip("requires execnet 1.0.7 or above")
+        monkeypatch.delenv('ENV1', raising=False)
+        monkeypatch.delenv('ENV2', raising=False)
+        monkeypatch.setenv('ENV3', 'var3')
+
+        item = testdir.getitem("""
+            def test_func():
+                import os
+                # ENV1, ENV2 set by xspec; ENV3 inherited from parent process
+                assert os.getenv('ENV2') == 'var2'
+                assert os.getenv('ENV1') == 'var1'
+                assert os.getenv('ENV3') == 'var3'
+        """)
+        node = mysetup.makenode(item.config,
+                xspec="popen//env:ENV1=var1//env:ENV2=var2")
+        node.send(item)
+        kwargs = mysetup.geteventargs("pytest_runtest_logreport")
+        rep = kwargs['report']
+        assert rep.passed
+
