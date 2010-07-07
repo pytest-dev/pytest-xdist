@@ -1,9 +1,12 @@
-1.4a1
+1.4
 -------------------------
 
 - perform distributed testing related reporting in the plugin 
   rather than having dist-related code in the generic py.test 
   distribution
+
+- depend on execnet-1.0.7 which adds "env1:NAME=value" keys to 
+  gateway specification strings. 
 
 1.3
 -------------------------
