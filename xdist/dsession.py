@@ -1,5 +1,5 @@
 import py
-from py._test import session 
+from py._test import session
 from xdist.nodemanage import NodeManager
 queue = py.builtin._tryimport('queue', 'Queue')
 
@@ -14,10 +14,10 @@ class LoopState(object):
     def __init__(self, dsession, colitems):
         self.dsession = dsession
         self.colitems = colitems
-        self.exitstatus = None 
-        # loopstate.dowork is False after reschedule events 
-        # because otherwise we might very busily loop 
-        # waiting for a host to become ready.  
+        self.exitstatus = None
+        # loopstate.dowork is False after reschedule events
+        # because otherwise we might very busily loop
+        # waiting for a host to become ready.
         self.dowork = True
         self.shuttingdown = False
         self.testsfailed = 0
@@ -47,8 +47,8 @@ class LoopState(object):
                 crashitem = pending[0]
                 debug("determined crashitem", crashitem)
                 self.dsession.handle_crashitem(crashitem, node)
-                # XXX recovery handling for "each"? 
-                # currently pending items are not retried 
+                # XXX recovery handling for "each"?
+                # currently pending items are not retried
                 if self.dsession.config.option.dist == "load":
                     self.colitems.extend(pending[1:])
 
@@ -59,10 +59,10 @@ class LoopState(object):
                 self.dowork = False # avoid busywait, nodes still have work
 
 class DSession(session.Session):
-    """ 
+    """
         Session drives the collection and running of tests
-        and generates test events for reporters. 
-    """ 
+        and generates test events for reporters.
+    """
     LOAD_THRESHOLD_NEWITEMS = 5
     ITEM_CHUNKSIZE = 10
 
@@ -96,7 +96,7 @@ class DSession(session.Session):
         allitems = self.collect_all_items(colitems)
         exitstatus = self.loop(allitems)
         self.teardown()
-        self.sessionfinishes(exitstatus=exitstatus) 
+        self.sessionfinishes(exitstatus=exitstatus)
         return exitstatus
 
     def collect_all_items(self, colitems):
@@ -111,19 +111,19 @@ class DSession(session.Session):
     def loop_once(self, loopstate):
         if loopstate.shuttingdown:
             return self.loop_once_shutdown(loopstate)
-        colitems = loopstate.colitems 
+        colitems = loopstate.colitems
         if self._nodesready.isSet() and loopstate.dowork and colitems:
-            self.triggertesting(loopstate.colitems) 
+            self.triggertesting(loopstate.colitems)
             colitems[:] = []
-        # we use a timeout here so that control-C gets through 
+        # we use a timeout here so that control-C gets through
         while 1:
             try:
                 eventcall = self.queue.get(timeout=2.0)
                 break
             except queue.Empty:
                 continue
-        loopstate.dowork = True 
-          
+        loopstate.dowork = True
+
         callname, args, kwargs = eventcall
         if callname is not None:
             call = getattr(self.config.hook, callname)
@@ -132,9 +132,9 @@ class DSession(session.Session):
 
         # termination conditions
         maxfail = self.config.getvalue("maxfail")
-        if (not self.node2pending or 
-            (loopstate.testsfailed and maxfail and 
-             loopstate.testsfailed >= maxfail) or 
+        if (not self.node2pending or
+            (loopstate.testsfailed and maxfail and
+             loopstate.testsfailed >= maxfail) or
             (not self.item2nodes and not colitems and not self.queue.qsize())):
             if maxfail and loopstate.testsfailed >= maxfail:
                 raise self.Interrupted("stopping after %d failures" % (
@@ -143,10 +143,10 @@ class DSession(session.Session):
             loopstate.shuttingdown = True
             if not self.node2pending:
                 loopstate.exitstatus = session.EXIT_NOHOSTS
-                
+
     def loop_once_shutdown(self, loopstate):
-        # once we are in shutdown mode we dont send 
-        # events other than HostDown upstream 
+        # once we are in shutdown mode we dont send
+        # events other than HostDown upstream
         eventname, args, kwargs = self.queue.get()
         if eventname == "pytest_testnodedown":
             self.config.hook.pytest_testnodedown(**kwargs)
@@ -181,7 +181,7 @@ class DSession(session.Session):
                 self.loop_once(loopstate)
                 if loopstate.exitstatus is not None:
                     exitstatus = loopstate.exitstatus
-                    break 
+                    break
         except KeyboardInterrupt:
             excinfo = py.code.ExceptionInfo()
             self.config.hook.pytest_keyboard_interrupt(excinfo=excinfo)
@@ -201,7 +201,7 @@ class DSession(session.Session):
     def addnode(self, node):
         assert node not in self.node2pending
         self.node2pending[node] = []
-        if (not hasattr(self, 'nodemanager') or 
+        if (not hasattr(self, 'nodemanager') or
           len(self.node2pending) == len(self.nodemanager.gwmanager.group)):
             self._nodesready.set()
 
@@ -219,7 +219,7 @@ class DSession(session.Session):
         return pending
 
     def triggertesting(self, colitems):
-        # for now we don't allow sending collectors 
+        # for now we don't allow sending collectors
         for next in colitems:
             assert isinstance(next, py.test.collect.Item), next
         senditems = list(colitems)
@@ -230,11 +230,11 @@ class DSession(session.Session):
             self.senditems_load(senditems)
 
     def queueevent(self, eventname, **kwargs):
-        self.queue.put((eventname, (), kwargs)) 
+        self.queue.put((eventname, (), kwargs))
 
     def senditems_each(self, tosend):
         if not tosend:
-            return 
+            return
         for node, pending in self.node2pending.items():
             node.sendlist(tosend)
             pending.extend(tosend)
@@ -247,7 +247,7 @@ class DSession(session.Session):
 
     def senditems_load(self, tosend):
         if not tosend:
-            return 
+            return
         available = []
         for node, pending in self.node2pending.items():
             if len(pending) < self.LOAD_THRESHOLD_NEWITEMS:
@@ -281,7 +281,7 @@ class DSession(session.Session):
         pending.remove(item)
 
     def handle_crashitem(self, item, node):
-        runner = item.config.pluginmanager.getplugin("runner") 
+        runner = item.config.pluginmanager.getplugin("runner")
         info = "!!! Node %r crashed during running of test %r" %(node, item)
         rep = runner.ItemTestReport(item=item, excinfo=info, when="???")
         rep.node = node
@@ -290,11 +290,11 @@ class DSession(session.Session):
     def setup(self):
         """ setup any neccessary resources ahead of the test run. """
         if not self.config.getvalue("verbose"):
-            self.report_line("instantiating gateways (use -v for details): %s" % 
+            self.report_line("instantiating gateways (use -v for details): %s" %
                 ",".join(self.config.option.tx))
         self.nodemanager = NodeManager(self.config)
         self.nodemanager.setup_nodes(putevent=self.queue.put)
 
     def teardown(self):
-        """ teardown any resources after a test run. """ 
+        """ teardown any resources after a test run. """
         self.nodemanager.teardown_nodes()

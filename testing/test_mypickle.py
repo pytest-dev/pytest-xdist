@@ -7,7 +7,7 @@ Queue = py.builtin._tryimport('queue', 'Queue').Queue
 
 from xdist.mypickle import ImmutablePickler, PickleChannel
 from xdist.mypickle import UnpickleError, makekey
-# first let's test some basic functionality 
+# first let's test some basic functionality
 
 def pytest_generate_tests(metafunc):
     if 'picklemod' in metafunc.funcargnames:
@@ -52,17 +52,17 @@ def test_underlying_basic_pickling_mechanisms(picklemod):
 
     pickler2.dump(d_other)
     f2.seek(0)
-        
-    unpickler1.memo = dict([(makekey(x), y) 
+
+    unpickler1.memo = dict([(makekey(x), y)
                                 for x, y in pickler1.memo.values()])
     d_back = unpickler1.load()
     assert d is d_back
 
 
-class A: 
+class A:
     pass
 
-        
+
 def test_pickle_and_back_IS_same(obj, proto):
     p1 = ImmutablePickler(uneven=False, protocol=proto)
     p2 = ImmutablePickler(uneven=True, protocol=proto)
@@ -70,7 +70,7 @@ def test_pickle_and_back_IS_same(obj, proto):
     d2 = p2.loads(s1)
     s2 = p2.dumps(d2)
     obj_back = p1.loads(s2)
-    assert obj is obj_back 
+    assert obj is obj_back
 
 def test_pickling_twice_before_unpickling():
     p1 = ImmutablePickler(uneven=False)
@@ -78,7 +78,7 @@ def test_pickling_twice_before_unpickling():
 
     a1 = A()
     a2 = A()
-    a3 = A() 
+    a3 = A()
     a3.a1 = a1
     a2.a1 = a1
     s1 = p1.dumps(a1)
@@ -102,7 +102,7 @@ def test_pickling_concurrently():
     a1.hasattr = 42
     a2 = A()
 
-    s1 = p1.dumps(a1)  
+    s1 = p1.dumps(a1)
     s2 = p2.dumps(a2)
     other_a1 = p2.loads(s1)
     other_a2 = p1.loads(s2)
@@ -123,7 +123,7 @@ class TestPickleChannelFunctional:
             "import py ; py.path.local(%r).pyimport()" %(__file__)
         )
         cls.gw.remote_init_threads(5)
-        # we need the remote test code to import 
+        # we need the remote test code to import
         # the same test module here
 
     def test_popen_send_instance(self):
@@ -143,7 +143,7 @@ class TestPickleChannelFunctional:
         assert a_received.hello == 10
         channel.send(a_received)
         remote_a2_is_a1 = channel.receive()
-        assert remote_a2_is_a1 
+        assert remote_a2_is_a1
 
     def test_send_concurrent(self):
         channel = self.gw.remote_exec("""
@@ -152,7 +152,7 @@ class TestPickleChannelFunctional:
             from testing.test_mypickle import A
             l = [A() for i in range(10)]
             channel.send(l)
-            other_l = channel.receive() 
+            other_l = channel.receive()
             channel.send((l, other_l))
             channel.send(channel.receive())
             channel.receive()
@@ -164,17 +164,17 @@ class TestPickleChannelFunctional:
         channel.send(other_l)
         ret = channel.receive()
         assert ret[0] is other_l
-        assert ret[1] is l 
+        assert ret[1] is l
         back = channel.receive()
-        assert other_l is other_l 
+        assert other_l is other_l
         channel.send(None)
 
-    #s1 = p1.dumps(a1)  
+    #s1 = p1.dumps(a1)
     #s2 = p2.dumps(a2)
     #other_a1 = p2.loads(s1)
     #other_a2 = p1.loads(s2)
     #a1_back = p1.loads(p2.dumps(other_a1))
-        
+
     def test_popen_with_callback(self):
         channel = self.gw.remote_exec("""
             from xdist.mypickle import PickleChannel
@@ -194,7 +194,7 @@ class TestPickleChannelFunctional:
         assert a_received.hello == 10
         channel.send(a_received)
         #remote_a2_is_a1 = queue.get(timeout=TESTTIMEOUT)
-        #assert remote_a2_is_a1 
+        #assert remote_a2_is_a1
 
     def test_popen_with_callback_with_endmarker(self):
         channel = self.gw.remote_exec("""
@@ -210,13 +210,13 @@ class TestPickleChannelFunctional:
         channel = PickleChannel(channel)
         queue = Queue()
         channel.setcallback(queue.put, endmarker=-1)
-          
+
         a_received = queue.get(timeout=TESTTIMEOUT)
         assert isinstance(a_received, A)
         assert a_received.hello == 10
         channel.send(a_received)
         remote_a2_is_a1 = queue.get(timeout=TESTTIMEOUT)
-        assert remote_a2_is_a1 
+        assert remote_a2_is_a1
         endmarker = queue.get(timeout=TESTTIMEOUT)
         assert endmarker == -1
 
@@ -235,7 +235,7 @@ class TestPickleChannelFunctional:
         channel._ipickle._unpicklememo.clear()
         channel.setcallback(queue.put, endmarker=-1)
         next = queue.get(timeout=TESTTIMEOUT)
-        assert next == -1 
+        assert next == -1
         error = channel._getremoteerror()
         assert isinstance(error, UnpickleError)
 

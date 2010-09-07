@@ -4,10 +4,10 @@ import xdist
 from xdist.txnode import TXNode
 from xdist.gwmanage import GatewayManager
 import execnet
-    
+
 class NodeManager(object):
     def __init__(self, config, specs=None):
-        self.config = config 
+        self.config = config
         if specs is None:
             specs = self._getxspecs()
         self.roots = self._getrsyncdirs()
@@ -23,32 +23,32 @@ class NodeManager(object):
     def rsync_roots(self):
         """ make sure that all remote gateways
             have the same set of roots in their
-            current directory. 
+            current directory.
         """
         self.makegateways()
         options = {
-            'ignores': self.config_getignores(), 
+            'ignores': self.config_getignores(),
             'verbose': self.config.option.verbose,
         }
         if self.roots:
             # send each rsync root
             for root in self.roots:
                 self.gwmanager.rsync(root, **options)
-        else: 
-            XXX # do we want to care for situations without explicit rsyncdirs? 
+        else:
+            XXX # do we want to care for situations without explicit rsyncdirs?
             # we transfer our topdir as the root
             self.gwmanager.rsync(self.config.topdir, **options)
-            # and cd into it 
+            # and cd into it
             self.gwmanager.multi_chdir(self.config.topdir.basename, inplacelocal=False)
 
     def makegateways(self):
-        # we change to the topdir sot that 
-        # PopenGateways will have their cwd 
-        # such that unpickling configs will 
-        # pick it up as the right topdir 
+        # we change to the topdir sot that
+        # PopenGateways will have their cwd
+        # such that unpickling configs will
+        # pick it up as the right topdir
         # (for other gateways this chdir is irrelevant)
         self.trace("making gateways")
-        old = self.config.topdir.chdir()  
+        old = self.config.topdir.chdir()
         try:
             self.gwmanager.makegateways()
         finally:
@@ -59,7 +59,7 @@ class NodeManager(object):
         self.trace("setting up nodes")
         for gateway in self.gwmanager.group:
             node = TXNode(self, gateway, self.config, putevent)
-            gateway.node = node  # to keep node alive 
+            gateway.node = node  # to keep node alive
             self.trace("started node %r" % node)
 
     def teardown_nodes(self):
@@ -83,7 +83,7 @@ class NodeManager(object):
 
     def _getrsyncdirs(self):
         config = self.config
-        candidates = [py._pydir] 
+        candidates = [py._pydir]
         candidates += [py.path.local(xdist.__file__).dirpath()]
         candidates += config.option.rsyncdir
         conftestroots = config.getconftest_pathlist("rsyncdirs")

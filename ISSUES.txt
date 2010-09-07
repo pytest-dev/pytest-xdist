@@ -1,10 +1,10 @@
 
-allow to run xdist tests with xdist 
+allow to run xdist tests with xdist
 -----------------------------------------------
-tag: feature 
+tag: feature
 
 allow to run xdist own tests using its own mechanism.
 currently this doesn't work because the remote side
-has no py.test plugin.   How to configure/do 
-register "xdist.plugin" on the remote side? 
+has no py.test plugin.   How to configure/do
+register "xdist.plugin" on the remote side?
 

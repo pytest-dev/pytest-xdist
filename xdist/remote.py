@@ -1,11 +1,11 @@
 """
-    LooponfailingSession and Helpers. 
+    LooponfailingSession and Helpers.
 
-    NOTE that one really has to avoid loading and depending on 
-    application modules within the controlling process 
+    NOTE that one really has to avoid loading and depending on
+    application modules within the controlling process
     (the one that starts repeatedly test processes)
-    otherwise changes to source code can crash 
-    the controlling process which should never happen. 
+    otherwise changes to source code can crash
+    the controlling process which should never happen.
 """
 import py
 import sys
@@ -16,8 +16,8 @@ from xdist import util
 class LooponfailingSession(Session):
     def __init__(self, config):
         super(LooponfailingSession, self).__init__(config=config)
-        self.rootdirs = [self.config.topdir] # xxx dist_rsync_roots? 
-        self.statrecorder = util.StatRecorder(self.rootdirs) 
+        self.rootdirs = [self.config.topdir] # xxx dist_rsync_roots?
+        self.statrecorder = util.StatRecorder(self.rootdirs)
         self.remotecontrol = RemoteControl(self.config)
         self.out = py.io.TerminalWriter()
 
@@ -28,7 +28,7 @@ class LooponfailingSession(Session):
                 self.loop_once(loopstate)
                 if not loopstate.colitems and loopstate.wasfailing:
                     continue # the last failures passed, let's rerun all
-                self.statrecorder.waitonchange(checkinterval=2.0) 
+                self.statrecorder.waitonchange(checkinterval=2.0)
         except KeyboardInterrupt:
             print
 
@@ -74,9 +74,9 @@ class RemoteControl(object):
                     if not os.path.isabs(p):
                         p = os.path.abspath(p)
                     newpaths.append(p)
-            sys.path[:] = newpaths     
+            sys.path[:] = newpaths
             os.chdir(chdir) # unpickling config uses cwd as topdir
-            
+
             config_state = channel.receive()
             fullwidth, hasmarkup = channel.receive()
             py.test.config.__setstate__(config_state)
@@ -85,7 +85,7 @@ class RemoteControl(object):
             sys.stdout = sys.stderr = outchannel.makefile('w')
 
             from xdist.remote import slave_runsession
-            slave_runsession(channel, py.test.config, fullwidth, hasmarkup) 
+            slave_runsession(channel, py.test.config, fullwidth, hasmarkup)
         """)
         channel.send(str(self.config.topdir))
         remote_outchannel = channel.receive()
@@ -125,15 +125,15 @@ class RemoteControl(object):
 def slave_runsession(channel, config, fullwidth, hasmarkup):
     """ we run this on the other side. """
     if config.option.debug:
-        def DEBUG(*args): 
+        def DEBUG(*args):
             print(" ".join(map(str, args)))
     else:
         def DEBUG(*args): pass
 
     DEBUG("SLAVE: received configuration, using topdir:", config.topdir)
     #config.option.session = None
-    config.option.looponfail = False 
-    config.option.usepdb = False 
+    config.option.looponfail = False
+    config.option.usepdb = False
     try:
         trails = channel.receive()
     except KeyboardInterrupt:
@@ -142,7 +142,7 @@ def slave_runsession(channel, config, fullwidth, hasmarkup):
     DEBUG("SLAVE: initsession()")
     session = config.initsession()
     # XXX configure the reporter object's terminal writer more directly
-    # XXX and write a test for this remote-terminal setting logic 
+    # XXX and write a test for this remote-terminal setting logic
     config.pytest_terminal_hasmarkup = hasmarkup
     config.pytest_terminal_fullwidth = fullwidth
     if trails:
@@ -152,25 +152,25 @@ def slave_runsession(channel, config, fullwidth, hasmarkup):
                 colitem = config._rootcol.fromtrail(trail)
             except ValueError:
                 #XXX send info for "test disappeared" or so
-                continue 
+                continue
             colitems.append(colitem)
     else:
         colitems = config.getinitialnodes()
-    session.shouldclose = channel.isclosed 
-   
+    session.shouldclose = channel.isclosed
+
     class Failures(list):
         def pytest_runtest_logreport(self, report):
             if report.failed:
                 self.append(report)
         pytest_collectreport = pytest_runtest_logreport
-        
+
     failreports = Failures()
     session.pluginmanager.register(failreports)
 
     DEBUG("SLAVE: starting session.main()")
     session.main(colitems)
     repr_pytest_looponfailinfo(
-        failreports=list(failreports), 
+        failreports=list(failreports),
         rootdirs=[config.topdir])
     rootcol = session.config._rootcol
     channel.send([rootcol.totrail(rep.getnode()) for rep in failreports])

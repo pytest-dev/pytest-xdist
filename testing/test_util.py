@@ -15,7 +15,7 @@ def test_filechange(tmpdir):
     tmp.ensure("new.py")
     changed = sd.check()
     assert changed
-    
+
     tmp.join("new.py").remove()
     changed = sd.check()
     assert changed
@@ -44,12 +44,12 @@ def test_pycremoval(tmpdir):
     pycfile = hello + "c"
     pycfile.ensure()
     changed = sd.check()
-    assert not changed 
+    assert not changed
 
     hello.write("world")
     changed = sd.check()
     assert not pycfile.check()
-    
+
 
 def test_waitonchange(tmpdir, monkeypatch):
     tmp = tmpdir

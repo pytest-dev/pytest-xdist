@@ -1,9 +1,9 @@
 """
-py.test 'xdist' plugin for distributed testing and loop-on-failing modes. 
+py.test 'xdist' plugin for distributed testing and loop-on-failing modes.
 
 See http://pytest.org/plugin/xdist.html for documentation and, after
-installation of the ``pytest-xdist`` PyPI package, ``py.test -h`` 
-for the new options. 
+installation of the ``pytest-xdist`` PyPI package, ``py.test -h``
+for the new options.
 """
 
 from setuptools import setup
@@ -16,7 +16,7 @@ setup(
     long_description=__doc__,
     license='GPLv2 or later',
     author='holger krekel and contributors',
-    author_email='py-dev@codespeak.net,holger@merlinux.eu', 
+    author_email='py-dev@codespeak.net,holger@merlinux.eu',
     url='http://bitbucket.org/hpk42/pytest-xdist',
     platforms=['linux', 'osx', 'win32'],
     packages = ['xdist'],

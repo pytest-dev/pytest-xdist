@@ -25,7 +25,7 @@ class TestGatewayManagerPopen:
             assert spec.chdir == "pyexecnetcache"
         for spec in GatewayManager(l, hook, defaultchdir="abc").specs:
             assert spec.chdir == "abc"
-        
+
     def test_popen_makegateway_events(self, hook, hookrecorder, _pytest):
         hm = GatewayManager(["popen"] * 2, hook)
         hm.makegateways()
@@ -34,10 +34,10 @@ class TestGatewayManagerPopen:
         assert call.gateway.id == "gw0"
         assert call.platinfo.executable == call.gateway._rinfo().executable
         call = hookrecorder.popcall("pytest_gwmanage_newgateway")
-        assert call.gateway.id == "gw1" 
+        assert call.gateway.id == "gw1"
         assert len(hm.group) == 2
         hm.exit()
-        assert not len(hm.group) 
+        assert not len(hm.group)
 
     def test_popens_rsync(self, hook, mysetup):
         source = mysetup.source
@@ -56,11 +56,11 @@ class TestGatewayManagerPopen:
         hm.rsync(source, notify=lambda *args: l.append(args))
         assert not l
         hm.exit()
-        assert not len(hm.group) 
-        assert "sys.path.insert" in gw.remote_exec.args[0] 
+        assert not len(hm.group)
+        assert "sys.path.insert" in gw.remote_exec.args[0]
 
     def test_rsync_popen_with_path(self, hook, mysetup):
-        source, dest = mysetup.source, mysetup.dest 
+        source, dest = mysetup.source, mysetup.dest
         hm = GatewayManager(["popen//chdir=%s" %dest] * 1, hook)
         hm.makegateways()
         source.ensure("dir1", "dir2", "hello")
@@ -75,16 +75,16 @@ class TestGatewayManagerPopen:
         assert dest.join("dir1", "dir2", 'hello').check()
 
     def test_rsync_same_popen_twice(self, hook, mysetup, hookrecorder):
-        source, dest = mysetup.source, mysetup.dest 
+        source, dest = mysetup.source, mysetup.dest
         hm = GatewayManager(["popen//chdir=%s" %dest] * 2, hook)
         hm.makegateways()
         source.ensure("dir1", "dir2", "hello")
         hm.rsync(source)
-        call = hookrecorder.popcall("pytest_gwmanage_rsyncstart") 
-        assert call.source == source 
+        call = hookrecorder.popcall("pytest_gwmanage_rsyncstart")
+        assert call.source == source
         assert len(call.gateways) == 1
         assert call.gateways[0] in hm.group
-        call = hookrecorder.popcall("pytest_gwmanage_rsyncfinish") 
+        call = hookrecorder.popcall("pytest_gwmanage_rsyncfinish")
 
 class pytest_funcarg__mysetup:
     def __init__(self, request):

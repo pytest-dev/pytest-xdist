@@ -13,7 +13,7 @@ class TestDistribution:
                     pass
                 def test_skip():
                     py.test.skip("hello")
-            """, 
+            """,
         )
         result = testdir.runpytest(p1, "-v", '-d', '--tx=popen', '--tx=popen')
         result.stdout.fnmatch_lines([
@@ -34,7 +34,7 @@ class TestDistribution:
                     pass
                 def test_skip():
                     py.test.skip("hello")
-            """, 
+            """,
         )
         testdir.makeconftest("""
             option_tx = 'popen popen popen'.split()
@@ -52,7 +52,7 @@ class TestDistribution:
     def test_dist_tests_with_crash(self, testdir):
         if not hasattr(py.std.os, 'kill'):
             py.test.skip("no os.kill")
-        
+
         p1 = testdir.makepyfile("""
                 import py
                 def test_fail0():
@@ -87,7 +87,7 @@ class TestDistribution:
         subdir.ensure("__init__.py")
         p = subdir.join("test_one.py")
         p.write("def test_5(): assert not __file__.startswith(%r)" % str(p))
-        result = testdir.runpytest("-v", "-d", "--rsyncdir=%(subdir)s" % locals(), 
+        result = testdir.runpytest("-v", "-d", "--rsyncdir=%(subdir)s" % locals(),
             "--tx=popen//chdir=%(dest)s" % locals(), p)
         assert result.ret == 0
         result.stdout.fnmatch_lines([
@@ -143,7 +143,7 @@ class TestDistribution:
             def pytest_terminal_summary(terminalreporter):
                 if not hasattr(terminalreporter.config, 'slaveinput'):
                     calc_result = terminalreporter.config.calc_result
-                    terminalreporter._tw.sep('-', 
+                    terminalreporter._tw.sep('-',
                         'calculated result is %s' % calc_result)
         """)
         p1 = testdir.makepyfile("def test_func(): pass")
@@ -171,12 +171,12 @@ class TestDistribution:
         args = ["-n1"]
         result = testdir.runpytest(*args)
         s = result.stdout.str()
-        assert result.ret 
+        assert result.ret
         assert 'SIGINT' in s
         assert 's2call' in s
 
     def test_keyboard_interrupt_dist(self, testdir):
-        # xxx could be refined to check for return code 
+        # xxx could be refined to check for return code
         p = testdir.makepyfile("""
             def test_sleep():
                 import time
@@ -188,7 +188,7 @@ class TestDistribution:
         child.expect(".*KeyboardInterrupt.*")
         #child.expect(".*seconds.*")
         child.close()
-        #assert ret == 2 
+        #assert ret == 2
 
 class TestTerminalReporting:
     def test_pass_skip_fail(self, testdir):
@@ -203,9 +203,9 @@ class TestTerminalReporting:
         """)
         result = testdir.runpytest("-n1", "-v")
         expected = [
-            "*PASS*test_pass_skip_fail.py:2: *test_ok*", 
-            "*SKIP*test_pass_skip_fail.py:4: *test_skip*", 
-            "*FAIL*test_pass_skip_fail.py:6: *test_func*", 
+            "*PASS*test_pass_skip_fail.py:2: *test_ok*",
+            "*SKIP*test_pass_skip_fail.py:4: *test_skip*",
+            "*FAIL*test_pass_skip_fail.py:6: *test_func*",
         ]
         for line in expected:
             result.stdout.fnmatch_lines([line])
@@ -222,7 +222,7 @@ class TestTerminalReporting:
         """)
         result = testdir.runpytest("-n1", "-v")
         result.stdout.fnmatch_lines([
-            "*FAIL*test_fail_platinfo.py:1: *test_func*", 
+            "*FAIL*test_fail_platinfo.py:1: *test_func*",
             "*popen*Python*",
             "    def test_func():",
             ">       assert 0",

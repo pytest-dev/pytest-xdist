@@ -1,6 +1,6 @@
 
 def pytest_gwmanage_newgateway(gateway, platinfo):
-    """ called on new raw gateway creation. """ 
+    """ called on new raw gateway creation. """
 
 def pytest_gwmanage_rsyncstart(source, gateways):
     """ called before rsyncing a directory to remote gateways takes place. """

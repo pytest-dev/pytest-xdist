@@ -1,14 +1,14 @@
 """
 
-   Pickling support for two processes that want to exchange 
-   *immutable* object instances.  Immutable in the sense 
-   that the receiving side of an object can modify its 
-   copy but when it sends it back the original sending 
+   Pickling support for two processes that want to exchange
+   *immutable* object instances.  Immutable in the sense
+   that the receiving side of an object can modify its
+   copy but when it sends it back the original sending
    side will continue to see its unmodified version
    (and no actual state will go over the wire).
 
-   This module also implements an experimental 
-   execnet pickling channel using this idea. 
+   This module also implements an experimental
+   execnet pickling channel using this idea.
 
 """
 
@@ -18,7 +18,7 @@ import sys, os, struct
 
 if sys.version_info >= (3,0):
     makekey = lambda x: x
-    fromkey = lambda x: x 
+    fromkey = lambda x: x
     from pickle import _Pickler as Pickler
     from pickle import _Unpickler as Unpickler
 else:
@@ -29,7 +29,7 @@ else:
 
 class MyPickler(Pickler):
     """ Pickler with a custom memoize()
-        to take care of unique ID creation. 
+        to take care of unique ID creation.
         See the usage in ImmutablePickler
     """
     def __init__(self, immo, file, protocol, uneven):
@@ -37,7 +37,7 @@ class MyPickler(Pickler):
         self.uneven = uneven
         self._unpicklememo = immo._unpicklememo
         self.memo = immo._picklememo
-        
+
     def memoize(self, obj):
         if self.fast:
             return
@@ -55,23 +55,23 @@ class MyPickler(Pickler):
     #    def save_string(self, obj, pack=struct.pack):
     #        obj = unicode(obj)
     #        self.save_unicode(obj, pack=pack)
-    #    Pickler.dispatch[str] = save_string 
-  
+    #    Pickler.dispatch[str] = save_string
+
 class UnpicklingDict(dict):
     def __init__(self, picklememo):
         super(UnpicklingDict, self).__init__()
         self._picklememo = picklememo
-   
+
     def __setitem__(self, key, obj):
         super(UnpicklingDict, self).__setitem__(key, obj)
         self._picklememo[id(obj)] = (fromkey(key), obj)
-    
+
 class ImmutablePickler:
     def __init__(self, uneven, protocol=0):
-        """ ImmutablePicklers are instantiated in Pairs. 
+        """ ImmutablePicklers are instantiated in Pairs.
             The two sides need to create unique IDs
             while pickling their objects.  This is
-            done by using either even or uneven 
+            done by using either even or uneven
             numbers, depending on the instantiation
             parameter.
         """
@@ -82,8 +82,8 @@ class ImmutablePickler:
 
     def selfmemoize(self, obj):
         # this is for feeding objects to ourselfes
-        # which be the case e.g. if you want to pickle 
-        # from a forked process back to the original 
+        # which be the case e.g. if you want to pickle
+        # from a forked process back to the original
         f = py.io.BytesIO()
         pickler = MyPickler(self, f, self._protocol, uneven=self.uneven)
         pickler.memoize(obj)
@@ -92,7 +92,7 @@ class ImmutablePickler:
         f = py.io.BytesIO()
         pickler = MyPickler(self, f, self._protocol, uneven=self.uneven)
         pickler.dump(obj)
-        #print >>debug, "dumped", obj 
+        #print >>debug, "dumped", obj
         #print >>debug, "picklememo", self._picklememo
         return f.getvalue()
 
@@ -117,20 +117,20 @@ class UnpickleError(Exception):
         return self.formatted
 
 class PickleChannel(object):
-    """ PickleChannels wrap execnet channels 
+    """ PickleChannels wrap execnet channels
         and allow to send/receive by using
-        "immutable pickling". 
+        "immutable pickling".
     """
     _unpicklingerror = None
     def __init__(self, channel):
         self._channel = channel
-        # we use the fact that each side of a 
+        # we use the fact that each side of a
         # gateway connection counts with uneven
-        # or even numbers depending on which 
+        # or even numbers depending on which
         # side it is (for the purpose of creating
         # unique ids - which is what we need it here for)
-        uneven = channel.gateway._channelfactory.count % 2 
-        self._ipickle = ImmutablePickler(uneven=uneven) 
+        uneven = channel.gateway._channelfactory.count % 2
+        self._ipickle = ImmutablePickler(uneven=uneven)
         self.RemoteError = channel.RemoteError
 
     def send(self, obj):

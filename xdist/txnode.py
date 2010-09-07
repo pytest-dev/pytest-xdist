@@ -1,22 +1,22 @@
 """
-    Manage setup, running and local representation of remote nodes/processes. 
+    Manage setup, running and local representation of remote nodes/processes.
 """
 import py
 from xdist.mypickle import PickleChannel
 from py._test.session import Session
 
 class TXNode(object):
-    """ Represents a Test Execution environment in the controlling process. 
-        - sets up a slave node through an execnet gateway 
+    """ Represents a Test Execution environment in the controlling process.
+        - sets up a slave node through an execnet gateway
         - manages sending of test-items and receival of results and events
-        - creates events when the remote side crashes 
+        - creates events when the remote side crashes
     """
     ENDMARK = -1
 
     def __init__(self, nodemanager, gateway, config, putevent):
         self.nodemanager = nodemanager
-        self.config = config 
-        self.putevent = putevent 
+        self.config = config
+        self.putevent = putevent
         self.gateway = gateway
         self.slaveinput = {}
         self.channel = install_slave(self)
@@ -31,13 +31,13 @@ class TXNode(object):
     def notify(self, eventname, *args, **kwargs):
         assert not args
         self.putevent((eventname, args, kwargs))
-      
+
     def callback(self, eventcall):
-        """ this gets called for each object we receive from 
-            the other side and if the channel closes. 
+        """ this gets called for each object we receive from
+            the other side and if the channel closes.
 
             Note that channel callbacks run in the receiver
-            thread of execnet gateways - we need to 
+            thread of execnet gateways - we need to
             avoid raising exceptions or doing heavy work.
         """
         try:
@@ -45,11 +45,11 @@ class TXNode(object):
                 err = self.channel._getremoteerror()
                 if not self._down:
                     if not err or isinstance(err, EOFError):
-                        err = "Not properly terminated" # lost connection? 
+                        err = "Not properly terminated" # lost connection?
                     self.notify("pytest_testnodedown", node=self, error=err)
                     self._down = True
                 return
-            eventname, args, kwargs = eventcall 
+            eventname, args, kwargs = eventcall
             if eventname == "slaveready":
                 self.notify("pytest_testnodeready", node=self)
             elif eventname == "slavefinished":
@@ -57,15 +57,15 @@ class TXNode(object):
                 self.slaveoutput = kwargs['slaveoutput']
                 error = kwargs['error']
                 self.notify("pytest_testnodedown", error=error, node=self)
-            elif eventname in ("pytest_runtest_logreport", 
+            elif eventname in ("pytest_runtest_logreport",
                                "pytest__teardown_final_logerror"):
                 kwargs['report'].node = self
                 self.notify(eventname, **kwargs)
             else:
                 self.notify(eventname, **kwargs)
-        except KeyboardInterrupt: 
+        except KeyboardInterrupt:
             # should not land in receiver-thread
-            raise 
+            raise
         except:
             excinfo = py.code.ExceptionInfo()
             py.builtin.print_("!" * 20, excinfo)
@@ -84,11 +84,11 @@ class TXNode(object):
         else:
             self.channel.send(None)
 
-# configuring and setting up slave node 
+# configuring and setting up slave node
 def install_slave(node):
     channel = node.gateway.remote_exec(source="""
-        import os, sys 
-        sys.path.insert(0, os.getcwd()) 
+        import os, sys
+        sys.path.insert(0, os.getcwd())
         from xdist.mypickle import PickleChannel
         from xdist.txnode import SlaveSession
         channel.send("basicimport")
@@ -107,11 +107,11 @@ def install_slave(node):
     channel.receive()
     channel = PickleChannel(channel)
     basetemp = None
-    config = node.config 
+    config = node.config
     config.hook.pytest_configure_node(node=node)
     if node.gateway.spec.popen:
         popenbase = config.ensuretemp("popen")
-        basetemp = py.path.local.make_numbered_dir(prefix="slave-", 
+        basetemp = py.path.local.make_numbered_dir(prefix="slave-",
             keep=0, rootdir=popenbase)
         basetemp = str(basetemp)
     channel.send((config, node.slaveinput, basetemp, node.gateway.id))
@@ -147,13 +147,13 @@ class SlaveSession(Session):
         self.sendevent("slaveready")
         self.main(None)
         error = getattr(self, '_slaveerror', None)
-        self.sendevent("slavefinished", error=error, 
+        self.sendevent("slavefinished", error=error,
                        slaveoutput=self.config.slaveoutput)
-        
+
     def _mainloop(self, colitems):
         while 1:
             task = self.channel.receive()
-            if task is None: 
+            if task is None:
                 break
             if isinstance(task, list):
                 for item in task:
@@ -165,10 +165,10 @@ class SlaveSession(Session):
         call = self.runner.CallInfo(item._reraiseunpicklingproblem, when='setup')
         if call.excinfo:
             # likely it is not collectable here because of
-            # platform/import-dependency induced skips 
+            # platform/import-dependency induced skips
             # we fake a setup-error report with the obtained exception
-            # and do not care about capturing or non-runner hooks 
+            # and do not care about capturing or non-runner hooks
             rep = self.runner.pytest_runtest_makereport(item=item, call=call)
             self.pytest_runtest_logreport(rep)
             return
-        item.config.hook.pytest_runtest_protocol(item=item) 
+        item.config.hook.pytest_runtest_protocol(item=item)

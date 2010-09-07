@@ -29,8 +29,8 @@ class GatewayManager:
                 gateway=gw, platinfo=gw._rinfo())
 
     def rsync(self, source, notify=None, verbose=False, ignores=None):
-        """ perform rsync to all remote hosts. 
-        """ 
+        """ perform rsync to all remote hosts.
+        """
         rsync = HostRSync(source, verbose=verbose, ignores=ignores)
         seen = py.builtin.set()
         gateways = []
@@ -38,7 +38,7 @@ class GatewayManager:
             spec = gateway.spec
             if spec.popen and not spec.chdir:
                 # XXX this assumes that sources are python-packages
-                # and that adding the basedir does not hurt 
+                # and that adding the basedir does not hurt
                 gateway.remote_exec("""
                     import sys ; sys.path.insert(0, %r)
                 """ % os.path.dirname(str(source))).waitclose()
@@ -52,20 +52,20 @@ class GatewayManager:
                 gateways.append(gateway)
         if seen:
             self.hook.pytest_gwmanage_rsyncstart(
-                source=source, 
-                gateways=gateways, 
+                source=source,
+                gateways=gateways,
             )
             rsync.send()
             self.hook.pytest_gwmanage_rsyncfinish(
-                source=source, 
-                gateways=gateways, 
+                source=source,
+                gateways=gateways,
             )
 
     def exit(self):
         self.group.terminate(self.EXIT_TIMEOUT)
 
 class HostRSync(execnet.RSync):
-    """ RSyncer that filters out common files 
+    """ RSyncer that filters out common files
     """
     def __init__(self, sourcedir, *args, **kwargs):
         self._synced = {}
@@ -78,7 +78,7 @@ class HostRSync(execnet.RSync):
     def filter(self, path):
         path = py.path.local(path)
         if not path.ext in ('.pyc', '.pyo'):
-            if not path.basename.endswith('~'): 
+            if not path.basename.endswith('~'):
                 if path.check(dotfile=0):
                     for x in self._ignores:
                         if path == x:
@@ -88,7 +88,7 @@ class HostRSync(execnet.RSync):
 
     def add_target_host(self, gateway, finished=None):
         remotepath = os.path.basename(self._sourcedir)
-        super(HostRSync, self).add_target(gateway, remotepath, 
+        super(HostRSync, self).add_target(gateway, remotepath,
                                           finishedcallback=finished,
                                           delete=True,)
 

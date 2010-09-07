@@ -2,7 +2,7 @@ import py
 import pickle
 
 def setglobals(request):
-    oldconfig = py.test.config 
+    oldconfig = py.test.config
     print("setting py.test.config to None")
     py.test.config = None
     def resetglobals():
@@ -73,10 +73,10 @@ def test_config__setstate__wired_correctly_in_childprocess(testdir):
         from xdist.mypickle import PickleChannel
         channel = PickleChannel(channel)
         config = channel.receive()
-        assert py.test.config == config 
+        assert py.test.config == config
     """)
     channel = PickleChannel(channel)
     config = testdir.parseconfig()
     channel.send(config)
-    channel.waitclose() # this will potentially raise 
+    channel.waitclose() # this will potentially raise
     gw.exit()

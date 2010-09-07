@@ -23,7 +23,7 @@ class EventQueue:
                 py.builtin.print_("seen events", events)
                 raise IOError("did not see %r events" % (eventname))
             else:
-                name, args, kwargs = eventcall 
+                name, args, kwargs = eventcall
                 assert isinstance(name, str)
                 if name == eventname:
                     if args:
@@ -55,7 +55,7 @@ class MySetup:
         self.nodemanager = None
         self.node = TXNode(self.nodemanager, self.gateway, self.config, putevent=self.queue.put)
         assert not self.node.channel.isclosed()
-        return self.node 
+        return self.node
 
     def xfinalize(self):
         if hasattr(self, 'node'):
@@ -78,9 +78,9 @@ def test_node_hash_equality(mysetup):
 class TestMasterSlaveConnection:
     def test_crash_invalid_item(self, mysetup):
         node = mysetup.makenode()
-        node.send(123) # invalid item 
+        node.send(123) # invalid item
         kwargs = mysetup.geteventargs("pytest_testnodedown")
-        assert kwargs['node'] is node 
+        assert kwargs['node'] is node
         #assert isinstance(kwargs['error'], execnet.RemoteError)
 
     def test_crash_killed(self, testdir, mysetup):
@@ -92,19 +92,19 @@ class TestMasterSlaveConnection:
                 os.kill(os.getpid(), 9)
         """)
         node = mysetup.makenode(item.config)
-        node.send(item) 
+        node.send(item)
         kwargs = mysetup.geteventargs("pytest_testnodedown")
-        assert kwargs['node'] is node 
+        assert kwargs['node'] is node
         assert "Not properly terminated" in str(kwargs['error'])
 
     def test_node_down(self, mysetup):
         node = mysetup.makenode()
         node.shutdown()
         kwargs = mysetup.geteventargs("pytest_testnodedown")
-        assert kwargs['node'] is node 
+        assert kwargs['node'] is node
         assert not kwargs['error']
         node.callback(node.ENDMARK)
-        excinfo = py.test.raises(IOError, 
+        excinfo = py.test.raises(IOError,
             "mysetup.geteventargs('testnodedown', timeout=0.01)")
 
     def test_send_on_closed_channel(self, testdir, mysetup):
@@ -120,14 +120,14 @@ class TestMasterSlaveConnection:
         node = mysetup.makenode(item.config)
         node.send(item)
         kwargs = mysetup.geteventargs("pytest_runtest_logreport")
-        rep = kwargs['report'] 
-        assert rep.passed 
+        rep = kwargs['report']
+        assert rep.passed
         py.builtin.print_(rep)
         assert rep.item == item
 
     def test_send_some(self, testdir, mysetup):
         items = testdir.getitems("""
-            def test_pass(): 
+            def test_pass():
                 pass
             def test_fail():
                 assert 0
@@ -141,12 +141,12 @@ class TestMasterSlaveConnection:
         for outcome in "passed failed skipped".split():
             kwargs = mysetup.geteventargs("pytest_runtest_logreport")
             report = kwargs['report']
-            assert getattr(report, outcome) 
+            assert getattr(report, outcome)
 
         node.sendlist(items)
         for outcome in "passed failed skipped".split():
             rep = mysetup.geteventargs("pytest_runtest_logreport")['report']
-            assert getattr(rep, outcome) 
+            assert getattr(rep, outcome)
 
     def test_send_one_with_env(self, testdir, mysetup, monkeypatch):
         if execnet.XSpec("popen").env is None:

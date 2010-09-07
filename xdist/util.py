@@ -6,7 +6,7 @@ class StatRecorder:
         self.statcache = {}
         self.check() # snapshot state
 
-    def fil(self, p): 
+    def fil(self, p):
         return p.ext in ('.py', '.txt', '.c', '.h')
     def rec(self, p):
         return p.check(dotfile=0)
@@ -43,7 +43,7 @@ class StatRecorder:
                                 pycfile = path + "c"
                                 if pycfile.check():
                                     pycfile.remove()
-                                
+
                     else:
                         changed = True
         if statcache:

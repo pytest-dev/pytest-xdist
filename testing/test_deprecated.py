@@ -8,9 +8,9 @@ def test_dist_conftest_options(testdir, recwarn):
         import py
         from py.builtin import print_
         print_("importing conftest", __file__)
-        Option = py.test.config.Option 
-        option = py.test.config.addoptions("someopt", 
-            Option('--someopt', action="store_true", 
+        Option = py.test.config.Option
+        option = py.test.config.addoptions("someopt",
+            Option('--someopt', action="store_true",
                     dest="someopt", default=False))
         dist_rsync_roots = ['../dir']
         print_("added options", option)
@@ -20,13 +20,13 @@ def test_dist_conftest_options(testdir, recwarn):
         import py
         from %s import conftest
         from py.builtin import print_
-        def test_1(): 
+        def test_1():
             print_("config from test_1", py.test.config)
             print_("conftest from test_1", conftest.__file__)
             print_("test_1: py.test.config.option.someopt", py.test.config.option.someopt)
             print_("test_1: conftest", conftest)
             print_("test_1: conftest.option.someopt", conftest.option.someopt)
-            assert conftest.option.someopt 
+            assert conftest.option.someopt
     """ % p1.dirpath().purebasename ))
     result = testdir.runpytest('-d', '--tx=popen', p1, '--someopt')
     assert result.ret == 0
@@ -34,5 +34,5 @@ def test_dist_conftest_options(testdir, recwarn):
         "*Deprecation*pytest_addoptions*",
     ])
     result.stdout.fnmatch_lines([
-        "*1 passed*", 
+        "*1 passed*",
     ])

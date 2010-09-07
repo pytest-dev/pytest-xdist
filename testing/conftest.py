@@ -2,11 +2,11 @@ import py
 import execnet
 
 pytest_plugins = "pytester"
-    
+
 #rsyncdirs = ['.', '../xdist', py.path.local(execnet.__file__).dirpath()]
 
 def pytest_addoption(parser):
-    parser.addoption('--gx', 
+    parser.addoption('--gx',
        action="append", dest="gspecs", default=None,
        help=("add a global test environment, XSpec-syntax. "))
 
@@ -16,9 +16,9 @@ def getgspecs(config):
     return [execnet.XSpec(spec)
                 for spec in config.getvalueorskip("gspecs")]
 
-# configuration information for tests 
+# configuration information for tests
 def getgspecs(config):
-    return [execnet.XSpec(spec) 
+    return [execnet.XSpec(spec)
                 for spec in config.getvalueorskip("gspecs")]
 
 def getspecssh(config):

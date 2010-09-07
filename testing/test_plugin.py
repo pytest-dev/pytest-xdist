@@ -27,14 +27,14 @@ class TestDistOptions:
         xspecs = nodemanager._getxspecs()
         assert len(xspecs) == 2
         print(xspecs)
-        assert xspecs[0].popen 
+        assert xspecs[0].popen
         assert xspecs[1].ssh == "xyz"
 
     def test_xspecs_multiplied(self, testdir):
         config = testdir.parseconfigure("--tx=3*popen",)
         xspecs = NodeManager(config)._getxspecs()
         assert len(xspecs) == 3
-        assert xspecs[1].popen 
+        assert xspecs[1].popen
 
     def test_getrsyncdirs(self, testdir):
         config = testdir.parseconfigure('--rsyncdir=' + str(testdir.tmpdir))
@@ -48,14 +48,14 @@ class TestDistOptions:
         for bn in 'x y z'.split():
             p.mkdir(bn)
         testdir.makeconftest("""
-            rsyncdirs= 'x', 
+            rsyncdirs= 'x',
         """)
         config = testdir.parseconfigure(
               testdir.tmpdir, '--rsyncdir=y', '--rsyncdir=z')
         nm = NodeManager(config, specs=[execnet.XSpec("popen")])
         roots = nm._getrsyncdirs()
         assert len(roots) == 3 + 2 # pylib + xdist
-        assert py.path.local('y') in roots 
-        assert py.path.local('z') in roots 
-        assert testdir.tmpdir.join('x') in roots 
+        assert py.path.local('y') in roots
+        assert py.path.local('z') in roots
+        assert testdir.tmpdir.join('x') in roots
 

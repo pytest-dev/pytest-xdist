@@ -4,7 +4,7 @@ from xdist.nodemanage import NodeManager
 class pytest_funcarg__mysetup:
     def __init__(self, request):
         basetemp = request.config.mktemp(
-            "mysetup-%s" % request.function.__name__, 
+            "mysetup-%s" % request.function.__name__,
             numbered=True)
         self.source = basetemp.mkdir("source")
         self.dest = basetemp.mkdir("dest")
@@ -26,7 +26,7 @@ class TestNodeManager:
         assert p.join("dir1", "file1").check()
 
     def test_popen_rsync_subdir(self, testdir, mysetup):
-        source, dest = mysetup.source, mysetup.dest 
+        source, dest = mysetup.source, mysetup.dest
         dir1 = mysetup.source.mkdir("dir1")
         dir2 = dir1.mkdir("dir2")
         dir2.ensure("hello")
@@ -35,10 +35,10 @@ class TestNodeManager:
             nodemanager = NodeManager(testdir.parseconfig(
                 "--tx", "popen//chdir=%s" % dest,
                 "--rsyncdir", rsyncroot,
-                source, 
+                source,
             ))
             assert nodemanager.config.topdir == source
-            nodemanager.rsync_roots() 
+            nodemanager.rsync_roots()
             if rsyncroot == source:
                 dest = dest.join("source")
             assert dest.join("dir1").check()
@@ -105,7 +105,7 @@ class TestNodeManager:
         nodemanager.setup_nodes(putevent=[].append)
         for spec in nodemanager.gwmanager.specs:
             l = reprec.getcalls("pytest_trace")
-            assert l 
+            assert l
         nodemanager.teardown_nodes()
 
     def test_ssh_setup_nodes(self, specssh, testdir):
@@ -113,8 +113,8 @@ class TestNodeManager:
             def test_one():
                 pass
         """)
-        reprec = testdir.inline_run("-d", "--rsyncdir=%s" % testdir.tmpdir, 
+        reprec = testdir.inline_run("-d", "--rsyncdir=%s" % testdir.tmpdir,
                 "--tx", specssh, testdir.tmpdir)
         rep, = reprec.getreports("pytest_runtest_logreport")
-        assert rep.passed 
+        assert rep.passed
 

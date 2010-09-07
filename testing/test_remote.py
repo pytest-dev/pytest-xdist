@@ -1,6 +1,6 @@
 import py
 py.test.importorskip("execnet")
-from xdist.remote import LooponfailingSession, LoopState, RemoteControl 
+from xdist.remote import LooponfailingSession, LoopState, RemoteControl
 
 class TestRemoteControl:
     def test_nofailures(self, testdir):
@@ -15,7 +15,7 @@ class TestRemoteControl:
         control = RemoteControl(item.config)
         control.setup()
         failures = control.runsession()
-        assert failures 
+        assert failures
         control.setup()
         item.fspath.write("def test_func(): assert 1\n")
         pyc = item.fspath.new(ext=".pyc")
@@ -26,13 +26,13 @@ class TestRemoteControl:
 
     def test_failure_change(self, testdir):
         modcol = testdir.getitem("""
-            def test_func(): 
+            def test_func():
                 assert 0
         """)
         control = RemoteControl(modcol.config)
         control.setup()
         failures = control.runsession()
-        assert failures 
+        assert failures
         control.setup()
         modcol.fspath.write(py.code.Source("""
             def test_func():
@@ -63,7 +63,7 @@ class TestLooponFailing:
         loopstate = LoopState()
         session.loop_once(loopstate)
         assert len(loopstate.colitems) == 1
- 
+
         modcol.fspath.write(py.code.Source("""
             def test_one():
                 x = 15
@@ -73,7 +73,7 @@ class TestLooponFailing:
         """))
         assert session.statrecorder.check()
         session.loop_once(loopstate)
-        assert not loopstate.colitems 
+        assert not loopstate.colitems
 
     def test_looponfail_from_one_to_two_tests(self, testdir):
         modcol = testdir.getmodulecol("""
@@ -114,7 +114,7 @@ class TestLooponFailing:
 
         modcol.fspath.write(py.code.Source("""
             def test_xxx(): # renamed test
-                assert 0 
+                assert 0
             def test_two():
                 assert 1 # pass now
         """))
