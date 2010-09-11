@@ -1,13 +1,12 @@
 import py
-py.test.importorskip("execnet")
-from xdist.remote import LooponfailingSession, LoopState, RemoteControl
+from xdist.looponfail import RemoteControl
 
 class TestRemoteControl:
     def test_nofailures(self, testdir):
         item = testdir.getitem("def test_func(): pass\n")
         control = RemoteControl(item.config)
         control.setup()
-        failures = control.runsession()
+        topdir, failures = control.runsession()[:2]
         assert not failures
 
     def test_failures_somewhere(self, testdir):
@@ -21,7 +20,7 @@ class TestRemoteControl:
         pyc = item.fspath.new(ext=".pyc")
         if pyc.check():
             pyc.remove()
-        failures = control.runsession(failures)
+        topdir, failures = control.runsession()[:2]
         assert not failures
 
     def test_failure_change(self, testdir):
@@ -30,10 +29,8 @@ class TestRemoteControl:
                 assert 0
         """)
         control = RemoteControl(modcol.config)
-        control.setup()
-        failures = control.runsession()
-        assert failures
-        control.setup()
+        control.loop_once()
+        assert control.failures
         modcol.fspath.write(py.code.Source("""
             def test_func():
                 assert 1
@@ -43,12 +40,26 @@ class TestRemoteControl:
         pyc = modcol.fspath.new(ext=".pyc")
         if pyc.check():
             pyc.remove()
-        failures = control.runsession(failures)
-        assert not failures
-        control.setup()
-        failures = control.runsession()
-        assert failures
-        assert str(failures).find("test_new") != -1
+        control.loop_once()
+        assert not control.failures
+        control.loop_once()
+        assert control.failures
+        assert str(control.failures).find("test_new") != -1
+
+    def test_failure_subdir_no_init(self, testdir):
+        modcol = testdir.getitem("""
+            def test_func():
+                assert 0
+        """)
+        parent = modcol.fspath.dirpath().dirpath()
+        parent.chdir()
+        modcol.config.args = [py.path.local(x).relto(parent)
+                                for x in modcol.config.args]
+        control = RemoteControl(modcol.config)
+        control.loop_once()
+        assert control.failures
+        control.loop_once()
+        assert control.failures
 
 class TestLooponFailing:
     def test_looponfail_from_fail_to_ok(self, testdir):
@@ -59,32 +70,29 @@ class TestLooponFailing:
             def test_two():
                 assert 1
         """)
-        session = LooponfailingSession(modcol.config)
-        loopstate = LoopState()
-        session.loop_once(loopstate)
-        assert len(loopstate.colitems) == 1
+        remotecontrol = RemoteControl(modcol.config)
+        remotecontrol.loop_once()
+        assert len(remotecontrol.failures) == 1
 
         modcol.fspath.write(py.code.Source("""
             def test_one():
-                x = 15
-                assert x == 15
+                assert 1
             def test_two():
                 assert 1
         """))
-        assert session.statrecorder.check()
-        session.loop_once(loopstate)
-        assert not loopstate.colitems
+        removepyc(modcol.fspath)
+        remotecontrol.loop_once()
+        assert not remotecontrol.failures
 
     def test_looponfail_from_one_to_two_tests(self, testdir):
         modcol = testdir.getmodulecol("""
             def test_one():
                 assert 0
         """)
-        session = LooponfailingSession(modcol.config)
-        loopstate = LoopState()
-        loopstate.colitems = []
-        session.loop_once(loopstate)
-        assert len(loopstate.colitems) == 1
+        remotecontrol = RemoteControl(modcol.config)
+        remotecontrol.loop_once()
+        assert len(remotecontrol.failures) == 1
+        assert 'test_one' in remotecontrol.failures[0]
 
         modcol.fspath.write(py.code.Source("""
             def test_one():
@@ -92,12 +100,13 @@ class TestLooponFailing:
             def test_two():
                 assert 0 # new and fails
         """))
-        assert session.statrecorder.check()
-        session.loop_once(loopstate)
-        assert len(loopstate.colitems) == 0
-
-        session.loop_once(loopstate)
-        assert len(loopstate.colitems) == 1
+        removepyc(modcol.fspath)
+        remotecontrol.loop_once()
+        assert len(remotecontrol.failures) == 0
+        remotecontrol.loop_once()
+        assert len(remotecontrol.failures) == 1
+        assert 'test_one' not in remotecontrol.failures[0]
+        assert 'test_two' in remotecontrol.failures[0]
 
     def test_looponfail_removed_test(self, testdir):
         modcol = testdir.getmodulecol("""
@@ -106,11 +115,9 @@ class TestLooponFailing:
             def test_two():
                 assert 0
         """)
-        session = LooponfailingSession(modcol.config)
-        loopstate = LoopState()
-        loopstate.colitems = []
-        session.loop_once(loopstate)
-        assert len(loopstate.colitems) == 2
+        remotecontrol = RemoteControl(modcol.config)
+        remotecontrol.loop_once()
+        assert len(remotecontrol.failures) == 2
 
         modcol.fspath.write(py.code.Source("""
             def test_xxx(): # renamed test
@@ -118,20 +125,23 @@ class TestLooponFailing:
             def test_two():
                 assert 1 # pass now
         """))
-        assert session.statrecorder.check()
-        session.loop_once(loopstate)
-        assert len(loopstate.colitems) == 0
+        removepyc(modcol.fspath)
+        remotecontrol.loop_once()
+        assert len(remotecontrol.failures) == 0
 
-        session.loop_once(loopstate)
-        assert len(loopstate.colitems) == 1
+        remotecontrol.loop_once()
+        assert len(remotecontrol.failures) == 1
 
 
-    def test_looponfail_functional_fail_to_ok(self, testdir):
+class TestFunctional:
+    def test_fail_to_ok(self, testdir):
         p = testdir.makepyfile("""
             def test_one():
                 x = 0
                 assert x == 1
         """)
+        #p = testdir.mkdir("sub").join(p1.basename)
+        #p1.move(p)
         child = testdir.spawn_pytest("-f %s --traceconfig" % p)
         child.expect("def test_one")
         child.expect("x == 1")
@@ -146,7 +156,7 @@ class TestLooponFailing:
         child.expect(".*1 passed.*")
         child.kill(15)
 
-    def test_looponfail_xfail_passes(self, testdir):
+    def test_xfail_passes(self, testdir):
         p = testdir.makepyfile("""
             import py
             @py.test.mark.xfail
@@ -159,3 +169,8 @@ class TestLooponFailing:
         child.expect("waiting for changes")
         child.kill(15)
 
+def removepyc(path):
+    # XXX damn those pyc files
+    pyc = path + "c"
+    if pyc.check():
+        pyc.remove()

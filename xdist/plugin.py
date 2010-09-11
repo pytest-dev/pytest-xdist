@@ -195,16 +195,27 @@ def pytest_configure(config):
         if val("looponfail"):
             if usepdb:
                 raise config.Error("--pdb incompatible with --looponfail.")
-            from xdist.remote import LooponfailingSession
-            config.setsessionclass(LooponfailingSession)
-            config._isdistsession = True
         elif val("dist") != "no":
             if usepdb:
                 raise config.Error("--pdb incompatible with distributing tests.")
-            from xdist.dsession import DSession
-            config.setsessionclass(DSession)
-            config._isdistsession = True
 
+def pytest_cmdline_main(config):
+    if config.getvalue("looponfail"):
+        from xdist.looponfail import looponfail_main
+        looponfail_main(config)
+        return 2 # looponfail only can get stop with ctrl-C anyway
+    elif config.getvalue("dist"):
+        pass
+    return
+    from py._test.session import Session, Collection
+    collection = Collection(config)
+    # instantiate session already because it
+    # records failures and implements maxfail handling
+    session = Session(config, collection)
+    exitstatus = collection.do_collection()
+    if not exitstatus:
+        exitstatus = session.main()
+    return exitstatus
 
 def pytest_sessionstart(session):
     config = session.config
