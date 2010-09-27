@@ -25,8 +25,7 @@ class GatewayManager:
         assert not list(self.group)
         for spec in self.specs:
             gw = self.group.makegateway(spec)
-            self.hook.pytest_gwmanage_newgateway(
-                gateway=gw, platinfo=gw._rinfo())
+            self.hook.pytest_gwmanage_newgateway(gateway=gw)
 
     def rsync(self, source, notify=None, verbose=False, ignores=None):
         """ perform rsync to all remote hosts.

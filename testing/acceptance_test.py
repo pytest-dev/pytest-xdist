@@ -51,8 +51,7 @@ class TestDistribution:
         )
         result = testdir.runpytest(p1, "-v", '-d', '--tx=popen', '--tx=popen')
         result.stdout.fnmatch_lines([
-            "*0*popen*Python*",
-            "*1*popen*Python*",
+            "*1*Python*",
             "*2 failed, 1 passed, 1 skipped*",
         ])
         assert result.ret == 1
@@ -89,9 +88,7 @@ class TestDistribution:
         """)
         result = testdir.runpytest(p1, '-d', "-v")
         result.stdout.fnmatch_lines([
-            "*0*popen*Python*",
-            "*1*popen*Python*",
-            "*2*popen*Python*",
+            "*2*Python*",
             "*2 failed, 1 passed, 1 skipped*",
         ])
         assert result.ret == 1
@@ -120,8 +117,8 @@ class TestDistribution:
         )
         result = testdir.runpytest(p1, "-v", '-d', '-n1')
         result.stdout.fnmatch_lines([
-            "*popen*Python*",
-            "*test_ok*PASS*",
+            "*Python*",
+            "*PASS**test_ok*",
             "*node*down*",
             "*3 failed, 1 passed, 1 skipped*"
         ])
@@ -139,7 +136,7 @@ class TestDistribution:
             "--tx=popen//chdir=%(dest)s" % locals(), p)
         assert result.ret == 0
         result.stdout.fnmatch_lines([
-            "*0* *popen*platform*",
+            "*0* *cwd*",
             #"RSyncStart: [G1]",
             #"RSyncFinished: [G1]",
             "*1 passed*"
@@ -196,7 +193,7 @@ class TestDistribution:
         p1 = testdir.makepyfile("def test_func(): pass")
         result = testdir.runpytest("-v", p1, '-d', '--tx=popen')
         result.stdout.fnmatch_lines([
-            "*popen*Python*",
+            "*0*Python*",
             "*calculated result is 49*",
             "*1 passed*"
         ])
@@ -251,15 +248,13 @@ class TestTerminalReporting:
                 assert 0
         """)
         result = testdir.runpytest("-n1", "-v")
-        expected = [
+        result.stdout.fnmatch_lines_random([
             "*PASS*test_pass_skip_fail.py:2: *test_ok*",
             "*SKIP*test_pass_skip_fail.py:4: *test_skip*",
             "*FAIL*test_pass_skip_fail.py:6: *test_func*",
-        ]
-        for line in expected:
-            result.stdout.fnmatch_lines([line])
+        ])
         result.stdout.fnmatch_lines([
-            "    def test_func():",
+            "*def test_func():",
             ">       assert 0",
             "E       assert 0",
         ])
@@ -272,8 +267,8 @@ class TestTerminalReporting:
         result = testdir.runpytest("-n1", "-v")
         result.stdout.fnmatch_lines([
             "*FAIL*test_fail_platinfo.py:1: *test_func*",
-            "*popen*Python*",
-            "    def test_func():",
+            "*0*Python*",
+            "*def test_func():",
             ">       assert 0",
             "E       assert 0",
         ])

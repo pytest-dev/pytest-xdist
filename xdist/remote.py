@@ -103,7 +103,7 @@ class SlaveController(object):
             if eventname in ("collectionstart"):
                 self.log("ignoring %s(%s)" %(eventname, kwargs))
             elif eventname == "slaveready":
-                self.notify_inproc(eventname, node=self)
+                self.notify_inproc(eventname, node=self, **kwargs)
             elif eventname == "slavefinished":
                 self._down = True
                 self.slaveoutput = kwargs['slaveoutput']
@@ -166,7 +166,8 @@ class SlaveInteractor:
     def pytest_sessionstart(self, session):
         self.session = session
         self.collection = session.collection
-        self.sendevent("slaveready")
+        slaveinfo = getinfodict()
+        self.sendevent("slaveready", slaveinfo=slaveinfo)
 
     def pytest_sessionfinish(self, __multicall__, exitstatus):
         self.config.slaveoutput['exitstatus'] = exitstatus
@@ -225,3 +226,13 @@ def unserialize_report(reportdict):
     else:
         return runner.TestReport(**d)
 
+def getinfodict():
+    import os, sys, platform
+    return dict(
+        version = sys.version,
+        version_info = tuple(sys.version_info),
+        sysplatform = sys.platform,
+        platform = platform.platform(),
+        executable = sys.executable,
+        cwd = os.getcwd(),
+    )

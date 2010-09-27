@@ -156,7 +156,11 @@ class DSession:
             exitstatus=exitstatus,)
         return exitstatus
 
-    def slave_slaveready(self, node):
+    def slave_slaveready(self, node, slaveinfo):
+        node.slaveinfo = slaveinfo
+        node.slaveinfo['id'] = node.gateway.id
+        node.slaveinfo['spec'] = node.gateway.spec
+        self.config.hook.pytest_testnodeready(node=node)
         self.sched.addnode(node)
         if self.shuttingdown:
             node.shutdown()
@@ -173,7 +177,7 @@ class DSession:
             self.session_finished = True
 
     def slave_errordown(self, node, error):
-        self.report_line("node %r down on error: %s" %(node.gateway.id, error,))
+        self.config.hook.pytest_testnodedown(node=node, error=error)
         crashitem = self.sched.remove_node(node)
         if crashitem:
             self.handle_crashitem(crashitem, node)
@@ -197,11 +201,13 @@ class DSession:
     def slave_testreport(self, node, rep):
         self.sched.remove_item(node, rep.nodeid)
         #self.report_line("testreport %s: %s" %(rep.id, rep.status))
+        enrich_report_with_platform_data(rep, node)
         self.config.hook.pytest_runtest_logreport(report=rep)
         self._handlefailures(rep)
 
     def slave_collectreport(self, node, rep):
         #self.report_line("collectreport %s: %s" %(rep.id, rep.status))
+        #rep.node = node
         self._handlefailures(rep)
 
     def _handlefailures(self, rep):
@@ -263,6 +269,7 @@ class DSession:
         msg = "Slave %r crashed while running %r" %(slave.gateway.id, nodeid)
         rep = runner.TestReport(nodeid, (), fspath, (fspath, None, fspath), (),
             "failed", msg, "???")
+        enrich_report_with_platform_data(rep, slave)
         self.config.hook.pytest_runtest_logreport(report=rep)
 
     def setup(self):
@@ -279,52 +286,39 @@ class DSession:
 
 class TerminalDistReporter:
     def __init__(self, config):
-        self.gateway2info = {}
         self.config = config
-        self.tplugin = config.pluginmanager.getplugin("terminal")
         self.tr = config.pluginmanager.getplugin("terminalreporter")
 
     def write_line(self, msg):
         self.tr.write_line(msg)
 
-    def pytest_itemstart(self, __multicall__):
-        try:
-            __multicall__.methods.remove(self.tr.pytest_itemstart)
-        except KeyError:
-            pass
-
-    def pytest_runtest_logreport(self, report):
-        if hasattr(report, 'node'):
-            report.headerlines.append(self.gateway2info.get(
-                report.node.gateway,
-                "node %r (platinfo not found? strange)"))
-
-    def pytest_gwmanage_newgateway(self, gateway, platinfo):
-        #self.write_line("%s instantiated gateway from spec %r" %(gateway.id, gateway.spec._spec))
-        d = {}
-        d['version'] = self.tplugin.repr_pythonversion(platinfo.version_info)
-        d['id'] = gateway.id
-        d['spec'] = gateway.spec._spec
-        d['platform'] = platinfo.platform
-        if self.config.option.verbose:
-            d['extra'] = "- " + platinfo.executable
-        else:
-            d['extra'] = ""
-        d['cwd'] = platinfo.cwd
-        infoline = ("[%(id)s] %(spec)s -- platform %(platform)s, "
-                        "Python %(version)s "
-                        "cwd: %(cwd)s"
-                        "%(extra)s" % d)
+    def pytest_gwmanage_newgateway(self, gateway):
+        rinfo = gateway._rinfo()
         if self.config.getvalue("verbose"):
-            self.write_line(infoline)
-        self.gateway2info[gateway] = infoline
+            version = "%s.%s.%s" %rinfo.version_info[:3]
+            self.write_line("[%s] %s Python %s cwd: %s" % (
+                gateway.id, rinfo.platform, version, rinfo.cwd))
 
     def pytest_testnodeready(self, node):
-        if self.config.getvalue("verbose"):
-            self.write_line(
-                "[%s] txnode ready to receive tests" %(node.gateway.id,))
+        if self.config.getvalue("debug"):
+            d = node.slaveinfo
+            infoline = "[%s] -- Python %s" %(
+                d['id'],
+                d['version'].replace('\n', ' -- '),)
+            self.write_line(infoline)
 
     def pytest_testnodedown(self, node, error):
         if not error:
             return
-        self.write_line("[%s] node down, error: %s" %(node.gateway.id, error))
+        self.write_line("[%s] node down: %s" %(node.gateway.id, error))
+
+def enrich_report_with_platform_data(rep, node):
+    rep.node = node
+    if hasattr(rep, 'node') and rep.longrepr:
+        d = node.slaveinfo
+        ver = "%s.%s.%s" % d['version_info'][:3]
+        infoline = "[%s] %s -- Python %s %s" % (
+            d['id'], d['sysplatform'], ver, d['executable'])
+        # XXX more structured longrepr? 
+        rep.longrepr = infoline + "\n\n" + str(rep.longrepr)
+
