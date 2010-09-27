@@ -1,7 +1,6 @@
 import py
-
 import execnet
-from xdist.nodemanage import NodeManager
+from xdist.slavemanage import NodeManager
 
 def test_dist_incompatibility_messages(testdir):
     result = testdir.runpytest("--pdb", "--looponfail")
@@ -14,10 +13,13 @@ def test_dist_incompatibility_messages(testdir):
     assert "incompatible" in result.stderr.str()
 
 def test_dist_options(testdir):
+    from xdist.plugin import check_options
     config = testdir.parseconfigure("-n 2")
+    check_options(config)
     assert config.option.dist == "load"
     assert config.option.tx == ['popen'] * 2
     config = testdir.parseconfigure("-d")
+    check_options(config)
     assert config.option.dist == "load"
 
 class TestDistOptions:
@@ -40,7 +42,7 @@ class TestDistOptions:
         config = testdir.parseconfigure('--rsyncdir=' + str(testdir.tmpdir))
         nm = NodeManager(config, specs=[execnet.XSpec("popen")])
         roots = nm._getrsyncdirs()
-        assert len(roots) == 1 + 2 # pylib + xdist
+        assert len(roots) == 1 + 1 # pylib
         assert testdir.tmpdir in roots
 
     def test_getrsyncdirs_with_conftest(self, testdir):
@@ -54,7 +56,7 @@ class TestDistOptions:
               testdir.tmpdir, '--rsyncdir=y', '--rsyncdir=z')
         nm = NodeManager(config, specs=[execnet.XSpec("popen")])
         roots = nm._getrsyncdirs()
-        assert len(roots) == 3 + 2 # pylib + xdist
+        assert len(roots) == 3 + 1 # pylib
         assert py.path.local('y') in roots
         assert py.path.local('z') in roots
         assert testdir.tmpdir.join('x') in roots

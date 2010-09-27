@@ -1,6 +1,6 @@
 import py
-from xdist.remote import SlaveController
-from xdist.remote import serialize_report, unserialize_report
+from xdist.slavemanage import SlaveController, unserialize_report
+from xdist.remote import serialize_report
 import execnet
 queue = py.builtin._tryimport("queue", "Queue")
 from py.builtin import print_

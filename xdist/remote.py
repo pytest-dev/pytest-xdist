@@ -1,150 +1,13 @@
 """
-    Implement --dist=* testing
+    This module is executed in remote subprocesses and helps to
+    control a remote testing session and relay back information.
+    It assumes that 'py' is importable and does not have dependencies
+    on the rest of the xdist code.  This means that the xdist-plugin
+    needs not to be installed in remote environments.
 """
 
-import py
-import sys
-from py._plugin import pytest_runner as runner # XXX load dynamically
+import sys, os
 
-def make_reltoroot(roots, args):
-    # XXX introduce/use public API for splitting py.test args
-    splitcode = "::"
-    l = []
-    for arg in args:
-        parts = arg.split(splitcode)
-        fspath = py.path.local(parts[0])
-        for root in roots:
-            x = fspath.relto(root)
-            if x or fspath == root:
-                parts[0] = root.basename + "/" + x
-                break
-        else:
-            raise ValueError("arg %s not relative to an rsync root" % (arg,))
-        l.append(splitcode.join(parts))
-    return l
-    
-class SlaveController(object):
-    ENDMARK = -1
-
-    def __init__(self, nodemanager, gateway, config, putevent):
-        self.nodemanager = nodemanager
-        self.putevent = putevent
-        self.gateway = gateway
-        self.config = config
-        self.slaveinput = {'slaveid': gateway.id}
-        self._down = False
-        self.log = py.log.Producer("slavectl-%s" % gateway.id)
-        if not self.config.option.debug:
-            py.log.setconsumer(self.log._keywords, None)
-
-    def __repr__(self):
-        return "<%s %s>" %(self.__class__.__name__, self.gateway.id,)
-
-    def setup(self):
-        self.log("setting up slave session")
-        spec = self.gateway.spec
-        args = self.config.args
-        if not spec.popen or spec.chdir:
-            args = make_reltoroot(self.nodemanager.roots, args)
-        self.config.hook.pytest_configure_node(node=self)
-        self.channel = self.gateway.remote_exec(init_slave_session,
-            slaveinput=self.slaveinput,
-            args=args, option_dict=vars(self.config.option),
-        )
-        if self.putevent:
-            self.channel.setcallback(self.process_from_remote,
-                endmarker=self.ENDMARK)
-
-    def ensure_teardown(self):
-        if hasattr(self, 'channel'):
-            if not self.channel.isclosed():
-                self.log("closing", self.channel)
-                self.channel.close()
-            #del self.channel
-        if hasattr(self, 'gateway'):
-            self.log("exiting", self.gateway)
-            self.gateway.exit()
-            #del self.gateway
-
-    def send_runtest(self, nodeid):
-        self.sendcommand("runtests", ids=[nodeid])
-
-    def shutdown(self):
-        if not self._down and not self.channel.isclosed():
-            self.sendcommand("shutdown")
-
-    def sendcommand(self, name, **kwargs):
-        """ send a named parametrized command to the other side. """
-        self.log("sending command %s(**%s)" % (name, kwargs))
-        self.channel.send((name, kwargs))
-
-    def notify_inproc(self, eventname, **kwargs):
-        self.log("queuing %s(**%s)" % (eventname, kwargs))
-        self.putevent((eventname, kwargs))
-
-    def process_from_remote(self, eventcall):
-        """ this gets called for each object we receive from
-            the other side and if the channel closes.
-
-            Note that channel callbacks run in the receiver
-            thread of execnet gateways - we need to
-            avoid raising exceptions or doing heavy work.
-        """
-        try:
-            if eventcall == self.ENDMARK:
-                err = self.channel._getremoteerror()
-                if not self._down:
-                    if not err or isinstance(err, EOFError):
-                        err = "Not properly terminated" # lost connection?
-                    self.notify_inproc("errordown", node=self, error=err)
-                    self._down = True
-                return
-            eventname, kwargs = eventcall
-            if eventname in ("collectionstart"):
-                self.log("ignoring %s(%s)" %(eventname, kwargs))
-            elif eventname == "slaveready":
-                self.notify_inproc(eventname, node=self, **kwargs)
-            elif eventname == "slavefinished":
-                self._down = True
-                self.slaveoutput = kwargs['slaveoutput']
-                self.notify_inproc("slavefinished", node=self)
-            #elif eventname == "logstart":
-            #    self.notify_inproc(eventname, node=self, **kwargs)
-            elif eventname in ("testreport", "collectreport"):
-                rep = unserialize_report(kwargs['data'])
-                self.notify_inproc(eventname, node=self, rep=rep)
-            elif eventname == "collectionfinish":
-                self.notify_inproc(eventname, node=self, ids=kwargs['ids'])
-            else:
-                raise ValueError("unknown event: %s" %(eventname,))
-        except KeyboardInterrupt:
-            # should not land in receiver-thread
-            raise
-        except:
-            excinfo = py.code.ExceptionInfo()
-            py.builtin.print_("!" * 20, excinfo)
-            self.config.pluginmanager.notify_exception(excinfo)
-
-def init_slave_session(channel, slaveinput, args, option_dict):
-    import py
-    from xdist.remote import remote_initconfig, SlaveInteractor
-    config = remote_initconfig(py.test.config, option_dict, args)
-    config.slaveinput = slaveinput
-    config.slaveoutput = {}
-    interactor = SlaveInteractor(config, channel)
-    config.hook.pytest_cmdline_main(config=config)
-
-def remote_initconfig(config, option_dict, args):
-    config._preparse(args)
-    config.option.__dict__.update(option_dict)
-    config.option.looponfail = False
-    config.option.usepdb = False
-    config.option.dist = "no"
-    config.option.distload = False
-    config.option.numprocesses = None
-    config.args = args
-    return config
-    
 class SlaveInteractor:
     def __init__(self, config, channel):
         self.config = config
@@ -210,6 +73,7 @@ class SlaveInteractor:
         self.sendevent("collectreport", data=data)
 
 def serialize_report(rep):
+    import py
     d = rep.__dict__.copy()
     d['longrepr'] = rep.longrepr and str(rep.longrepr) or None
     for name in d:
@@ -219,15 +83,8 @@ def serialize_report(rep):
             d[name] = None # for now
     return d
 
-def unserialize_report(reportdict):
-    d = reportdict
-    if 'result' in d:
-        return runner.CollectReport(**d)
-    else:
-        return runner.TestReport(**d)
-
 def getinfodict():
-    import os, sys, platform
+    import platform
     return dict(
         version = sys.version,
         version_info = tuple(sys.version_info),
@@ -236,3 +93,24 @@ def getinfodict():
         executable = sys.executable,
         cwd = os.getcwd(),
     )
+
+def remote_initconfig(config, option_dict, args):
+    config._preparse(args)
+    config.option.__dict__.update(option_dict)
+    config.option.looponfail = False
+    config.option.usepdb = False
+    config.option.dist = "no"
+    config.option.distload = False
+    config.option.numprocesses = None
+    config.args = args
+    return config
+    
+
+if __name__ == '__channelexec__':
+    slaveinput,args,option_dict = channel.receive()
+    import py
+    config = remote_initconfig(py.test.config, option_dict, args)
+    config.slaveinput = slaveinput
+    config.slaveoutput = {}
+    interactor = SlaveInteractor(config, channel)
+    config.hook.pytest_cmdline_main(config=config)

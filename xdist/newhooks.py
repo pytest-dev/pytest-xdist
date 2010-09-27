@@ -1,5 +1,5 @@
 
-def pytest_gwmanage_newgateway(gateway, platinfo):
+def pytest_gwmanage_newgateway(gateway):
     """ called on new raw gateway creation. """
 
 def pytest_gwmanage_rsyncstart(source, gateways):

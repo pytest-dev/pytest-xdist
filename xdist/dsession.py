@@ -1,6 +1,6 @@
 import py
 import sys
-from xdist.nodemanage import NodeManager
+from xdist.slavemanage import NodeManager
 from py._test import session
 queue = py.builtin._tryimport('queue', 'Queue')
 
