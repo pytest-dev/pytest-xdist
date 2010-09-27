@@ -162,8 +162,13 @@ class DSession:
             node.shutdown()
 
     def slave_slavefinished(self, node):
+        self.config.hook.pytest_testnodedown(node=node, error=None)
+        if node.slaveoutput['exitstatus'] == 2: # keyboard-interrupt
+            self.shouldstop = "%s received keyboard-interrupt" % (node,)
+            self.slave_errordown(node, "keyboard-interrupt")
+            return
         crashitem = self.sched.remove_node(node)
-        assert not crashitem, (crashitem, node)
+        #assert not crashitem, (crashitem, node)
         if self.shuttingdown and not self.sched.hasnodes():
             self.session_finished = True
 

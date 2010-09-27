@@ -4,11 +4,10 @@
 
 import py
 import sys
-import execnet
 from py._plugin import pytest_runner as runner # XXX load dynamically
 
 def make_reltoroot(roots, args):
-    # XXX introduce/use public API for splitting args
+    # XXX introduce/use public API for splitting py.test args
     splitcode = "::"
     l = []
     for arg in args:
@@ -32,6 +31,7 @@ class SlaveController(object):
         self.putevent = putevent
         self.gateway = gateway
         self.config = config
+        self.slaveinput = {'slaveid': gateway.id}
         self._down = False
         self.log = py.log.Producer("slavectl-%s" % gateway.id)
         if not self.config.option.debug:
@@ -46,7 +46,9 @@ class SlaveController(object):
         args = self.config.args
         if not spec.popen or spec.chdir:
             args = make_reltoroot(self.nodemanager.roots, args)
+        self.config.hook.pytest_configure_node(node=self)
         self.channel = self.gateway.remote_exec(init_slave_session,
+            slaveinput=self.slaveinput,
             args=args, option_dict=vars(self.config.option),
         )
         if self.putevent:
@@ -123,14 +125,12 @@ class SlaveController(object):
             py.builtin.print_("!" * 20, excinfo)
             self.config.pluginmanager.notify_exception(excinfo)
 
-def init_slave_session(channel, args, option_dict):
+def init_slave_session(channel, slaveinput, args, option_dict):
     import py
-    #outchannel = channel.gateway.newchannel()
-    #sys.stdout = sys.stderr = outchannel.makefile('w')
-    #channel.send(outchannel)
-    #fullwidth, hasmarkup = channel.receive()
     from xdist.remote import remote_initconfig, SlaveInteractor
     config = remote_initconfig(py.test.config, option_dict, args)
+    config.slaveinput = slaveinput
+    config.slaveoutput = {}
     interactor = SlaveInteractor(config, channel)
     config.hook.pytest_cmdline_main(config=config)
 
@@ -148,7 +148,8 @@ def remote_initconfig(config, option_dict, args):
 class SlaveInteractor:
     def __init__(self, config, channel):
         self.config = config
-        self.log = py.log.Producer("slave")
+        self.slaveid = config.slaveinput.get('slaveid', "?")
+        self.log = py.log.Producer("slave-%s" % self.slaveid)
         if not config.option.debug:
             py.log.setconsumer(self.log._keywords, None)
         self.channel = channel
@@ -167,8 +168,11 @@ class SlaveInteractor:
         self.collection = session.collection
         self.sendevent("slaveready")
 
-    def pytest_sessionfinish(self):
-        self.sendevent("slavefinished", slaveoutput={})
+    def pytest_sessionfinish(self, __multicall__, exitstatus):
+        self.config.slaveoutput['exitstatus'] = exitstatus
+        res = __multicall__.execute()
+        self.sendevent("slavefinished", slaveoutput=self.config.slaveoutput)
+        return res
 
     def pytest_perform_collection(self, session):
         self.sendevent("collectionstart")
@@ -188,7 +192,6 @@ class SlaveInteractor:
         return True
 
     def pytest_log_finishcollection(self, collection):
-        self.log("pytest_log_finishcollection")
         ids = [collection.getid(item) for item in collection.items]
         self.sendevent("collectionfinish",
             topdir=str(collection.topdir),

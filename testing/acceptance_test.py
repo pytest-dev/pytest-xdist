@@ -175,8 +175,8 @@ class TestDistribution:
                 node.slaveinput['a'] = 42
                 node.slaveinput['b'] = 7
 
-            # This hook only takes action on slave.
             def pytest_configure(config):
+                # this attribute is only set on slaves
                 if hasattr(config, 'slaveinput'):
                     a = config.slaveinput['a']
                     b = config.slaveinput['b']
@@ -187,7 +187,6 @@ class TestDistribution:
             def pytest_testnodedown(node, error):
                 node.config.calc_result = node.slaveoutput['r']
 
-            # This hook only takes action on master.
             def pytest_terminal_summary(terminalreporter):
                 if not hasattr(terminalreporter.config, 'slaveinput'):
                     calc_result = terminalreporter.config.calc_result
@@ -210,18 +209,20 @@ class TestDistribution:
         """)
         testdir.makeconftest("""
             def pytest_sessionfinish(session):
+                # on the slave
                 if hasattr(session.config, 'slaveoutput'):
                     session.config.slaveoutput['s2'] = 42
+            # on the master
             def pytest_testnodedown(node, error):
                 assert node.slaveoutput['s2'] == 42
                 print ("s2call-finished")
         """)
-        args = ["-n1"]
+        args = ["-n1", "--debug"]
         result = testdir.runpytest(*args)
         s = result.stdout.str()
-        assert result.ret
-        assert 'SIGINT' in s
+        assert result.ret == 2
         assert 's2call' in s
+        assert "Interrupted" in s
 
     def test_keyboard_interrupt_dist(self, testdir):
         # xxx could be refined to check for return code
