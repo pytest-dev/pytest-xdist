@@ -2,7 +2,6 @@ import py
 import sys
 from xdist.nodemanage import NodeManager
 from py._test import session
-import kwlog
 queue = py.builtin._tryimport('queue', 'Queue')
 
 def dsession_main(config):
@@ -24,9 +23,10 @@ class LoadScheduling:
         self.node2collection = {}
         self.pending = []
         if log is None:
-            self.log = kwlog.Producer("loadsched")
+            self.log = py.log.Producer("loadsched")
         else:
             self.log = log.loadsched
+        self.collection_is_completed = False
 
     def hasnodes(self):
         return bool(self.node2pending)
@@ -34,11 +34,8 @@ class LoadScheduling:
     def addnode(self, node):
         self.node2pending[node] = []
 
-    def collection_is_completed(self):
-        return len(self.node2collection) == self.numnodes
-
     def tests_finished(self):
-        if not self.collection_is_completed() or self.pending:
+        if not self.collection_is_completed or self.pending:
             return False
         for items in self.node2pending.values():
             if items:
@@ -46,8 +43,11 @@ class LoadScheduling:
         return True
 
     def addnode_collection(self, node, collection):
+        assert not self.collection_is_completed
         assert node in self.node2pending
         self.node2collection[node] = list(collection)
+        if len(self.node2collection) >= self.numnodes:
+            self.collection_is_completed = True
 
     def remove_item(self, node, item):
         if item not in self.item2nodes:
@@ -65,6 +65,9 @@ class LoadScheduling:
             pending.append(item)
             self.item2nodes.setdefault(item, []).append(node)
             node.send_runtest(item)
+        #self.log("items waiting for node: %d" %(len(self.pending)))
+        #self.log("item2pending still executing: %s" %(self.item2nodes,))
+        #self.log("node2pending: %s" %(self.node2pending,))
 
     def remove_node(self, node):
         pending = self.node2pending.pop(node)
@@ -81,7 +84,7 @@ class LoadScheduling:
         return crashitem
 
     def init_distribute(self):
-        assert self.collection_is_completed()
+        assert self.collection_is_completed
         assert not hasattr(self, 'item2nodes')
         self.item2nodes = {}
         # XXX allow nodes to have different collections
@@ -111,7 +114,7 @@ class LoadScheduling:
                     break
             del self.pending[:i+1]
         if self.pending:
-            self.log.debug("triggertesting remaining:", len(self.pending))
+            self.log("triggertesting remaining:", len(self.pending))
 
 class Interrupted(KeyboardInterrupt):
     """ signals an immediate interruption. """
@@ -119,9 +122,9 @@ class Interrupted(KeyboardInterrupt):
 class DSession:
     def __init__(self, config):
         self.config = config
-        self.log = kwlog.Producer("dsession")
-        #kwlog.setconsumer(self.log, kwlog.Path("/tmp/x.log"))
-        kwlog.setconsumer(self.log, None)
+        self.log = py.log.Producer("dsession")
+        if not config.option.debug:
+            py.log.setconsumer(self.log._keywords, None)
         self.shuttingdown = False
         self.countfailures = 0
         self.maxfail = config.getvalue("maxfail")
@@ -156,7 +159,7 @@ class DSession:
     def slave_slaveready(self, node):
         self.sched.addnode(node)
         if self.shuttingdown:
-            node.sendcommand("shutdown")
+            node.shutdown()
 
     def slave_slavefinished(self, node):
         crashitem = self.sched.remove_node(node)
@@ -178,7 +181,7 @@ class DSession:
         self.report_line("[%s] collected %d test items" %(
             node.gateway.id, len(ids)))
 
-        if self.sched.collection_is_completed():
+        if self.sched.collection_is_completed:
             self.sched.init_distribute()
             self.sched.triggertesting()
 
@@ -204,15 +207,16 @@ class DSession:
                     self.countfailures)
 
     def loop(self):
-        self.sched = LoadScheduling(len(self.config.option.tx), log=self.log)
+        numnodes = len(self.nodemanager.gwmanager.specs)
+        self.sched = LoadScheduling(numnodes, log=self.log)
         self.shouldstop = False
         self.session_finished = False
         exitstatus = 0
         try:
-            while not (self.session_finished or self.shouldstop):
+            while not self.session_finished:
                 self.loop_once()
-            if self.shouldstop:
-                raise Interrupted(str(self.shouldstop))
+                if self.shouldstop:
+                    raise Interrupted(str(self.shouldstop))
         except KeyboardInterrupt:
             excinfo = py.code.ExceptionInfo()
             self.config.hook.pytest_keyboard_interrupt(excinfo=excinfo)
@@ -236,12 +240,13 @@ class DSession:
         assert callname, kwargs
         method = "slave_" + callname
         call = getattr(self, method)
-        self.log.debug("calling method: %s(**%s)" % (method, kwargs))
+        self.log("calling method: %s(**%s)" % (method, kwargs))
         call(**kwargs)
         if self.sched.tests_finished():
             self.triggershutdown()
 
     def triggershutdown(self):
+        self.log("triggering shutdown")
         self.shuttingdown = True
         for node in self.sched.node2pending:
             node.shutdown()

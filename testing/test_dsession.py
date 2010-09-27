@@ -37,11 +37,11 @@ class TestLoadScheduling:
         sched.addnode(node1)
         sched.addnode(node2)
         collection = ["a.py::test_1", "a.py::test_2"]
-        assert not sched.collection_is_completed()
+        assert not sched.collection_is_completed
         sched.addnode_collection(node1, collection)
-        assert not sched.collection_is_completed()
+        assert not sched.collection_is_completed
         sched.addnode_collection(node2, collection)
-        assert sched.collection_is_completed()
+        assert sched.collection_is_completed
         assert sched.node2collection[node1] == collection
         assert sched.node2collection[node2] == collection
         sched.init_distribute()
@@ -87,12 +87,12 @@ class TestLoadScheduling:
         sched.addnode(node)
         collection = ["test_file.py::test_func"]
         sched.addnode_collection(node, collection)
-        assert sched.collection_is_completed()
+        assert sched.collection_is_completed
         sched.init_distribute()
         sched.triggertesting()
         assert not sched.pending
-        sched.remove_node(node)
-        assert sched.pending == collection
+        crashitem = sched.remove_node(node)
+        assert crashitem == collection[0]
 
 
 class TestDSession:

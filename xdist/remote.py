@@ -5,38 +5,50 @@
 import py
 import sys
 import execnet
-import kwlog
 from py._plugin import pytest_runner as runner # XXX load dynamically
 
+def make_reltoroot(roots, args):
+    # XXX introduce/use public API for splitting args
+    splitcode = "::"
+    l = []
+    for arg in args:
+        parts = arg.split(splitcode)
+        fspath = py.path.local(parts[0])
+        for root in roots:
+            x = fspath.relto(root)
+            if x or fspath == root:
+                parts[0] = root.basename + "/" + x
+                break
+        else:
+            raise ValueError("arg %s not relative to an rsync root" % (arg,))
+        l.append(splitcode.join(parts))
+    return l
+    
 class SlaveController(object):
     ENDMARK = -1
 
     def __init__(self, nodemanager, gateway, config, putevent):
-        #self.nodemanager = nodemanager
+        self.nodemanager = nodemanager
         self.putevent = putevent
         self.gateway = gateway
         self.config = config
-        self.status = None
         self._down = False
-        self.status = "gateway-init"
+        self.log = py.log.Producer("slavectl-%s" % gateway.id)
+        if not self.config.option.debug:
+            py.log.setconsumer(self.log._keywords, None)
 
     def __repr__(self):
-        return "<%s id=%s status=%s>" %(self.__class__.__name__,
-            self.gateway.id, self.status)
-
-    def trace(self, *args):
-        if self.config.option.debug:
-            msg = " ".join([str(x) for x in args])
-            py.builtin.print_("SlaveController:", msg)
+        return "<%s %s>" %(self.__class__.__name__, self.gateway.id,)
 
     def setup(self):
-        self.trace("setting up slave session")
-        assert self.status == "gateway-init"
+        self.log("setting up slave session")
+        spec = self.gateway.spec
+        args = self.config.args
+        if not spec.popen or spec.chdir:
+            args = make_reltoroot(self.nodemanager.roots, args)
         self.channel = self.gateway.remote_exec(init_slave_session,
-            args=self.config.args,
-            option_dict=vars(self.config.option),
+            args=args, option_dict=vars(self.config.option),
         )
-        self.status = "slave-init"
         if self.putevent:
             self.channel.setcallback(self.process_from_remote,
                 endmarker=self.ENDMARK)
@@ -44,11 +56,11 @@ class SlaveController(object):
     def ensure_teardown(self):
         if hasattr(self, 'channel'):
             if not self.channel.isclosed():
-                self.trace("closing", self.channel)
+                self.log("closing", self.channel)
                 self.channel.close()
             #del self.channel
         if hasattr(self, 'gateway'):
-            self.trace("exiting", self.gateway)
+            self.log("exiting", self.gateway)
             self.gateway.exit()
             #del self.gateway
 
@@ -61,11 +73,11 @@ class SlaveController(object):
 
     def sendcommand(self, name, **kwargs):
         """ send a named parametrized command to the other side. """
-        self.trace("sending command %s(**%s)" % (name, kwargs))
+        self.log("sending command %s(**%s)" % (name, kwargs))
         self.channel.send((name, kwargs))
 
     def notify_inproc(self, eventname, **kwargs):
-        self.trace("queuing %s(**%s)" % (eventname, kwargs))
+        self.log("queuing %s(**%s)" % (eventname, kwargs))
         self.putevent((eventname, kwargs))
 
     def process_from_remote(self, eventcall):
@@ -87,7 +99,7 @@ class SlaveController(object):
                 return
             eventname, kwargs = eventcall
             if eventname in ("collectionstart"):
-                self.trace("ignoring %s(%s)" %(eventname, kwargs))
+                self.log("ignoring %s(%s)" %(eventname, kwargs))
             elif eventname == "slaveready":
                 self.notify_inproc(eventname, node=self)
             elif eventname == "slavefinished":
@@ -130,26 +142,25 @@ def remote_initconfig(config, option_dict, args):
     config.option.dist = "no"
     config.option.distload = False
     config.option.numprocesses = None
-    #kwlog.Producer("slave").DEBUG("option dict", config.option.__dict__)
     config.args = args
     return config
-
+    
 class SlaveInteractor:
     def __init__(self, config, channel):
         self.config = config
-        self.log = kwlog.Producer("slave")
-        kwlog.setconsumer(self.log, None)
-        self.log.info("initializing SlaveInteractor")
+        self.log = py.log.Producer("slave")
+        if not config.option.debug:
+            py.log.setconsumer(self.log._keywords, None)
         self.channel = channel
         config.pluginmanager.register(self)
 
     def sendevent(self, name, **kwargs):
-        self.log.debug("sending", name, kwargs)
+        self.log("sending", name, kwargs)
         self.channel.send((name, kwargs))
 
     def pytest_internalerror(self, excrepr):
         for line in str(excrepr).split("\n"):
-            self.log.debug("IERROR> " + line)
+            self.log("IERROR> " + line)
 
     def pytest_sessionstart(self, session):
         self.session = session
@@ -163,10 +174,10 @@ class SlaveInteractor:
         self.sendevent("collectionstart")
 
     def pytest_runtest_mainloop(self, session):
-        self.log.debug("entering main loop")
+        self.log("entering main loop")
         while 1:
             name, kwargs = self.channel.receive()
-            self.log.debug("received command %s(**%s)" % (name, kwargs))
+            self.log("received command %s(**%s)" % (name, kwargs))
             if name == "runtests":
                 ids = kwargs['ids']
                 for nodeid in ids:
@@ -177,7 +188,7 @@ class SlaveInteractor:
         return True
 
     def pytest_log_finishcollection(self, collection):
-        self.log.debug("pytest_log_finishcollection")
+        self.log("pytest_log_finishcollection")
         ids = [collection.getid(item) for item in collection.items]
         self.sendevent("collectionfinish",
             topdir=str(collection.topdir),
