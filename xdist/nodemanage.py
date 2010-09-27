@@ -1,7 +1,8 @@
 import py
 import sys, os
 import xdist
-from xdist.txnode import TXNode
+from xdist.remote import SlaveController
+
 from xdist.gwmanage import GatewayManager
 import execnet
 
@@ -48,18 +49,19 @@ class NodeManager(object):
         # pick it up as the right topdir
         # (for other gateways this chdir is irrelevant)
         self.trace("making gateways")
-        old = self.config.topdir.chdir()
-        try:
-            self.gwmanager.makegateways()
-        finally:
-            old.chdir()
+        #old = self.config.topdir.chdir()
+        #try:
+        self.gwmanager.makegateways()
+        #finally:
+        #    old.chdir()
 
     def setup_nodes(self, putevent):
         self.rsync_roots()
         self.trace("setting up nodes")
         for gateway in self.gwmanager.group:
-            node = TXNode(self, gateway, self.config, putevent)
+            node = SlaveController(self, gateway, self.config, putevent)
             gateway.node = node  # to keep node alive
+            node.setup()
             self.trace("started node %r" % node)
 
     def teardown_nodes(self):

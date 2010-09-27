@@ -183,7 +183,18 @@ def pytest_addhooks(pluginmanager):
 # -------------------------------------------------------------------------
 # distributed testing initialization
 # -------------------------------------------------------------------------
-def pytest_configure(config):
+
+def pytest_cmdline_main(config):
+    check_options(config)
+    if config.getvalue("looponfail"):
+        from xdist.looponfail import looponfail_main
+        looponfail_main(config)
+        return 2 # looponfail only can get stop with ctrl-C anyway
+    elif config.getvalue("dist") != "no":
+        from xdist.dsession import dsession_main
+        return dsession_main(config)
+
+def check_options(config):
     if config.option.numprocesses:
         config.option.dist = "load"
         config.option.tx = ['popen'] * int(config.option.numprocesses)
@@ -199,32 +210,6 @@ def pytest_configure(config):
             if usepdb:
                 raise config.Error("--pdb incompatible with distributing tests.")
 
-def pytest_cmdline_main(config):
-    if config.getvalue("looponfail"):
-        from xdist.looponfail import looponfail_main
-        looponfail_main(config)
-        return 2 # looponfail only can get stop with ctrl-C anyway
-    elif config.getvalue("dist"):
-        pass
-    return
-    from py._test.session import Session, Collection
-    collection = Collection(config)
-    # instantiate session already because it
-    # records failures and implements maxfail handling
-    session = Session(config, collection)
-    exitstatus = collection.do_collection()
-    if not exitstatus:
-        exitstatus = session.main()
-    return exitstatus
-
-def pytest_sessionstart(session):
-    config = session.config
-    if hasattr(config, '_isdistsession'):
-        if not config.pluginmanager.hasplugin("terminal") or \
-           not config.pluginmanager.hasplugin("terminalreporter"):
-            return
-        trdist = TerminalDistReporter(config)
-        config.pluginmanager.register(trdist, "terminaldistreporter")
 
 def pytest_runtest_protocol(item):
     if item.config.getvalue("boxed"):
@@ -238,23 +223,20 @@ def forked_run_report(item):
     # XXX optionally allow sharing of setup/teardown
     from py._plugin.pytest_runner import runtestprotocol
     EXITSTATUS_TESTEXIT = 4
-    from xdist.mypickle import ImmutablePickler
-    ipickle = ImmutablePickler(uneven=0)
-    ipickle.selfmemoize(item.config)
-    # XXX workaround the issue that 2.6 cannot pickle
-    # instances of classes defined in global conftest.py files
-    ipickle.selfmemoize(item)
+    import marshal
+    from xdist.remote import serialize_report, unserialize_report
     def runforked():
         try:
             reports = runtestprotocol(item, log=False)
         except KeyboardInterrupt:
             py.std.os._exit(EXITSTATUS_TESTEXIT)
-        return ipickle.dumps(reports)
+        return marshal.dumps([serialize_report(x) for x in reports])
 
     ff = py.process.ForkedFunc(runforked)
     result = ff.waitfinish()
     if result.retval is not None:
-        return ipickle.loads(result.retval)
+        report_dumps = marshal.loads(result.retval)
+        return [unserialize_report(x) for x in report_dumps]
     else:
         if result.exitstatus == EXITSTATUS_TESTEXIT:
             py.test.exit("forked test item %s raised Exit" %(item,))
@@ -264,62 +246,8 @@ def report_process_crash(item, result):
     path, lineno = item._getfslineno()
     info = "%s:%s: running the test CRASHED with signal %d" %(
             path, lineno, result.signal)
-    from py._plugin.pytest_runner import ItemTestReport
-    return ItemTestReport(item, excinfo=info, when="???")
-
-class TerminalDistReporter:
-    def __init__(self, config):
-        self.gateway2info = {}
-        self.config = config
-        self.tplugin = config.pluginmanager.getplugin("terminal")
-        self.tr = config.pluginmanager.getplugin("terminalreporter")
-
-    def write_line(self, msg):
-        self.tr.write_line(msg)
-
-    def pytest_itemstart(self, __multicall__):
-        try:
-            __multicall__.methods.remove(self.tr.pytest_itemstart)
-        except KeyError:
-            pass
-
-    def pytest_runtest_logreport(self, report):
-        if hasattr(report, 'node'):
-            report.headerlines.append(self.gateway2info.get(
-                report.node.gateway,
-                "node %r (platinfo not found? strange)"))
-
-    def pytest_gwmanage_newgateway(self, gateway, platinfo):
-        #self.write_line("%s instantiated gateway from spec %r" %(gateway.id, gateway.spec._spec))
-        d = {}
-        d['version'] = self.tplugin.repr_pythonversion(platinfo.version_info)
-        d['id'] = gateway.id
-        d['spec'] = gateway.spec._spec
-        d['platform'] = platinfo.platform
-        if self.config.option.verbose:
-            d['extra'] = "- " + platinfo.executable
-        else:
-            d['extra'] = ""
-        d['cwd'] = platinfo.cwd
-        infoline = ("[%(id)s] %(spec)s -- platform %(platform)s, "
-                        "Python %(version)s "
-                        "cwd: %(cwd)s"
-                        "%(extra)s" % d)
-        if self.config.getvalue("verbose"):
-            self.write_line(infoline)
-        self.gateway2info[gateway] = infoline
-
-    def pytest_testnodeready(self, node):
-        if self.config.getvalue("verbose"):
-            self.write_line(
-                "[%s] txnode ready to receive tests" %(node.gateway.id,))
-
-    def pytest_testnodedown(self, node, error):
-        if not error:
-            return
-        self.write_line("[%s] node down, error: %s" %(node.gateway.id, error))
-
-    def pytest_rescheduleitems(self, items):
-        if self.config.option.debug:
-            self.write_sep("!", "RESCHEDULING %s " %(items,))
-
+    from py._plugin import pytest_runner as runner
+    call = runner.CallInfo(lambda: 0/0, "???")
+    call.excinfo = info
+    rep = runner.pytest_runtest_makereport(item, call)
+    return rep

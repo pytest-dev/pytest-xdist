@@ -2,7 +2,6 @@
     Manage setup, running and local representation of remote nodes/processes.
 """
 import py
-from xdist.mypickle import PickleChannel
 from py._test.session import Session
 
 class TXNode(object):
@@ -19,7 +18,7 @@ class TXNode(object):
         self.putevent = putevent
         self.gateway = gateway
         self.slaveinput = {}
-        self.channel = install_slave(self)
+        self.channel = self.setup()
         self.channel.setcallback(self.callback, endmarker=self.ENDMARK)
         self._down = False
 
@@ -84,44 +83,47 @@ class TXNode(object):
         else:
             self.channel.send(None)
 
-# configuring and setting up slave node
-def install_slave(node):
-    channel = node.gateway.remote_exec(source="""
-        import os, sys
-        sys.path.insert(0, os.getcwd())
-        from xdist.mypickle import PickleChannel
-        from xdist.txnode import SlaveSession
-        channel.send("basicimport")
-        channel = PickleChannel(channel)
-        import py
-        config, slaveinput, basetemp, nodeid = channel.receive()
-        config.slaveinput = slaveinput
-        config.slaveoutput = {}
-        if basetemp:
-            config.basetemp = py.path.local(basetemp)
-        config.nodeid = nodeid
-        config.pluginmanager.do_configure(config)
-        session = SlaveSession(config, channel, nodeid)
-        session.dist_main()
-    """)
-    channel.receive()
-    channel = PickleChannel(channel)
-    basetemp = None
-    config = node.config
-    config.hook.pytest_configure_node(node=node)
-    if node.gateway.spec.popen:
-        popenbase = config.ensuretemp("popen")
-        basetemp = py.path.local.make_numbered_dir(prefix="slave-",
-            keep=0, rootdir=popenbase)
-        basetemp = str(basetemp)
-    channel.send((config, node.slaveinput, basetemp, node.gateway.id))
-    return channel
+    # configuring and setting up slave node
+    def setup(self):
+        basetemp = None
+        config = self.config
+        config.hook.pytest_configure_node(node=self)
+        if self.gateway.spec.popen:
+            popenbase = config.ensuretemp("popen")
+            basetemp = py.path.local.make_numbered_dir(prefix="slave-",
+                keep=0, rootdir=popenbase)
+            basetemp = str(basetemp)
+        return self.gateway.remote_exec(init_slave_session,
+            args=self.config.args,
+            option_dict=vars(self.config.option),
+            slaveinput={}, # XXX,
+            basetemp=basetemp,
+            nodeid=self.gateway.id,
+        )
 
-class SlaveSession(Session):
-    def __init__(self, config, channel, nodeid):
+def init_slave_session(channel, args, option_dict, 
+        slaveinput, basetemp, nodeid):
+    import os, sys
+    #sys.path.insert(0, os.getcwd())
+    from xdist.txnode import SlaveSession
+    import py
+    config = py.test.config
+    config.option.__dict__.update(option_dict)
+    config._preparse(args)
+    config.args = args
+    config.slaveinput = slaveinput
+    config.slaveoutput = {}
+    if basetemp:
+        config.basetemp = py.path.local(basetemp)
+    config.nodeid = nodeid
+    return SlaveSession(config, channel).dist_main()
+
+class SlaveSession:
+    def __init__(self, config, channel):
         self.channel = channel
-        self.nodeid = nodeid
-        super(SlaveSession, self).__init__(config=config)
+        self.config = config
+        self.runner = self.config.pluginmanager.getplugin("pytest_runner")
+        config.pluginmanager.register(self, "slavesession")
 
     def __repr__(self):
         return "<%s channel=%s>" %(self.__class__.__name__, self.channel)
@@ -143,7 +145,6 @@ class SlaveSession(Session):
         self.sendevent("pytest_internalerror", excrepr=excrepr)
 
     def dist_main(self):
-        self.runner = self.config.pluginmanager.getplugin("pytest_runner")
         self.sendevent("slaveready")
         self.main(None)
         error = getattr(self, '_slaveerror', None)

@@ -16,8 +16,3 @@ def pytest_testnodeready(node):
 
 def pytest_testnodedown(node, error):
     """ Test Node is down. """
-
-def pytest_rescheduleitems(items):
-    """ reschedule Items from a node that went down. """
-
-

@@ -1,4 +1,4 @@
-from xdist.dsession import DSession
+from xdist.dsession import DSession, LoadScheduling
 from py._test import session as outcome
 import py
 import execnet
@@ -16,8 +16,8 @@ class MockNode:
     def __init__(self):
         self.sent = []
 
-    def send(self, item):
-        self.sent.append(item)
+    def send_runtest(self, nodeid):
+        self.sent.append(nodeid)
 
     def sendlist(self, items):
         self.sent.extend(items)
@@ -29,23 +29,78 @@ def dumpqueue(queue):
     while queue.qsize():
         print(queue.get())
 
-class TestDSession:
-    def test_add_remove_node(self, testdir):
-        item = testdir.getitem("def test_func(): pass")
-        node = MockNode()
-        rep = run(item, node)
-        session = DSession(item.config)
-        assert not session.node2pending
-        session.addnode(node)
-        assert len(session.node2pending) == 1
-        session.senditems_load([item])
-        pending = session.removenode(node)
-        assert pending == [item]
-        assert item not in session.item2nodes
-        l = session.removenode(node)
-        assert not l
+class TestLoadScheduling:
+    def test_schedule_load_simple(self):
+        node1 = MockNode()
+        node2 = MockNode()
+        sched = LoadScheduling(2)
+        sched.addnode(node1)
+        sched.addnode(node2)
+        collection = ["a.py::test_1", "a.py::test_2"]
+        assert not sched.collection_is_completed()
+        sched.addnode_collection(node1, collection)
+        assert not sched.collection_is_completed()
+        sched.addnode_collection(node2, collection)
+        assert sched.collection_is_completed()
+        assert sched.node2collection[node1] == collection
+        assert sched.node2collection[node2] == collection
+        sched.init_distribute()
+        assert sched.pending
+        sched.triggertesting()
+        assert not sched.tests_finished()
+        assert node1.sent == collection[:1]
+        assert node2.sent == collection[1:]
+        sched.remove_item(node1, collection[0])
+        sched.remove_item(node2, collection[1])
+        assert sched.tests_finished()
+        assert not sched.pending
 
-    def test_senditems_each_and_receive_with_two_nodes(self, testdir):
+    def test_triggertesting_chunksize(self):
+        sched = LoadScheduling(2)
+        node1 = MockNode()
+        node2 = MockNode()
+        sched.addnode(node1)
+        sched.addnode(node2)
+        sched.ITEM_CHUNKSIZE = 2
+        col = ["xyz"] * (2*sched.ITEM_CHUNKSIZE +1)
+        sched.addnode_collection(node1, col)
+        sched.addnode_collection(node2, col)
+        sched.init_distribute()
+        sched.triggertesting()
+        sent1 = node1.sent
+        sent2 = node2.sent
+        chunkitems = col[:sched.ITEM_CHUNKSIZE]
+        assert sent1 == chunkitems
+        assert sent2 == chunkitems
+        assert sched.node2pending[node1] == sent1
+        assert sched.node2pending[node2] == sent2
+        assert len(sched.pending) == 1
+        for node in (node1, node2):
+            for i in range(sched.ITEM_CHUNKSIZE):
+                sched.remove_item(node, "xyz")
+        sched.triggertesting()
+        assert not sched.pending
+
+    def test_add_remove_node(self):
+        node = MockNode()
+        sched = LoadScheduling(1)
+        sched.addnode(node)
+        collection = ["test_file.py::test_func"]
+        sched.addnode_collection(node, collection)
+        assert sched.collection_is_completed()
+        sched.init_distribute()
+        sched.triggertesting()
+        assert not sched.pending
+        sched.remove_node(node)
+        assert sched.pending == collection
+
+
+class TestDSession:
+
+    #def test_collection_fails(self, testdir):
+    #    pass
+
+    def xxx_test_senditems_each_and_receive_with_two_nodes(self, testdir):
         item = testdir.getitem("def test_func(): pass")
         node1 = MockNode()
         node2 = MockNode()
@@ -63,54 +118,6 @@ class TestDSession:
         assert not session.node2pending[node1]
         assert not session.item2nodes
 
-    def test_senditems_load_and_receive_one_node(self, testdir):
-        item = testdir.getitem("def test_func(): pass")
-        node = MockNode()
-        rep = run(item, node)
-        session = DSession(item.config)
-        session.addnode(node)
-        session.senditems_load([item])
-        assert session.node2pending[node] == [item]
-        assert session.item2nodes[item] == [node]
-        session.removeitem(item, node)
-        assert not session.node2pending[node]
-        assert not session.item2nodes
-
-    def test_triggertesting_collect(self, testdir):
-        modcol = testdir.getmodulecol("""
-            def test_func():
-                pass
-        """)
-        session = DSession(modcol.config)
-        reprec = testdir.getreportrecorder(session)
-        items = session.collect_all_items([modcol])
-        assert len(items) == 1
-        calls= reprec.getcalls("pytest_collectreport")
-        assert len(calls) == 1
-        call = calls[0]
-        assert len(call.report.result) == 1
-
-    def test_senditems_load(self, testdir, monkeypatch):
-        item = testdir.getitem("def test_func(): pass")
-        session = DSession(item.config)
-        node1 = MockNode()
-        node2 = MockNode()
-        session.addnode(node1)
-        session.addnode(node2)
-        monkeypatch.setattr(session, 'ITEM_CHUNKSIZE', 3)
-        session.senditems_load([item] * (2*session.ITEM_CHUNKSIZE +1))
-        sent1 = node1.sent
-        sent2 = node2.sent
-        chunkitems = [item] * session.ITEM_CHUNKSIZE
-        assert sent1 == chunkitems
-        assert sent2 == chunkitems
-        assert session.node2pending[node1] == sent1
-        assert session.node2pending[node2] == sent2
-        name, args, kwargs = session.queue.get(block=False)
-        assert name == "pytest_rescheduleitems"
-        assert kwargs['items'] == [item]
-
-
     def test_keyboardinterrupt(self, testdir):
         item = testdir.getitem("def test_func(): pass")
         session = DSession(item.config)
@@ -126,35 +133,6 @@ class TestDSession:
         session.queue.get = raise_
         exitstatus = session.loop([])
         assert exitstatus == outcome.EXIT_INTERNALERROR
-
-    def test_rescheduleevent(self, testdir):
-        item = testdir.getitem("def test_func(): pass")
-        session = DSession(item.config)
-        node = MockNode()
-        session.addnode(node)
-        loopstate = session._initloopstate([])
-        session.queueevent("pytest_rescheduleitems", items=[item])
-        session.loop_once(loopstate)
-        # we need to do work because nothing is pending / we would not wake up
-        assert loopstate.dowork == True
-
-        session.node2pending[node].append(item)
-        session.queueevent("pytest_rescheduleitems", items=[item])
-        session.loop_once(loopstate)
-        # now we want to not directly trigger work again to avoid busy-wait
-        assert loopstate.dowork == False
-
-        session.queueevent(None)
-        session.loop_once(loopstate)
-        session.queueevent(None)
-        session.loop_once(loopstate)
-        assert node.sent == [item, item]
-        session.queueevent("pytest_runtest_logreport", report=run(item, node))
-        session.loop_once(loopstate)
-        session.queueevent("pytest_runtest_logreport", report=run(item, node))
-        session.loop_once(loopstate)
-        assert loopstate.shuttingdown
-        assert not loopstate.testsfailed
 
     def test_no_node_remaining_for_tests(self, testdir):
         item = testdir.getitem("def test_func(): pass")

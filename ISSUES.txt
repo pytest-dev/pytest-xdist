@@ -1,3 +1,11 @@
+rename / hooks
+-----------------------------------------------
+tag: bug
+
+node -> slave 
+transition for hooks?
+configure_node -> configure_slave
+
 
 allow to run xdist tests with xdist
 -----------------------------------------------

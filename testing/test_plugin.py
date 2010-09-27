@@ -4,8 +4,8 @@ import execnet
 from xdist.nodemanage import NodeManager
 
 def test_dist_incompatibility_messages(testdir):
-    Error = py.test.config.Error
-    py.test.raises(Error, "testdir.parseconfigure('--pdb', '--looponfail')")
+    result = testdir.runpytest("--pdb", "--looponfail")
+    assert result.ret != 0
     result = testdir.runpytest("--pdb", "-n", "3")
     assert result.ret != 0
     assert "incompatible" in result.stderr.str()

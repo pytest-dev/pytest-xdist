@@ -184,8 +184,9 @@ class SlaveFailSession:
         self.config.hook.pytest_cmdline_main(config=self.config)
         trails, failreports = [], []
         for rep in self.recorded_failures:
-            trails.append(self.collection.getid(rep.getnode()))
-            loc = rep._getcrashline()
+            trails.append(rep.nodeid)
+            loc = rep.longrepr
+            loc = str(getattr(loc, 'reprcrash', loc))
             failreports.append(loc)
         topdir = str(self.topdir)
         self.channel.send((topdir, trails, failreports, self.collection_failed))

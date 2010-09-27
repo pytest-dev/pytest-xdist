@@ -2,6 +2,40 @@ import py
 import sys
 
 class TestDistribution:
+    def test_n1_pass(self, testdir):
+        p1 = testdir.makepyfile("""
+            def test_ok():
+                pass
+        """)
+        result = testdir.runpytest(p1, "-n1")
+        assert result.ret == 0
+        result.stdout.fnmatch_lines([
+            "*1 passed*",
+        ])
+
+    def test_n1_fail(self, testdir):
+        p1 = testdir.makepyfile("""
+            def test_fail():
+                assert 0
+        """)
+        result = testdir.runpytest(p1, "-n1")
+        assert result.ret == 1
+        result.stdout.fnmatch_lines([
+            "*1 failed*",
+        ])
+
+    def test_n1_skip(self, testdir):
+        p1 = testdir.makepyfile("""
+            def test_skip():
+                import py
+                py.test.skip("myreason")
+        """)
+        result = testdir.runpytest(p1, "-n1")
+        assert result.ret == 0
+        result.stdout.fnmatch_lines([
+            "*1 skipped*",
+        ])
+
     def test_manytests_to_one_popen(self, testdir):
         p1 = testdir.makepyfile("""
                 import py
@@ -22,6 +56,20 @@ class TestDistribution:
             "*2 failed, 1 passed, 1 skipped*",
         ])
         assert result.ret == 1
+
+    def test_n1_fail_minus_x(self, testdir):
+        p1 = testdir.makepyfile("""
+            def test_fail1():
+                assert 0
+            def test_fail2():
+                assert 0
+        """)
+        result = testdir.runpytest(p1, "-x", "-v", "-n1")
+        assert result.ret == 2
+        result.stdout.fnmatch_lines([
+            "*Interrupted: stopping*1*",
+            "*1 failed*",
+        ])
 
     def test_dist_conftest_specified(self, testdir):
         p1 = testdir.makepyfile("""
@@ -48,7 +96,7 @@ class TestDistribution:
         ])
         assert result.ret == 1
 
-    @py.test.mark.xfail("sys.platform.startswith('java')")
+    @py.test.mark.xfail("sys.platform.startswith('java')", run=False)
     def test_dist_tests_with_crash(self, testdir):
         if not hasattr(py.std.os, 'kill'):
             py.test.skip("no os.kill")
@@ -70,12 +118,11 @@ class TestDistribution:
                     os.kill(os.getpid(), 15)
             """
         )
-        result = testdir.runpytest(p1, "-v", '-d', '--tx=3*popen')
+        result = testdir.runpytest(p1, "-v", '-d', '-n1')
         result.stdout.fnmatch_lines([
             "*popen*Python*",
-            "*popen*Python*",
-            "*popen*Python*",
-            "*node down*",
+            "*test_ok*PASS*",
+            "*node*down*",
             "*3 failed, 1 passed, 1 skipped*"
         ])
         assert result.ret == 1
@@ -86,8 +133,9 @@ class TestDistribution:
         subdir = source.mkdir("example_pkg")
         subdir.ensure("__init__.py")
         p = subdir.join("test_one.py")
-        p.write("def test_5(): assert not __file__.startswith(%r)" % str(p))
-        result = testdir.runpytest("-v", "-d", "--rsyncdir=%(subdir)s" % locals(),
+        p.write("def test_5():\n  assert not __file__.startswith(%r)" % str(p))
+        result = testdir.runpytest("-v", "-d", 
+            "--rsyncdir=%(subdir)s" % locals(),
             "--tx=popen//chdir=%(dest)s" % locals(), p)
         assert result.ret == 0
         result.stdout.fnmatch_lines([

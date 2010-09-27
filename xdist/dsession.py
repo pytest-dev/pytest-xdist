@@ -1,81 +1,135 @@
 import py
-from py._test import session
+import sys
 from xdist.nodemanage import NodeManager
+from py._test import session
+import kwlog
 queue = py.builtin._tryimport('queue', 'Queue')
 
-debug_file = None # open('/tmp/loop.log', 'w')
-def debug(*args):
-    if debug_file is not None:
-        s = " ".join(map(str, args))
-        debug_file.write(s+"\n")
-        debug_file.flush()
+def dsession_main(config):
+    config.pluginmanager.do_configure(config)
+    session = DSession(config)
+    trdist = TerminalDistReporter(config)
+    config.pluginmanager.register(trdist, "terminaldistreporter")
+    exitcode = session.main()
+    config.pluginmanager.do_unconfigure(config)
+    return exitcode
 
-class LoopState(object):
-    def __init__(self, dsession, colitems):
-        self.dsession = dsession
-        self.colitems = colitems
-        self.exitstatus = None
-        # loopstate.dowork is False after reschedule events
-        # because otherwise we might very busily loop
-        # waiting for a host to become ready.
-        self.dowork = True
-        self.shuttingdown = False
-        self.testsfailed = 0
-
-    def __repr__(self):
-        return "<LoopState exitstatus=%r shuttingdown=%r len(colitems)=%d>" % (
-            self.exitstatus, self.shuttingdown, len(self.colitems))
-
-    def pytest_runtest_logreport(self, report):
-        if report.item in self.dsession.item2nodes:
-            if report.when != "teardown": # otherwise we already managed it
-                self.dsession.removeitem(report.item, report.node)
-        if report.failed:
-            self.testsfailed += 1
-
-    def pytest_collectreport(self, report):
-        if report.passed:
-            self.colitems.extend(report.result)
-
-    def pytest_testnodeready(self, node):
-        self.dsession.addnode(node)
-
-    def pytest_testnodedown(self, node, error=None):
-        pending = self.dsession.removenode(node)
-        if pending:
-            if error:
-                crashitem = pending[0]
-                debug("determined crashitem", crashitem)
-                self.dsession.handle_crashitem(crashitem, node)
-                # XXX recovery handling for "each"?
-                # currently pending items are not retried
-                if self.dsession.config.option.dist == "load":
-                    self.colitems.extend(pending[1:])
-
-    def pytest_rescheduleitems(self, items):
-        self.colitems[:] = items + self.colitems
-        for pending in self.dsession.node2pending.values():
-            if pending:
-                self.dowork = False # avoid busywait, nodes still have work
-
-class DSession(session.Session):
-    """
-        Session drives the collection and running of tests
-        and generates test events for reporters.
-    """
+class LoadScheduling:
     LOAD_THRESHOLD_NEWITEMS = 5
     ITEM_CHUNKSIZE = 10
 
-    def __init__(self, config):
-        self.queue = queue.Queue()
+    def __init__(self, numnodes, log=None):
+        self.numnodes = numnodes
         self.node2pending = {}
+        self.node2collection = {}
+        self.pending = []
+        if log is None:
+            self.log = kwlog.Producer("loadsched")
+        else:
+            self.log = log.loadsched
+
+    def hasnodes(self):
+        return bool(self.node2pending)
+
+    def addnode(self, node):
+        self.node2pending[node] = []
+
+    def collection_is_completed(self):
+        return len(self.node2collection) == self.numnodes
+
+    def tests_finished(self):
+        if not self.collection_is_completed() or self.pending:
+            return False
+        for items in self.node2pending.values():
+            if items:
+                return False
+        return True
+
+    def addnode_collection(self, node, collection):
+        assert node in self.node2pending
+        self.node2collection[node] = list(collection)
+
+    def remove_item(self, node, item):
+        if item not in self.item2nodes:
+            raise AssertionError(item, self.item2nodes)
+        nodes = self.item2nodes[item]
+        if node in nodes: # the node might have gone down already
+            nodes.remove(node)
+        #if not nodes:
+        #    del self.item2nodes[item]
+        pending = self.node2pending[node]
+        pending.remove(item)
+        # pre-load items-to-test if the node may become ready
+        if self.pending and len(pending) < self.LOAD_THRESHOLD_NEWITEMS:
+            item = self.pending.pop(0)
+            pending.append(item)
+            self.item2nodes.setdefault(item, []).append(node)
+            node.send_runtest(item)
+
+    def remove_node(self, node):
+        pending = self.node2pending.pop(node)
+        # KeyError if we didn't get an addnode() yet
+        for item in pending:
+            l = self.item2nodes[item]
+            l.remove(node)
+            if not l:
+                del self.item2nodes[item]
+        if not pending:
+            return
+        crashitem = pending.pop(0)
+        self.pending.extend(pending)
+        return crashitem
+
+    def init_distribute(self):
+        assert self.collection_is_completed()
+        assert not hasattr(self, 'item2nodes')
         self.item2nodes = {}
-        super(DSession, self).__init__(config=config)
+        # XXX allow nodes to have different collections
+        col = list(self.node2collection.values())[0]
+        for node, collection in self.node2collection.items():
+            assert collection == col
+        self.pending = col
+       
+    def triggertesting(self):
+        if not self.pending:
+            return
+        available = []
+        for node, pending in self.node2pending.items():
+            if len(pending) < self.LOAD_THRESHOLD_NEWITEMS:
+                available.append((node, pending))
+        num_available = len(available)
+        if num_available:
+            max_one_round = num_available * self.ITEM_CHUNKSIZE -1
+            for i, item in enumerate(self.pending):
+                nodeindex = i % num_available
+                node, pending = available[nodeindex]
+                node.send_runtest(item)
+                self.item2nodes.setdefault(item, []).append(node)
+                #item.ihook.pytest_itemstart(item=item, node=node)
+                pending.append(item)
+                if i >= max_one_round:
+                    break
+            del self.pending[:i+1]
+        if self.pending:
+            self.log.debug("triggertesting remaining:", len(self.pending))
+
+class Interrupted(KeyboardInterrupt):
+    """ signals an immediate interruption. """
+
+class DSession:
+    def __init__(self, config):
+        self.config = config
+        self.log = kwlog.Producer("dsession")
+        #kwlog.setconsumer(self.log, kwlog.Path("/tmp/x.log"))
+        kwlog.setconsumer(self.log, None)
+        self.shuttingdown = False
+        self.countfailures = 0
+        self.maxfail = config.getvalue("maxfail")
+        self.queue = queue.Queue()
         try:
             self.terminal = config.pluginmanager.getplugin("terminalreporter")
         except KeyError:
             self.terminal = None
-        self._nodesready = py.std.threading.Event()
 
     def report_line(self, line):
         if self.terminal:
@@ -90,98 +144,75 @@ class DSession(session.Session):
     #    targets = ", ".join(["[%s]" % gw.id for gw in gateways])
     #    self.write_line("rsyncfinish: %s -> %s" %(source, targets))
 
-    def main(self, colitems):
-        self.sessionstarts()
+    def main(self):
+        self.config.hook.pytest_sessionstart(session=self)
         self.setup()
-        allitems = self.collect_all_items(colitems)
-        exitstatus = self.loop(allitems)
+        exitstatus = self.loop()
         self.teardown()
-        self.sessionfinishes(exitstatus=exitstatus)
+        self.config.hook.pytest_sessionfinish(session=self,
+            exitstatus=exitstatus,)
         return exitstatus
 
-    def collect_all_items(self, colitems):
-        verbose = self.config.getvalue("verbose")
-        if verbose:
-            self.report_line("[master] starting full item collection ...")
-        allitems = list(self.collect(colitems))
-        if verbose:
-            self.report_line("[master] collected %d items" %(len(allitems)))
-        return allitems
+    def slave_slaveready(self, node):
+        self.sched.addnode(node)
+        if self.shuttingdown:
+            node.sendcommand("shutdown")
 
-    def loop_once(self, loopstate):
-        if loopstate.shuttingdown:
-            return self.loop_once_shutdown(loopstate)
-        colitems = loopstate.colitems
-        if self._nodesready.isSet() and loopstate.dowork and colitems:
-            self.triggertesting(loopstate.colitems)
-            colitems[:] = []
-        # we use a timeout here so that control-C gets through
-        while 1:
-            try:
-                eventcall = self.queue.get(timeout=2.0)
-                break
-            except queue.Empty:
-                continue
-        loopstate.dowork = True
+    def slave_slavefinished(self, node):
+        crashitem = self.sched.remove_node(node)
+        assert not crashitem, (crashitem, node)
+        if self.shuttingdown and not self.sched.hasnodes():
+            self.session_finished = True
 
-        callname, args, kwargs = eventcall
-        if callname is not None:
-            call = getattr(self.config.hook, callname)
-            assert not args
-            call(**kwargs)
+    def slave_errordown(self, node, error):
+        self.report_line("node %r down on error: %s" %(node.gateway.id, error,))
+        crashitem = self.sched.remove_node(node)
+        if crashitem:
+            self.handle_crashitem(crashitem, node)
+            #self.report_line("item crashed on node: %s" % crashitem)
+        if not self.sched.hasnodes():
+            self.session_finished = True
 
-        # termination conditions
-        maxfail = self.config.getvalue("maxfail")
-        if (not self.node2pending or
-            (loopstate.testsfailed and maxfail and
-             loopstate.testsfailed >= maxfail) or
-            (not self.item2nodes and not colitems and not self.queue.qsize())):
-            if maxfail and loopstate.testsfailed >= maxfail:
-                raise self.Interrupted("stopping after %d failures" % (
-                    loopstate.testsfailed))
-            self.triggershutdown()
-            loopstate.shuttingdown = True
-            if not self.node2pending:
-                loopstate.exitstatus = session.EXIT_NOHOSTS
+    def slave_collectionfinish(self, node, ids):
+        self.sched.addnode_collection(node, ids)
+        self.report_line("[%s] collected %d test items" %(
+            node.gateway.id, len(ids)))
 
-    def loop_once_shutdown(self, loopstate):
-        # once we are in shutdown mode we dont send
-        # events other than HostDown upstream
-        eventname, args, kwargs = self.queue.get()
-        if eventname == "pytest_testnodedown":
-            self.config.hook.pytest_testnodedown(**kwargs)
-            self.removenode(kwargs['node'])
-        elif eventname == "pytest_runtest_logreport":
-            # might be some teardown report
-            self.config.hook.pytest_runtest_logreport(**kwargs)
-        elif eventname == "pytest_internalerror":
-            self.config.hook.pytest_internalerror(**kwargs)
-            loopstate.exitstatus = session.EXIT_INTERNALERROR
-        elif eventname == "pytest__teardown_final_logerror":
-            self.config.hook.pytest__teardown_final_logerror(**kwargs)
-            loopstate.exitstatus = session.EXIT_TESTSFAILED
-        if not self.node2pending:
-            # finished
-            if loopstate.testsfailed:
-                loopstate.exitstatus = session.EXIT_TESTSFAILED
-            else:
-                loopstate.exitstatus = session.EXIT_OK
-        #self.config.pluginmanager.unregister(loopstate)
+        if self.sched.collection_is_completed():
+            self.sched.init_distribute()
+            self.sched.triggertesting()
 
-    def _initloopstate(self, colitems):
-        loopstate = LoopState(self, colitems)
-        self.config.pluginmanager.register(loopstate)
-        return loopstate
+    def slave_logstart(self, node, nodeid, location):
+        self.config.hook.pytest_runtest_logstart(
+            nodeid=nodeid, location=location)
 
-    def loop(self, colitems):
+    def slave_testreport(self, node, rep):
+        self.sched.remove_item(node, rep.nodeid)
+        #self.report_line("testreport %s: %s" %(rep.id, rep.status))
+        self.config.hook.pytest_runtest_logreport(report=rep)
+        self._handlefailures(rep)
+
+    def slave_collectreport(self, node, rep):
+        #self.report_line("collectreport %s: %s" %(rep.id, rep.status))
+        self._handlefailures(rep)
+
+    def _handlefailures(self, rep):
+        if rep.failed:
+            self.countfailures += 1
+            if self.maxfail and self.countfailures >= self.maxfail:
+                self.shouldstop = "stopping after %d failures" % (
+                    self.countfailures)
+
+    def loop(self):
+        self.sched = LoadScheduling(len(self.config.option.tx), log=self.log)
+        self.shouldstop = False
+        self.session_finished = False
+        exitstatus = 0
         try:
-            loopstate = self._initloopstate(colitems)
-            loopstate.dowork = False # first receive at least one HostUp events
-            while 1:
-                self.loop_once(loopstate)
-                if loopstate.exitstatus is not None:
-                    exitstatus = loopstate.exitstatus
-                    break
+            while not (self.session_finished or self.shouldstop):
+                self.loop_once()
+            if self.shouldstop:
+                raise Interrupted(str(self.shouldstop))
         except KeyboardInterrupt:
             excinfo = py.code.ExceptionInfo()
             self.config.hook.pytest_keyboard_interrupt(excinfo=excinfo)
@@ -189,103 +220,40 @@ class DSession(session.Session):
         except:
             self.config.pluginmanager.notify_exception()
             exitstatus = session.EXIT_INTERNALERROR
-        self.config.pluginmanager.unregister(loopstate)
-        if exitstatus == 0 and self._testsfailed:
+        #self.config.pluginmanager.unregister(loopstate)
+        if exitstatus == 0 and self.countfailures:
             exitstatus = session.EXIT_TESTSFAILED
         return exitstatus
 
+    def loop_once(self):
+        while 1:
+            try:
+                eventcall = self.queue.get(timeout=2.0)
+                break
+            except queue.Empty:
+                continue
+        callname, kwargs = eventcall
+        assert callname, kwargs
+        method = "slave_" + callname
+        call = getattr(self, method)
+        self.log.debug("calling method: %s(**%s)" % (method, kwargs))
+        call(**kwargs)
+        if self.sched.tests_finished():
+            self.triggershutdown()
+
     def triggershutdown(self):
-        for node in self.node2pending:
+        self.shuttingdown = True
+        for node in self.sched.node2pending:
             node.shutdown()
 
-    def addnode(self, node):
-        assert node not in self.node2pending
-        self.node2pending[node] = []
-        if (not hasattr(self, 'nodemanager') or
-          len(self.node2pending) == len(self.nodemanager.gwmanager.group)):
-            self._nodesready.set()
-
-    def removenode(self, node):
-        try:
-            pending = self.node2pending.pop(node)
-        except KeyError:
-            # this happens if we didn't receive a testnodeready event yet
-            return []
-        for item in pending:
-            l = self.item2nodes[item]
-            l.remove(node)
-            if not l:
-                del self.item2nodes[item]
-        return pending
-
-    def triggertesting(self, colitems):
-        # for now we don't allow sending collectors
-        for next in colitems:
-            assert isinstance(next, py.test.collect.Item), next
-        senditems = list(colitems)
-        if self.config.option.dist == "each":
-            self.senditems_each(senditems)
-        else:
-            # XXX assert self.config.option.dist == "load"
-            self.senditems_load(senditems)
-
-    def queueevent(self, eventname, **kwargs):
-        self.queue.put((eventname, (), kwargs))
-
-    def senditems_each(self, tosend):
-        if not tosend:
-            return
-        for node, pending in self.node2pending.items():
-            node.sendlist(tosend)
-            pending.extend(tosend)
-            for item in tosend:
-                nodes = self.item2nodes.setdefault(item, [])
-                assert node not in nodes
-                nodes.append(node)
-                item.ihook.pytest_itemstart(item=item, node=node)
-        tosend[:] = []
-
-    def senditems_load(self, tosend):
-        if not tosend:
-            return
-        available = []
-        for node, pending in self.node2pending.items():
-            if len(pending) < self.LOAD_THRESHOLD_NEWITEMS:
-                available.append((node, pending))
-        num_available = len(available)
-        max_one_round = num_available * self.ITEM_CHUNKSIZE -1
-        if num_available:
-            for i, item in enumerate(tosend):
-                nodeindex = i % num_available
-                node, pending = available[nodeindex]
-                node.send(item)
-                self.item2nodes.setdefault(item, []).append(node)
-                item.ihook.pytest_itemstart(item=item, node=node)
-                pending.append(item)
-                if i >= max_one_round:
-                    break
-            del tosend[:i+1]
-        if tosend:
-            # we have some left, give it to the main loop
-            self.queueevent("pytest_rescheduleitems", items=tosend)
-
-    def removeitem(self, item, node):
-        if item not in self.item2nodes:
-            raise AssertionError(item, self.item2nodes)
-        nodes = self.item2nodes[item]
-        if node in nodes: # the node might have gone down already
-            nodes.remove(node)
-        if not nodes:
-            del self.item2nodes[item]
-        pending = self.node2pending[node]
-        pending.remove(item)
-
-    def handle_crashitem(self, item, node):
-        runner = item.config.pluginmanager.getplugin("runner")
-        info = "!!! Node %r crashed during running of test %r" %(node, item)
-        rep = runner.ItemTestReport(item=item, excinfo=info, when="???")
-        rep.node = node
-        item.ihook.pytest_runtest_logreport(report=rep)
+    def handle_crashitem(self, nodeid, slave):
+        # XXX get more reporting info by recording pytest_runtest_logstart?
+        runner = self.config.pluginmanager.getplugin("runner")
+        fspath = nodeid.split("::")[0]
+        msg = "Slave %r crashed while running %r" %(slave.gateway.id, nodeid)
+        rep = runner.TestReport(nodeid, (), fspath, (fspath, None, fspath), (),
+            "failed", msg, "???")
+        self.config.hook.pytest_runtest_logreport(report=rep)
 
     def setup(self):
         """ setup any neccessary resources ahead of the test run. """
@@ -298,3 +266,55 @@ class DSession(session.Session):
     def teardown(self):
         """ teardown any resources after a test run. """
         self.nodemanager.teardown_nodes()
+
+class TerminalDistReporter:
+    def __init__(self, config):
+        self.gateway2info = {}
+        self.config = config
+        self.tplugin = config.pluginmanager.getplugin("terminal")
+        self.tr = config.pluginmanager.getplugin("terminalreporter")
+
+    def write_line(self, msg):
+        self.tr.write_line(msg)
+
+    def pytest_itemstart(self, __multicall__):
+        try:
+            __multicall__.methods.remove(self.tr.pytest_itemstart)
+        except KeyError:
+            pass
+
+    def pytest_runtest_logreport(self, report):
+        if hasattr(report, 'node'):
+            report.headerlines.append(self.gateway2info.get(
+                report.node.gateway,
+                "node %r (platinfo not found? strange)"))
+
+    def pytest_gwmanage_newgateway(self, gateway, platinfo):
+        #self.write_line("%s instantiated gateway from spec %r" %(gateway.id, gateway.spec._spec))
+        d = {}
+        d['version'] = self.tplugin.repr_pythonversion(platinfo.version_info)
+        d['id'] = gateway.id
+        d['spec'] = gateway.spec._spec
+        d['platform'] = platinfo.platform
+        if self.config.option.verbose:
+            d['extra'] = "- " + platinfo.executable
+        else:
+            d['extra'] = ""
+        d['cwd'] = platinfo.cwd
+        infoline = ("[%(id)s] %(spec)s -- platform %(platform)s, "
+                        "Python %(version)s "
+                        "cwd: %(cwd)s"
+                        "%(extra)s" % d)
+        if self.config.getvalue("verbose"):
+            self.write_line(infoline)
+        self.gateway2info[gateway] = infoline
+
+    def pytest_testnodeready(self, node):
+        if self.config.getvalue("verbose"):
+            self.write_line(
+                "[%s] txnode ready to receive tests" %(node.gateway.id,))
+
+    def pytest_testnodedown(self, node, error):
+        if not error:
+            return
+        self.write_line("[%s] node down, error: %s" %(node.gateway.id, error))
