@@ -295,8 +295,8 @@ class SlaveController(object):
                 self.notify_inproc("slavefinished", node=self)
             #elif eventname == "logstart":
             #    self.notify_inproc(eventname, node=self, **kwargs)
-            elif eventname in ("testreport", "collectreport"):
-                rep = unserialize_report(kwargs['data'])
+            elif eventname in ("testreport", "collectreport", "teardownreport"):
+                rep = unserialize_report(eventname, kwargs['data'])
                 self.notify_inproc(eventname, node=self, rep=rep)
             elif eventname == "collectionfinish":
                 self.notify_inproc(eventname, node=self, ids=kwargs['ids'])
@@ -310,9 +310,11 @@ class SlaveController(object):
             py.builtin.print_("!" * 20, excinfo)
             self.config.pluginmanager.notify_exception(excinfo)
 
-def unserialize_report(reportdict):
+def unserialize_report(name, reportdict):
     d = reportdict
-    if 'result' in d:
-        return runner.CollectReport(**d)
-    else:
+    if name == "testreport":
         return runner.TestReport(**d)
+    elif name == "collectreport":
+        return runner.CollectReport(**d)
+    elif name == "teardownreport":
+        return runner.TeardownErrorReport(**d)

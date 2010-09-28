@@ -83,7 +83,7 @@ class TestReportSerialization:
         for rep in reports:
             d = serialize_report(rep)
             check_marshallable(d)
-            newrep = unserialize_report(d)
+            newrep = unserialize_report("testreport", d)
             assert newrep.passed == rep.passed
             assert newrep.failed == rep.failed
             assert newrep.skipped == rep.skipped
@@ -99,7 +99,7 @@ class TestReportSerialization:
         for rep in reports:
             d = serialize_report(rep)
             check_marshallable(d)
-            newrep = unserialize_report(d)
+            newrep = unserialize_report("collectreport", d)
             assert newrep.passed == rep.passed
             assert newrep.failed == rep.failed
             assert newrep.skipped == rep.skipped
@@ -111,7 +111,7 @@ class TestReportSerialization:
         for rep in reports:
             d = serialize_report(rep)
             check_marshallable(d)
-            newrep = unserialize_report(d)
+            newrep = unserialize_report("collectreport", d)
             assert newrep.passed == rep.passed
             assert newrep.failed == rep.failed
             assert newrep.skipped == rep.skipped
@@ -137,7 +137,7 @@ class TestSlaveInteractor:
         slave.sendcommand("runtests", ids=ids)
         ev = slave.popevent("testreport")
         assert ev.name == "testreport"
-        rep = unserialize_report(ev.kwargs['data'])
+        rep = unserialize_report(ev.name, ev.kwargs['data'])
         assert rep.nodeid.endswith("::test_func")
         assert rep.passed
         assert rep.when == "call"
@@ -155,7 +155,7 @@ class TestSlaveInteractor:
         assert not ev.kwargs
         ev = slave.popevent()
         assert ev.name == "collectreport"
-        rep = unserialize_report(ev.kwargs['data'])
+        rep = unserialize_report(ev.name, ev.kwargs['data'])
         assert rep.skipped
         ev = slave.popevent("collectionfinish")
         print ev.kwargs
@@ -168,7 +168,7 @@ class TestSlaveInteractor:
         assert not ev.kwargs
         ev = slave.popevent()
         assert ev.name == "collectreport"
-        rep = unserialize_report(ev.kwargs['data'])
+        rep = unserialize_report(ev.name, ev.kwargs['data'])
         assert rep.failed
         ev = slave.popevent("collectionfinish")
         print ev.kwargs

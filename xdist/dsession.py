@@ -199,11 +199,16 @@ class DSession:
             nodeid=nodeid, location=location)
 
     def slave_testreport(self, node, rep):
-        self.sched.remove_item(node, rep.nodeid)
+        if rep.when in ("setup", "call"):
+            self.sched.remove_item(node, rep.nodeid)
         #self.report_line("testreport %s: %s" %(rep.id, rep.status))
         enrich_report_with_platform_data(rep, node)
         self.config.hook.pytest_runtest_logreport(report=rep)
         self._handlefailures(rep)
+
+    def slave_teardownreport(self, node, rep):
+        enrich_report_with_platform_data(rep, node)
+        self.config.hook.pytest__teardown_final_logerror(report=rep)
 
     def slave_collectreport(self, node, rep):
         #self.report_line("collectreport %s: %s" %(rep.id, rep.status))

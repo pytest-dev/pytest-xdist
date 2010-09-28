@@ -272,3 +272,101 @@ class TestTerminalReporting:
             ">       assert 0",
             "E       assert 0",
         ])
+
+def test_teardownfails_one_function(testdir):
+    p = testdir.makepyfile("""
+        def test_func():
+            pass
+        def teardown_function(function):
+            assert 0
+    """)
+    result = testdir.runpytest(p, '-n1', '--tx=popen')
+    result.stdout.fnmatch_lines([
+        "*def teardown_function(function):*",
+        "*1 passed*1 error*"
+    ])
+
+@py.test.mark.xfail
+def test_terminate_on_hangingnode(testdir):
+    p = testdir.makeconftest("""
+        def pytest__teardown_final(session):
+            if session.nodeid == "my": # running on slave
+                import time
+                time.sleep(3)
+    """)
+    result = testdir.runpytest(p, '--dist=each', '--tx=popen//id=my')
+    assert result.duration < 2.0
+    result.stdout.fnmatch_lines([
+        "*killed*my*",
+    ])
+
+
+
+def test_session_hooks(testdir):
+    testdir.makeconftest("""
+        import sys
+        def pytest_sessionstart(session):
+            sys.pytestsessionhooks = session
+        def pytest_sessionfinish(session):
+            if hasattr(session.config, 'slaveinput'):
+                name = "slave"
+            else:
+                name = "master"
+            f = open(name, "w")
+            f.write("xy")
+            f.close()
+            # let's fail on the slave
+            if name == "slave":
+                raise ValueError(42)
+    """)
+    p = testdir.makepyfile("""
+        import sys
+        def test_hello():
+            assert hasattr(sys, 'pytestsessionhooks')
+    """)
+    result = testdir.runpytest(p, "--dist=each", "--tx=popen")
+    result.stdout.fnmatch_lines([
+        "*ValueError*",
+        "*1 passed*",
+    ])
+    assert not result.ret
+    d = result.parseoutcomes()
+    assert d['passed'] == 1
+    assert testdir.tmpdir.join("slave").check()
+    assert testdir.tmpdir.join("master").check()
+
+def test_funcarg_teardown_failure(testdir):
+    p = testdir.makepyfile("""
+        def pytest_funcarg__myarg(request):
+            def teardown(val):
+                raise ValueError(val)
+            return request.cached_setup(setup=lambda: 42, teardown=teardown,
+                scope="module")
+        def test_hello(myarg):
+            pass
+    """)
+    result = testdir.runpytest("--debug", p, "-n1")
+    result.stdout.fnmatch_lines([
+        "*ValueError*42*",
+        "*1 passed*1 error*",
+    ])
+    py.test.xfail("fix exitstatus handling")
+    assert result.ret
+
+def test_crashing_item(testdir):
+    p = testdir.makepyfile("""
+        import py
+        import os
+        def test_crash():
+            py.process.kill(os.getpid())
+        def test_noncrash():
+            pass
+    """)
+    result = testdir.runpytest("-n2", p)
+    result.stdout.fnmatch_lines([
+        "*crashed*test_crash*",
+        "*1 failed*1 passed*"
+    ])
+
+
+
