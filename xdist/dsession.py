@@ -1,17 +1,59 @@
 import py
 import sys
 from xdist.slavemanage import NodeManager
-from py._test import session
 queue = py.builtin._tryimport('queue', 'Queue')
 
-def dsession_main(config):
-    config.pluginmanager.do_configure(config)
-    session = DSession(config)
-    trdist = TerminalDistReporter(config)
-    config.pluginmanager.register(trdist, "terminaldistreporter")
-    exitcode = session.main()
-    config.pluginmanager.do_unconfigure(config)
-    return exitcode
+class EachScheduling:
+
+    def __init__(self, numnodes, log=None):
+        self.numnodes = numnodes
+        self.node2collection = {}
+        self.node2pending = {}
+        if log is None:
+            self.log = py.log.Producer("eachsched")
+        else:
+            self.log = log.loadsched
+        self.collection_is_completed = False
+
+    def hasnodes(self):
+        return bool(self.node2pending)
+
+    def addnode(self, node):
+        self.node2collection[node] = None
+
+    def tests_finished(self):
+        if not self.collection_is_completed:
+            return False
+        for items in self.node2pending.values():
+            if items:
+                return False
+        return True
+
+    def addnode_collection(self, node, collection):
+        assert not self.collection_is_completed
+        assert self.node2collection[node] is None
+        self.node2collection[node] = list(collection)
+        self.node2pending[node] = []
+        if len(self.node2pending) >= self.numnodes:
+            self.collection_is_completed = True
+
+    def remove_item(self, node, item):
+        self.node2pending[node].remove(item)
+
+    def remove_node(self, node):
+        # KeyError if we didn't get an addnode() yet
+        pending = self.node2pending.pop(node)
+        if not pending:
+            return
+        crashitem = pending.pop(0)
+        # XXX what about the rest of pending?
+        return crashitem
+
+    def init_distribute(self):
+        assert self.collection_is_completed
+        for node, pending in self.node2pending.items():
+            node.send_runtest_all()
+            pending[:] = self.node2collection[node]
 
 class LoadScheduling:
     LOAD_THRESHOLD_NEWITEMS = 5
@@ -92,29 +134,20 @@ class LoadScheduling:
         for node, collection in self.node2collection.items():
             assert collection == col
         self.pending = col
-       
-    def triggertesting(self):
-        if not self.pending:
+        if not col:
             return
-        available = []
-        for node, pending in self.node2pending.items():
-            if len(pending) < self.LOAD_THRESHOLD_NEWITEMS:
-                available.append((node, pending))
-        num_available = len(available)
-        if num_available:
-            max_one_round = num_available * self.ITEM_CHUNKSIZE -1
-            for i, item in enumerate(self.pending):
-                nodeindex = i % num_available
-                node, pending = available[nodeindex]
-                node.send_runtest(item)
-                self.item2nodes.setdefault(item, []).append(node)
-                #item.ihook.pytest_itemstart(item=item, node=node)
-                pending.append(item)
-                if i >= max_one_round:
-                    break
-            del self.pending[:i+1]
-        if self.pending:
-            self.log("triggertesting remaining:", len(self.pending))
+        available = list(self.node2pending.items())
+        num_available = self.numnodes
+        max_one_round = num_available * self.ITEM_CHUNKSIZE -1
+        for i, item in enumerate(self.pending):
+            nodeindex = i % num_available
+            node, pending = available[nodeindex]
+            node.send_runtest(item)
+            self.item2nodes.setdefault(item, []).append(node)
+            pending.append(item)
+            if i >= max_one_round:
+                break
+        del self.pending[:i+1]
 
 class Interrupted(KeyboardInterrupt):
     """ signals an immediate interruption. """
@@ -138,23 +171,59 @@ class DSession:
         if self.terminal:
             self.terminal.write_line(line)
 
-    def pytest_gwmanage_rsyncstart(self, source, gateways):
-        targets = ",".join([gw.id for gw in gateways])
-        msg = "[%s] rsyncing: %s" %(targets, source)
-        self.report_line(msg)
+    def pytest_sessionstart(self, session, __multicall__):
+        #print "remaining multicall methods", __multicall__.methods
+        if not self.config.getvalue("verbose"):
+            self.report_line("instantiating gateways (use -v for details): %s" %
+                ",".join(self.config.option.tx))
+        self.nodemanager = NodeManager(self.config)
+        self.nodemanager.setup_nodes(putevent=self.queue.put)
 
-    #def pytest_gwmanage_rsyncfinish(self, source, gateways):
-    #    targets = ", ".join(["[%s]" % gw.id for gw in gateways])
-    #    self.write_line("rsyncfinish: %s -> %s" %(source, targets))
+    def pytest_sessionfinish(self, session):
+        """ teardown any resources after a test run. """
+        self.nodemanager.teardown_nodes()
 
-    def main(self):
-        self.config.hook.pytest_sessionstart(session=self)
-        self.setup()
-        exitstatus = self.loop()
-        self.teardown()
-        self.config.hook.pytest_sessionfinish(session=self,
-            exitstatus=exitstatus,)
-        return exitstatus
+    def pytest_perform_collection(self, __multicall__):
+        # prohibit collection of test items in master process
+        __multicall__.methods[:] = []
+
+    def pytest_runtest_mainloop(self):
+        numnodes = len(self.nodemanager.gwmanager.specs)
+        dist = self.config.getvalue("dist")
+        if dist == "load":
+            self.sched = LoadScheduling(numnodes, log=self.log)
+        elif dist == "each":
+            self.sched = EachScheduling(numnodes, log=self.log)
+        else:
+            assert 0, dist
+        self.shouldstop = False
+        self.session_finished = False
+        while not self.session_finished:
+            self.loop_once()
+            if self.shouldstop:
+                raise Interrupted(str(self.shouldstop))
+        return True
+
+    def loop_once(self):
+        """ process one callback from one of the slaves. """
+        while 1:
+            try:
+                eventcall = self.queue.get(timeout=2.0)
+                break
+            except queue.Empty:
+                continue
+        callname, kwargs = eventcall
+        assert callname, kwargs
+        method = "slave_" + callname
+        call = getattr(self, method)
+        self.log("calling method: %s(**%s)" % (method, kwargs))
+        call(**kwargs)
+        if self.sched.tests_finished():
+            self.triggershutdown()
+
+    #
+    # callbacks for processing events from slaves
+    #
 
     def slave_slaveready(self, node, slaveinfo):
         node.slaveinfo = slaveinfo
@@ -192,7 +261,6 @@ class DSession:
 
         if self.sched.collection_is_completed:
             self.sched.init_distribute()
-            self.sched.triggertesting()
 
     def slave_logstart(self, node, nodeid, location):
         self.config.hook.pytest_runtest_logstart(
@@ -222,45 +290,6 @@ class DSession:
                 self.shouldstop = "stopping after %d failures" % (
                     self.countfailures)
 
-    def loop(self):
-        numnodes = len(self.nodemanager.gwmanager.specs)
-        self.sched = LoadScheduling(numnodes, log=self.log)
-        self.shouldstop = False
-        self.session_finished = False
-        exitstatus = 0
-        try:
-            while not self.session_finished:
-                self.loop_once()
-                if self.shouldstop:
-                    raise Interrupted(str(self.shouldstop))
-        except KeyboardInterrupt:
-            excinfo = py.code.ExceptionInfo()
-            self.config.hook.pytest_keyboard_interrupt(excinfo=excinfo)
-            exitstatus = session.EXIT_INTERRUPTED
-        except:
-            self.config.pluginmanager.notify_exception()
-            exitstatus = session.EXIT_INTERNALERROR
-        #self.config.pluginmanager.unregister(loopstate)
-        if exitstatus == 0 and self.countfailures:
-            exitstatus = session.EXIT_TESTSFAILED
-        return exitstatus
-
-    def loop_once(self):
-        while 1:
-            try:
-                eventcall = self.queue.get(timeout=2.0)
-                break
-            except queue.Empty:
-                continue
-        callname, kwargs = eventcall
-        assert callname, kwargs
-        method = "slave_" + callname
-        call = getattr(self, method)
-        self.log("calling method: %s(**%s)" % (method, kwargs))
-        call(**kwargs)
-        if self.sched.tests_finished():
-            self.triggershutdown()
-
     def triggershutdown(self):
         self.log("triggering shutdown")
         self.shuttingdown = True
@@ -276,18 +305,6 @@ class DSession:
             "failed", msg, "???")
         enrich_report_with_platform_data(rep, slave)
         self.config.hook.pytest_runtest_logreport(report=rep)
-
-    def setup(self):
-        """ setup any neccessary resources ahead of the test run. """
-        if not self.config.getvalue("verbose"):
-            self.report_line("instantiating gateways (use -v for details): %s" %
-                ",".join(self.config.option.tx))
-        self.nodemanager = NodeManager(self.config)
-        self.nodemanager.setup_nodes(putevent=self.queue.put)
-
-    def teardown(self):
-        """ teardown any resources after a test run. """
-        self.nodemanager.teardown_nodes()
 
 class TerminalDistReporter:
     def __init__(self, config):
@@ -305,9 +322,9 @@ class TerminalDistReporter:
                 gateway.id, rinfo.platform, version, rinfo.cwd))
 
     def pytest_testnodeready(self, node):
-        if self.config.getvalue("debug"):
+        if self.config.getvalue("verbose"):
             d = node.slaveinfo
-            infoline = "[%s] -- Python %s" %(
+            infoline = "[%s] Python %s" %(
                 d['id'],
                 d['version'].replace('\n', ' -- '),)
             self.write_line(infoline)
@@ -316,6 +333,15 @@ class TerminalDistReporter:
         if not error:
             return
         self.write_line("[%s] node down: %s" %(node.gateway.id, error))
+
+    #def pytest_gwmanage_rsyncstart(self, source, gateways):
+    #    targets = ",".join([gw.id for gw in gateways])
+    #    msg = "[%s] rsyncing: %s" %(targets, source)
+    #    self.write_line(msg)
+    #def pytest_gwmanage_rsyncfinish(self, source, gateways):
+    #    targets = ", ".join(["[%s]" % gw.id for gw in gateways])
+    #    self.write_line("rsyncfinish: %s -> %s" %(source, targets))
+
 
 def enrich_report_with_platform_data(rep, node):
     rep.node = node

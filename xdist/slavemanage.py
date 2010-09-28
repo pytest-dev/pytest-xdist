@@ -233,9 +233,13 @@ class SlaveController(object):
         args = self.config.args
         if not spec.popen or spec.chdir:
             args = make_reltoroot(self.nodemanager.roots, args)
+        option_dict = vars(self.config.option)
+        if spec.popen:
+            name = "popen-%s" % self.gateway.id
+            option_dict['basetemp'] = str(self.config.getbasetemp().join(name))
         self.config.hook.pytest_configure_node(node=self)
         self.channel = self.gateway.remote_exec(xdist.remote)
-        self.channel.send((self.slaveinput, args, vars(self.config.option)))
+        self.channel.send((self.slaveinput, args, option_dict))
         if self.putevent:
             self.channel.setcallback(self.process_from_remote,
                 endmarker=self.ENDMARK)
@@ -253,6 +257,9 @@ class SlaveController(object):
 
     def send_runtest(self, nodeid):
         self.sendcommand("runtests", ids=[nodeid])
+
+    def send_runtest_all(self):
+        self.sendcommand("runtests_all",)
 
     def shutdown(self):
         if not self._down and not self.channel.isclosed():

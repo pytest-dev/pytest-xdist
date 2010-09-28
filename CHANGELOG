@@ -1,6 +1,10 @@
 1.5a1
 -------------------------
 
+
+- major internal refactoring to match the py-1.4 event refactoring
+  - perform test collection always at slave side instead of at the master
+  - make python2/python3 bridging work, remove usage of pickling
 - remove all trailing whitespace from source
 
 1.4

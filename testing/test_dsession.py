@@ -1,4 +1,4 @@
-from xdist.dsession import DSession, LoadScheduling
+from xdist.dsession import DSession, LoadScheduling, EachScheduling
 from py._test import session as outcome
 import py
 import execnet
@@ -19,6 +19,9 @@ class MockNode:
     def send_runtest(self, nodeid):
         self.sent.append(nodeid)
 
+    def send_runtest_all(self):
+        self.sent.append("ALL")
+
     def sendlist(self, items):
         self.sent.extend(items)
 
@@ -28,6 +31,46 @@ class MockNode:
 def dumpqueue(queue):
     while queue.qsize():
         print(queue.get())
+
+class TestEachScheduling:
+    def test_schedule_load_simple(self):
+        node1 = MockNode()
+        node2 = MockNode()
+        sched = EachScheduling(2)
+        sched.addnode(node1)
+        sched.addnode(node2)
+        collection = ["a.py::test_1", ]
+        assert not sched.collection_is_completed
+        sched.addnode_collection(node1, collection)
+        assert not sched.collection_is_completed
+        sched.addnode_collection(node2, collection)
+        assert sched.collection_is_completed
+        assert sched.node2collection[node1] == collection
+        assert sched.node2collection[node2] == collection
+        sched.init_distribute()
+        assert not sched.tests_finished()
+        assert node1.sent == ['ALL']
+        assert node2.sent == ['ALL']
+        sched.remove_item(node1, collection[0])
+        assert not sched.tests_finished()
+        sched.remove_item(node2, collection[0])
+        assert sched.tests_finished()
+
+    def test_schedule_remove_node(self):
+        node1 = MockNode()
+        sched = EachScheduling(1)
+        sched.addnode(node1)
+        collection = ["a.py::test_1", ]
+        assert not sched.collection_is_completed
+        sched.addnode_collection(node1, collection)
+        assert sched.collection_is_completed
+        assert sched.node2collection[node1] == collection
+        sched.init_distribute()
+        assert not sched.tests_finished()
+        crashitem = sched.remove_node(node1)
+        assert crashitem
+        assert sched.tests_finished()
+        assert not sched.hasnodes()
 
 class TestLoadScheduling:
     def test_schedule_load_simple(self):
@@ -45,17 +88,17 @@ class TestLoadScheduling:
         assert sched.node2collection[node1] == collection
         assert sched.node2collection[node2] == collection
         sched.init_distribute()
-        assert sched.pending
-        sched.triggertesting()
         assert not sched.tests_finished()
-        assert node1.sent == collection[:1]
-        assert node2.sent == collection[1:]
-        sched.remove_item(node1, collection[0])
-        sched.remove_item(node2, collection[1])
+        assert len(node1.sent) == 1
+        assert len(node2.sent) == 1
+        x = sorted(node1.sent + node2.sent)
+        assert x == collection
+        sched.remove_item(node1, node1.sent[0])
+        sched.remove_item(node2, node2.sent[0])
         assert sched.tests_finished()
         assert not sched.pending
 
-    def test_triggertesting_chunksize(self):
+    def test_init_distribute_chunksize(self):
         sched = LoadScheduling(2)
         node1 = MockNode()
         node2 = MockNode()
@@ -66,7 +109,6 @@ class TestLoadScheduling:
         sched.addnode_collection(node1, col)
         sched.addnode_collection(node2, col)
         sched.init_distribute()
-        sched.triggertesting()
         sent1 = node1.sent
         sent2 = node2.sent
         chunkitems = col[:sched.ITEM_CHUNKSIZE]
@@ -78,7 +120,6 @@ class TestLoadScheduling:
         for node in (node1, node2):
             for i in range(sched.ITEM_CHUNKSIZE):
                 sched.remove_item(node, "xyz")
-        sched.triggertesting()
         assert not sched.pending
 
     def test_add_remove_node(self):
@@ -89,320 +130,14 @@ class TestLoadScheduling:
         sched.addnode_collection(node, collection)
         assert sched.collection_is_completed
         sched.init_distribute()
-        sched.triggertesting()
         assert not sched.pending
         crashitem = sched.remove_node(node)
         assert crashitem == collection[0]
 
 
-class TestDSession:
+class TestDistReporter:
 
-    #def test_collection_fails(self, testdir):
-    #    pass
-
-    def xxx_test_senditems_each_and_receive_with_two_nodes(self, testdir):
-        item = testdir.getitem("def test_func(): pass")
-        node1 = MockNode()
-        node2 = MockNode()
-        session = DSession(item.config)
-        session.addnode(node1)
-        session.addnode(node2)
-        session.senditems_each([item])
-        assert session.node2pending[node1] == [item]
-        assert session.node2pending[node2] == [item]
-        assert node1 in session.item2nodes[item]
-        assert node2 in session.item2nodes[item]
-        session.removeitem(item, node1)
-        assert session.item2nodes[item] == [node2]
-        session.removeitem(item, node2)
-        assert not session.node2pending[node1]
-        assert not session.item2nodes
-
-    def test_keyboardinterrupt(self, testdir):
-        item = testdir.getitem("def test_func(): pass")
-        session = DSession(item.config)
-        def raise_(timeout=None): raise KeyboardInterrupt()
-        session.queue.get = raise_
-        exitstatus = session.loop([])
-        assert exitstatus == outcome.EXIT_INTERRUPTED
-
-    def test_internalerror(self, testdir):
-        item = testdir.getitem("def test_func(): pass")
-        session = DSession(item.config)
-        def raise_(): raise ValueError()
-        session.queue.get = raise_
-        exitstatus = session.loop([])
-        assert exitstatus == outcome.EXIT_INTERNALERROR
-
-    def test_no_node_remaining_for_tests(self, testdir):
-        item = testdir.getitem("def test_func(): pass")
-        # setup a session with one node
-        session = DSession(item.config)
-        node = MockNode()
-        session.addnode(node)
-
-        # setup a HostDown event
-        session.queueevent("pytest_testnodedown", node=node, error=None)
-
-        loopstate = session._initloopstate([item])
-        loopstate.dowork = False
-        session.loop_once(loopstate)
-        dumpqueue(session.queue)
-        assert loopstate.exitstatus == outcome.EXIT_NOHOSTS
-
-    def test_removeitem_from_failing_teardown(self, testdir):
-        # teardown reports only come in when they signal a failure
-        # internal session-management should basically ignore them
-        # XXX probably it'S best to invent a new error hook for
-        # teardown/setup related failures
-        modcol = testdir.getmodulecol("""
-            def test_one():
-                pass
-            def teardown_function(function):
-                assert 0
-        """)
-        item1, = modcol.collect()
-
-        # setup a session with two nodes
-        session = DSession(item1.config)
-        node1, node2 = MockNode(), MockNode()
-        session.addnode(node1)
-        session.addnode(node2)
-
-        # have one test pending for a node that goes down
-        session.senditems_each([item1])
-        nodes = session.item2nodes[item1]
-        class rep:
-            failed = True
-            item = item1
-            node = nodes[0]
-            when = "call"
-        session.queueevent("pytest_runtest_logreport", report=rep)
-        reprec = testdir.getreportrecorder(session)
-        print(session.item2nodes)
-        loopstate = session._initloopstate([])
-        assert len(session.item2nodes[item1]) == 2
-        session.loop_once(loopstate)
-        assert len(session.item2nodes[item1]) == 1
-        rep.when = "teardown"
-        session.queueevent("pytest_runtest_logreport", report=rep)
-        session.loop_once(loopstate)
-        assert len(session.item2nodes[item1]) == 1
-
-    def test_testnodeready_adds_to_available(self, testdir):
-        item = testdir.getitem("def test_func(): pass")
-        # setup a session with two nodes
-        session = DSession(item.config)
-        node1 = MockNode()
-        session.queueevent("pytest_testnodeready", node=node1)
-        loopstate = session._initloopstate([item])
-        loopstate.dowork = False
-        assert len(session.node2pending) == 0
-        session.loop_once(loopstate)
-        assert len(session.node2pending) == 1
-
-    def runthrough(self, item, excinfo=None):
-        session = DSession(item.config)
-        node = MockNode()
-        session.addnode(node)
-        loopstate = session._initloopstate([item])
-
-        session.queueevent(None)
-        session.loop_once(loopstate)
-
-        assert node.sent == [item]
-        ev = run(item, node, excinfo=excinfo)
-        session.queueevent("pytest_runtest_logreport", report=ev)
-        session.loop_once(loopstate)
-        assert loopstate.shuttingdown
-        session.queueevent("pytest_testnodedown", node=node, error=None)
-        session.loop_once(loopstate)
-        dumpqueue(session.queue)
-        return session, loopstate.exitstatus
-
-    def test_exit_completed_tests_ok(self, testdir):
-        item = testdir.getitem("def test_func(): pass")
-        session, exitstatus = self.runthrough(item)
-        assert exitstatus == outcome.EXIT_OK
-
-    def test_exit_completed_tests_fail(self, testdir):
-        item = testdir.getitem("def test_func(): 0/0")
-        session, exitstatus = self.runthrough(item, excinfo="fail")
-        assert exitstatus == outcome.EXIT_TESTSFAILED
-
-    def test_exit_on_first_failing(self, testdir):
-        modcol = testdir.getmodulecol("""
-            def test_fail():
-                assert 0
-            def test_pass():
-                pass
-        """)
-        modcol.config.option.maxfail = 1
-        session = DSession(modcol.config)
-        node = MockNode()
-        session.addnode(node)
-        items = modcol.config.hook.pytest_make_collect_report(collector=modcol).result
-
-        # trigger testing  - this sends tests to the node
-        session.triggertesting(items)
-
-        # run tests ourselves and produce reports
-        ev1 = run(items[0], node, "fail")
-        ev2 = run(items[1], node, None)
-        session.queueevent("pytest_runtest_logreport", report=ev1)
-        session.queueevent("pytest_runtest_logreport", report=ev2)
-        # now call the loop
-        loopstate = session._initloopstate(items)
-        py.test.raises(session.Interrupted, "session.loop_once(loopstate)")
-        assert loopstate.testsfailed
-        #assert loopstate.shuttingdown
-
-    def test_maxfail(self, testdir):
-        modcol = testdir.getmodulecol("""
-            def test_fail1():
-                assert 0
-            def test_fail2():
-                assert 0
-            def test_pass():
-                pass
-        """)
-        modcol.config.option.maxfail = 2
-        session = DSession(modcol.config)
-        node = MockNode()
-        session.addnode(node)
-        items = modcol.config.hook.pytest_make_collect_report(collector=modcol).result
-
-        # trigger testing  - this sends tests to the node
-        session.triggertesting(items)
-
-        # run tests ourselves and produce reports
-        ev1 = run(items[0], node, "fail")
-        ev2 = run(items[1], node, "fail")
-        session.queueevent("pytest_runtest_logreport", report=ev1) # a failing one
-        session.queueevent("pytest_runtest_logreport", report=ev2)
-        # now call the loop
-        loopstate = session._initloopstate(items)
-        try:
-            session.loop_once(loopstate)
-        except session.Interrupted:
-            py.test.fail("raised Interrupted but shouildn't")
-        py.test.raises(session.Interrupted, "session.loop_once(loopstate)")
-        assert loopstate.testsfailed
-        #assert loopstate.shuttingdown
-
-    def test_shuttingdown_filters(self, testdir):
-        item = testdir.getitem("def test_func(): pass")
-        session = DSession(item.config)
-        node = MockNode()
-        session.addnode(node)
-        loopstate = session._initloopstate([])
-        loopstate.shuttingdown = True
-        reprec = testdir.getreportrecorder(session)
-        session.queueevent("pytest_runtest_logreport", report=run(item, node))
-        session.loop_once(loopstate)
-        assert not reprec.getcalls("pytest_testnodedown")
-        session.queueevent("pytest_testnodedown", node=node, error=None)
-        session.loop_once(loopstate)
-        assert reprec.getcall('pytest_testnodedown').node == node
-
-    def test_filteritems(self, testdir):
-        modcol = testdir.getmodulecol("""
-            def test_fail():
-                assert 0
-            def test_pass():
-                pass
-        """)
-        session = DSession(modcol.config)
-
-        modcol.config.option.keyword = "nothing"
-        dsel = session.filteritems([modcol])
-        assert dsel == [modcol]
-        items = modcol.collect()
-        hookrecorder = testdir.getreportrecorder(session).hookrecorder
-        remaining = session.filteritems(items)
-        assert remaining == []
-
-        event = hookrecorder.getcalls("pytest_deselected")[-1]
-        assert event.items == items
-
-        modcol.config.option.keyword = "test_fail"
-        remaining = session.filteritems(items)
-        assert remaining == [items[0]]
-
-        event = hookrecorder.getcalls("pytest_deselected")[-1]
-        assert event.items == [items[1]]
-
-    def test_testnodedown_shutdown_after_completion(self, testdir):
-        item = testdir.getitem("def test_func(): pass")
-        session = DSession(item.config)
-
-        node = MockNode()
-        session.addnode(node)
-        session.senditems_load([item])
-        session.queueevent("pytest_runtest_logreport", report=run(item, node))
-        loopstate = session._initloopstate([])
-        session.loop_once(loopstate)
-        assert node._shutdown is True
-        assert loopstate.exitstatus is None, "loop did not wait for testnodedown"
-        assert loopstate.shuttingdown
-        session.queueevent("pytest_testnodedown", node=node, error=None)
-        session.loop_once(loopstate)
-        assert loopstate.exitstatus == 0
-
-    def test_nopending_but_collection_remains(self, testdir):
-        modcol = testdir.getmodulecol("""
-            def test_fail():
-                assert 0
-            def test_pass():
-                pass
-        """)
-        session = DSession(modcol.config)
-        node = MockNode()
-        session.addnode(node)
-
-        colreport = modcol.config.hook.pytest_make_collect_report(collector=modcol)
-        item1, item2 = colreport.result
-        session.senditems_load([item1])
-        # node2pending will become empty when the loop sees the report
-        rep = run(item1, node)
-        session.queueevent("pytest_runtest_logreport", report=run(item1, node))
-
-        # but we have a collection pending
-        session.queueevent("pytest_collectreport", report=colreport)
-
-        loopstate = session._initloopstate([])
-        session.loop_once(loopstate)
-        assert loopstate.exitstatus is None, "loop did not care for collection report"
-        assert not loopstate.colitems
-        session.loop_once(loopstate)
-        assert loopstate.colitems == colreport.result
-        assert loopstate.exitstatus is None, "loop did not care for colitems"
-
-    def test_dist_some_tests(self, testdir):
-        p1 = testdir.makepyfile(test_one="""
-            def test_1():
-                pass
-            def test_x():
-                import py
-                py.test.skip("aaa")
-            def test_fail():
-                assert 0
-        """)
-        config = testdir.parseconfig('-d', p1, '--tx=popen')
-        dsession = DSession(config)
-        hookrecorder = testdir.getreportrecorder(config).hookrecorder
-        dsession.main([config.getnode(p1)])
-        rep = hookrecorder.popcall("pytest_runtest_logreport").report
-        assert rep.passed
-        rep = hookrecorder.popcall("pytest_runtest_logreport").report
-        assert rep.skipped
-        rep = hookrecorder.popcall("pytest_runtest_logreport").report
-        assert rep.failed
-        # see that the node is really down
-        node = hookrecorder.popcall("pytest_testnodedown").node
-        assert node.gateway.spec.popen
-        #XXX eq.geteventargs("pytest_sessionfinish")
-
+    @py.test.mark.xfail
     def test_rsync_printing(self, testdir, linecomp):
         config = testdir.parseconfig()
         from py._plugin.pytest_terminal import TerminalReporter

@@ -190,9 +190,16 @@ def pytest_cmdline_main(config):
         from xdist.looponfail import looponfail_main
         looponfail_main(config)
         return 2 # looponfail only can get stop with ctrl-C anyway
-    elif config.getvalue("dist") != "no":
-        from xdist.dsession import dsession_main
-        return dsession_main(config)
+
+def pytest_configure(config, __multicall__):
+    __multicall__.execute()
+    if config.getvalue("dist") != "no":
+        from xdist.dsession import DSession, TerminalDistReporter
+        session = DSession(config)
+        config.pluginmanager.register(session, "dsession")
+        
+        trdist = TerminalDistReporter(config)
+        config.pluginmanager.register(trdist, "terminaldistreporter")
 
 def check_options(config):
     if config.option.numprocesses:
@@ -224,7 +231,8 @@ def forked_run_report(item):
     from py._plugin.pytest_runner import runtestprotocol
     EXITSTATUS_TESTEXIT = 4
     import marshal
-    from xdist.remote import serialize_report, unserialize_report
+    from xdist.remote import serialize_report
+    from xdist.slavemanage import unserialize_report
     def runforked():
         try:
             reports = runtestprotocol(item, log=False)
@@ -236,7 +244,7 @@ def forked_run_report(item):
     result = ff.waitfinish()
     if result.retval is not None:
         report_dumps = marshal.loads(result.retval)
-        return [unserialize_report(x) for x in report_dumps]
+        return [unserialize_report("testreport", x) for x in report_dumps]
     else:
         if result.exitstatus == EXITSTATUS_TESTEXIT:
             py.test.exit("forked test item %s raised Exit" %(item,))

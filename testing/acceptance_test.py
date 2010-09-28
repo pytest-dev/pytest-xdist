@@ -70,6 +70,18 @@ class TestDistribution:
             "*1 failed*",
         ])
 
+    def test_basetemp_in_subprocesses(self, testdir):
+        p1 = testdir.makepyfile("""
+            def test_send(pytestconfig):
+                bt = pytestconfig.getbasetemp()
+                assert bt.basename.startswith("popen-")
+        """)
+        result = testdir.runpytest(p1, "-n1")
+        assert result.ret == 0
+        result.stdout.fnmatch_lines([
+            "*1 passed*",
+        ])
+
     def test_dist_conftest_specified(self, testdir):
         p1 = testdir.makepyfile("""
                 import py
@@ -143,28 +155,6 @@ class TestDistribution:
         ])
         assert dest.join(subdir.basename).check(dir=1)
 
-    def test_dist_each(self, testdir):
-        interpreters = []
-        for name in ("python2.4", "python2.5"):
-            interp = py.path.local.sysfind(name)
-            if interp is None:
-                py.test.skip("%s not found" % name)
-            interpreters.append(interp)
-
-        testdir.makepyfile(__init__="", test_one="""
-            import sys
-            def test_hello():
-                print("%s...%s" % sys.version_info[:2])
-                assert 0
-        """)
-        args = ["--dist=each", "-v"]
-        args += ["--tx", "popen//python=%s" % interpreters[0]]
-        args += ["--tx", "popen//python=%s" % interpreters[1]]
-        result = testdir.runpytest(*args)
-        s = result.stdout.str()
-        assert "2.4" in s
-        assert "2.5" in s
-
     def test_data_exchange(self, testdir):
         c1 = testdir.makeconftest("""
             # This hook only called on master.
@@ -235,6 +225,38 @@ class TestDistribution:
         #child.expect(".*seconds.*")
         child.close()
         #assert ret == 2
+
+class TestDistEach:
+    def test_simple(self, testdir):
+        testdir.makepyfile("""
+            def test_hello():
+                pass
+        """)
+        result = testdir.runpytest("--debug", "--dist=each", "--tx=2*popen")
+        assert not result.ret
+        result.stdout.fnmatch_lines(["*2 pass*"])
+
+    def test_simple_diffoutput(self, testdir):
+        interpreters = []
+        for name in ("python2.5", "python2.6"):
+            interp = py.path.local.sysfind(name)
+            if interp is None:
+                py.test.skip("%s not found" % name)
+            interpreters.append(interp)
+
+        testdir.makepyfile(__init__="", test_one="""
+            import sys
+            def test_hello():
+                print("%s...%s" % sys.version_info[:2])
+                assert 0
+        """)
+        args = ["--dist=each", "-v"]
+        args += ["--tx", "popen//python=%s" % interpreters[0]]
+        args += ["--tx", "popen//python=%s" % interpreters[1]]
+        result = testdir.runpytest(*args)
+        s = result.stdout.str()
+        assert "2...5" in s
+        assert "2...6" in s
 
 class TestTerminalReporting:
     def test_pass_skip_fail(self, testdir):
@@ -345,12 +367,11 @@ def test_funcarg_teardown_failure(testdir):
         def test_hello(myarg):
             pass
     """)
-    result = testdir.runpytest("--debug", p, "-n1")
+    result = testdir.runpytest("--debug", p) # , "-n1")
     result.stdout.fnmatch_lines([
         "*ValueError*42*",
         "*1 passed*1 error*",
     ])
-    py.test.xfail("fix exitstatus handling")
     assert result.ret
 
 def test_crashing_item(testdir):

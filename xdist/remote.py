@@ -55,6 +55,9 @@ class SlaveInteractor:
                 for nodeid in ids:
                     for item in self.collection.getbyid(nodeid):
                         self.config.hook.pytest_runtest_protocol(item=item)
+            elif name == "runtests_all":
+                for item in self.collection.items:
+                    self.config.hook.pytest_runtest_protocol(item=item)
             elif name == "shutdown":
                 break
         return True
@@ -65,7 +68,7 @@ class SlaveInteractor:
             topdir=str(collection.topdir),
             ids=ids)
 
-    #def pytest_runtest_logstart(self, nodeid, location):
+    #def pytest_runtest_logstart(self, nodeid, location, fspath):
     #    self.sendevent("logstart", nodeid=nodeid, location=location)
 
     def pytest_runtest_logreport(self, report):

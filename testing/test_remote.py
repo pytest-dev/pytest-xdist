@@ -174,6 +174,34 @@ class TestSlaveInteractor:
         print ev.kwargs
         assert not ev.kwargs['ids']
 
+    def test_runtests_all(self, slave):
+        p = slave.testdir.makepyfile("""
+            def test_func(): pass
+            def test_func2(): pass
+        """)
+        slave.setup()
+        ev = slave.popevent()
+        assert ev.name == "slaveready"
+        ev = slave.popevent()
+        assert ev.name == "collectionstart"
+        assert not ev.kwargs
+        ev = slave.popevent("collectionfinish")
+        ids = ev.kwargs['ids']
+        assert len(ids) == 2
+        slave.sendcommand("runtests_all", )
+        ev = slave.popevent("testreport")
+        assert ev.name == "testreport"
+        rep = unserialize_report(ev.name, ev.kwargs['data'])
+        assert rep.nodeid.endswith("::test_func")
+        ev = slave.popevent("testreport")
+        assert ev.name == "testreport"
+        rep = unserialize_report(ev.name, ev.kwargs['data'])
+        assert rep.nodeid.endswith("::test_func2")
+        assert rep.passed
+        slave.sendcommand("shutdown")
+        ev = slave.popevent("slavefinished")
+        assert 'slaveoutput' in ev.kwargs
+
     def test_happy_run_events_converted(self, testdir, slave):
         py.test.xfail("implement a simple test for event production")
         assert not slave.use_callback
