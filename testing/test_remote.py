@@ -6,6 +6,8 @@ queue = py.builtin._tryimport("queue", "Queue")
 from py.builtin import print_
 import marshal
 
+WAIT_TIMEOUT = 10.0
+
 def check_marshallable(d):
     try:
         marshal.dumps(d)
@@ -41,9 +43,9 @@ class SlaveSetup:
     def popevent(self, name=None):
         while 1:
             if self.use_callback:
-                data = self.events.get(timeout=2)
+                data = self.events.get(timeout=WAIT_TIMEOUT)
             else:
-                data = self.slp.channel.receive(timeout=2)
+                data = self.slp.channel.receive(timeout=WAIT_TIMEOUT)
             ev = EventCall(data)
             if name is None or ev.name == name:
                 return ev
@@ -158,7 +160,6 @@ class TestSlaveInteractor:
         rep = unserialize_report(ev.name, ev.kwargs['data'])
         assert rep.skipped
         ev = slave.popevent("collectionfinish")
-        print ev.kwargs
         assert not ev.kwargs['ids']
 
     def test_remote_collect_fail(self, slave):
