@@ -172,7 +172,6 @@ class TestSlaveInteractor:
         rep = unserialize_report(ev.name, ev.kwargs['data'])
         assert rep.failed
         ev = slave.popevent("collectionfinish")
-        print ev.kwargs
         assert not ev.kwargs['ids']
 
     def test_runtests_all(self, slave):
