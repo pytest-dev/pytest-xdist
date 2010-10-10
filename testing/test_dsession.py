@@ -1,5 +1,5 @@
 from xdist.dsession import DSession, LoadScheduling, EachScheduling
-from pytest.plugin import pytest_session as outcome
+from pytest.plugin import session as outcome
 import py
 import execnet
 

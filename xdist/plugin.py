@@ -228,7 +228,7 @@ def pytest_runtest_protocol(item):
 def forked_run_report(item):
     # for now, we run setup/teardown in the subprocess
     # XXX optionally allow sharing of setup/teardown
-    from pytest.plugin.pytest_runner import runtestprotocol
+    from pytest.plugin.runner import runtestprotocol
     EXITSTATUS_TESTEXIT = 4
     import marshal
     from xdist.remote import serialize_report
@@ -254,7 +254,7 @@ def report_process_crash(item, result):
     path, lineno = item._getfslineno()
     info = "%s:%s: running the test CRASHED with signal %d" %(
             path, lineno, result.signal)
-    from pytest.plugin import pytest_runner as runner
+    from pytest.plugin import runner
     call = runner.CallInfo(lambda: 0/0, "???")
     call.excinfo = info
     rep = runner.pytest_runtest_makereport(item, call)
