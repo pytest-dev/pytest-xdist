@@ -236,6 +236,8 @@ class TestDistEach:
         assert not result.ret
         result.stdout.fnmatch_lines(["*2 pass*"])
 
+    @py.test.mark.xfail(run=False,
+        reason="other python versions might not have py.test installed")
     def test_simple_diffoutput(self, testdir):
         interpreters = []
         for name in ("python2.5", "python2.6"):

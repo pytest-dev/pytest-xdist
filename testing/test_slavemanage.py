@@ -11,8 +11,8 @@ def pytest_funcarg__hookrecorder(request):
 
 def pytest_funcarg__hook(request):
     from xdist import newhooks
-    from py._test.pluginmanager import HookRelay, Registry
-    from py._plugin import hookspec
+    from pytest.pluginmanager import HookRelay, Registry
+    from pytest.plugin import hookspec
     return HookRelay([hookspec, newhooks], Registry())
 
 class pytest_funcarg__mysetup:

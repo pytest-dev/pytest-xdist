@@ -22,7 +22,7 @@ setup(
     packages = ['xdist'],
     entry_points = {'pytest11': ['xdist = xdist.plugin'],},
     zip_safe=False,
-    install_requires = ['execnet>=1.0.7', 'py>1.3.9'],
+    install_requires = ['execnet>=1.0.7', 'pylib>1.3.9'],
     classifiers=[
     'Development Status :: 5 - Production/Stable',
     'Intended Audience :: Developers',

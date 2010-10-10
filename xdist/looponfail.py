@@ -10,11 +10,11 @@
 import py
 import sys
 import execnet
-from py._test.session import gettopdir
 
 def looponfail_main(config):
     remotecontrol = RemoteControl(config)
     # XXX better configure rootdir
+    gettopdir = config.pluginmanager.getplugin("session").gettopdir
     rootdirs = [gettopdir(config.args)]
     statrecorder = StatRecorder(rootdirs)
     try:

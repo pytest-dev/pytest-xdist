@@ -3,7 +3,7 @@ import sys, os
 import execnet
 import xdist.remote
 
-from py._plugin import pytest_runner as runner # XXX load dynamically
+from pytest.plugin import pytest_runner as runner # XXX load dynamically
 
 class NodeManager(object):
     def __init__(self, config, specs=None):
