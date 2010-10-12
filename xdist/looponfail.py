@@ -123,7 +123,8 @@ def init_slave_session(channel, args, option_dict):
     sys.path[:] = newpaths
 
     #fullwidth, hasmarkup = channel.receive()
-    config = py.test.config
+    from pytest.plugin.config import Config
+    config = Config()
     config.option.__dict__.update(option_dict)
     config._preparse(args)
     config.args = args

@@ -60,10 +60,8 @@ def pytest_funcarg__slave(request):
 def test_remoteinitconfig(testdir):
     from xdist.remote import remote_initconfig
     config1 = testdir.parseconfig()
-    config2 = testdir.parseconfig("-x")
-    cfg = remote_initconfig(config2, config1.option.__dict__, config1.args)
-    assert cfg == config2
-    assert cfg.option.__dict__ == config1.option.__dict__
+    config2 = remote_initconfig(config1.option.__dict__, config1.args)
+    assert config2.option.__dict__ == config1.option.__dict__
 
 class TestReportSerialization:
     def test_itemreport_outcomes(self, testdir):

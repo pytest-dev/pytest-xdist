@@ -101,7 +101,9 @@ def getinfodict():
         cwd = os.getcwd(),
     )
 
-def remote_initconfig(config, option_dict, args):
+def remote_initconfig(option_dict, args):
+    from pytest.plugin.config import Config
+    config = Config()
     config._preparse(args)
     config.option.__dict__.update(option_dict)
     config.option.looponfail = False
@@ -116,7 +118,7 @@ def remote_initconfig(config, option_dict, args):
 if __name__ == '__channelexec__':
     slaveinput,args,option_dict = channel.receive()
     import py
-    config = remote_initconfig(py.test.config, option_dict, args)
+    config = remote_initconfig(option_dict, args)
     config.slaveinput = slaveinput
     config.slaveoutput = {}
     interactor = SlaveInteractor(config, channel)
