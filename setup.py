@@ -7,11 +7,10 @@ for the new options.
 """
 
 from setuptools import setup
-from xdist import __version__
 
 setup(
     name="pytest-xdist",
-    version=__version__,
+    version='1.5a2',
     description='py.test xdist plugin for distributed testing and loop-on-failing modes',
     long_description=__doc__,
     license='GPLv2 or later',

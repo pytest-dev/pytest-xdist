@@ -152,15 +152,16 @@ class SlaveFailSession:
         if self.topdir and self.trails:
             self.topdir = py.path.local(self.topdir)
             self.collection.topdir = self.topdir
-            nodes = []
+            col = self.collection
+            items = []
             for trail in self.trails:
-                names = self.collection._parsearg(trail, base=self.topdir)
+                names = col._parsearg(trail, base=self.topdir)
                 try:
-                    self.collection.genitems(
-                        [self.collection._topcollector], names, nodes)
+                    for node in col.matchnodes([col._topcollector], names):
+                        items.extend(col.genitems(node))
                 except self.config.Error:
                     pass # ignore collect errors / vanished tests
-            self.collection.items = nodes
+            self.collection.items = items
             return True
         self.topdir = session.collection.topdir
 
