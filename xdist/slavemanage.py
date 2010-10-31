@@ -1,4 +1,4 @@
-import py
+import py, pytest
 import sys, os
 import execnet
 import xdist.remote
@@ -18,7 +18,7 @@ class NodeManager(object):
         self.config.hook.pytest_trace(category="nodemanage", msg=msg)
 
     def config_getignores(self):
-        return self.config.getconftest_pathlist("rsyncignore")
+        return self.config.getini("rsyncignore")
 
     def rsync_roots(self):
         """ make sure that all remote gateways
@@ -78,7 +78,7 @@ class NodeManager(object):
             else:
                 xspeclist.extend([xspec[i+1:]] * num)
         if not xspeclist:
-            raise config.Error(
+            raise pytest.UsageError(
                 "MISSING test execution (tx) nodes: please specify --tx")
         return [execnet.XSpec(x) for x in xspeclist]
 
@@ -86,14 +86,14 @@ class NodeManager(object):
         config = self.config
         candidates = [py._pydir]
         candidates += config.option.rsyncdir
-        conftestroots = config.getconftest_pathlist("rsyncdirs")
+        conftestroots = config.getini("rsyncdirs")
         if conftestroots:
             candidates.extend(conftestroots)
         roots = []
         for root in candidates:
             root = py.path.local(root).realpath()
             if not root.check():
-                raise config.Error("rsyncdir doesn't exist: %r" %(root,))
+                raise pytest.UsageError("rsyncdir doesn't exist: %r" %(root,))
             if root not in roots:
                 roots.append(root)
         return roots

@@ -173,8 +173,9 @@ class TestNodeManager:
         source.ensure("dir1", "somefile", dir=1)
         dir2.ensure("hello")
         source.ensure("bogusdir", "file")
-        source.join("conftest.py").write(py.code.Source("""
-            rsyncdirs = ['dir1/dir2']
+        source.join("tox.ini").write(py.std.textwrap.dedent("""
+            [pytest]
+            rsyncdirs=dir1/dir2
         """))
         config = testdir.reparseconfig([source])
         nodemanager = NodeManager(config, ["popen//chdir=%s" % dest])
@@ -189,9 +190,10 @@ class TestNodeManager:
         dir5 = source.ensure("dir5", "dir6", "bogus")
         dirf = source.ensure("dir5", "file")
         dir2.ensure("hello")
-        source.join("conftest.py").write(py.code.Source("""
-            rsyncdirs = ['dir1', 'dir5']
-            rsyncignore = ['dir1/dir2', 'dir5/dir6']
+        source.join("tox.ini").write(py.std.textwrap.dedent("""
+            [pytest]
+            rsyncdirs = dir1 dir5
+            rsyncignore = dir1/dir2 dir5/dir6
         """))
         config = testdir.reparseconfig([source])
         nodemanager = NodeManager(config, ["popen//chdir=%s" % dest])

@@ -42,10 +42,10 @@ class SlaveInteractor:
         self.sendevent("slavefinished", slaveoutput=self.config.slaveoutput)
         return res
 
-    def pytest_perform_collection(self, session):
+    def pytest_collection(self, session):
         self.sendevent("collectionstart")
 
-    def pytest_runtest_mainloop(self, session):
+    def pytest_runtestloop(self, session):
         self.log("entering main loop")
         while 1:
             name, kwargs = self.channel.receive()
@@ -62,7 +62,7 @@ class SlaveInteractor:
                 break
         return True
 
-    def pytest_log_finishcollection(self, collection):
+    def pytest_collection_finish(self, collection):
         ids = [collection.getid(item) for item in collection.items]
         self.sendevent("collectionfinish",
             topdir=str(collection.topdir),

@@ -126,17 +126,18 @@ put options values in a ``conftest.py`` file like this::
 Any commandline ``--tx`` specifictions  will add to the list of
 available execution environments.
 
-Specifying "rsync" dirs in a conftest.py
-+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Specifying "rsync" dirs in a setup.cfg|tox.ini
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-In your ``mypkg/conftest.py`` you may specify directories to synchronise
-or to exclude::
+In a ``tox.ini`` or ``setup.cfg`` file in your root project directory
+you may specify directories to include or to exclude in synchronisation::
 
-    rsyncdirs = ['.', '../plugins']
-    rsyncignore = ['_cache']
+    [pytest]
+    rsyncdirs = . mypkg helperpkg
+    rsyncignore = .hg
 
 These directory specifications are relative to the directory
-where the ``conftest.py`` is found.
+where the configuration file was found.
 
 """
 
@@ -172,6 +173,11 @@ def pytest_addoption(parser):
            help="load-balance tests.  shortcut for '--dist=load'")
     group.addoption('--rsyncdir', action="append", default=[], metavar="dir1",
            help="add directory for rsyncing to remote tx nodes.")
+
+    parser.addini('rsyncdirs', 'list of (relative) paths to be rsynced for'
+         ' remote distributed testing.', type="pathlist")
+    parser.addini('rsyncignore', 'list of (relative) paths to be ignored '
+         'for rsyncing.', type="pathlist")
 
 # -------------------------------------------------------------------------
 # distributed testing hooks

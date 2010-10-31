@@ -168,12 +168,12 @@ class DSession:
             self.terminal = None
 
     def report_line(self, line):
-        if self.terminal:
+        if self.terminal and self.config.option.verbose >= 0:
             self.terminal.write_line(line)
 
     def pytest_sessionstart(self, session, __multicall__):
         #print "remaining multicall methods", __multicall__.methods
-        if not self.config.getvalue("verbose"):
+        if self.config.option.verbose > 0:
             self.report_line("instantiating gateways (use -v for details): %s" %
                 ",".join(self.config.option.tx))
         self.nodemanager = NodeManager(self.config)
@@ -183,11 +183,11 @@ class DSession:
         """ teardown any resources after a test run. """
         self.nodemanager.teardown_nodes()
 
-    def pytest_perform_collection(self, __multicall__):
+    def pytest_collection(self, __multicall__):
         # prohibit collection of test items in master process
         __multicall__.methods[:] = []
 
-    def pytest_runtest_mainloop(self):
+    def pytest_runtestloop(self):
         numnodes = len(self.nodemanager.gwmanager.specs)
         dist = self.config.getvalue("dist")
         if dist == "load":
@@ -316,13 +316,13 @@ class TerminalDistReporter:
 
     def pytest_gwmanage_newgateway(self, gateway):
         rinfo = gateway._rinfo()
-        if self.config.getvalue("verbose"):
+        if self.config.option.verbose >= 0:
             version = "%s.%s.%s" %rinfo.version_info[:3]
             self.write_line("[%s] %s Python %s cwd: %s" % (
                 gateway.id, rinfo.platform, version, rinfo.cwd))
 
     def pytest_testnodeready(self, node):
-        if self.config.getvalue("verbose"):
+        if self.config.option.verbose >= 0:
             d = node.slaveinfo
             infoline = "[%s] Python %s" %(
                 d['id'],

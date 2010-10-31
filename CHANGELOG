@@ -1,7 +1,9 @@
 1.5a1
 -------------------------
 
-
+- adapt to pytest-2.0 changes, rsyncdirs and rsyncignore can now
+  only be specified in [pytest] sections of ini files, see "py.test -h"
+  for details.
 - major internal refactoring to match the py-1.4 event refactoring
   - perform test collection always at slave side instead of at the master
   - make python2/python3 bridging work, remove usage of pickling

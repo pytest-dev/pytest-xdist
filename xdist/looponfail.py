@@ -145,7 +145,7 @@ class SlaveFailSession:
         if self.config.option.debug:
             print(" ".join(map(str, args)))
 
-    def pytest_perform_collection(self, session):
+    def pytest_collection(self, session):
         self.session = session
         self.collection = session.collection
         self.topdir, self.trails = self.current_command
