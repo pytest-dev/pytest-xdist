@@ -62,6 +62,7 @@ def test_remoteinitconfig(testdir):
     config1 = testdir.parseconfig()
     config2 = remote_initconfig(config1.option.__dict__, config1.args)
     assert config2.option.__dict__ == config1.option.__dict__
+    py.test.raises(KeyError, 'config2.pluginmanager.getplugin("terminal")')
 
 class TestReportSerialization:
     def test_itemreport_outcomes(self, testdir):
