@@ -82,7 +82,7 @@ class TestDistribution:
             "*1 passed*",
         ])
 
-    def test_dist_conftest_specified(self, testdir):
+    def test_dist_ini_specified(self, testdir):
         p1 = testdir.makepyfile("""
                 import py
                 def test_fail0():
@@ -95,8 +95,9 @@ class TestDistribution:
                     py.test.skip("hello")
             """,
         )
-        testdir.makeconftest("""
-            option_tx = 'popen popen popen'.split()
+        testdir.makeini("""
+            [pytest]
+            addopts = --tx=3*popen
         """)
         result = testdir.runpytest(p1, '-d', "-v")
         result.stdout.fnmatch_lines([

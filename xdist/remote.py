@@ -104,7 +104,7 @@ def getinfodict():
 def remote_initconfig(option_dict, args):
     from pytest.plugin.config import Config
     config = Config()
-    config._preparse(args)
+    config._preparse(args, addopts=False)
     config.option.__dict__.update(option_dict)
     config.option.looponfail = False
     config.option.usepdb = False
