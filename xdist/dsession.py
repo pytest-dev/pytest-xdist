@@ -301,7 +301,7 @@ class DSession:
         runner = self.config.pluginmanager.getplugin("runner")
         fspath = nodeid.split("::")[0]
         msg = "Slave %r crashed while running %r" %(slave.gateway.id, nodeid)
-        rep = runner.TestReport(nodeid, (), fspath, (fspath, None, fspath), (),
+        rep = runner.TestReport(nodeid, (fspath, None, fspath), (),
             "failed", msg, "???")
         enrich_report_with_platform_data(rep, slave)
         self.config.hook.pytest_runtest_logreport(report=rep)
@@ -350,6 +350,6 @@ def enrich_report_with_platform_data(rep, node):
         ver = "%s.%s.%s" % d['version_info'][:3]
         infoline = "[%s] %s -- Python %s %s" % (
             d['id'], d['sysplatform'], ver, d['executable'])
-        # XXX more structured longrepr? 
+        # XXX more structured longrepr?
         rep.longrepr = infoline + "\n\n" + str(rep.longrepr)
 

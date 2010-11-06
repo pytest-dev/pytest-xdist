@@ -156,6 +156,8 @@ class TestSlaveInteractor:
         assert not ev.kwargs
         ev = slave.popevent()
         assert ev.name == "collectreport"
+        ev = slave.popevent()
+        assert ev.name == "collectreport"
         rep = unserialize_report(ev.name, ev.kwargs['data'])
         assert rep.skipped
         ev = slave.popevent("collectionfinish")
@@ -166,6 +168,8 @@ class TestSlaveInteractor:
         slave.setup()
         ev = slave.popevent("collectionstart")
         assert not ev.kwargs
+        ev = slave.popevent()
+        assert ev.name == "collectreport"
         ev = slave.popevent()
         assert ev.name == "collectreport"
         rep = unserialize_report(ev.name, ev.kwargs['data'])

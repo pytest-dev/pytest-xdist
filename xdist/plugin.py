@@ -142,7 +142,7 @@ where the configuration file was found.
 """
 
 import sys
-import py
+import py, pytest
 
 def pytest_addoption(parser):
     group = parser.getgroup("xdist", "distributed and subprocess testing")
@@ -178,6 +178,8 @@ def pytest_addoption(parser):
          ' remote distributed testing.', type="pathlist")
     parser.addini('rsyncignore', 'list of (relative) paths to be ignored '
          'for rsyncing.', type="pathlist")
+    parser.addini("looponfailroots", type="pathlist",
+        help="directories to check for changes", default=[py.path.local()])
 
 # -------------------------------------------------------------------------
 # distributed testing hooks
@@ -218,10 +220,10 @@ def check_options(config):
         usepdb = config.option.usepdb  # a core option
         if val("looponfail"):
             if usepdb:
-                raise config.Error("--pdb incompatible with --looponfail.")
+                raise pytest.UsageError("--pdb incompatible with --looponfail.")
         elif val("dist") != "no":
             if usepdb:
-                raise config.Error("--pdb incompatible with distributing tests.")
+                raise pytest.UsageError("--pdb incompatible with distributing tests.")
 
 
 def pytest_runtest_protocol(item):

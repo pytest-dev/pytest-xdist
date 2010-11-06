@@ -7,21 +7,22 @@
     the controlling process which should best never happen.
 """
 
-import py
+import py, pytest
 import sys
 import execnet
 
 def looponfail_main(config):
     remotecontrol = RemoteControl(config)
-    # XXX better configure rootdir
-    gettopdir = config.pluginmanager.getplugin("session").gettopdir
-    rootdirs = [gettopdir(config.args)]
+    rootdirs = config.getini("looponfailroots")
     statrecorder = StatRecorder(rootdirs)
     try:
         while 1:
             remotecontrol.loop_once()
             if not remotecontrol.failures and remotecontrol.wasfailing:
                 continue # the last failures passed, let's immediately rerun all
+            repr_pytest_looponfailinfo(
+                failreports=remotecontrol.failures,
+                rootdirs=rootdirs)
             statrecorder.waitonchange(checkinterval=2.0)
     except KeyboardInterrupt:
         print()
@@ -29,7 +30,6 @@ def looponfail_main(config):
 class RemoteControl(object):
     def __init__(self, config):
         self.config = config
-        self.remote_topdir = None
         self.failures = []
 
     def trace(self, *args):
@@ -70,8 +70,8 @@ class RemoteControl(object):
 
     def runsession(self):
         try:
-            self.trace("sending", (self.remote_topdir, self.failures))
-            self.channel.send((self.remote_topdir, self.failures))
+            self.trace("sending", self.failures)
+            self.channel.send(self.failures)
             try:
                 return self.channel.receive()
             except self.channel.RemoteError:
@@ -85,15 +85,11 @@ class RemoteControl(object):
         self.setup()
         self.wasfailing = self.failures and len(self.failures)
         result = self.runsession()
-        topdir, failures, reports, collection_failed = result
+        failures, reports, collection_failed = result
         if collection_failed:
             reports = ["Collection failed, keeping previous failure set"]
         else:
-            self.remote_topdir, self.failures = topdir, failures
-
-        repr_pytest_looponfailinfo(
-            failreports=reports,
-            rootdirs=[self.remote_topdir],)
+            self.failures = failures
 
 def repr_pytest_looponfailinfo(failreports, rootdirs):
     tr = py.io.TerminalWriter()
@@ -147,23 +143,29 @@ class SlaveFailSession:
 
     def pytest_collection(self, session):
         self.session = session
-        self.collection = session.collection
-        self.topdir, self.trails = self.current_command
-        if self.topdir and self.trails:
-            self.topdir = py.path.local(self.topdir)
-            self.collection.topdir = self.topdir
+        self.collection = collection = session.collection
+        self.trails = self.current_command
+        hook = self.collection.ihook
+        try:
+            items = collection.perform_collect(self.trails or None)
+        except pytest.UsageError:
+            items = collection.perform_collect(None)
+        hook.pytest_collection_modifyitems(config=session.config, items=items)
+        hook.pytest_collection_finish(collection=collection)
+        return True
+
+        if self.trails:
             col = self.collection
             items = []
             for trail in self.trails:
-                names = col._parsearg(trail, base=self.topdir)
+                names = col._parsearg(trail)
                 try:
                     for node in col.matchnodes([col._topcollector], names):
                         items.extend(col.genitems(node))
-                except self.config.Error:
+                except pytest.UsageError:
                     pass # ignore collect errors / vanished tests
             self.collection.items = items
             return True
-        self.topdir = session.collection.topdir
 
     def pytest_runtest_logreport(self, report):
         if report.failed:
@@ -189,8 +191,7 @@ class SlaveFailSession:
             loc = rep.longrepr
             loc = str(getattr(loc, 'reprcrash', loc))
             failreports.append(loc)
-        topdir = str(self.topdir)
-        self.channel.send((topdir, trails, failreports, self.collection_failed))
+        self.channel.send((trails, failreports, self.collection_failed))
 
 class StatRecorder:
     def __init__(self, rootdirlist):

@@ -53,8 +53,8 @@ class SlaveInteractor:
             if name == "runtests":
                 ids = kwargs['ids']
                 for nodeid in ids:
-                    for item in self.collection.getbyid(nodeid):
-                        self.config.hook.pytest_runtest_protocol(item=item)
+                    item = self._id2item[nodeid]
+                    self.config.hook.pytest_runtest_protocol(item=item)
             elif name == "runtests_all":
                 for item in self.collection.items:
                     self.config.hook.pytest_runtest_protocol(item=item)
@@ -63,9 +63,13 @@ class SlaveInteractor:
         return True
 
     def pytest_collection_finish(self, collection):
-        ids = [collection.getid(item) for item in collection.items]
+        self._id2item = {}
+        ids = []
+        for item in collection.items:
+            self._id2item[item.nodeid] = item
+            ids.append(item.nodeid)
         self.sendevent("collectionfinish",
-            topdir=str(collection.topdir),
+            topdir=str(collection.fspath),
             ids=ids)
 
     #def pytest_runtest_logstart(self, nodeid, location, fspath):
