@@ -143,29 +143,15 @@ class SlaveFailSession:
 
     def pytest_collection(self, session):
         self.session = session
-        self.collection = collection = session.collection
         self.trails = self.current_command
-        hook = self.collection.ihook
+        hook = self.session.ihook
         try:
-            items = collection.perform_collect(self.trails or None)
+            items = session.perform_collect(self.trails or None)
         except pytest.UsageError:
-            items = collection.perform_collect(None)
-        hook.pytest_collection_modifyitems(config=session.config, items=items)
-        hook.pytest_collection_finish(collection=collection)
+            items = session.perform_collect(None)
+        hook.pytest_collection_modifyitems(session=session, config=session.config, items=items)
+        hook.pytest_collection_finish(session=session)
         return True
-
-        if self.trails:
-            col = self.collection
-            items = []
-            for trail in self.trails:
-                names = col._parsearg(trail)
-                try:
-                    for node in col.matchnodes([col._topcollector], names):
-                        items.extend(col.genitems(node))
-                except pytest.UsageError:
-                    pass # ignore collect errors / vanished tests
-            self.collection.items = items
-            return True
 
     def pytest_runtest_logreport(self, report):
         if report.failed:

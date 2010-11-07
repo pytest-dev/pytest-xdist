@@ -32,7 +32,6 @@ class SlaveInteractor:
 
     def pytest_sessionstart(self, session):
         self.session = session
-        self.collection = session.collection
         slaveinfo = getinfodict()
         self.sendevent("slaveready", slaveinfo=slaveinfo)
 
@@ -56,20 +55,20 @@ class SlaveInteractor:
                     item = self._id2item[nodeid]
                     self.config.hook.pytest_runtest_protocol(item=item)
             elif name == "runtests_all":
-                for item in self.collection.items:
+                for item in session.items:
                     self.config.hook.pytest_runtest_protocol(item=item)
             elif name == "shutdown":
                 break
         return True
 
-    def pytest_collection_finish(self, collection):
+    def pytest_collection_finish(self, session):
         self._id2item = {}
         ids = []
-        for item in collection.items:
+        for item in session.items:
             self._id2item[item.nodeid] = item
             ids.append(item.nodeid)
         self.sendevent("collectionfinish",
-            topdir=str(collection.fspath),
+            topdir=str(session.fspath),
             ids=ids)
 
     #def pytest_runtest_logstart(self, nodeid, location, fspath):
