@@ -1,3 +1,10 @@
+next release critical
+-----------------------------------------------
+tag: bug
+
+miserably fails: --dist=each --tx popen --tx socket=...
+
+
 rename / hooks
 -----------------------------------------------
 tag: bug

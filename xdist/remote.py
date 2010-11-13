@@ -121,6 +121,11 @@ def remote_initconfig(option_dict, args):
 
 if __name__ == '__channelexec__':
     slaveinput,args,option_dict = channel.receive()
+    importpath = os.getcwd()
+    sys.path.insert(0, importpath) # XXX only for remote situations
+    os.environ['PYTHONPATH'] = (importpath + os.pathsep +
+        os.environ.get('PYTHONPATH', ''))
+    #os.environ['PYTHONPATH'] = importpath
     import py
     config = remote_initconfig(option_dict, args)
     config.slaveinput = slaveinput

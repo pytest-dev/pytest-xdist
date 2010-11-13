@@ -247,10 +247,14 @@ class DSession:
 
     def slave_errordown(self, node, error):
         self.config.hook.pytest_testnodedown(node=node, error=error)
-        crashitem = self.sched.remove_node(node)
-        if crashitem:
-            self.handle_crashitem(crashitem, node)
-            #self.report_line("item crashed on node: %s" % crashitem)
+        try:
+            crashitem = self.sched.remove_node(node)
+        except KeyError:
+            pass
+        else:
+            if crashitem:
+                self.handle_crashitem(crashitem, node)
+                #self.report_line("item crashed on node: %s" % crashitem)
         if not self.sched.hasnodes():
             self.session_finished = True
 

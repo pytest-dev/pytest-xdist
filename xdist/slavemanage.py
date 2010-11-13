@@ -10,8 +10,9 @@ class NodeManager(object):
         self.config = config
         if specs is None:
             specs = self._getxspecs()
-        self.roots = self._getrsyncdirs()
         self.gwmanager = GatewayManager(specs, config.hook)
+        self.specs = self.gwmanager.specs
+        self.roots = self._getrsyncdirs()
         self._nodesready = py.std.threading.Event()
 
     def trace(self, msg):
@@ -34,12 +35,6 @@ class NodeManager(object):
             # send each rsync root
             for root in self.roots:
                 self.gwmanager.rsync(root, **options)
-        else:
-            XXX # do we want to care for situations without explicit rsyncdirs?
-            # we transfer our topdir as the root
-            self.gwmanager.rsync(self.config.topdir, **options)
-            # and cd into it
-            self.gwmanager.multi_chdir(self.config.topdir.basename, inplacelocal=False)
 
     def makegateways(self):
         # we change to the topdir sot that
@@ -83,8 +78,16 @@ class NodeManager(object):
         return [execnet.XSpec(x) for x in xspeclist]
 
     def _getrsyncdirs(self):
+        for spec in self.specs:
+            if not spec.popen or spec.chdir:
+                break
+        else:
+            return []
+        import pytest, _pytest
+        pytestpath = pytest.__file__.rstrip("co")
+        pytestdir = py.path.local(_pytest.__file__).dirpath()
         config = self.config
-        candidates = [py._pydir]
+        candidates = [py._pydir,pytestpath,pytestdir]
         candidates += config.option.rsyncdir
         conftestroots = config.getini("rsyncdirs")
         if conftestroots:

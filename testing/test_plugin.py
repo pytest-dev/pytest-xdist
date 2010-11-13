@@ -41,9 +41,10 @@ class TestDistOptions:
     def test_getrsyncdirs(self, testdir):
         config = testdir.parseconfigure('--rsyncdir=' + str(testdir.tmpdir))
         nm = NodeManager(config, specs=[execnet.XSpec("popen")])
-        roots = nm._getrsyncdirs()
-        assert len(roots) == 1 + 1 # pylib
-        assert testdir.tmpdir in roots
+        assert not nm._getrsyncdirs()
+        nm = NodeManager(config, specs=[execnet.XSpec("popen//chdir=qwe")])
+        assert nm.roots
+        assert testdir.tmpdir in nm.roots
 
     def test_getrsyncdirs_with_conftest(self, testdir):
         p = py.path.local()
@@ -55,7 +56,7 @@ class TestDistOptions:
         """)
         config = testdir.parseconfigure(
               testdir.tmpdir, '--rsyncdir=y', '--rsyncdir=z')
-        nm = NodeManager(config, specs=[execnet.XSpec("popen")])
+        nm = NodeManager(config, specs=[execnet.XSpec("popen//chdir=xyz")])
         roots = nm._getrsyncdirs()
         #assert len(roots) == 3 + 1 # pylib
         assert py.path.local('y') in roots
