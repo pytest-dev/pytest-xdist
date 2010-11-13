@@ -105,7 +105,7 @@ def getinfodict():
     )
 
 def remote_initconfig(option_dict, args):
-    from pytest.plugin.config import Config
+    from _pytest.config import Config
     config = Config()
     config.pluginmanager.unregister(name="terminal")
     config._preparse(args, addopts=False)

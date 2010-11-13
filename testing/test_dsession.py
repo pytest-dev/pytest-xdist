@@ -1,5 +1,5 @@
 from xdist.dsession import DSession, LoadScheduling, EachScheduling
-from pytest.plugin import session as outcome
+from _pytest import session as outcome
 import py
 import execnet
 
@@ -140,7 +140,7 @@ class TestDistReporter:
     @py.test.mark.xfail
     def test_rsync_printing(self, testdir, linecomp):
         config = testdir.parseconfig()
-        from pytest.plugin.pytest_terminal import TerminalReporter
+        from _pytest.pytest_terminal import TerminalReporter
         rep = TerminalReporter(config, file=linecomp.stringio)
         config.pluginmanager.register(rep, "terminalreporter")
         dsession = DSession(config)

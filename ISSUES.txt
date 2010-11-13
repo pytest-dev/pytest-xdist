@@ -2,12 +2,11 @@ rename / hooks
 -----------------------------------------------
 tag: bug
 
-node -> slave 
+node -> slave
 transition for hooks?
 configure_node -> configure_slave
 
-
-allow to run xdist tests with xdist
+allow to remotely run xdist tests with xdist
 -----------------------------------------------
 tag: feature
 
@@ -16,3 +15,10 @@ currently this doesn't work because the remote side
 has no py.test plugin.   How to configure/do
 register "xdist.plugin" on the remote side?
 
+see to avoid any "from _pytest" internal imports
+-----------------------------------------------
+tag: feature
+
+currently tests and even xdist core code imports
+names from the internal _pytest namespace.
+See to avoid it.
