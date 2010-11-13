@@ -85,7 +85,10 @@ class SlaveInteractor:
 def serialize_report(rep):
     import py
     d = rep.__dict__.copy()
-    d['longrepr'] = rep.longrepr and str(rep.longrepr) or None
+    if hasattr(rep.longrepr, 'toterminal'):
+        d['longrepr'] = str(rep.longrepr)
+    else:
+        d['longrepr'] = rep.longrepr
     for name in d:
         if isinstance(d[name], py.path.local):
             d[name] = str(d[name])

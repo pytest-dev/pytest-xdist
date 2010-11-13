@@ -10,7 +10,7 @@ from setuptools import setup
 
 setup(
     name="pytest-xdist",
-    version='1.5a7',
+    version='1.5a8',
     description='py.test xdist plugin for distributed testing and loop-on-failing modes',
     long_description=__doc__,
     license='GPLv2 or later',

@@ -144,7 +144,7 @@ class TestDistribution:
         subdir.ensure("__init__.py")
         p = subdir.join("test_one.py")
         p.write("def test_5():\n  assert not __file__.startswith(%r)" % str(p))
-        result = testdir.runpytest("-v", "-d", 
+        result = testdir.runpytest("-v", "-d",
             "--rsyncdir=%(subdir)s" % locals(),
             "--tx=popen//chdir=%(dest)s" % locals(), p)
         assert result.ret == 0
@@ -390,6 +390,21 @@ def test_crashing_item(testdir):
     result.stdout.fnmatch_lines([
         "*crashed*test_crash*",
         "*1 failed*1 passed*"
+    ])
+
+
+
+def test_skipping(testdir):
+    p = testdir.makepyfile("""
+        import pytest
+        def test_crash():
+            pytest.skip("hello")
+    """)
+    result = testdir.runpytest("-n1", '-rs', p)
+    assert result.ret == 0
+    result.stdout.fnmatch_lines([
+        "*hello*",
+        "*1 skipped*"
     ])
 
 

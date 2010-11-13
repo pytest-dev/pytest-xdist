@@ -274,12 +274,12 @@ class DSession:
         if rep.when in ("setup", "call"):
             self.sched.remove_item(node, rep.nodeid)
         #self.report_line("testreport %s: %s" %(rep.id, rep.status))
-        enrich_report_with_platform_data(rep, node)
+        rep.node = node
         self.config.hook.pytest_runtest_logreport(report=rep)
         self._handlefailures(rep)
 
     def slave_teardownreport(self, node, rep):
-        enrich_report_with_platform_data(rep, node)
+        rep.node = node
         self.config.hook.pytest__teardown_final_logerror(report=rep)
 
     def slave_collectreport(self, node, rep):
@@ -307,7 +307,7 @@ class DSession:
         msg = "Slave %r crashed while running %r" %(slave.gateway.id, nodeid)
         rep = runner.TestReport(nodeid, (fspath, None, fspath), (),
             "failed", msg, "???")
-        enrich_report_with_platform_data(rep, slave)
+        rep.node = slave
         self.config.hook.pytest_runtest_logreport(report=rep)
 
 class TerminalDistReporter:
@@ -345,15 +345,4 @@ class TerminalDistReporter:
     #def pytest_gwmanage_rsyncfinish(self, source, gateways):
     #    targets = ", ".join(["[%s]" % gw.id for gw in gateways])
     #    self.write_line("rsyncfinish: %s -> %s" %(source, targets))
-
-
-def enrich_report_with_platform_data(rep, node):
-    rep.node = node
-    if hasattr(rep, 'node') and rep.longrepr:
-        d = node.slaveinfo
-        ver = "%s.%s.%s" % d['version_info'][:3]
-        infoline = "[%s] %s -- Python %s %s" % (
-            d['id'], d['sysplatform'], ver, d['executable'])
-        # XXX more structured longrepr?
-        rep.longrepr = infoline + "\n\n" + str(rep.longrepr)
 
