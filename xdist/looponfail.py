@@ -122,7 +122,7 @@ def init_slave_session(channel, args, option_dict):
     from _pytest.config import Config
     config = Config()
     config.option.__dict__.update(option_dict)
-    config._preparse(args)
+    config._preparse(list(args))
     config.args = args
     from xdist.looponfail import SlaveFailSession
     SlaveFailSession(config, channel).main()
