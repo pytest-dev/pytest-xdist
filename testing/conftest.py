@@ -27,7 +27,7 @@ def getspecssh(config):
         if spec.ssh:
             if not py.path.local.sysfind("ssh"):
                 py.test.skip("command not found: ssh")
-            return spec
+            return str(spec)
     py.test.skip("need '--gx ssh=...'")
 
 def getsocketspec(config):
