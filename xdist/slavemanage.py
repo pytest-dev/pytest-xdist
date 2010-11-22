@@ -14,9 +14,7 @@ class NodeManager(object):
         self.specs = self.gwmanager.specs
         self.roots = self._getrsyncdirs()
         self._nodesready = py.std.threading.Event()
-
-    def trace(self, msg):
-        self.config.hook.pytest_trace(category="nodemanage", msg=msg)
+        self.trace = self.config.trace.get("nodemanager")
 
     def config_getignores(self):
         return self.config.getini("rsyncignore")
@@ -89,9 +87,9 @@ class NodeManager(object):
         config = self.config
         candidates = [py._pydir,pytestpath,pytestdir]
         candidates += config.option.rsyncdir
-        conftestroots = config.getini("rsyncdirs")
-        if conftestroots:
-            candidates.extend(conftestroots)
+        rsyncroots = config.getini("rsyncdirs")
+        if rsyncroots:
+            candidates.extend(rsyncroots)
         roots = []
         for root in candidates:
             root = py.path.local(root).realpath()
@@ -100,7 +98,6 @@ class NodeManager(object):
             if root not in roots:
                 roots.append(root)
         return roots
-
 
 class GatewayManager:
     """
@@ -239,7 +236,8 @@ class SlaveController(object):
         option_dict = vars(self.config.option)
         if spec.popen:
             name = "popen-%s" % self.gateway.id
-            option_dict['basetemp'] = str(self.config.getbasetemp().join(name))
+            basetemp = self.config._tmpdirhandler.getbasetemp()
+            option_dict['basetemp'] = str(basetemp.join(name))
         self.config.hook.pytest_configure_node(node=self)
         self.channel = self.gateway.remote_exec(xdist.remote)
         self.channel.send((self.slaveinput, args, option_dict))

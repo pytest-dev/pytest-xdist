@@ -72,10 +72,10 @@ class TestDistribution:
 
     def test_basetemp_in_subprocesses(self, testdir):
         p1 = testdir.makepyfile("""
-            def test_send(pytestconfig):
-                bt = pytestconfig.getbasetemp()
-                assert bt.basename.startswith("popen-")
-        """)
+            def test_send(tmpdir):
+                import py
+                assert tmpdir.relto(py.path.local(%r)), tmpdir
+        """ % str(testdir.tmpdir))
         result = testdir.runpytest(p1, "-n1")
         assert result.ret == 0
         result.stdout.fnmatch_lines([

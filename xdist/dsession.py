@@ -1,4 +1,4 @@
-import py
+import pytest, py
 import sys
 from xdist.slavemanage import NodeManager
 queue = py.builtin._tryimport('queue', 'Queue')
@@ -171,8 +171,8 @@ class DSession:
         if self.terminal and self.config.option.verbose >= 0:
             self.terminal.write_line(line)
 
-    def pytest_sessionstart(self, session, __multicall__):
-        #print "remaining multicall methods", __multicall__.methods
+    @pytest.mark.trylast
+    def pytest_sessionstart(self, session):
         if self.config.option.verbose > 0:
             self.report_line("instantiating gateways (use -v for details): %s" %
                 ",".join(self.config.option.tx))
@@ -181,11 +181,13 @@ class DSession:
 
     def pytest_sessionfinish(self, session):
         """ teardown any resources after a test run. """
-        self.nodemanager.teardown_nodes()
+        nm = getattr(self, 'nodemanager', None) # if not fully initialized
+        if nm is not None:
+            nm.teardown_nodes()
 
-    def pytest_collection(self, __multicall__):
+    def pytest_collection(self):
         # prohibit collection of test items in master process
-        __multicall__.methods[:] = []
+        return True
 
     def pytest_runtestloop(self):
         numnodes = len(self.nodemanager.gwmanager.specs)
@@ -326,7 +328,7 @@ class TerminalDistReporter:
                 gateway.id, rinfo.platform, version, rinfo.cwd))
 
     def pytest_testnodeready(self, node):
-        if self.config.option.verbose >= 0:
+        if self.config.option.verbose > 0:
             d = node.slaveinfo
             infoline = "[%s] Python %s" %(
                 d['id'],

@@ -17,11 +17,9 @@ def pytest_funcarg__hook(request):
 
 class pytest_funcarg__mysetup:
     def __init__(self, request):
-        basetemp = request.config.mktemp(
-            "mysetup-%s" % request.function.__name__,
-            numbered=True)
-        self.source = basetemp.mkdir("source")
-        self.dest = basetemp.mkdir("dest")
+        temp = request.getfuncargvalue("tmpdir")
+        self.source = temp.mkdir("source")
+        self.dest = temp.mkdir("dest")
         request.getfuncargvalue("_pytest")
 
 class TestGatewayManagerPopen:
@@ -220,7 +218,7 @@ class TestNodeManager:
         specs = ["popen"] * 2
         source.join("conftest.py").write("rsyncdirs = ['a']")
         source.ensure('a', dir=1)
-        config = testdir.reparseconfig([source, '--debug'])
+        config = testdir.parseconfigure(source, '--debug')
         assert config.option.debug
         nodemanager = NodeManager(config, specs)
         reprec = testdir.getreportrecorder(config).hookrecorder

@@ -34,7 +34,7 @@ class SlaveSetup:
         self.testdir.chdir()
         #import os ; os.environ['EXECNET_DEBUG'] = "2"
         self.gateway = execnet.makegateway()
-        self.config = config = self.testdir.parseconfig()
+        self.config = config = self.testdir.parseconfigure()
         putevent = self.use_callback and self.events.put or None
         self.slp = SlaveController(None, self.gateway, config, putevent)
         self.request.addfinalizer(self.slp.ensure_teardown)
