@@ -190,7 +190,7 @@ class DSession:
         return True
 
     def pytest_runtestloop(self):
-        numnodes = len(self.nodemanager.gwmanager.specs)
+        numnodes = len(self.nodemanager.specs)
         dist = self.config.getvalue("dist")
         if dist == "load":
             self.sched = LoadScheduling(numnodes, log=self.log)

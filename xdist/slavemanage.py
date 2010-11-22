@@ -6,15 +6,22 @@ import xdist.remote
 from _pytest import runner # XXX load dynamically
 
 class NodeManager(object):
-    def __init__(self, config, specs=None):
+    EXIT_TIMEOUT = 10
+    def __init__(self, config, specs=None, defaultchdir="pyexecnetcache"):
         self.config = config
-        if specs is None:
-            specs = self._getxspecs()
-        self.gwmanager = GatewayManager(specs, config.hook)
-        self.specs = self.gwmanager.specs
-        self.roots = self._getrsyncdirs()
         self._nodesready = py.std.threading.Event()
         self.trace = self.config.trace.get("nodemanager")
+        self.group = execnet.Group()
+        if specs is None:
+            specs = self._getxspecs()
+        self.specs = []
+        for spec in specs:
+            if not isinstance(spec, execnet.XSpec):
+                spec = execnet.XSpec(spec)
+            if not spec.chdir and not spec.popen:
+                spec.chdir = defaultchdir
+            self.specs.append(spec)
+        self.roots = self._getrsyncdirs()
 
     def config_getignores(self):
         return self.config.getini("rsyncignore")
@@ -32,37 +39,30 @@ class NodeManager(object):
         if self.roots:
             # send each rsync root
             for root in self.roots:
-                self.gwmanager.rsync(root, **options)
+                self.rsync(root, **options)
 
     def makegateways(self):
-        # we change to the topdir sot that
-        # PopenGateways will have their cwd
-        # such that unpickling configs will
-        # pick it up as the right topdir
-        # (for other gateways this chdir is irrelevant)
         self.trace("making gateways")
-        #old = self.config.topdir.chdir()
-        #try:
-        self.gwmanager.makegateways()
-        #finally:
-        #    old.chdir()
+        assert not list(self.group)
+        for spec in self.specs:
+            gw = self.group.makegateway(spec)
+            self.config.hook.pytest_gwmanage_newgateway(gateway=gw)
 
     def setup_nodes(self, putevent):
         self.rsync_roots()
         self.trace("setting up nodes")
-        for gateway in self.gwmanager.group:
+        for gateway in self.group:
             node = SlaveController(self, gateway, self.config, putevent)
             gateway.node = node  # to keep node alive
             node.setup()
             self.trace("started node %r" % node)
 
     def teardown_nodes(self):
-        self.gwmanager.exit()
+        self.group.terminate(self.EXIT_TIMEOUT)
 
     def _getxspecs(self):
-        config = self.config
         xspeclist = []
-        for xspec in config.getvalue("tx"):
+        for xspec in self.config.getvalue("tx"):
             i = xspec.find("*")
             try:
                 num = int(xspec[:i])
@@ -99,28 +99,6 @@ class NodeManager(object):
                 roots.append(root)
         return roots
 
-class GatewayManager:
-    """
-        instantiating, managing and rsyncing to test hosts
-    """
-    EXIT_TIMEOUT = 10
-    def __init__(self, specs, hook, defaultchdir="pyexecnetcache"):
-        self.specs = []
-        self.hook = hook
-        self.group = execnet.Group()
-        for spec in specs:
-            if not isinstance(spec, execnet.XSpec):
-                spec = execnet.XSpec(spec)
-            if not spec.chdir and not spec.popen:
-                spec.chdir = defaultchdir
-            self.specs.append(spec)
-
-    def makegateways(self):
-        assert not list(self.group)
-        for spec in self.specs:
-            gw = self.group.makegateway(spec)
-            self.hook.pytest_gwmanage_newgateway(gateway=gw)
-
     def rsync(self, source, notify=None, verbose=False, ignores=None):
         """ perform rsync to all remote hosts.
         """
@@ -144,18 +122,15 @@ class GatewayManager:
                 seen.add(spec)
                 gateways.append(gateway)
         if seen:
-            self.hook.pytest_gwmanage_rsyncstart(
+            self.config.hook.pytest_gwmanage_rsyncstart(
                 source=source,
                 gateways=gateways,
             )
             rsync.send()
-            self.hook.pytest_gwmanage_rsyncfinish(
+            self.config.hook.pytest_gwmanage_rsyncfinish(
                 source=source,
                 gateways=gateways,
             )
-
-    def exit(self):
-        self.group.terminate(self.EXIT_TIMEOUT)
 
 class HostRSync(execnet.RSync):
     """ RSyncer that filters out common files
