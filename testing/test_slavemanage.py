@@ -15,11 +15,6 @@ def pytest_funcarg__config(request):
     config = testdir.parseconfig()
     return config
 
-    from xdist import newhooks
-    from _pytest.core import HookRelay, PluginManager
-    from _pytest import hookspec
-    return HookRelay([hookspec, newhooks], PluginManager())
-
 class pytest_funcarg__mysetup:
     def __init__(self, request):
         temp = request.getfuncargvalue("tmpdir")
@@ -42,10 +37,13 @@ class TestNodeManagerPopen:
     def test_popen_makegateway_events(self, config, hookrecorder, _pytest):
         hm = NodeManager(config, ["popen"] * 2)
         hm.makegateways()
-        call = hookrecorder.popcall("pytest_gwmanage_newgateway")
+        call = hookrecorder.popcall("pytest_xdist_setupnodes")
+        assert len(call.specs) == 2
+
+        call = hookrecorder.popcall("pytest_xdist_newgateway")
         assert call.gateway.spec == execnet.XSpec("popen")
         assert call.gateway.id == "gw0"
-        call = hookrecorder.popcall("pytest_gwmanage_newgateway")
+        call = hookrecorder.popcall("pytest_xdist_newgateway")
         assert call.gateway.id == "gw1"
         assert len(hm.group) == 2
         hm.teardown_nodes()
@@ -92,11 +90,11 @@ class TestNodeManagerPopen:
         hm.makegateways()
         source.ensure("dir1", "dir2", "hello")
         hm.rsync(source)
-        call = hookrecorder.popcall("pytest_gwmanage_rsyncstart")
+        call = hookrecorder.popcall("pytest_xdist_rsyncstart")
         assert call.source == source
         assert len(call.gateways) == 1
         assert call.gateways[0] in hm.group
-        call = hookrecorder.popcall("pytest_gwmanage_rsyncfinish")
+        call = hookrecorder.popcall("pytest_xdist_rsyncfinish")
 
 class TestHRSync:
     class pytest_funcarg__mysetup:
@@ -140,6 +138,7 @@ class TestNodeManager:
         config = testdir.reparseconfig([source])
         nodemanager = NodeManager(config, ["popen//chdir=%s" % mysetup.dest])
         #assert nodemanager.config.topdir == source == config.topdir
+        nodemanager.makegateways()
         nodemanager.rsync_roots()
         p, = nodemanager.gwmanager.multi_exec(
             "import os ; channel.send(os.getcwd())").receive_each()
@@ -161,6 +160,7 @@ class TestNodeManager:
                 "--rsyncdir", rsyncroot,
                 source,
             ))
+            nodemanager.makegateways()
             nodemanager.rsync_roots()
             if rsyncroot == source:
                 dest = dest.join("source")
@@ -181,6 +181,7 @@ class TestNodeManager:
         """))
         config = testdir.reparseconfig([source])
         nodemanager = NodeManager(config, ["popen//chdir=%s" % dest])
+        nodemanager.makegateways()
         nodemanager.rsync_roots()
         assert dest.join("dir2").check()
         assert not dest.join("dir1").check()
@@ -199,6 +200,7 @@ class TestNodeManager:
         """))
         config = testdir.reparseconfig([source])
         nodemanager = NodeManager(config, ["popen//chdir=%s" % dest])
+        nodemanager.makegateways()
         nodemanager.rsync_roots()
         assert dest.join("dir1").check()
         assert not dest.join("dir1", "dir2").check()
@@ -212,6 +214,7 @@ class TestNodeManager:
         source.ensure('a', dir=1)
         config = testdir.reparseconfig([source])
         nodemanager = NodeManager(config, specs)
+        nodemanager.makegateways()
         nodemanager.rsync_roots()
         for gwspec in nodemanager.specs:
             assert gwspec._samefilesystem()

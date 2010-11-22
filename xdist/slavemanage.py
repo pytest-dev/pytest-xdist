@@ -20,20 +20,17 @@ class NodeManager(object):
                 spec = execnet.XSpec(spec)
             if not spec.chdir and not spec.popen:
                 spec.chdir = defaultchdir
+            self.group.allocate_id(spec)
             self.specs.append(spec)
         self.roots = self._getrsyncdirs()
-
-    def config_getignores(self):
-        return self.config.getini("rsyncignore")
 
     def rsync_roots(self):
         """ make sure that all remote gateways
             have the same set of roots in their
             current directory.
         """
-        self.makegateways()
         options = {
-            'ignores': self.config_getignores(),
+            'ignores': self.config.getini("rsyncignore"),
             'verbose': self.config.option.verbose,
         }
         if self.roots:
@@ -42,13 +39,15 @@ class NodeManager(object):
                 self.rsync(root, **options)
 
     def makegateways(self):
-        self.trace("making gateways")
         assert not list(self.group)
+        self.config.hook.pytest_xdist_setupnodes(config=self.config,
+            specs=self.specs)
         for spec in self.specs:
             gw = self.group.makegateway(spec)
-            self.config.hook.pytest_gwmanage_newgateway(gateway=gw)
+            self.config.hook.pytest_xdist_newgateway(gateway=gw)
 
     def setup_nodes(self, putevent):
+        self.makegateways()
         self.rsync_roots()
         self.trace("setting up nodes")
         for gateway in self.group:
@@ -122,12 +121,12 @@ class NodeManager(object):
                 seen.add(spec)
                 gateways.append(gateway)
         if seen:
-            self.config.hook.pytest_gwmanage_rsyncstart(
+            self.config.hook.pytest_xdist_rsyncstart(
                 source=source,
                 gateways=gateways,
             )
             rsync.send()
-            self.config.hook.pytest_gwmanage_rsyncfinish(
+            self.config.hook.pytest_xdist_rsyncfinish(
                 source=source,
                 gateways=gateways,
             )

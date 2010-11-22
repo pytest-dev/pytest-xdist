@@ -1,11 +1,14 @@
 
-def pytest_gwmanage_newgateway(gateway):
+def pytest_xdist_setupnodes(config, specs):
+    """ called before any remote node is set up. """
+
+def pytest_xdist_newgateway(gateway):
     """ called on new raw gateway creation. """
 
-def pytest_gwmanage_rsyncstart(source, gateways):
+def pytest_xdist_rsyncstart(source, gateways):
     """ called before rsyncing a directory to remote gateways takes place. """
 
-def pytest_gwmanage_rsyncfinish(source, gateways):
+def pytest_xdist_rsyncfinish(source, gateways):
     """ called after rsyncing a directory to remote gateways takes place. """
 
 def pytest_configure_node(node):

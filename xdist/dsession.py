@@ -166,6 +166,9 @@ class DSession:
             self.terminal = config.pluginmanager.getplugin("terminalreporter")
         except KeyError:
             self.terminal = None
+        else:
+            self.trdist = TerminalDistReporter(config)
+            config.pluginmanager.register(self.trdist, "terminaldistreporter")
 
     def report_line(self, line):
         if self.terminal and self.config.option.verbose >= 0:
@@ -173,9 +176,6 @@ class DSession:
 
     @pytest.mark.trylast
     def pytest_sessionstart(self, session):
-        if self.config.option.verbose > 0:
-            self.report_line("instantiating gateways (use -v for details): %s" %
-                ",".join(self.config.option.tx))
         self.nodemanager = NodeManager(self.config)
         self.nodemanager.setup_nodes(putevent=self.queue.put)
 
@@ -262,10 +262,15 @@ class DSession:
 
     def slave_collectionfinish(self, node, ids):
         self.sched.addnode_collection(node, ids)
-        self.report_line("[%s] collected %d test items" %(
-            node.gateway.id, len(ids)))
+        if self.terminal:
+            self.trdist.setstatus(node.gateway.spec, "[%d]" %(len(ids)))
 
         if self.sched.collection_is_completed:
+            if self.terminal:
+                self.terminal.write_line("")
+                self.terminal.write_line("scheduling tests via %s" %(
+                    self.sched.__class__.__name__))
+                
             self.sched.init_distribute()
 
     def slave_logstart(self, node, nodeid, location):
@@ -316,16 +321,43 @@ class TerminalDistReporter:
     def __init__(self, config):
         self.config = config
         self.tr = config.pluginmanager.getplugin("terminalreporter")
+        self._status = {}
+        self._lastlen = 0
 
     def write_line(self, msg):
         self.tr.write_line(msg)
 
-    def pytest_gwmanage_newgateway(self, gateway):
-        rinfo = gateway._rinfo()
-        if self.config.option.verbose >= 0:
-            version = "%s.%s.%s" %rinfo.version_info[:3]
-            self.write_line("[%s] %s Python %s cwd: %s" % (
-                gateway.id, rinfo.platform, version, rinfo.cwd))
+    def setstatus(self, spec, status, show=True):
+        self._status[spec.id] = status
+        if show:
+            parts = ["%s %s" %(spec.id, self._status[spec.id])
+                       for spec in self._specs]
+            line = " / ".join(parts)
+            self.rewrite(line)
+
+    def rewrite(self, line, newline=False):
+        pline = line + " " * max(self._lastlen-len(line), 0)
+        if newline:
+            self._lastlen = 0
+            pline += "\n"
+        else:
+            self._lastlen = len(line)
+        self.tr.rewrite(pline, bold=True)
+
+    def pytest_xdist_setupnodes(self, specs):
+        self._specs = specs
+        for spec in specs:
+            self.setstatus(spec, "initializing", show=False)
+        self.setstatus(spec, "initializing", show=True)
+
+    def pytest_xdist_newgateway(self, gateway):
+        if self.config.option.verbose > 0:
+            rinfo = gateway._rinfo()
+            version = "%s.%s.%s" % rinfo.version_info[:3]
+            self.rewrite("[%s] %s Python %s cwd: %s" % (
+                gateway.id, rinfo.platform, version, rinfo.cwd),
+                newline=True)
+        self.setstatus(gateway.spec, "collecting")
 
     def pytest_testnodeready(self, node):
         if self.config.option.verbose > 0:
@@ -333,18 +365,19 @@ class TerminalDistReporter:
             infoline = "[%s] Python %s" %(
                 d['id'],
                 d['version'].replace('\n', ' -- '),)
-            self.write_line(infoline)
+            self.rewrite(infoline, newline=True)
+        self.setstatus(node.gateway.spec, "ready")
 
     def pytest_testnodedown(self, node, error):
         if not error:
             return
         self.write_line("[%s] node down: %s" %(node.gateway.id, error))
 
-    #def pytest_gwmanage_rsyncstart(self, source, gateways):
+    #def pytest_xdist_rsyncstart(self, source, gateways):
     #    targets = ",".join([gw.id for gw in gateways])
     #    msg = "[%s] rsyncing: %s" %(targets, source)
     #    self.write_line(msg)
-    #def pytest_gwmanage_rsyncfinish(self, source, gateways):
+    #def pytest_xdist_rsyncfinish(self, source, gateways):
     #    targets = ", ".join(["[%s]" % gw.id for gw in gateways])
     #    self.write_line("rsyncfinish: %s -> %s" %(source, targets))
 

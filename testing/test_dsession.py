@@ -156,11 +156,11 @@ class TestDistReporter:
         #    platform = "xyz"
         #    cwd = "qwe"
 
-        #dsession.pytest_gwmanage_newgateway(gw1, rinfo)
+        #dsession.pytest_xdist_newgateway(gw1, rinfo)
         #linecomp.assert_contains_lines([
         #    "*X1*popen*xyz*2.5*"
         #])
-        dsession.pytest_gwmanage_rsyncstart(source="hello", gateways=[gw1, gw2])
+        dsession.pytest_xdist_rsyncstart(source="hello", gateways=[gw1, gw2])
         linecomp.assert_contains_lines([
             "[X1,X2] rsyncing: hello",
         ])

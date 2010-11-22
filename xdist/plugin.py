@@ -59,12 +59,9 @@ def pytest_cmdline_main(config):
 def pytest_configure(config, __multicall__):
     __multicall__.execute()
     if config.getvalue("dist") != "no":
-        from xdist.dsession import DSession, TerminalDistReporter
+        from xdist.dsession import DSession
         session = DSession(config)
         config.pluginmanager.register(session, "dsession")
-        
-        trdist = TerminalDistReporter(config)
-        config.pluginmanager.register(trdist, "terminaldistreporter")
 
 def check_options(config):
     if config.option.numprocesses:
