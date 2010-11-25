@@ -1,7 +1,7 @@
-1.5a1
+1.5
 -------------------------
 
-- adapt to pytest-2.0 changes, rsyncdirs and rsyncignore can now
+- adapt to and require pytest-2.0 changes, rsyncdirs and rsyncignore can now
   only be specified in [pytest] sections of ini files, see "py.test -h"
   for details.
 - major internal refactoring to match the pytest-2.0 event refactoring
