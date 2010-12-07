@@ -267,6 +267,7 @@ class DSession:
 
         if self.sched.collection_is_completed:
             if self.terminal:
+                self.trdist.ensure_show_status()
                 self.terminal.write_line("")
                 self.terminal.write_line("scheduling tests via %s" %(
                     self.sched.__class__.__name__))
@@ -327,13 +328,19 @@ class TerminalDistReporter:
     def write_line(self, msg):
         self.tr.write_line(msg)
 
+    def ensure_show_status(self):
+        if not self.tr.hasmarkup:
+            self.write_line(self.getstatus())
+
     def setstatus(self, spec, status, show=True):
         self._status[spec.id] = status
-        if show:
-            parts = ["%s %s" %(spec.id, self._status[spec.id])
-                       for spec in self._specs]
-            line = " / ".join(parts)
-            self.rewrite(line)
+        if show and self.tr.hasmarkup:
+            self.rewrite(self.getstatus())
+
+    def getstatus(self):
+        parts = ["%s %s" %(spec.id, self._status[spec.id])
+                   for spec in self._specs]
+        return " / ".join(parts)
 
     def rewrite(self, line, newline=False):
         pline = line + " " * max(self._lastlen-len(line), 0)
@@ -347,8 +354,9 @@ class TerminalDistReporter:
     def pytest_xdist_setupnodes(self, specs):
         self._specs = specs
         for spec in specs:
-            self.setstatus(spec, "initializing", show=False)
-        self.setstatus(spec, "initializing", show=True)
+            self.setstatus(spec, "I", show=False)
+        self.setstatus(spec, "I", show=True)
+        self.ensure_show_status()
 
     def pytest_xdist_newgateway(self, gateway):
         if self.config.option.verbose > 0:
@@ -357,7 +365,7 @@ class TerminalDistReporter:
             self.rewrite("[%s] %s Python %s cwd: %s" % (
                 gateway.id, rinfo.platform, version, rinfo.cwd),
                 newline=True)
-        self.setstatus(gateway.spec, "collecting")
+        self.setstatus(gateway.spec, "C")
 
     def pytest_testnodeready(self, node):
         if self.config.option.verbose > 0:
@@ -366,7 +374,7 @@ class TerminalDistReporter:
                 d['id'],
                 d['version'].replace('\n', ' -- '),)
             self.rewrite(infoline, newline=True)
-        self.setstatus(node.gateway.spec, "ready")
+        self.setstatus(node.gateway.spec, "ok")
 
     def pytest_testnodedown(self, node, error):
         if not error:
