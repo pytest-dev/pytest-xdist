@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="pytest-xdist",
-    version='1.6.dev2',
+    version='1.6.dev3',
     description='py.test xdist plugin for distributed testing and loop-on-failing modes',
     long_description=open('README.txt').read(),
     license='GPLv2 or later',
@@ -13,7 +13,7 @@ setup(
     packages = ['xdist'],
     entry_points = {'pytest11': ['xdist = xdist.plugin'],},
     zip_safe=False,
-    install_requires = ['execnet>=1.0.8', 'pytest>1.9.9'],
+    install_requires = ['execnet>=1.0.8', 'pytest>2.0.2'],
     classifiers=[
     'Development Status :: 5 - Production/Stable',
     'Intended Audience :: Developers',

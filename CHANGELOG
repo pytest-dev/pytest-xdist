@@ -1,3 +1,10 @@
+1.6 (dev)
+-------------------------
+
+- terser collection reporting
+
+- fix issue34 - distributed testing with -p plugin now works correctly
+
 1.5
 -------------------------
 

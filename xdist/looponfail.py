@@ -120,9 +120,7 @@ def init_slave_session(channel, args, option_dict):
 
     #fullwidth, hasmarkup = channel.receive()
     from _pytest.config import Config
-    config = Config()
-    config.option.__dict__.update(option_dict)
-    config._preparse(list(args))
+    config = Config.fromdictargs(option_dict, list(args))
     config.args = args
     from xdist.looponfail import SlaveFailSession
     SlaveFailSession(config, channel).main()

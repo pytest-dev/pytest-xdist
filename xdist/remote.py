@@ -109,10 +109,8 @@ def getinfodict():
 
 def remote_initconfig(option_dict, args):
     from _pytest.config import Config
-    config = Config()
-    config.pluginmanager.unregister(name="terminal")
-    config._preparse(args, addopts=False)
-    config.option.__dict__.update(option_dict)
+    option_dict['plugins'].append("no:terminal")
+    config = Config.fromdictargs(option_dict, args)
     config.option.looponfail = False
     config.option.usepdb = False
     config.option.dist = "no"

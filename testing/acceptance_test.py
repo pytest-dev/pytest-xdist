@@ -407,5 +407,18 @@ def test_skipping(testdir):
         "*1 skipped*"
     ])
 
-
-
+def test_issue34_pluginloading_in_subprocess(testdir):
+    testdir.tmpdir.join("plugin123.py").write(py.code.Source("""
+        def pytest_namespace():
+            return {'sample_variable': 'testing'}
+    """))
+    testdir.makepyfile("""
+        import pytest
+        def test_hello():
+            assert pytest.sample_variable == "testing"
+    """)
+    result = testdir.runpytest("-n1", "-p", "plugin123")
+    assert result.ret == 0
+    result.stdout.fnmatch_lines([
+        "*1 passed*",
+    ])

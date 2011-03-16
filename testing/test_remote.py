@@ -62,7 +62,7 @@ def test_remoteinitconfig(testdir):
     config1 = testdir.parseconfig()
     config2 = remote_initconfig(config1.option.__dict__, config1.args)
     assert config2.option.__dict__ == config1.option.__dict__
-    assert config2.pluginmanager.getplugin("terminal") == None
+    assert config2.pluginmanager.getplugin("terminal") in (-1, None)
 
 class TestReportSerialization:
     def test_itemreport_outcomes(self, testdir):
