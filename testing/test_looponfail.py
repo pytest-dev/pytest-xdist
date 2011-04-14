@@ -14,11 +14,11 @@ class TestStatRecorder:
         changed = sd.check()
         assert changed
 
-        tmp.ensure("new.py")
+        p = tmp.ensure("new.py")
         changed = sd.check()
         assert changed
 
-        tmp.join("new.py").remove()
+        p.remove()
         changed = sd.check()
         assert changed
 
@@ -33,6 +33,24 @@ class TestStatRecorder:
         assert not changed
 
         tmp.join("a").remove()
+        changed = sd.check()
+        assert changed
+
+    def test_filechange_deletion_race(self, tmpdir, monkeypatch):
+        tmp = tmpdir
+        sd = StatRecorder([tmp])
+        changed = sd.check()
+        assert not changed
+
+        p = tmp.ensure("new.py")
+        changed = sd.check()
+        assert changed
+
+        p.remove()
+        # make check()'s visit() call return our just removed
+        # path as if we were in a race condition
+        monkeypatch.setattr(tmp, 'visit', lambda *args: [p])
+
         changed = sd.check()
         assert changed
 

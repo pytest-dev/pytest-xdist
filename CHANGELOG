@@ -5,6 +5,9 @@
 
 - fix issue34 - distributed testing with -p plugin now works correctly
 
+- fix race condition in looponfail mode where a concurrent file removal
+  could cause a crash
+
 1.5
 -------------------------
 

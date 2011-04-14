@@ -201,14 +201,11 @@ class StatRecorder:
         newstat = {}
         for rootdir in self.rootdirlist:
             for path in rootdir.visit(self.fil, self.rec):
-                oldstat = statcache.get(path, None)
-                if oldstat is not None:
-                    del statcache[path]
+                oldstat = statcache.pop(path, None)
                 try:
                     newstat[path] = curstat = path.stat()
                 except py.error.ENOENT:
                     if oldstat:
-                        del statcache[path]
                         changed = True
                 else:
                     if oldstat:
