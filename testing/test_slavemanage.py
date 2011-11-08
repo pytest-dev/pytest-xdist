@@ -135,7 +135,7 @@ class TestNodeManager:
     @py.test.mark.xfail
     def test_rsync_roots_no_roots(self, testdir, mysetup):
         mysetup.source.ensure("dir1", "file1").write("hello")
-        config = testdir.reparseconfig([source])
+        config = testdir.parseconfig(source)
         nodemanager = NodeManager(config, ["popen//chdir=%s" % mysetup.dest])
         #assert nodemanager.config.topdir == source == config.topdir
         nodemanager.makegateways()
@@ -179,7 +179,7 @@ class TestNodeManager:
             [pytest]
             rsyncdirs=dir1/dir2
         """))
-        config = testdir.reparseconfig([source])
+        config = testdir.parseconfig(source)
         nodemanager = NodeManager(config, ["popen//chdir=%s" % dest])
         nodemanager.makegateways()
         nodemanager.rsync_roots()
@@ -198,7 +198,7 @@ class TestNodeManager:
             rsyncdirs = dir1 dir5
             rsyncignore = dir1/dir2 dir5/dir6
         """))
-        config = testdir.reparseconfig([source])
+        config = testdir.parseconfig(source)
         nodemanager = NodeManager(config, ["popen//chdir=%s" % dest])
         nodemanager.makegateways()
         nodemanager.rsync_roots()
@@ -212,7 +212,7 @@ class TestNodeManager:
         specs = ["popen"] * 3
         source.join("conftest.py").write("rsyncdirs = ['a']")
         source.ensure('a', dir=1)
-        config = testdir.reparseconfig([source])
+        config = testdir.parseconfig(source)
         nodemanager = NodeManager(config, specs)
         nodemanager.makegateways()
         nodemanager.rsync_roots()

@@ -271,7 +271,7 @@ class DSession:
                 self.terminal.write_line("")
                 self.terminal.write_line("scheduling tests via %s" %(
                     self.sched.__class__.__name__))
-                
+
             self.sched.init_distribute()
 
     def slave_logstart(self, node, nodeid, location):
@@ -279,8 +279,9 @@ class DSession:
             nodeid=nodeid, location=location)
 
     def slave_testreport(self, node, rep):
-        if rep.when in ("setup", "call"):
-            self.sched.remove_item(node, rep.nodeid)
+        if not (rep.passed and rep.when != "call"):
+            if rep.when in ("setup", "call"):
+                self.sched.remove_item(node, rep.nodeid)
         #self.report_line("testreport %s: %s" %(rep.id, rep.status))
         rep.node = node
         self.config.hook.pytest_runtest_logreport(report=rep)

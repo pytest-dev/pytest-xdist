@@ -80,7 +80,7 @@ class TestReportSerialization:
                 py.test.xfail("hello")
         """)
         reports = reprec.getreports("pytest_runtest_logreport")
-        assert len(reports) == 6
+        assert len(reports) == 17 # with setup/teardown "passed" reports
         for rep in reports:
             d = serialize_report(rep)
             check_marshallable(d)
@@ -138,6 +138,7 @@ class TestSlaveInteractor:
         ids = ev.kwargs['ids']
         assert len(ids) == 1
         slave.sendcommand("runtests", ids=ids)
+        ev = slave.popevent("testreport") # setup
         ev = slave.popevent("testreport")
         assert ev.name == "testreport"
         rep = unserialize_report(ev.name, ev.kwargs['data'])
@@ -194,15 +195,12 @@ class TestSlaveInteractor:
         ids = ev.kwargs['ids']
         assert len(ids) == 2
         slave.sendcommand("runtests_all", )
-        ev = slave.popevent("testreport")
-        assert ev.name == "testreport"
-        rep = unserialize_report(ev.name, ev.kwargs['data'])
-        assert rep.nodeid.endswith("::test_func")
-        ev = slave.popevent("testreport")
-        assert ev.name == "testreport"
-        rep = unserialize_report(ev.name, ev.kwargs['data'])
-        assert rep.nodeid.endswith("::test_func2")
-        assert rep.passed
+        for func in "::test_func", "::test_func2":
+            for i in range(3):  # setup/call/teardown
+                ev = slave.popevent("testreport")
+                assert ev.name == "testreport"
+                rep = unserialize_report(ev.name, ev.kwargs['data'])
+                assert rep.nodeid.endswith(func)
         slave.sendcommand("shutdown")
         ev = slave.popevent("slavefinished")
         assert 'slaveoutput' in ev.kwargs
