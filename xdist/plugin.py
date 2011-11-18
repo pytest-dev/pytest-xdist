@@ -97,7 +97,6 @@ def forked_run_report(item):
     from xdist.slavemanage import unserialize_report
     def runforked():
         try:
-            item.nextitem = None
             reports = runtestprotocol(item, log=False)
         except KeyboardInterrupt:
             py.std.os._exit(EXITSTATUS_TESTEXIT)
