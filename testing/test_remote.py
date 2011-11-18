@@ -195,13 +195,13 @@ class TestSlaveInteractor:
         ids = ev.kwargs['ids']
         assert len(ids) == 2
         slave.sendcommand("runtests_all", )
+        slave.sendcommand("shutdown", )
         for func in "::test_func", "::test_func2":
             for i in range(3):  # setup/call/teardown
                 ev = slave.popevent("testreport")
                 assert ev.name == "testreport"
                 rep = unserialize_report(ev.name, ev.kwargs['data'])
                 assert rep.nodeid.endswith(func)
-        slave.sendcommand("shutdown")
         ev = slave.popevent("slavefinished")
         assert 'slaveoutput' in ev.kwargs
 

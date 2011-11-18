@@ -1,7 +1,8 @@
 1.7
 -------------------------
 
-- fix incompatibilities with pytest-2.2.0
+- fix incompatibilities with pytest-2.2.0 (allow multiple
+  pytest_runtest_logreport reports for a test item)
 
 1.6
 -------------------------
