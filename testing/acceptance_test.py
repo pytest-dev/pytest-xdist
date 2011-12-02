@@ -314,7 +314,7 @@ def test_teardownfails_one_function(testdir):
 @py.test.mark.xfail
 def test_terminate_on_hangingnode(testdir):
     p = testdir.makeconftest("""
-        def pytest__teardown_final(session):
+        def pytest_sessionfinishes(session):
             if session.nodeid == "my": # running on slave
                 import time
                 time.sleep(3)

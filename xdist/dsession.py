@@ -284,10 +284,6 @@ class DSession:
         self.config.hook.pytest_runtest_logreport(report=rep)
         self._handlefailures(rep)
 
-    def slave_teardownreport(self, node, rep):
-        rep.node = node
-        self.config.hook.pytest__teardown_final_logerror(report=rep)
-
     def slave_collectreport(self, node, rep):
         #self.report_line("collectreport %s: %s" %(rep.id, rep.status))
         #rep.node = node

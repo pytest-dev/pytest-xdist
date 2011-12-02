@@ -301,5 +301,3 @@ def unserialize_report(name, reportdict):
         return runner.TestReport(**d)
     elif name == "collectreport":
         return runner.CollectReport(**d)
-    elif name == "teardownreport":
-        return runner.TeardownErrorReport(**d)

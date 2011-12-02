@@ -26,10 +26,6 @@ class SlaveInteractor:
         for line in str(excrepr).split("\n"):
             self.log("IERROR> " + line)
 
-    def pytest__teardown_final_logerror(self, report):
-        rep = serialize_report(report)
-        self.sendevent("teardownreport", data=rep)
-
     def pytest_sessionstart(self, session):
         self.session = session
         slaveinfo = getinfodict()
