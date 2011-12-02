@@ -138,6 +138,7 @@ class TestSlaveInteractor:
         ids = ev.kwargs['ids']
         assert len(ids) == 1
         slave.sendcommand("runtests", ids=ids)
+        slave.sendcommand("shutdown")
         ev = slave.popevent("testreport") # setup
         ev = slave.popevent("testreport")
         assert ev.name == "testreport"
@@ -145,7 +146,6 @@ class TestSlaveInteractor:
         assert rep.nodeid.endswith("::test_func")
         assert rep.passed
         assert rep.when == "call"
-        slave.sendcommand("shutdown")
         ev = slave.popevent("slavefinished")
         assert 'slaveoutput' in ev.kwargs
 

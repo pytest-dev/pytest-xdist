@@ -24,9 +24,6 @@ class EachScheduling:
     def tests_finished(self):
         if not self.collection_is_completed:
             return False
-        for items in self.node2pending.values():
-            if items:
-                return False
         return True
 
     def addnode_collection(self, node, collection):
@@ -79,9 +76,9 @@ class LoadScheduling:
     def tests_finished(self):
         if not self.collection_is_completed or self.pending:
             return False
-        for items in self.node2pending.values():
-            if items:
-                return False
+        #for items in self.node2pending.values():
+        #    if items:
+        #        return False
         return True
 
     def addnode_collection(self, node, collection):
@@ -107,7 +104,7 @@ class LoadScheduling:
             pending.append(item)
             self.item2nodes.setdefault(item, []).append(node)
             node.send_runtest(item)
-        #self.log("items waiting for node: %d" %(len(self.pending)))
+        self.log("items waiting for node: %d" %(len(self.pending)))
         #self.log("item2pending still executing: %s" %(self.item2nodes,))
         #self.log("node2pending: %s" %(self.node2pending,))
 

@@ -46,18 +46,26 @@ class SlaveInteractor:
 
     def pytest_runtestloop(self, session):
         self.log("entering main loop")
+        torun = []
         while 1:
             name, kwargs = self.channel.receive()
             self.log("received command %s(**%s)" % (name, kwargs))
             if name == "runtests":
                 ids = kwargs['ids']
                 for nodeid in ids:
-                    item = self._id2item[nodeid]
-                    self.config.hook.pytest_runtest_protocol(item=item)
+                    torun.append(self._id2item[nodeid])
             elif name == "runtests_all":
-                for item in session.items:
-                    self.config.hook.pytest_runtest_protocol(item=item)
-            elif name == "shutdown":
+                torun.extend(session.items)
+            self.log("items to run: %s" %(len(torun)))
+            while len(torun) >= 2:
+                item = torun.pop(0)
+                nextitem = torun[0]
+                self.config.hook.pytest_runtest_protocol(item=item,
+                    nextitem=nextitem)
+            if name == "shutdown":
+                while torun:
+                    self.config.hook.pytest_runtest_protocol(
+                        item=torun.pop(0), nextitem=None)
                 break
         return True
 
@@ -118,7 +126,7 @@ def remote_initconfig(option_dict, args):
     config.option.numprocesses = None
     config.args = args
     return config
-    
+
 
 if __name__ == '__channelexec__':
     slaveinput,args,option_dict = channel.receive()

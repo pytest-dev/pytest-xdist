@@ -1,3 +1,9 @@
+1.8
+-------------------------
+
+- fix pytest-issue93 - use the refined pytest-2.2.1 runtestprotocol 
+  interface to perform eager teardowns for test items.
+
 1.7
 -------------------------
 

@@ -183,7 +183,7 @@ def make_reltoroot(roots, args):
             raise ValueError("arg %s not relative to an rsync root" % (arg,))
         l.append(splitcode.join(parts))
     return l
-    
+
 class SlaveController(object):
     ENDMARK = -1
 
@@ -237,8 +237,11 @@ class SlaveController(object):
         self.sendcommand("runtests_all",)
 
     def shutdown(self):
-        if not self._down and not self.channel.isclosed():
-            self.sendcommand("shutdown")
+        if not self._down:
+            try:
+                self.sendcommand("shutdown")
+            except IOError:
+                pass
 
     def sendcommand(self, name, **kwargs):
         """ send a named parametrized command to the other side. """
