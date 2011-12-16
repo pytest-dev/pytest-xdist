@@ -88,16 +88,14 @@ class TestRemoteControl:
         assert not failures
 
     def test_failures_somewhere(self, testdir):
-        item = testdir.getitem("def test_func(): assert 0\n")
+        item = testdir.getitem("def test_func():\n assert 0\n")
         control = RemoteControl(item.config)
         control.setup()
         failures = control.runsession()
         assert failures
         control.setup()
-        item.fspath.write("def test_func(): assert 1\n")
-        pyc = item.fspath.new(ext=".pyc")
-        if pyc.check():
-            pyc.remove()
+        item.fspath.write("def test_func():\n assert 1\n")
+        removepyc(item.fspath)
         topdir, failures = control.runsession()[:2]
         assert not failures
 
@@ -115,9 +113,7 @@ class TestRemoteControl:
             def test_new():
                 assert 0
         """))
-        pyc = modcol.fspath.new(ext=".pyc")
-        if pyc.check():
-            pyc.remove()
+        removepyc(modcol.fspath)
         control.loop_once()
         assert not control.failures
         control.loop_once()
@@ -252,4 +248,7 @@ def removepyc(path):
     pyc = path + "c"
     if pyc.check():
         pyc.remove()
+    c = path.dirpath("__pycache__")
+    if c.check():
+        c.remove()
 
