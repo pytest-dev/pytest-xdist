@@ -121,6 +121,23 @@ class TestReportSerialization:
             if rep.failed:
                 assert newrep.longrepr == str(rep.longrepr)
 
+    def test_extended_report_deserialization(self, testdir):
+        reprec = testdir.inline_runsource("qwe abc")
+        reports = reprec.getreports("pytest_collectreport")
+        assert reports
+        for rep in reports:
+            rep.extra = True
+            d = serialize_report(rep)
+            check_marshallable(d)
+            newrep = unserialize_report("collectreport", d)
+            assert newrep.extra
+            assert newrep.passed == rep.passed
+            assert newrep.failed == rep.failed
+            assert newrep.skipped == rep.skipped
+            if rep.failed:
+                assert newrep.longrepr == str(rep.longrepr)
+
+
 class TestSlaveInteractor:
     def test_basic_collect_and_runtests(self, slave):
         p = slave.testdir.makepyfile("""
