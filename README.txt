@@ -168,3 +168,9 @@ where the configuration file was found.
 .. _`pytest-xdist repository`: http://bitbucket.org/hpk42/pytest-xdist
 .. _`pytest`: http://pytest.org
 
+Issue and Bug Tracker
+------------------------
+
+Please use the pytest issue tracker for bugs in this plugin, see https://bitbucket.org/hpk42/pytest/issues .
+
+
