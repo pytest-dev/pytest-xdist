@@ -4,16 +4,19 @@ xdist: pytest distributed testing plugin
 The `pytest-xdist`_ plugin extends py.test with some unique
 test execution modes:
 
-* Looponfail: run your tests repeatedly in a subprocess.  After each run py.test
-  waits until a file in your project changes and then re-runs the previously
-  failing tests.  This is repeated until all tests pass after which again
-  a full run is performed.
-
-* multiprocess Load-balancing: if you have multiple CPUs or hosts you can use
+* test run parallelization_: if you have multiple CPUs or hosts you can use
   those for a combined test run.  This allows to speed up
-  development or to use special resources of remote machines.
+  development or to use special resources of `remote machines`_.
 
-* Multi-Platform coverage: you can specify different Python interpreters
+* ``--boxed``: run each test in a boxed_ subprocess to survive ``SEGFAULTS`` or
+  otherwise dying processes
+
+* ``--looponfail``: run your tests repeatedly in a subprocess.  After each run 
+  py.test waits until a file in your project changes and then re-runs
+  the previously failing tests.  This is repeated until all tests pass
+  after which again a full run is performed.
+
+* `Multi-Platform`_ coverage: you can specify different Python interpreters
   or different platforms and run tests in parallel on all of them.
 
 Before running tests remotely, ``py.test`` efficiently "rsyncs" your
@@ -41,6 +44,8 @@ a checkout of the `pytest-xdist repository`_ ::
 Usage examples
 ---------------------
 
+.. _parallelization:
+
 Speed up test runs by sending tests to multiple CPUs
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -55,20 +60,42 @@ a lot of IO this can lead to considerable speed ups.
 Running tests in a Python subprocess
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-To instantiate a python2.4 sub process and send tests to it, you may type::
+To instantiate a python2.5 sub process and send tests to it, you may type::
 
-    py.test -d --tx popen//python=python2.4
+    py.test -d --tx popen//python=python2.5
 
-This will start a subprocess which is run with the "python2.4"
+This will start a subprocess which is run with the "python2.5"
 Python interpreter, found in your system binary lookup path.
 
 If you prefix the --tx option value like this::
 
-    --tx 3*popen//python=python2.4
+    --tx 3*popen//python=python2.5
 
 then three subprocesses would be created and tests
 will be load-balanced across these three processes.
 
+.. _boxed:
+
+Running tests in a boxed subprocess
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+If you have tests involving C or C++ libraries you might have to deal
+with tests crashing the process.  For this case you max use the boxing
+options::
+
+    py.test --boxed
+
+which will run each test in a subprocess and will report if a test
+crashed the process.  You can also combine this option with
+running multiple processes to speed up the test run and use your CPU cores::
+
+    py.test -n3 --boxed
+
+this would run 3 testing subprocesses in parallel which each 
+create new boxed subprocesses for each test.
+
+
+.. _`remote machines`:
 
 Sending tests to remote SSH accounts
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -111,6 +138,8 @@ new socket host with something like this::
 
 
 .. _`atonce`:
+.. _`Multi-Platform`:
+
 
 Running tests on many platforms at once
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
