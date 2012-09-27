@@ -8,8 +8,8 @@ test execution modes:
   those for a combined test run.  This allows to speed up
   development or to use special resources of `remote machines`_.
 
-* ``--boxed``: run each test in a boxed_ subprocess to survive ``SEGFAULTS`` or
-  otherwise dying processes
+* ``--boxed``: (not available on Windows) run each test in a boxed_ 
+  subprocess to survive ``SEGFAULTS`` or otherwise dying processes
 
 * ``--looponfail``: run your tests repeatedly in a subprocess.  After each run 
   py.test waits until a file in your project changes and then re-runs
