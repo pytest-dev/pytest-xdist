@@ -206,6 +206,24 @@ class TestLooponFailing:
         remotecontrol.loop_once()
         assert len(remotecontrol.failures) == 1
 
+    def test_looponfail_multiple_errors(self, testdir, monkeypatch):
+        modcol = testdir.getmodulecol("""
+            def test_one():
+                assert 0
+        """)
+        remotecontrol = RemoteControl(modcol.config)
+        orig_runsession = remotecontrol.runsession
+
+        def runsession_dups():
+            # twisted.trial test cases may report multiple errors.
+            failures, reports, collection_failed = orig_runsession()
+            print failures
+            return failures * 2, reports, collection_failed
+
+        monkeypatch.setattr(remotecontrol, 'runsession', runsession_dups)
+        remotecontrol.loop_once()
+        assert len(remotecontrol.failures) == 1
+
 
 class TestFunctional:
     def test_fail_to_ok(self, testdir):
