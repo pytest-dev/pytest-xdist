@@ -1,3 +1,11 @@
+1.9.dev
+-------------------------
+
+- changed LICENSE to MIT
+
+- fix duplicate reported test ids with --looponfailing
+  (thanks Jeremy Thurgood)
+
 1.8
 -------------------------
 
