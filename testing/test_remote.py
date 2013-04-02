@@ -88,7 +88,7 @@ class TestReportSerialization:
             assert newrep.passed == rep.passed
             assert newrep.failed == rep.failed
             assert newrep.skipped == rep.skipped
-            if newrep.skipped and 'xfail' not in newrep.keywords:
+            if newrep.skipped and not hasattr(newrep, "wasxfail"):
                 assert len(newrep.longrepr) == 3
             assert newrep.outcome == rep.outcome
             assert newrep.when == rep.when

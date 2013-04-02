@@ -15,12 +15,14 @@ def pytest_funcarg__config(request):
     config = testdir.parseconfig()
     return config
 
-class pytest_funcarg__mysetup:
-    def __init__(self, request):
-        temp = request.getfuncargvalue("tmpdir")
-        self.source = temp.mkdir("source")
-        self.dest = temp.mkdir("dest")
-        request.getfuncargvalue("_pytest")
+def pytest_funcarg__mysetup(request):
+    class mysetup:
+        def __init__(self, request):
+            temp = request.getfuncargvalue("tmpdir")
+            self.source = temp.mkdir("source")
+            self.dest = temp.mkdir("dest")
+            request.getfuncargvalue("_pytest")
+    return mysetup(request)
 
 class TestNodeManagerPopen:
     def test_popen_no_default_chdir(self, config):
@@ -97,11 +99,13 @@ class TestNodeManagerPopen:
         call = hookrecorder.popcall("pytest_xdist_rsyncfinish")
 
 class TestHRSync:
-    class pytest_funcarg__mysetup:
-        def __init__(self, request):
-            tmp = request.getfuncargvalue('tmpdir')
-            self.source = tmp.mkdir("source")
-            self.dest = tmp.mkdir("dest")
+    def pytest_funcarg__mysetup(self, request):
+        class mysetup:
+            def __init__(self, request):
+                tmp = request.getfuncargvalue('tmpdir')
+                self.source = tmp.mkdir("source")
+                self.dest = tmp.mkdir("dest")
+        return mysetup(request)
 
     def test_hrsync_filter(self, mysetup):
         source, dest = mysetup.source, mysetup.dest
