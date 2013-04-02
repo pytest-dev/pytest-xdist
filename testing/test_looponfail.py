@@ -217,7 +217,7 @@ class TestLooponFailing:
         def runsession_dups():
             # twisted.trial test cases may report multiple errors.
             failures, reports, collection_failed = orig_runsession()
-            print failures
+            print (failures)
             return failures * 2, reports, collection_failed
 
         monkeypatch.setattr(remotecontrol, 'runsession', runsession_dups)
