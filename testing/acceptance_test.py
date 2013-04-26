@@ -36,6 +36,18 @@ class TestDistribution:
             "E   ImportError: No module named __import_of_missing_module",
         ])
 
+    def test_n2_import_error(self, testdir):
+        """Check that we don't report the same import error multiple times
+        in distributed mode."""
+        p1 = testdir.makepyfile("""
+            import __import_of_missing_module
+            def test_import():
+                pass
+        """)
+        result1 = testdir.runpytest(p1, "-n2")
+        result2 = testdir.runpytest(p1, "-n1")
+        assert len(result1.stdout.lines) == len(result2.stdout.lines)
+
     def test_n1_skip(self, testdir):
         p1 = testdir.makepyfile("""
             def test_skip():

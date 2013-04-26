@@ -159,6 +159,7 @@ class DSession:
         self.countfailures = 0
         self.maxfail = config.getvalue("maxfail")
         self.queue = queue.Queue()
+        self._failed_collection_paths = {}
         try:
             self.terminal = config.pluginmanager.getplugin("terminalreporter")
         except KeyError:
@@ -285,8 +286,16 @@ class DSession:
         self._handlefailures(rep)
 
     def slave_collectreport(self, node, rep):
-        self.config.hook.pytest_collectreport(report=rep)
-        self._handlefailures(rep)
+        if rep.failed:
+            self._failed_slave_collectreport(node, rep)
+
+    def _failed_slave_collectreport(self, node, rep):
+        # Check we haven't already seen this report.
+        str_path = str(rep.fspath)
+        if str_path not in self._failed_collection_paths:
+            self._failed_collection_paths[str_path] = True
+            self.config.hook.pytest_collectreport(report=rep)
+            self._handlefailures(rep)
 
     def _handlefailures(self, rep):
         if rep.failed:
