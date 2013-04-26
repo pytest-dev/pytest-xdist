@@ -33,7 +33,7 @@ class TestDistribution:
         result = testdir.runpytest(p1, "-n1")
         assert result.ret == 1
         result.stdout.fnmatch_lines([
-            "*1 failed*",
+            "E   ImportError: No module named __import_of_missing_module",
         ])
 
     def test_n1_skip(self, testdir):

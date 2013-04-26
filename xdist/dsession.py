@@ -285,8 +285,7 @@ class DSession:
         self._handlefailures(rep)
 
     def slave_collectreport(self, node, rep):
-        #self.report_line("collectreport %s: %s" %(rep.id, rep.status))
-        #rep.node = node
+        self.config.hook.pytest_collectreport(report=rep)
         self._handlefailures(rep)
 
     def _handlefailures(self, rep):
