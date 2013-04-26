@@ -24,6 +24,18 @@ class TestDistribution:
             "*1 failed*",
         ])
 
+    def test_n1_import_error(self, testdir):
+        p1 = testdir.makepyfile("""
+            import __import_of_missing_module
+            def test_import():
+                pass
+        """)
+        result = testdir.runpytest(p1, "-n1")
+        assert result.ret == 1
+        result.stdout.fnmatch_lines([
+            "*1 failed*",
+        ])
+
     def test_n1_skip(self, testdir):
         p1 = testdir.makepyfile("""
             def test_skip():
