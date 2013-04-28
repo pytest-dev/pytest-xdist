@@ -60,6 +60,18 @@ class TestDistribution:
             "*1 skipped*",
         ])
 
+    def test_manytests_to_one_import_error(self, testdir):
+        p1 = testdir.makepyfile("""
+            import __import_of_missing_module
+            def test_import():
+                pass
+        """)
+        result = testdir.runpytest(p1, '--tx=popen', '--tx=popen')
+        assert result.ret == 1
+        result.stdout.fnmatch_lines([
+            "E   ImportError: No module named __import_of_missing_module",
+        ])
+
     def test_manytests_to_one_popen(self, testdir):
         p1 = testdir.makepyfile("""
                 import py
