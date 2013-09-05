@@ -135,8 +135,12 @@ class LoadScheduling:
         # XXX allow nodes to have different collections
         first_node, col = list(self.node2collection.items())[0]
         for node, collection in self.node2collection.items():
-            if collection != col:
-                report_collection_diff(col, collection, first_node.gateway.id, node.gateway.id)
+            report_collection_diff(
+                col,
+                collection,
+                first_node.gateway.id,
+                node.gateway.id,
+            )
 
         self.pending = col
         if not col:

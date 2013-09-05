@@ -201,5 +201,4 @@ def test_report_collection_diff_different():
     try:
         report_collection_diff(from_collection, to_collection, 1, 2)
     except AssertionError as e:
-
         assert unicode(e) == error_message
