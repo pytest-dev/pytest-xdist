@@ -9,6 +9,10 @@
 - fix pytest issue41: re-run tests on all file changes, not just
   randomly select ones like .py/.c.
 
+- fix pytest issue347: slaves running on top of Python3.2 
+  will set PYTHONDONTWRITEYBTECODE to 1 to avoid import concurrency
+  bugs.
+
 1.8
 -------------------------
 
