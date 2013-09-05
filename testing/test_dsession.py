@@ -1,4 +1,9 @@
-from xdist.dsession import DSession, LoadScheduling, EachScheduling
+from xdist.dsession import (
+    DSession,
+    LoadScheduling,
+    EachScheduling,
+    report_collection_diff,
+)
 from _pytest import main as outcome
 import py
 import execnet
@@ -165,3 +170,36 @@ class TestDistReporter:
         linecomp.assert_contains_lines([
             "[X1,X2] rsyncing: hello",
         ])
+
+
+def test_report_collection_diff_equal():
+    """Test reporting of equal collections."""
+    from_collection = to_collection = ['aaa', 'bbb', 'ccc']
+    assert report_collection_diff(from_collection, to_collection, 1, 2)
+
+
+def test_report_collection_diff_different():
+    """Test reporting of different collections."""
+    from_collection = ['aaa', 'bbb', 'ccc', 'YYY']
+    to_collection = ['aZa', 'bbb', 'XXX', 'ccc']
+    error_message = (
+        u'Different tests were collected between 1 and 2. The difference is:\n'
+        u'--- 1 \n'
+        u'\n'
+        u'+++ 2 \n'
+        u'\n'
+        u'@@ -1,4 +1,4 @@\n'
+        u'\n'
+        u'-aaa\n'
+        u'+aZa\n'
+        u' bbb\n'
+        u'+XXX\n'
+        u' ccc\n'
+        u'-YYY'
+    )
+
+    try:
+        report_collection_diff(from_collection, to_collection, 1, 2)
+    except AssertionError as e:
+
+        assert unicode(e) == error_message

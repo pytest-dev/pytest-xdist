@@ -1,7 +1,13 @@
-import pytest, py
 import sys
+import difflib
+
+import pytest
+import py
 from xdist.slavemanage import NodeManager
+
+
 queue = py.builtin._tryimport('queue', 'Queue')
+
 
 class EachScheduling:
 
@@ -127,15 +133,17 @@ class LoadScheduling:
         assert not hasattr(self, 'item2nodes')
         self.item2nodes = {}
         # XXX allow nodes to have different collections
-        col = list(self.node2collection.values())[0]
+        first_node, col = list(self.node2collection.items())[0]
         for node, collection in self.node2collection.items():
-            assert collection == col
+            if collection != col:
+                report_collection_diff(col, collection, first_node.gateway.id, node.gateway.id)
+
         self.pending = col
         if not col:
             return
         available = list(self.node2pending.items())
         num_available = self.numnodes
-        max_one_round = num_available * self.ITEM_CHUNKSIZE -1
+        max_one_round = num_available * self.ITEM_CHUNKSIZE - 1
         for i, item in enumerate(self.pending):
             nodeindex = i % num_available
             node, pending = available[nodeindex]
@@ -144,7 +152,35 @@ class LoadScheduling:
             pending.append(item)
             if i >= max_one_round:
                 break
-        del self.pending[:i+1]
+        del self.pending[:i + 1]
+
+
+def report_collection_diff(from_collection, to_collection, from_id, to_id):
+    """Report the collected test difference between two nodes.
+
+    :returns: True if collections are equal.
+
+    :raises: AssertionError with a detailed error message describing the
+             difference between the collections.
+
+    """
+    if from_collection == to_collection:
+        return True
+
+    diff = difflib.unified_diff(
+        from_collection,
+        to_collection,
+        fromfile=from_id,
+        tofile=to_id,
+    )
+    error_message = (
+        u'Different tests were collected between {from_id} and {to_id}. '
+        u'The difference is:\n'
+        u'{diff}'
+    ).format(from_id=from_id, to_id=to_id, diff='\n'.join(diff))
+
+    raise AssertionError(error_message)
+
 
 class Interrupted(KeyboardInterrupt):
     """ signals an immediate interruption. """
