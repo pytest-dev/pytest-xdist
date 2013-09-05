@@ -6,6 +6,9 @@
 - fix duplicate reported test ids with --looponfailing
   (thanks Jeremy Thurgood)
 
+- fix pytest issue41: re-run tests on all file changes, not just
+  randomly select ones like .py/.c.
+
 1.8
 -------------------------
 

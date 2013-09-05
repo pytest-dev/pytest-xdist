@@ -64,11 +64,11 @@ class TestStatRecorder:
         pycfile = hello + "c"
         pycfile.ensure()
         changed = sd.check()
-        assert not changed
+        assert changed
 
         hello.write("world")
         changed = sd.check()
-        assert not pycfile.check()
+        assert changed
 
     def test_waitonchange(self, tmpdir, monkeypatch):
         tmp = tmpdir

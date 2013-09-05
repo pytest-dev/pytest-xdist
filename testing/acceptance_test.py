@@ -33,7 +33,7 @@ class TestDistribution:
         result = testdir.runpytest(p1, "-n1")
         assert result.ret == 1
         result.stdout.fnmatch_lines([
-            "E   ImportError: No module named __import_of_missing_module",
+            "E   ImportError: *__import_of_missing_module*",
         ])
 
     def test_n2_import_error(self, testdir):
@@ -69,7 +69,7 @@ class TestDistribution:
         result = testdir.runpytest(p1, '--tx=popen', '--tx=popen')
         assert result.ret == 1
         result.stdout.fnmatch_lines([
-            "E   ImportError: No module named __import_of_missing_module",
+            "E   ImportError: *__import_of_missing_module*",
         ])
 
     def test_manytests_to_one_popen(self, testdir):
