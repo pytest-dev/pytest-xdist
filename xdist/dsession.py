@@ -177,13 +177,13 @@ def report_collection_diff(from_collection, to_collection, from_id, to_id):
         fromfile=from_id,
         tofile=to_id,
     )
-    error_message = (
-        u'Different tests were collected between {from_id} and {to_id}. '
-        u'The difference is:\n'
-        u'{diff}'
+    error_message = py.builtin._totext(
+        'Different tests were collected between {from_id} and {to_id}. '
+        'The difference is:\n'
+        '{diff}'
     ).format(from_id=from_id, to_id=to_id, diff='\n'.join(diff))
-
-    raise AssertionError(error_message)
+    msg = "\n".join([x.rstrip() for x in error_message.split("\n")])
+    raise AssertionError(msg)
 
 
 class Interrupted(KeyboardInterrupt):

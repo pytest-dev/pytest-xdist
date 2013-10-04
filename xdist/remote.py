@@ -128,7 +128,7 @@ if __name__ == '__channelexec__':
     # python3.2 is not concurrent import safe, so let's play it safe
     # https://bitbucket.org/hpk42/pytest/issue/347/pytest-xdist-and-python-32
     if sys.version_info[:2] == (3,2):
-        os.environ["PYTHONDONTWRITEBYTECODE"] = 1
+        os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
     slaveinput,args,option_dict = channel.receive()
     importpath = os.getcwd()
     sys.path.insert(0, importpath) # XXX only for remote situations

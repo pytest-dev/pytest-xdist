@@ -17,9 +17,16 @@ def run(item, node, excinfo=None):
     rep.node = node
     return rep
 
+class MockGateway:
+    _count = 0
+    def __init__(self):
+        self.id = str(self._count)
+        self._count += 1
+
 class MockNode:
     def __init__(self):
         self.sent = []
+        self.gateway = MockGateway()
 
     def send_runtest(self, nodeid):
         self.sent.append(nodeid)
@@ -183,22 +190,22 @@ def test_report_collection_diff_different():
     from_collection = ['aaa', 'bbb', 'ccc', 'YYY']
     to_collection = ['aZa', 'bbb', 'XXX', 'ccc']
     error_message = (
-        u'Different tests were collected between 1 and 2. The difference is:\n'
-        u'--- 1 \n'
-        u'\n'
-        u'+++ 2 \n'
-        u'\n'
-        u'@@ -1,4 +1,4 @@\n'
-        u'\n'
-        u'-aaa\n'
-        u'+aZa\n'
-        u' bbb\n'
-        u'+XXX\n'
-        u' ccc\n'
-        u'-YYY'
+        'Different tests were collected between 1 and 2. The difference is:\n'
+        '--- 1\n'
+        '\n'
+        '+++ 2\n'
+        '\n'
+        '@@ -1,4 +1,4 @@\n'
+        '\n'
+        '-aaa\n'
+        '+aZa\n'
+        ' bbb\n'
+        '+XXX\n'
+        ' ccc\n'
+        '-YYY'
     )
 
     try:
         report_collection_diff(from_collection, to_collection, 1, 2)
     except AssertionError as e:
-        assert unicode(e) == error_message
+        assert py.builtin._totext(e) == error_message
