@@ -1,7 +1,9 @@
 1.10
 -------------------------
 
-- ignore dot files for file changes (editors write tmp/swap files etc.)
+- ignore pyc files, dot files and directories for changes (editors write tmp/swap
+  files etc., which also affects mtime of directory)
+
 
 1.9
 -------------------------

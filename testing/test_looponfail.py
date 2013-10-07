@@ -16,7 +16,7 @@ class TestStatRecorder:
 
         (hello + "c").write("hello")
         changed = sd.check()
-        assert changed
+        assert not changed
 
         p = tmp.ensure("new.py")
         changed = sd.check()
@@ -39,6 +39,12 @@ class TestStatRecorder:
         tmp.join("a").remove()
         changed = sd.check()
         assert changed
+
+    def test_dirchange(self, tmpdir):
+        tmp = tmpdir
+        hello = tmp.ensure("dir", "hello.py")
+        sd = StatRecorder([tmp])
+        assert not sd.fil(tmp.join("dir"))
 
     def test_filechange_deletion_race(self, tmpdir, monkeypatch):
         tmp = tmpdir
@@ -67,12 +73,10 @@ class TestStatRecorder:
 
         pycfile = hello + "c"
         pycfile.ensure()
-        changed = sd.check()
-        assert changed
-
         hello.write("world")
         changed = sd.check()
         assert changed
+        assert not pycfile.check()
 
     def test_waitonchange(self, tmpdir, monkeypatch):
         tmp = tmpdir

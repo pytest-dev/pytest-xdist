@@ -188,7 +188,7 @@ class StatRecorder:
         self.check() # snapshot state
 
     def fil(self, p):
-        return p.check(dotfile=0)
+        return p.check(file=1, dotfile=0) and p.ext != ".pyc"
     def rec(self, p):
         return p.check(dotfile=0)
 
