@@ -188,7 +188,7 @@ class StatRecorder:
         self.check() # snapshot state
 
     def fil(self, p):
-        return True  # we are sensitive to all file changes since 1.9
+        return p.check(dotfile=0)
     def rec(self, p):
         return p.check(dotfile=0)
 

@@ -14,6 +14,10 @@ class TestStatRecorder:
         changed = sd.check()
         assert changed
 
+        (hello + "c").write("hello")
+        changed = sd.check()
+        assert changed
+
         p = tmp.ensure("new.py")
         changed = sd.check()
         assert changed

@@ -1,3 +1,8 @@
+1.10
+-------------------------
+
+- ignore dot files for file changes (editors write tmp/swap files etc.)
+
 1.9
 -------------------------
 
