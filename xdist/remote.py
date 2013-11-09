@@ -75,8 +75,8 @@ class SlaveInteractor:
             topdir=str(session.fspath),
             ids=ids)
 
-    #def pytest_runtest_logstart(self, nodeid, location, fspath):
-    #    self.sendevent("logstart", nodeid=nodeid, location=location)
+    def pytest_runtest_logstart(self, nodeid, location):
+        self.sendevent("logstart", nodeid=nodeid, location=location)
 
     def pytest_runtest_logreport(self, report):
         data = serialize_report(report)
