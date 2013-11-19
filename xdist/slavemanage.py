@@ -278,8 +278,8 @@ class SlaveController(object):
                 self._down = True
                 self.slaveoutput = kwargs['slaveoutput']
                 self.notify_inproc("slavefinished", node=self)
-            #elif eventname == "logstart":
-            #    self.notify_inproc(eventname, node=self, **kwargs)
+            elif eventname == "logstart":
+                self.notify_inproc(eventname, node=self, **kwargs)
             elif eventname in ("testreport", "collectreport", "teardownreport"):
                 rep = unserialize_report(eventname, kwargs['data'])
                 self.notify_inproc(eventname, node=self, rep=rep)

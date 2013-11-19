@@ -156,6 +156,9 @@ class TestSlaveInteractor:
         assert len(ids) == 1
         slave.sendcommand("runtests", ids=ids)
         slave.sendcommand("shutdown")
+        ev = slave.popevent("logstart")
+        assert ev.kwargs["nodeid"].endswith("test_func")
+        assert len(ev.kwargs["location"]) == 3
         ev = slave.popevent("testreport") # setup
         ev = slave.popevent("testreport")
         assert ev.name == "testreport"
