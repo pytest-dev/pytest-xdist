@@ -62,6 +62,10 @@ def pytest_configure(config, __multicall__):
         from xdist.dsession import DSession
         session = DSession(config)
         config.pluginmanager.register(session, "dsession")
+        tr = config.pluginmanager.getplugin("terminalreporter")
+        tr.showfspath = False
+
+
 
 def check_options(config):
     if config.option.numprocesses:
