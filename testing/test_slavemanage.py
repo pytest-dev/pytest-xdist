@@ -198,12 +198,14 @@ class TestNodeManager:
         dirf = source.ensure("dir5", "file")
         dir2.ensure("hello")
         dirfoo = source.ensure("foo", "bar")
+        dirbar = source.ensure("bar", "foo")
         source.join("tox.ini").write(py.std.textwrap.dedent("""
             [pytest]
             rsyncdirs = dir1 dir5
             rsyncignore = dir1/dir2 dir5/dir6 foo*
         """))
         config = testdir.parseconfig(source)
+        config.option.rsyncignore = ['bar']
         nodemanager = NodeManager(config, ["popen//chdir=%s" % dest])
         nodemanager.makegateways()
         nodemanager.rsync_roots()
@@ -212,6 +214,7 @@ class TestNodeManager:
         assert dest.join("dir5","file").check()
         assert not dest.join("dir6").check()
         assert not dest.join('foo').check()
+        assert not dest.join('bar').check()
 
     def test_optimise_popen(self, testdir, mysetup):
         source, dest = mysetup.source, mysetup.dest

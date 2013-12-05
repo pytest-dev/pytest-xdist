@@ -102,7 +102,7 @@ class NodeManager(object):
     def _getrsyncoptions(self):
         """Get options to be passed for rsync."""
         ignores = list(self.DEFAULT_IGNORES)
-        ignores = self.config.option.rsyncignore
+        ignores += self.config.option.rsyncignore
         ignores += self.config.getini("rsyncignore")
 
         return {
