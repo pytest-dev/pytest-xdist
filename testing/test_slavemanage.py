@@ -113,7 +113,7 @@ class TestHRSync:
         source.ensure(".svn", "entries")
         source.ensure(".somedotfile", "moreentries")
         source.ensure("somedir", "editfile~")
-        syncer = HostRSync(source)
+        syncer = HostRSync(source, ignores=NodeManager.DEFAULT_IGNORES)
         l = list(source.visit(rec=syncer.filter,
                                    fil=syncer.filter))
         assert len(l) == 3
@@ -197,10 +197,11 @@ class TestNodeManager:
         dir5 = source.ensure("dir5", "dir6", "bogus")
         dirf = source.ensure("dir5", "file")
         dir2.ensure("hello")
+        dirfoo = source.ensure("foo", "bar")
         source.join("tox.ini").write(py.std.textwrap.dedent("""
             [pytest]
             rsyncdirs = dir1 dir5
-            rsyncignore = dir1/dir2 dir5/dir6
+            rsyncignore = dir1/dir2 dir5/dir6 foo*
         """))
         config = testdir.parseconfig(source)
         nodemanager = NodeManager(config, ["popen//chdir=%s" % dest])
@@ -210,6 +211,7 @@ class TestNodeManager:
         assert not dest.join("dir1", "dir2").check()
         assert dest.join("dir5","file").check()
         assert not dest.join("dir6").check()
+        assert not dest.join('foo').check()
 
     def test_optimise_popen(self, testdir, mysetup):
         source, dest = mysetup.source, mysetup.dest

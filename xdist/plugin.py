@@ -1,5 +1,5 @@
-import sys
-import py, pytest
+import py
+import pytest
 
 def pytest_addoption(parser):
     group = parser.getgroup("xdist", "distributed and subprocess testing")
@@ -28,8 +28,10 @@ def pytest_addoption(parser):
     group._addoption('-d',
            action="store_true", dest="distload", default=False,
            help="load-balance tests.  shortcut for '--dist=load'")
-    group.addoption('--rsyncdir', action="append", default=[], metavar="dir1",
+    group.addoption('--rsyncdir', action="append", default=[], metavar="rsyncdirs",
            help="add directory for rsyncing to remote tx nodes.")
+    group.addoption('--rsyncignore', action="append", default=[], metavar="rsyncignores",
+           help="add expression for ignores when rsyncing to remote tx nodes.")
 
     parser.addini('rsyncdirs', 'list of (relative) paths to be rsynced for'
          ' remote distributed testing.', type="pathlist")

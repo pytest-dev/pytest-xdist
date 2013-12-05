@@ -46,6 +46,11 @@ class TestDistOptions:
         assert nm.roots
         assert testdir.tmpdir in nm.roots
 
+    def test_getrsyncignore(self, testdir):
+        config = testdir.parseconfigure('--rsyncignore=fo*')
+        nm = NodeManager(config, specs=[execnet.XSpec("popen//chdir=qwe")])
+        assert 'fo*' in nm.rsyncoptions['ignores']
+
     def test_getrsyncdirs_with_conftest(self, testdir):
         p = py.path.local()
         for bn in 'x y z'.split():

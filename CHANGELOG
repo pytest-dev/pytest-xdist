@@ -1,11 +1,9 @@
 1.10 unreleased
 -------------------------
 
-- ignore pyc files, dot files and directories for changes (editors write tmp/swap
-  files etc., which also affects mtime of directory)
-
+- add glob support for rsyncignores, add command line option to pass additional rsyncignores
 - fix pytest issue382 - produce "pytest_runtest_logstart" event again
-  in master. Thanks Aron Curzon. 
+  in master. Thanks Aron Curzon.
 
 1.9
 -------------------------
@@ -18,14 +16,14 @@
 - fix pytest issue41: re-run tests on all file changes, not just
   randomly select ones like .py/.c.
 
-- fix pytest issue347: slaves running on top of Python3.2 
+- fix pytest issue347: slaves running on top of Python3.2
   will set PYTHONDONTWRITEYBTECODE to 1 to avoid import concurrency
   bugs.
 
 1.8
 -------------------------
 
-- fix pytest-issue93 - use the refined pytest-2.2.1 runtestprotocol 
+- fix pytest-issue93 - use the refined pytest-2.2.1 runtestprotocol
   interface to perform eager teardowns for test items.
 
 1.7
