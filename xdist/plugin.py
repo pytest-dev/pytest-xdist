@@ -67,8 +67,6 @@ def pytest_configure(config, __multicall__):
         tr = config.pluginmanager.getplugin("terminalreporter")
         tr.showfspath = False
 
-
-
 def check_options(config):
     if config.option.numprocesses:
         config.option.dist = "load"

@@ -1,7 +1,9 @@
 1.10 unreleased
 -------------------------
 
-- add glob support for rsyncignores, add command line option to pass additional rsyncignores
+- add glob support for rsyncignores, add command line option to pass
+  additional rsyncignores. Thanks Anatoly Bubenkov.
+
 - fix pytest issue382 - produce "pytest_runtest_logstart" event again
   in master. Thanks Aron Curzon.
 
