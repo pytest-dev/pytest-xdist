@@ -125,6 +125,8 @@ during setup of the remote side.
 You can specify multiple ``--rsyncignore`` glob-patterns
 to be ignored when file are sent to the remote side.
 There are also internal ignores: .*, *.pyc, *.pyo, *~
+Those you cannot override using rsyncignore command-line or
+ini-file option(s).
 
 
 Sending tests to remote Socket Servers
