@@ -35,7 +35,7 @@ def pytest_addoption(parser):
 
     parser.addini('rsyncdirs', 'list of (relative) paths to be rsynced for'
          ' remote distributed testing.', type="pathlist")
-    parser.addini('rsyncignore', 'list of (relative) paths to be ignored '
+    parser.addini('rsyncignore', 'list of (relative) glob-style paths to be ignored '
          'for rsyncing.', type="pathlist")
     parser.addini("looponfailroots", type="pathlist",
         help="directories to check for changes", default=[py.path.local()])
