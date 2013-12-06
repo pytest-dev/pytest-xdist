@@ -8,10 +8,10 @@ test execution modes:
   those for a combined test run.  This allows to speed up
   development or to use special resources of `remote machines`_.
 
-* ``--boxed``: (not available on Windows) run each test in a boxed_ 
+* ``--boxed``: (not available on Windows) run each test in a boxed_
   subprocess to survive ``SEGFAULTS`` or otherwise dying processes
 
-* ``--looponfail``: run your tests repeatedly in a subprocess.  After each run 
+* ``--looponfail``: run your tests repeatedly in a subprocess.  After each run
   py.test waits until a file in your project changes and then re-runs
   the previously failing tests.  This is repeated until all tests pass
   after which again a full run is performed.
@@ -33,7 +33,7 @@ Install the plugin with::
     easy_install pytest-xdist
 
     # or
-    
+
     pip install pytest-xdist
 
 or use the package in develope/in-place mode with
@@ -91,7 +91,7 @@ running multiple processes to speed up the test run and use your CPU cores::
 
     py.test -n3 --boxed
 
-this would run 3 testing subprocesses in parallel which each 
+this would run 3 testing subprocesses in parallel which each
 create new boxed subprocesses for each test.
 
 
@@ -121,6 +121,13 @@ also has an ``__init__.py`` file because internally
 py.test references tests as a fully qualified python
 module path.  **You will otherwise get strange errors**
 during setup of the remote side.
+
+You can specify multiple ``--rsyncignore`` glob-patterns
+to be ignored when file are sent to the remote side.
+There are also internal ignores: .*, *.pyc, *.pyo, *~
+Those you cannot override using rsyncignore command-line or
+ini-file option(s).
+
 
 Sending tests to remote Socket Servers
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

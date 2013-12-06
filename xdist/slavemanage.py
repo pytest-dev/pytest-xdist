@@ -1,5 +1,8 @@
-import py, pytest
-import sys, os
+import fnmatch
+import os
+
+import py
+import pytest
 import execnet
 import xdist.remote
 
@@ -7,6 +10,7 @@ from _pytest import runner # XXX load dynamically
 
 class NodeManager(object):
     EXIT_TIMEOUT = 10
+    DEFAULT_IGNORES = ['.*', '*.pyc', '*.pyo', '*~']
     def __init__(self, config, specs=None, defaultchdir="pyexecnetcache"):
         self.config = config
         self._nodesready = py.std.threading.Event()
@@ -23,20 +27,17 @@ class NodeManager(object):
             self.group.allocate_id(spec)
             self.specs.append(spec)
         self.roots = self._getrsyncdirs()
+        self.rsyncoptions = self._getrsyncoptions()
 
     def rsync_roots(self):
         """ make sure that all remote gateways
             have the same set of roots in their
             current directory.
         """
-        options = {
-            'ignores': self.config.getini("rsyncignore"),
-            'verbose': self.config.option.verbose,
-        }
         if self.roots:
             # send each rsync root
             for root in self.roots:
-                self.rsync(root, **options)
+                self.rsync(root, **self.rsyncoptions)
 
     def makegateways(self):
         assert not list(self.group)
@@ -98,6 +99,18 @@ class NodeManager(object):
                 roots.append(root)
         return roots
 
+    def _getrsyncoptions(self):
+        """Get options to be passed for rsync."""
+        ignores = list(self.DEFAULT_IGNORES)
+        ignores += self.config.option.rsyncignore
+        ignores += self.config.getini("rsyncignore")
+
+        return {
+            'ignores': ignores,
+            'verbose': self.config.option.verbose,
+        }
+
+
     def rsync(self, source, notify=None, verbose=False, ignores=None):
         """ perform rsync to all remote hosts.
         """
@@ -144,14 +157,12 @@ class HostRSync(execnet.RSync):
 
     def filter(self, path):
         path = py.path.local(path)
-        if not path.ext in ('.pyc', '.pyo'):
-            if not path.basename.endswith('~'):
-                if path.check(dotfile=0):
-                    for x in self._ignores:
-                        if path == x:
-                            break
-                    else:
-                        return True
+        for x in self._ignores:
+            x = getattr(x, 'strpath', x)
+            if fnmatch.fnmatch(path.basename, x) or fnmatch.fnmatch(path.strpath, x):
+                return False
+        else:
+            return True
 
     def add_target_host(self, gateway, finished=None):
         remotepath = os.path.basename(self._sourcedir)

@@ -14,8 +14,14 @@ syntax:glob
 *.class
 *.orig
 
+*.sublime-*
+.Python
+
 build/
 dist/
+include/
+lib/
+bin/
 pytest_xdist.egg-info
 issue/
 3rdparty/
