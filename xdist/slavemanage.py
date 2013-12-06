@@ -160,7 +160,7 @@ class HostRSync(execnet.RSync):
         for x in self._ignores:
             x = getattr(x, 'strpath', x)
             if fnmatch.fnmatch(path.basename, x) or fnmatch.fnmatch(path.strpath, x):
-                break
+                return False
         else:
             return True
 
