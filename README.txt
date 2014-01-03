@@ -80,7 +80,7 @@ Running tests in a boxed subprocess
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 If you have tests involving C or C++ libraries you might have to deal
-with tests crashing the process.  For this case you max use the boxing
+with tests crashing the process.  For this case you may use the boxing
 options::
 
     py.test --boxed
