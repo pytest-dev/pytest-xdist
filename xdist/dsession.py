@@ -40,7 +40,7 @@ class EachScheduling:
         if len(self.node2pending) >= self.numnodes:
             self.collection_is_completed = True
 
-    def remove_item(self, node, item_index):
+    def remove_item(self, node, item_index, duration=0):
         self.node2pending[node].remove(item_index)
 
     def remove_node(self, node):
@@ -91,12 +91,16 @@ class LoadScheduling:
         if len(self.node2collection) >= self.numnodes:
             self.collection_is_completed = True
 
-    def remove_item(self, node, item_index):
+    def remove_item(self, node, item_index, duration=0):
         node_pending = self.node2pending[node]
         node_pending.remove(item_index)
         # pre-load items-to-test if the node may become ready
 
         if self.pending:
+            if duration >= 0.1 and node_pending:
+                # seems the node is doing long-running tests
+                # so let's rather wait with sending new items
+                return
             # how many nodes do we have remaining per node roughly?
             num_nodes = len(self.node2pending)
             # if our node goes below a heuristic minimum, fill it out to
@@ -142,8 +146,8 @@ class LoadScheduling:
             return
         # how many items per node do we have about?
         items_per_node = len(self.collection) // len(self.node2pending)
-        # take half of it for initial distribution, at least 1
-        node_chunksize = max(items_per_node // 2, 1)
+        # take a fraction of tests for initial distribution
+        node_chunksize = max(items_per_node // 4, 1)
         # and initialize each node with a chunk of tests
         for node in self.node2pending:
             self._send_tests(node, node_chunksize)
@@ -317,7 +321,7 @@ class DSession:
     def slave_testreport(self, node, rep):
         if not (rep.passed and rep.when != "call"):
             if rep.when in ("setup", "call"):
-                self.sched.remove_item(node, rep.item_index)
+                self.sched.remove_item(node, rep.item_index, rep.duration)
         #self.report_line("testreport %s: %s" %(rep.id, rep.status))
         rep.node = node
         self.config.hook.pytest_runtest_logreport(report=rep)
