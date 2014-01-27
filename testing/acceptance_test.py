@@ -256,6 +256,7 @@ class TestDistribution:
                 time.sleep(10)
         """)
         child = testdir.spawn_pytest("-n1")
+        py.std.time.sleep(0.1)
         child.expect(".*test session starts.*")
         child.kill(2) # keyboard interrupt
         child.expect(".*KeyboardInterrupt.*")
