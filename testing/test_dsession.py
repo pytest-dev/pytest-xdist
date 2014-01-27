@@ -6,6 +6,7 @@ from xdist.dsession import (
 )
 from _pytest import main as outcome
 import py
+import pytest
 import execnet
 
 XSpec = execnet.XSpec
@@ -209,3 +210,16 @@ def test_report_collection_diff_different():
         report_collection_diff(from_collection, to_collection, 1, 2)
     except AssertionError as e:
         assert py.builtin._totext(e) == error_message
+
+@pytest.mark.xfail(reason="duplicate test ids not supported yet")
+def test_pytest_issue419(testdir):
+    testdir.makepyfile("""
+        import pytest
+
+        @pytest.mark.parametrize('birth_year', [1988, 1988, ])
+        def test_2011_table(birth_year):
+            pass
+    """)
+    reprec = testdir.inline_run("-n1")
+    reprec.assertoutcome(passed=2)
+    assert 0

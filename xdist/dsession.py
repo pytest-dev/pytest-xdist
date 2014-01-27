@@ -142,6 +142,8 @@ class LoadScheduling:
                 node.gateway.id,
             )
 
+        # all collections are the same, good.
+        # we now create an index
         self.pending = col
         if not col:
             return
