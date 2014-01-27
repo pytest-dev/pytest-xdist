@@ -47,39 +47,44 @@ class SlaveInteractor:
             name, kwargs = self.channel.receive()
             self.log("received command %s(**%s)" % (name, kwargs))
             if name == "runtests":
-                ids = kwargs['ids']
-                for nodeid in ids:
-                    torun.append(self._id2item[nodeid])
+                torun.extend(kwargs['indices'])
             elif name == "runtests_all":
-                torun.extend(session.items)
-            self.log("items to run: %s" %(len(torun)))
+                torun.extend(range(len(session.items)))
+            self.log("items to run: %s" % (torun,))
             while len(torun) >= 2:
-                item = torun.pop(0)
-                nextitem = torun[0]
-                self.config.hook.pytest_runtest_protocol(item=item,
-                    nextitem=nextitem)
+                # we store item_index so that we can pick it up from the
+                # runtest hooks
+                self.run_one_test(torun)
+
             if name == "shutdown":
                 while torun:
-                    self.config.hook.pytest_runtest_protocol(
-                        item=torun.pop(0), nextitem=None)
+                    self.run_one_test(torun)
                 break
         return True
 
+    def run_one_test(self, torun):
+        items = self.session.items
+        self.item_index = torun.pop(0)
+        if torun:
+            nextitem = items[torun[0]]
+        else:
+            nextitem = None
+        self.config.hook.pytest_runtest_protocol(
+            item=items[self.item_index],
+            nextitem=nextitem)
+
     def pytest_collection_finish(self, session):
-        self._id2item = {}
-        ids = []
-        for item in session.items:
-            self._id2item[item.nodeid] = item
-            ids.append(item.nodeid)
         self.sendevent("collectionfinish",
             topdir=str(session.fspath),
-            ids=ids)
+            ids=[item.nodeid for item in session.items])
 
     def pytest_runtest_logstart(self, nodeid, location):
         self.sendevent("logstart", nodeid=nodeid, location=location)
 
     def pytest_runtest_logreport(self, report):
         data = serialize_report(report)
+        data["item_index"] = self.item_index
+        assert self.session.items[self.item_index].nodeid == report.nodeid
         self.sendevent("testreport", data=data)
 
     def pytest_collectreport(self, report):

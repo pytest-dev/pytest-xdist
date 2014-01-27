@@ -64,9 +64,9 @@ class TestEachScheduling:
         assert sched.tests_finished()
         assert node1.sent == ['ALL']
         assert node2.sent == ['ALL']
-        sched.remove_item(node1, collection[0])
+        sched.remove_item(node1, 0)
         assert sched.tests_finished()
-        sched.remove_item(node2, collection[0])
+        sched.remove_item(node2, 0)
         assert sched.tests_finished()
 
     def test_schedule_remove_node(self):
@@ -105,7 +105,7 @@ class TestLoadScheduling:
         assert len(node1.sent) == 1
         assert len(node2.sent) == 1
         x = sorted(node1.sent + node2.sent)
-        assert x == collection
+        assert x == [0, 1]
         sched.remove_item(node1, node1.sent[0])
         sched.remove_item(node2, node2.sent[0])
         assert sched.tests_finished()
@@ -126,14 +126,14 @@ class TestLoadScheduling:
         sent1 = node1.sent
         sent2 = node2.sent
         chunkitems = col[:sched.ITEM_CHUNKSIZE]
-        assert sent1 == chunkitems
-        assert sent2 == chunkitems
+        assert (sent1 == [0,2] and sent2 == [1,3]) or (
+                sent1 == [1,3] and sent2 == [0,2])
         assert sched.node2pending[node1] == sent1
         assert sched.node2pending[node2] == sent2
         assert len(sched.pending) == 1
         for node in (node1, node2):
-            for i in range(sched.ITEM_CHUNKSIZE):
-                sched.remove_item(node, "xyz")
+            for i in sched.node2pending[node]:
+                sched.remove_item(node, i)
         assert not sched.pending
 
     def test_add_remove_node(self):

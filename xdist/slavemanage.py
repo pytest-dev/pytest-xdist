@@ -241,8 +241,8 @@ class SlaveController(object):
             self.gateway.exit()
             #del self.gateway
 
-    def send_runtest(self, nodeid):
-        self.sendcommand("runtests", ids=[nodeid])
+    def send_runtest(self, index):
+        self.sendcommand("runtests", indices=[index])
 
     def send_runtest_all(self):
         self.sendcommand("runtests_all",)
@@ -292,7 +292,10 @@ class SlaveController(object):
             elif eventname == "logstart":
                 self.notify_inproc(eventname, node=self, **kwargs)
             elif eventname in ("testreport", "collectreport", "teardownreport"):
+                item_index = kwargs.pop("item_index", None)
                 rep = unserialize_report(eventname, kwargs['data'])
+                if item_index is not None:
+                    rep.item_index = item_index
                 self.notify_inproc(eventname, node=self, rep=rep)
             elif eventname == "collectionfinish":
                 self.notify_inproc(eventname, node=self, ids=kwargs['ids'])
@@ -307,8 +310,7 @@ class SlaveController(object):
             self.config.pluginmanager.notify_exception(excinfo)
 
 def unserialize_report(name, reportdict):
-    d = reportdict
     if name == "testreport":
-        return runner.TestReport(**d)
+        return runner.TestReport(**reportdict)
     elif name == "collectreport":
-        return runner.CollectReport(**d)
+        return runner.CollectReport(**reportdict)

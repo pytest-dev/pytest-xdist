@@ -40,15 +40,15 @@ class EachScheduling:
         if len(self.node2pending) >= self.numnodes:
             self.collection_is_completed = True
 
-    def remove_item(self, node, item):
-        self.node2pending[node].remove(item)
+    def remove_item(self, node, item_index):
+        self.node2pending[node].remove(item_index)
 
     def remove_node(self, node):
         # KeyError if we didn't get an addnode() yet
         pending = self.node2pending.pop(node)
         if not pending:
             return
-        crashitem = pending.pop(0)
+        crashitem = self.node2collection[node][pending.pop(0)]
         # XXX what about the rest of pending?
         return crashitem
 
@@ -56,7 +56,7 @@ class EachScheduling:
         assert self.collection_is_completed
         for node, pending in self.node2pending.items():
             node.send_runtest_all()
-            pending[:] = self.node2collection[node]
+            pending[:] = range(len(self.node2collection[node]))
 
 class LoadScheduling:
     LOAD_THRESHOLD_NEWITEMS = 5
@@ -94,14 +94,15 @@ class LoadScheduling:
         if len(self.node2collection) >= self.numnodes:
             self.collection_is_completed = True
 
-    def remove_item(self, node, item):
+    def remove_item(self, node, item_index):
         node_pending = self.node2pending[node]
-        node_pending.remove(item)
+        assert item_index in node_pending, (item_index, node_pending)
+        node_pending.remove(item_index)
         # pre-load items-to-test if the node may become ready
         if self.pending and len(node_pending) < self.LOAD_THRESHOLD_NEWITEMS:
-            item = self.pending.pop(0)
-            node_pending.append(item)
-            node.send_runtest(item)
+            item_index = self.pending.pop(0)
+            node_pending.append(item_index)
+            node.send_runtest(item_index)
         self.log("items waiting for node: %d" %(len(self.pending)))
         #self.log("node2pending: %s" %(self.node2pending,))
 
@@ -110,7 +111,7 @@ class LoadScheduling:
         if not pending:
             return
         # the node must have crashed on the item if there are pending ones
-        crashitem = pending.pop(0)
+        crashitem = self.collection[pending.pop(0)]
         self.pending.extend(pending)
         return crashitem
 
@@ -128,17 +129,18 @@ class LoadScheduling:
 
         # all collections are the same, good.
         # we now create an index
-        self.pending = col
+        self.collection = col
+        self.pending = range(len(col))
         if not col:
             return
         available = list(self.node2pending.items())
         num_available = self.numnodes
         max_one_round = num_available * self.ITEM_CHUNKSIZE - 1
-        for i, item in enumerate(self.pending):
+        for i, item_index in enumerate(self.pending):
             nodeindex = i % num_available
             node, pending = available[nodeindex]
-            node.send_runtest(item)
-            pending.append(item)
+            node.send_runtest(item_index)
+            pending.append(item_index)
             if i >= max_one_round:
                 break
         del self.pending[:i + 1]
@@ -304,7 +306,7 @@ class DSession:
     def slave_testreport(self, node, rep):
         if not (rep.passed and rep.when != "call"):
             if rep.when in ("setup", "call"):
-                self.sched.remove_item(node, rep.nodeid)
+                self.sched.remove_item(node, rep.item_index)
         #self.report_line("testreport %s: %s" %(rep.id, rep.status))
         rep.node = node
         self.config.hook.pytest_runtest_logreport(report=rep)

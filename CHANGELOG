@@ -7,6 +7,10 @@
 - fix pytest issue382 - produce "pytest_runtest_logstart" event again
   in master. Thanks Aron Curzon.
 
+- fix pytest issue419 by sending/receiving indices into the test 
+  collection instead of node ids (which are not neccessarily unique
+  for functions parametrized with duplicate values)
+
 1.9
 -------------------------
 
