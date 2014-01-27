@@ -154,7 +154,7 @@ class TestSlaveInteractor:
         assert ev.kwargs['topdir'] == slave.testdir.tmpdir
         ids = ev.kwargs['ids']
         assert len(ids) == 1
-        slave.sendcommand("runtests", indices=range(len(ids)))
+        slave.sendcommand("runtests", indices=list(range(len(ids))))
         slave.sendcommand("shutdown")
         ev = slave.popevent("logstart")
         assert ev.kwargs["nodeid"].endswith("test_func")

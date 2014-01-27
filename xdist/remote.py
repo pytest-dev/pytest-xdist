@@ -24,7 +24,7 @@ class SlaveInteractor:
 
     def pytest_internalerror(self, excrepr):
         for line in str(excrepr).split("\n"):
-            self.log("IERROR> " + line)
+            self.log("IERROR>", line)
 
     def pytest_sessionstart(self, session):
         self.session = session
@@ -45,24 +45,19 @@ class SlaveInteractor:
         torun = []
         while 1:
             name, kwargs = self.channel.receive()
-            self.log("received command %s(**%s)" % (name, kwargs))
+            self.log("received command", name, kwargs)
             if name == "runtests":
                 torun.extend(kwargs['indices'])
             elif name == "runtests_all":
                 torun.extend(range(len(session.items)))
-            self.log("items to run: %s" % (torun,))
-            while len(torun) >= 2:
-                # we store item_index so that we can pick it up from the
-                # runtest hooks
-                self.run_one_test(torun)
-
+            self.log("items to run:", torun)
+            while torun:
+                self.run_tests(torun)
             if name == "shutdown":
-                while torun:
-                    self.run_one_test(torun)
                 break
         return True
 
-    def run_one_test(self, torun):
+    def run_tests(self, torun):
         items = self.session.items
         self.item_index = torun.pop(0)
         if torun:

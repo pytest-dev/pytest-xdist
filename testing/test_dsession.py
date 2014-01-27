@@ -29,14 +29,11 @@ class MockNode:
         self.sent = []
         self.gateway = MockGateway()
 
-    def send_runtest(self, nodeid):
-        self.sent.append(nodeid)
+    def send_runtest_some(self, indices):
+        self.sent.extend(indices)
 
     def send_runtest_all(self):
         self.sent.append("ALL")
-
-    def sendlist(self, items):
-        self.sent.extend(items)
 
     def shutdown(self):
         self._shutdown=True
@@ -117,17 +114,16 @@ class TestLoadScheduling:
         node2 = MockNode()
         sched.addnode(node1)
         sched.addnode(node2)
-        sched.ITEM_CHUNKSIZE = 2
-        col = ["xyz"] * (2*sched.ITEM_CHUNKSIZE +1)
+        col = ["xyz"] * (3)
         sched.addnode_collection(node1, col)
         sched.addnode_collection(node2, col)
         sched.init_distribute()
         #assert not sched.tests_finished()
         sent1 = node1.sent
         sent2 = node2.sent
-        chunkitems = col[:sched.ITEM_CHUNKSIZE]
-        assert (sent1 == [0,2] and sent2 == [1,3]) or (
-                sent1 == [1,3] and sent2 == [0,2])
+        chunkitems = col[:1]
+        assert (sent1 == [0] and sent2 == [1]) or (
+                sent1 == [1] and sent2 == [0])
         assert sched.node2pending[node1] == sent1
         assert sched.node2pending[node2] == sent2
         assert len(sched.pending) == 1

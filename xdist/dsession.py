@@ -59,9 +59,6 @@ class EachScheduling:
             pending[:] = range(len(self.node2collection[node]))
 
 class LoadScheduling:
-    LOAD_THRESHOLD_NEWITEMS = 5
-    ITEM_CHUNKSIZE = 10
-
     def __init__(self, numnodes, log=None):
         self.numnodes = numnodes
         self.node2pending = {}
@@ -96,15 +93,24 @@ class LoadScheduling:
 
     def remove_item(self, node, item_index):
         node_pending = self.node2pending[node]
-        assert item_index in node_pending, (item_index, node_pending)
         node_pending.remove(item_index)
         # pre-load items-to-test if the node may become ready
-        if self.pending and len(node_pending) < self.LOAD_THRESHOLD_NEWITEMS:
-            item_index = self.pending.pop(0)
-            node_pending.append(item_index)
-            node.send_runtest(item_index)
-        self.log("items waiting for node: %d" %(len(self.pending)))
-        #self.log("node2pending: %s" %(self.node2pending,))
+
+        if self.pending:
+            # how many nodes do we have remaining per node roughly?
+            num_nodes = len(self.node2pending)
+            # if our node goes below a heuristic minimum, fill it out to
+            # heuristic maximum
+            items_per_node_min = max(
+                    1, len(self.pending) // num_nodes // 4)
+            items_per_node_max = max(
+                    1, len(self.pending) // num_nodes // 2)
+            if len(node_pending) <= items_per_node_min:
+                num_send = items_per_node_max - len(node_pending) + 1
+                self._send_tests(node, num_send)
+
+        self.log("num items waiting for node:", len(self.pending))
+        #self.log("node2pending:", self.node2pending)
 
     def remove_node(self, node):
         pending = self.node2pending.pop(node)
@@ -118,8 +124,9 @@ class LoadScheduling:
     def init_distribute(self):
         assert self.collection_is_completed
         # XXX allow nodes to have different collections
-        first_node, col = list(self.node2collection.items())[0]
-        for node, collection in self.node2collection.items():
+        node_collection_items = list(self.node2collection.items())
+        first_node, col = node_collection_items[0]
+        for node, collection in node_collection_items[1:]:
             report_collection_diff(
                 col,
                 collection,
@@ -130,21 +137,25 @@ class LoadScheduling:
         # all collections are the same, good.
         # we now create an index
         self.collection = col
-        self.pending = range(len(col))
+        self.pending[:] = range(len(col))
         if not col:
             return
-        available = list(self.node2pending.items())
-        num_available = self.numnodes
-        max_one_round = num_available * self.ITEM_CHUNKSIZE - 1
-        for i, item_index in enumerate(self.pending):
-            nodeindex = i % num_available
-            node, pending = available[nodeindex]
-            node.send_runtest(item_index)
-            pending.append(item_index)
-            if i >= max_one_round:
-                break
-        del self.pending[:i + 1]
+        # how many items per node do we have about?
+        items_per_node = len(self.collection) // len(self.node2pending)
+        # take half of it for initial distribution, at least 1
+        node_chunksize = max(items_per_node // 2, 1)
+        # and initialize each node with a chunk of tests
+        for node in self.node2pending:
+            self._send_tests(node, node_chunksize)
 
+    #f = open("/tmp/sent", "w")
+    def _send_tests(self, node, num):
+        tests_per_node = self.pending[:num]
+        #print >>self.f, "sent", node, tests_per_node
+        if tests_per_node:
+            del self.pending[:num]
+            self.node2pending[node].extend(tests_per_node)
+            node.send_runtest_some(tests_per_node)
 
 def report_collection_diff(from_collection, to_collection, from_id, to_id):
     """Report the collected test difference between two nodes.
@@ -243,7 +254,7 @@ class DSession:
         assert callname, kwargs
         method = "slave_" + callname
         call = getattr(self, method)
-        self.log("calling method: %s(**%s)" % (method, kwargs))
+        self.log("calling method", method, kwargs)
         call(**kwargs)
         if self.sched.tests_finished():
             self.triggershutdown()

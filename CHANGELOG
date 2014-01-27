@@ -11,6 +11,13 @@
   collection instead of node ids (which are not neccessarily unique
   for functions parametrized with duplicate values)
 
+- send multiple "to test" indices in one network message to a slave
+  and improve heuristics for sending chunks where the chunksize
+  depends on the number of remaining tests rather than fixed numbers.
+  This reduces the number of master -> node messages (but not the
+  reverse direction)
+
+
 1.9
 -------------------------
 

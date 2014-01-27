@@ -241,8 +241,8 @@ class SlaveController(object):
             self.gateway.exit()
             #del self.gateway
 
-    def send_runtest(self, index):
-        self.sendcommand("runtests", indices=[index])
+    def send_runtest_some(self, indices):
+        self.sendcommand("runtests", indices=indices)
 
     def send_runtest_all(self):
         self.sendcommand("runtests_all",)
