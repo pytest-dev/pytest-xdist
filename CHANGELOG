@@ -1,4 +1,4 @@
-1.10 unreleased
+1.10
 -------------------------
 
 - add glob support for rsyncignores, add command line option to pass
