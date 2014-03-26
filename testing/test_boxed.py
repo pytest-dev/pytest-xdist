@@ -1,6 +1,10 @@
-import py
+import pytest
+import os
 
-@py.test.mark.skipif("not hasattr(os, 'fork')")
+needsfork = pytest.mark.skipif(not hasattr(os, "fork"),
+                               reason="os.fork required")
+
+@needsfork
 def test_functional_boxed(testdir):
     p1 = testdir.makepyfile("""
         import os
@@ -13,12 +17,32 @@ def test_functional_boxed(testdir):
         "*1 failed*"
     ])
 
+@needsfork
+def test_functional_boxed_stdout(testdir):
+    p1 = testdir.makepyfile("""
+        import os
+        import sys
+        def test_function():
+            sys.stdout.write("hello\\n")
+            sys.stderr.write("world\\n")
+            os.kill(os.getpid(), 15)
+    """)
+    result = testdir.runpytest(p1, "--boxed")
+    result.stdout.fnmatch_lines("""
+        *CRASHED*
+        *stdout*
+        hello
+        *stderr*
+        world
+        *1 failed*
+    """)
+
 class TestOptionEffects:
     def test_boxed_option_default(self, testdir):
         tmpdir = testdir.tmpdir.ensure("subdir", dir=1)
         config = testdir.parseconfig()
         assert not config.option.boxed
-        py.test.importorskip("execnet")
+        pytest.importorskip("execnet")
         config = testdir.parseconfig('-d', tmpdir)
         assert not config.option.boxed
 

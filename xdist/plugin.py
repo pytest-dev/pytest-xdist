@@ -118,10 +118,14 @@ def forked_run_report(item):
 
 def report_process_crash(item, result):
     path, lineno = item._getfslineno()
-    info = "%s:%s: running the test CRASHED with signal %d" %(
-            path, lineno, result.signal)
+    info = ("%s:%s: running the test CRASHED with signal %d" %
+            (path, lineno, result.signal))
     from _pytest import runner
     call = runner.CallInfo(lambda: 0/0, "???")
     call.excinfo = info
     rep = runner.pytest_runtest_makereport(item, call)
+    if result.out:
+        rep.sections.append(("captured stdout", result.out))
+    if result.err:
+        rep.sections.append(("captured stderr", result.err))
     return rep

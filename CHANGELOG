@@ -1,3 +1,9 @@
+XXX
+-------------------------
+
+- fix pytest/xdist issue485 (also depends on py-1.4.21.dev1): 
+  attach stdout/stderr on --boxed processes that die.
+
 1.10
 -------------------------
 
