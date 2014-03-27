@@ -18,7 +18,11 @@ def test_functional_boxed(testdir):
     ])
 
 @needsfork
-def test_functional_boxed_stdout(testdir):
+@pytest.mark.parametrize("capmode", [
+    "no",
+    pytest.mark.xfail("sys", reason="capture cleanup needed"),
+    pytest.mark.xfail("fd", reason="capture cleanup needed")])
+def test_functional_boxed_capturing(testdir, capmode):
     p1 = testdir.makepyfile("""
         import os
         import sys
@@ -27,7 +31,7 @@ def test_functional_boxed_stdout(testdir):
             sys.stderr.write("world\\n")
             os.kill(os.getpid(), 15)
     """)
-    result = testdir.runpytest(p1, "--boxed")
+    result = testdir.runpytest(p1, "--boxed", "--capture=%s" % capmode)
     result.stdout.fnmatch_lines("""
         *CRASHED*
         *stdout*
