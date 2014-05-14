@@ -53,14 +53,14 @@ def pytest_addhooks(pluginmanager):
 
 def pytest_cmdline_main(config):
     check_options(config)
-    if config.getvalue("looponfail"):
+    if config.getoption("looponfail"):
         from xdist.looponfail import looponfail_main
         looponfail_main(config)
         return 2 # looponfail only can get stop with ctrl-C anyway
 
 def pytest_configure(config, __multicall__):
     __multicall__.execute()
-    if config.getvalue("dist") != "no":
+    if config.getoption("dist") != "no":
         from xdist.dsession import DSession
         session = DSession(config)
         config.pluginmanager.register(session, "dsession")
