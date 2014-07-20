@@ -51,9 +51,12 @@ class SlaveInteractor:
             elif name == "runtests_all":
                 torun.extend(range(len(session.items)))
             self.log("items to run:", torun)
-            while torun:
+            # only run if we have an item and a next item
+            while len(torun) >= 2:
                 self.run_tests(torun)
             if name == "shutdown":
+                if torun:
+                    self.run_tests(torun)
                 break
         return True
 

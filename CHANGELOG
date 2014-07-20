@@ -1,8 +1,13 @@
-XXX
+1.11
 -------------------------
 
-- fix pytest/xdist issue485 (also depends on py-1.4.21.dev1): 
+- fix pytest/xdist issue485 (also depends on py-1.4.22):
   attach stdout/stderr on --boxed processes that die.
+
+- fix pytest/xdist issue503: make sure that a node has usually
+  two items to execute to avoid scoped fixtures to be torn down
+  pre-maturely (fixture teardown/setup is "nextitem" sensitive).
+  Thanks to Andreas Pelme for bug analysis and failing test.
 
 1.10
 -------------------------

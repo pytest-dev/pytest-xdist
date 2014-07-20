@@ -49,7 +49,7 @@ class EachScheduling:
         if not pending:
             return
         crashitem = self.node2collection[node][pending.pop(0)]
-        # XXX what about the rest of pending?
+        # XXX do or report something wrt the remaining per-node pending items?
         return crashitem
 
     def init_distribute(self):
@@ -58,11 +58,13 @@ class EachScheduling:
             node.send_runtest_all()
             pending[:] = range(len(self.node2collection[node]))
 
+
 class LoadScheduling:
     def __init__(self, numnodes, log=None):
         self.numnodes = numnodes
         self.node2pending = {}
         self.node2collection = {}
+        self.nodes = []
         self.pending = []
         if log is None:
             self.log = py.log.Producer("loadsched")
@@ -75,13 +77,14 @@ class LoadScheduling:
 
     def addnode(self, node):
         self.node2pending[node] = []
+        self.nodes.append(node)
 
     def tests_finished(self):
-        if not self.collection_is_completed or self.pending:
+        if not self.collection_is_completed:
             return False
-        #for items in self.node2pending.values():
-        #    if items:
-        #        return False
+        for pending in self.node2pending.values():
+            if len(pending) >= 2:
+                return False
         return True
 
     def addnode_collection(self, node, collection):
@@ -92,37 +95,46 @@ class LoadScheduling:
             self.collection_is_completed = True
 
     def remove_item(self, node, item_index, duration=0):
-        node_pending = self.node2pending[node]
-        node_pending.remove(item_index)
-        # pre-load items-to-test if the node may become ready
+        self.node2pending[node].remove(item_index)
+        self.check_schedule(node, duration=duration)
 
+    def check_schedule(self, node, duration=0):
         if self.pending:
-            if duration >= 0.1 and node_pending:
-                # seems the node is doing long-running tests
-                # so let's rather wait with sending new items
-                return
-            # how many nodes do we have remaining per node roughly?
+            # how many nodes do we have?
             num_nodes = len(self.node2pending)
             # if our node goes below a heuristic minimum, fill it out to
             # heuristic maximum
             items_per_node_min = max(
-                    1, len(self.pending) // num_nodes // 4)
+                    2, len(self.pending) // num_nodes // 4)
             items_per_node_max = max(
-                    1, len(self.pending) // num_nodes // 2)
-            if len(node_pending) <= items_per_node_min:
-                num_send = items_per_node_max - len(node_pending) + 1
+                    2, len(self.pending) // num_nodes // 2)
+            node_pending = self.node2pending[node]
+            if len(node_pending) < items_per_node_min:
+                if duration >= 0.1 and len(node_pending) >= 2:
+                    # seems the node is doing long-running tests
+                    # and has enough items to continue
+                    # so let's rather wait with sending new items
+                    return
+                num_send = items_per_node_max - len(node_pending)
                 self._send_tests(node, num_send)
 
         self.log("num items waiting for node:", len(self.pending))
         #self.log("node2pending:", self.node2pending)
 
     def remove_node(self, node):
+        self.nodes.remove(node)
         pending = self.node2pending.pop(node)
         if not pending:
             return
-        # the node must have crashed on the item if there are pending ones
+        # the node has crashed on the item if there are pending ones
+        # and we are told to remove the node
         crashitem = self.collection[pending.pop(0)]
+
+        # put the remaining items back to the general pending list
         self.pending.extend(pending)
+        # see if some nodes can pick the remaining tests up already
+        for node in self.node2pending:
+            self.check_schedule(node)
         return crashitem
 
     def init_distribute(self):
@@ -147,9 +159,9 @@ class LoadScheduling:
         # how many items per node do we have about?
         items_per_node = len(self.collection) // len(self.node2pending)
         # take a fraction of tests for initial distribution
-        node_chunksize = max(items_per_node // 4, 1)
+        node_chunksize = max(items_per_node // 4, 2)
         # and initialize each node with a chunk of tests
-        for node in self.node2pending:
+        for node in self.nodes:
             self._send_tests(node, node_chunksize)
 
     #f = open("/tmp/sent", "w")

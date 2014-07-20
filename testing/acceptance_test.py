@@ -1,3 +1,4 @@
+import pytest
 import py
 import sys
 
@@ -459,3 +460,29 @@ def test_issue34_pluginloading_in_subprocess(testdir):
     result.stdout.fnmatch_lines([
         "*1 passed*",
     ])
+
+
+def test_fixture_scope_caching_issue503(testdir):
+    p1 = testdir.makepyfile("""
+            import pytest
+
+            @pytest.fixture(scope='session')
+            def fix():
+                assert fix.counter == 0, 'session fixture was invoked multiple times'
+                fix.counter += 1
+            fix.counter = 0
+
+            def test_a(fix):
+                pass
+
+            def test_b(fix):
+                pass
+    """)
+    result = testdir.runpytest(p1, '-v', '-n1')
+    assert result.ret == 0
+    result.stdout.fnmatch_lines([
+    "*2 passed*",
+    ])
+
+
+

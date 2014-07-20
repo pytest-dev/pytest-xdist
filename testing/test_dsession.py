@@ -98,15 +98,15 @@ class TestLoadScheduling:
         assert sched.node2collection[node1] == collection
         assert sched.node2collection[node2] == collection
         sched.init_distribute()
-        assert sched.tests_finished()
-        assert len(node1.sent) == 1
-        assert len(node2.sent) == 1
-        x = sorted(node1.sent + node2.sent)
-        assert x == [0, 1]
-        sched.remove_item(node1, node1.sent[0])
-        sched.remove_item(node2, node2.sent[0])
-        assert sched.tests_finished()
         assert not sched.pending
+        assert not sched.tests_finished()
+        assert len(node1.sent) == 2
+        assert len(node2.sent) == 0
+        assert node1.sent == [0, 1]
+        sched.remove_item(node1, node1.sent[0])
+        assert sched.tests_finished()
+        sched.remove_item(node1, node1.sent[1])
+        assert sched.tests_finished()
 
     def test_init_distribute_chunksize(self):
         sched = LoadScheduling(2)
@@ -114,22 +114,25 @@ class TestLoadScheduling:
         node2 = MockNode()
         sched.addnode(node1)
         sched.addnode(node2)
-        col = ["xyz"] * (3)
+        col = ["xyz"] * (6)
         sched.addnode_collection(node1, col)
         sched.addnode_collection(node2, col)
         sched.init_distribute()
         #assert not sched.tests_finished()
         sent1 = node1.sent
         sent2 = node2.sent
-        chunkitems = col[:1]
-        assert (sent1 == [0] and sent2 == [1]) or (
-                sent1 == [1] and sent2 == [0])
+        assert sent1 == [0, 1]
+        assert sent2 == [2, 3]
+        assert sched.pending == [4, 5]
         assert sched.node2pending[node1] == sent1
         assert sched.node2pending[node2] == sent2
-        assert len(sched.pending) == 1
-        for node in (node1, node2):
-            for i in sched.node2pending[node]:
-                sched.remove_item(node, i)
+        assert len(sched.pending) == 2
+        sched.remove_item(node1, 0)
+        assert node1.sent == [0, 1, 4]
+        assert sched.pending == [5]
+        assert node2.sent == [2, 3]
+        sched.remove_item(node1, 1)
+        assert node1.sent == [0, 1, 4, 5]
         assert not sched.pending
 
     def test_add_remove_node(self):
