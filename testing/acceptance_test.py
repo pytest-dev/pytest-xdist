@@ -1,6 +1,4 @@
-import pytest
 import py
-import sys
 
 class TestDistribution:
     def test_n1_pass(self, testdir):
@@ -194,7 +192,7 @@ class TestDistribution:
         assert dest.join(subdir.basename).check(dir=1)
 
     def test_data_exchange(self, testdir):
-        c1 = testdir.makeconftest("""
+        testdir.makeconftest("""
             # This hook only called on master.
             def pytest_configure_node(node):
                 node.slaveinput['a'] = 42
@@ -251,7 +249,7 @@ class TestDistribution:
 
     def test_keyboard_interrupt_dist(self, testdir):
         # xxx could be refined to check for return code
-        p = testdir.makepyfile("""
+        testdir.makepyfile("""
             def test_sleep():
                 import time
                 time.sleep(10)
@@ -301,7 +299,7 @@ class TestDistEach:
 
 class TestTerminalReporting:
     def test_pass_skip_fail(self, testdir):
-        p = testdir.makepyfile("""
+        testdir.makepyfile("""
             import py
             def test_ok():
                 pass
@@ -323,7 +321,7 @@ class TestTerminalReporting:
         ])
 
     def test_fail_platinfo(self, testdir):
-        p = testdir.makepyfile("""
+        testdir.makepyfile("""
             def test_func():
                 assert 0
         """)

@@ -128,6 +128,7 @@ def remote_initconfig(option_dict, args):
 
 
 if __name__ == '__channelexec__':
+    channel = channel  # noqa
     # python3.2 is not concurrent import safe, so let's play it safe
     # https://bitbucket.org/hpk42/pytest/issue/347/pytest-xdist-and-python-32
     if sys.version_info[:2] == (3,2):

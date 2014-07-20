@@ -4,7 +4,6 @@ from xdist.dsession import (
     EachScheduling,
     report_collection_diff,
 )
-from _pytest import main as outcome
 import py
 import pytest
 import execnet

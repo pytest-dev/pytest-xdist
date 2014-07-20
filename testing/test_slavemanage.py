@@ -1,5 +1,4 @@
 import py
-import os
 import execnet
 from xdist.slavemanage import HostRSync, NodeManager
 
@@ -108,7 +107,7 @@ class TestHRSync:
         return mysetup(request)
 
     def test_hrsync_filter(self, mysetup):
-        source, dest = mysetup.source, mysetup.dest
+        source, _ = mysetup.source, mysetup.dest  # noqa
         source.ensure("dir", "file.txt")
         source.ensure(".svn", "entries")
         source.ensure(".somedotfile", "moreentries")
@@ -139,7 +138,7 @@ class TestNodeManager:
     @py.test.mark.xfail
     def test_rsync_roots_no_roots(self, testdir, mysetup):
         mysetup.source.ensure("dir1", "file1").write("hello")
-        config = testdir.parseconfig(source)
+        config = testdir.parseconfig(mysetup.source)
         nodemanager = NodeManager(config, ["popen//chdir=%s" % mysetup.dest])
         #assert nodemanager.config.topdir == source == config.topdir
         nodemanager.makegateways()
@@ -194,11 +193,11 @@ class TestNodeManager:
     def test_rsyncignore(self, testdir, mysetup):
         source, dest = mysetup.source, mysetup.dest
         dir2 = source.ensure("dir1", "dir2", dir=1)
-        dir5 = source.ensure("dir5", "dir6", "bogus")
-        dirf = source.ensure("dir5", "file")
+        source.ensure("dir5", "dir6", "bogus")
+        source.ensure("dir5", "file")
         dir2.ensure("hello")
-        dirfoo = source.ensure("foo", "bar")
-        dirbar = source.ensure("bar", "foo")
+        source.ensure("foo", "bar")
+        source.ensure("bar", "foo")
         source.join("tox.ini").write(py.std.textwrap.dedent("""
             [pytest]
             rsyncdirs = dir1 dir5
@@ -217,7 +216,7 @@ class TestNodeManager:
         assert not dest.join('bar').check()
 
     def test_optimise_popen(self, testdir, mysetup):
-        source, dest = mysetup.source, mysetup.dest
+        source = mysetup.source
         specs = ["popen"] * 3
         source.join("conftest.py").write("rsyncdirs = ['a']")
         source.ensure('a', dir=1)

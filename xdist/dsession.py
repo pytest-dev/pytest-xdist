@@ -1,4 +1,3 @@
-import sys
 import difflib
 
 import pytest
@@ -295,7 +294,7 @@ class DSession:
             self.slave_errordown(node, "keyboard-interrupt")
             return
         crashitem = self.sched.remove_node(node)
-        #assert not crashitem, (crashitem, node)
+        assert not crashitem, (crashitem, node)
         if self.shuttingdown and not self.sched.hasnodes():
             self.session_finished = True
 

@@ -87,7 +87,7 @@ class RemoteControl(object):
         result = self.runsession()
         failures, reports, collection_failed = result
         if collection_failed:
-            reports = ["Collection failed, keeping previous failure set"]
+            pass # "Collection failed, keeping previous failure set"
         else:
             uniq_failures = []
             for failure in failures:
@@ -109,7 +109,6 @@ def repr_pytest_looponfailinfo(failreports, rootdirs):
 
 def init_slave_session(channel, args, option_dict):
     import os, sys
-    import py
     outchannel = channel.gateway.newchannel()
     sys.stdout = sys.stderr = outchannel.makefile('w')
     channel.send(outchannel)

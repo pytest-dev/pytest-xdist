@@ -7,14 +7,11 @@ pytest_plugins = "pytester"
 
 def pytest_addoption(parser):
     parser.addoption('--gx',
-       action="append", dest="gspecs", 
+       action="append", dest="gspecs",
        help=("add a global test environment, XSpec-syntax. "))
 
 def pytest_funcarg__specssh(request):
     return getspecssh(request.config)
-def getgspecs(config):
-    return [execnet.XSpec(spec)
-                for spec in config.getvalueorskip("gspecs")]
 
 # configuration information for tests
 def getgspecs(config):

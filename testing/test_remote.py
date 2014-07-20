@@ -3,7 +3,6 @@ from xdist.slavemanage import SlaveController, unserialize_report
 from xdist.remote import serialize_report
 import execnet
 queue = py.builtin._tryimport("queue", "Queue")
-from py.builtin import print_
 import marshal
 
 WAIT_TIMEOUT = 10.0
@@ -26,7 +25,7 @@ class SlaveSetup:
     use_callback = False
 
     def __init__(self, request):
-        self.testdir = testdir = request.getfuncargvalue("testdir")
+        self.testdir = request.getfuncargvalue("testdir")
         self.request = request
         self.events = queue.Queue()
 
@@ -140,7 +139,7 @@ class TestReportSerialization:
 
 class TestSlaveInteractor:
     def test_basic_collect_and_runtests(self, slave):
-        p = slave.testdir.makepyfile("""
+        slave.testdir.makepyfile("""
             def test_func():
                 pass
         """)
@@ -170,7 +169,7 @@ class TestSlaveInteractor:
         assert 'slaveoutput' in ev.kwargs
 
     def test_remote_collect_skip(self, slave):
-        p = slave.testdir.makepyfile("""
+        slave.testdir.makepyfile("""
             import py
             py.test.skip("hello")
         """)
@@ -187,7 +186,7 @@ class TestSlaveInteractor:
         assert not ev.kwargs['ids']
 
     def test_remote_collect_fail(self, slave):
-        p = slave.testdir.makepyfile("""aasd qwe""")
+        slave.testdir.makepyfile("""aasd qwe""")
         slave.setup()
         ev = slave.popevent("collectionstart")
         assert not ev.kwargs
@@ -201,7 +200,7 @@ class TestSlaveInteractor:
         assert not ev.kwargs['ids']
 
     def test_runtests_all(self, slave):
-        p = slave.testdir.makepyfile("""
+        slave.testdir.makepyfile("""
             def test_func(): pass
             def test_func2(): pass
         """)
@@ -228,7 +227,7 @@ class TestSlaveInteractor:
     def test_happy_run_events_converted(self, testdir, slave):
         py.test.xfail("implement a simple test for event production")
         assert not slave.use_callback
-        p = slave.testdir.makepyfile("""
+        slave.testdir.makepyfile("""
             def test_func():
                 pass
         """)

@@ -42,7 +42,7 @@ class TestStatRecorder:
 
     def test_dirchange(self, tmpdir):
         tmp = tmpdir
-        hello = tmp.ensure("dir", "hello.py")
+        tmp.ensure("dir", "hello.py")
         sd = StatRecorder([tmp])
         assert not sd.fil(tmp.join("dir"))
 
