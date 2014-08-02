@@ -146,6 +146,25 @@ class TestLoadScheduling:
         crashitem = sched.remove_node(node)
         assert crashitem == collection[0]
 
+    def test_schedule_different_tests_collected(self):
+        """
+        Test that LoadScheduling is logging different tests were
+        collected by slaves when that happens.
+        """
+        node1 = MockNode()
+        node2 = MockNode()
+        sched = LoadScheduling(2)
+        logged_messages = []
+        py.log.setconsumer('loadsched', logged_messages.append)
+        sched.addnode(node1)
+        sched.addnode(node2)
+        sched.addnode_collection(node1, ["a.py::test_1"])
+        sched.addnode_collection(node2, ["a.py::test_2"])
+        sched.init_distribute()
+        logged_content = ''.join(x.content() for x in logged_messages)
+        assert 'Different tests were collected between' in logged_content
+        assert 'Different tests collected, aborting run' in logged_content
+
 
 class TestDistReporter:
 
@@ -181,7 +200,7 @@ class TestDistReporter:
 def test_report_collection_diff_equal():
     """Test reporting of equal collections."""
     from_collection = to_collection = ['aaa', 'bbb', 'ccc']
-    assert report_collection_diff(from_collection, to_collection, 1, 2)
+    assert report_collection_diff(from_collection, to_collection, 1, 2) is None
 
 
 def test_report_collection_diff_different():
@@ -204,10 +223,8 @@ def test_report_collection_diff_different():
         '-YYY'
     )
 
-    try:
-        report_collection_diff(from_collection, to_collection, 1, 2)
-    except AssertionError as e:
-        assert py.builtin._totext(e) == error_message
+    msg = report_collection_diff(from_collection, to_collection, 1, 2)
+    assert msg == error_message
 
 @pytest.mark.xfail(reason="duplicate test ids not supported yet")
 def test_pytest_issue419(testdir):

@@ -17,7 +17,7 @@ class EachScheduling:
         if log is None:
             self.log = py.log.Producer("eachsched")
         else:
-            self.log = log.loadsched
+            self.log = log.eachsched
         self.collection_is_completed = False
 
     def hasnodes(self):
@@ -139,22 +139,17 @@ class LoadScheduling:
     def init_distribute(self):
         assert self.collection_is_completed
         # XXX allow nodes to have different collections
-        node_collection_items = list(self.node2collection.items())
-        first_node, col = node_collection_items[0]
-        for node, collection in node_collection_items[1:]:
-            report_collection_diff(
-                col,
-                collection,
-                first_node.gateway.id,
-                node.gateway.id,
-            )
+        if not self._check_nodes_have_same_collection():
+            self.log('**Different tests collected, aborting run**')
+            return
 
         # all collections are the same, good.
         # we now create an index
-        self.collection = col
-        self.pending[:] = range(len(col))
-        if not col:
+        self.collection = list(self.node2collection.values())[0]
+        self.pending[:] = range(len(self.collection))
+        if not self.collection:
             return
+
         # how many items per node do we have about?
         items_per_node = len(self.collection) // len(self.node2pending)
         # take a fraction of tests for initial distribution
@@ -172,17 +167,36 @@ class LoadScheduling:
             self.node2pending[node].extend(tests_per_node)
             node.send_runtest_some(tests_per_node)
 
+    def _check_nodes_have_same_collection(self):
+        """
+        Return True if all nodes have collected the same items, False otherwise.
+        This method also logs the collection differences as they are found.
+        """
+        node_collection_items = list(self.node2collection.items())
+        first_node, col = node_collection_items[0]
+        same_collection = True
+        for node, collection in node_collection_items[1:]:
+            msg = report_collection_diff(
+                col,
+                collection,
+                first_node.gateway.id,
+                node.gateway.id,
+            )
+            if msg:
+                self.log(msg)
+                same_collection = False
+
+        return same_collection
+
+
 def report_collection_diff(from_collection, to_collection, from_id, to_id):
     """Report the collected test difference between two nodes.
 
-    :returns: True if collections are equal.
-
-    :raises: AssertionError with a detailed error message describing the
-             difference between the collections.
-
+    :returns: detailed message describing the difference between the given
+    collections, or None if they are equal.
     """
     if from_collection == to_collection:
-        return True
+        return None
 
     diff = difflib.unified_diff(
         from_collection,
@@ -196,7 +210,7 @@ def report_collection_diff(from_collection, to_collection, from_id, to_id):
         '{diff}'
     ).format(from_id=from_id, to_id=to_id, diff='\n'.join(diff))
     msg = "\n".join([x.rstrip() for x in error_message.split("\n")])
-    raise AssertionError(msg)
+    return msg
 
 
 class Interrupted(KeyboardInterrupt):
