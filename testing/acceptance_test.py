@@ -310,9 +310,9 @@ class TestTerminalReporting:
         """)
         result = testdir.runpytest("-n1", "-v")
         result.stdout.fnmatch_lines_random([
-            "*PASS*test_pass_skip_fail.py?2*test_ok*",
-            "*SKIP*test_pass_skip_fail.py?4*test_skip*",
-            "*FAIL*test_pass_skip_fail.py?6*test_func*",
+            "*PASS*test_pass_skip_fail.py*test_ok*",
+            "*SKIP*test_pass_skip_fail.py*test_skip*",
+            "*FAIL*test_pass_skip_fail.py*test_func*",
         ])
         result.stdout.fnmatch_lines([
             "*def test_func():",
@@ -327,7 +327,7 @@ class TestTerminalReporting:
         """)
         result = testdir.runpytest("-n1", "-v")
         result.stdout.fnmatch_lines([
-            "*FAIL*test_fail_platinfo.py*1*test_func*",
+            "*FAIL*test_fail_platinfo.py*test_func*",
             "*0*Python*",
             "*def test_func():",
             ">       assert 0",
