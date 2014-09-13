@@ -25,4 +25,6 @@ bin/
 pytest_xdist.egg-info
 issue/
 3rdparty/
+pytestdebug.log
 .tox
+.cache
