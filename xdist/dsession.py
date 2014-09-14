@@ -59,27 +59,109 @@ class EachScheduling:
 
 
 class LoadScheduling:
+    """Implement load scheduling accross nodes.
+
+    This distributes the tests collected across all nodes so each test
+    is run just once.  All nodes collect and submit the test suit and
+    when all collections are received it is verified they are
+    identical collections.  Then the collection gets devided up in
+    chunks and chunks get submitted to nodes.  The first node
+    finishing it's chunk gets the next chunk until all tests are done.
+
+    When created ``numnodes`` defines how many nodes are expected to
+    submit a collection, this is used to know when all nodes have
+    finished collection or how large the chunks need to be created.
+
+    Attributes:
+
+    :numnodes: The expected number of nodes taking part.  The actual
+       number of nodes will vary during the scheduler's lifetime as
+       nodes are added by the DSession as they are brought up and
+       removed either because of a died node or normal shutdown.  This
+       number is primarily used to know when the initial collection is
+       completed.
+
+    :node2collection: Map of nodes and their test collection.  All
+       collections should always be identical.
+
+    :node2pending: Map of nodes and the indices of their pending
+       tests.  The indices are an index into ``.pending`` (which is
+       identical to their own collection stored in
+       ``.node2collection``).
+
+    :collection: The one collection once it is validated to be
+       identical between all the nodes.  It is initialised to None
+       until ``.init_distribute()`` is called.
+
+    :pending: List of indices of globally pending tests.  These are
+       tests which have not yet been allocated to a chunk for a node
+       to process.
+
+    :log: A py.log.Producer instance.
+
+    """
+
     def __init__(self, numnodes, log=None):
         self.numnodes = numnodes
-        self.node2pending = {}
         self.node2collection = {}
-        self.nodes = []
+        self.node2pending = {}
         self.pending = []
+        self.collection = None
         if log is None:
             self.log = py.log.Producer("loadsched")
         else:
             self.log = log.loadsched
-        self.collection_is_completed = False
+
+    @property
+    def nodes(self):
+        """A list of all nodes in the scheduler."""
+        return list(self.node2pending.keys())
+
+    @property
+    def collection_is_completed(self):
+        """Boolean indication initial test collection is complete.
+
+        This is a boolean indicating all initial participating nodes
+        have finished collection.  The required number of initial
+        nodes is defined by ``.numnodes``.
+        """
+        return len(self.node2collection) >= self.numnodes
+
+    def haspending(self):
+        """Return True if there are pending test items
+
+        This indicates that collection has finished and nodes are
+        still processing test items, so can be thought of as "the
+        scheduler is active".
+        """
+        if self.pending:
+            return True
+        for pending in self.node2pending.values():
+            if pending:
+                return True
+        return False
 
     def hasnodes(self):
+        """Return True if nodes exist in the scheduler."""
         return bool(self.node2pending)
 
     def addnode(self, node):
+        """Add a new node in the scheduler.
+
+        From now on the node will be allocated chunks of tests to
+        execute.
+
+        Called by the ``DSession.slave_slaveready`` hook when it
+        sucessfully bootstrapped a new node.
+        """
+        assert node not in self.node2pending
         self.node2pending[node] = []
-        self.nodes.append(node)
 
     def tests_finished(self):
+        """Return True if all tests have been executed by the nodes."""
         if not self.collection_is_completed:
+            return False
+        if self.pending:
             return False
         for pending in self.node2pending.values():
             if len(pending) >= 2:
@@ -87,26 +169,52 @@ class LoadScheduling:
         return True
 
     def addnode_collection(self, node, collection):
-        assert not self.collection_is_completed
+        """Add the collected test items from a node
+
+        The collection is stored in the ``.node2collection`` map.
+        Called by the ``DSession.slave_collectionfinish`` hook.
+        """
         assert node in self.node2pending
+        if self.collection_is_completed:
+            # A new node has been added later, perhaps an original one died.
+            assert self.collection  # .init_distribute() should have
+                                    # been called by now
+            if collection != self.collection:
+                other_node = next(iter(self.node2collection.keys()))
+                msg = report_collection_diff(self.collection,
+                                             collection,
+                                             other_node.gateway.id,
+                                             node.gateway.id)
+                self.log(msg)
+                return
         self.node2collection[node] = list(collection)
-        if len(self.node2collection) >= self.numnodes:
-            self.collection_is_completed = True
 
     def remove_item(self, node, item_index, duration=0):
+        """Mark test item as completed by node
+
+        The duration it took to execute the item is used as a hint to
+        the scheduler.
+
+        This is called by the ``DSession.slave_testreport`` hook.
+        """
         self.node2pending[node].remove(item_index)
         self.check_schedule(node, duration=duration)
 
     def check_schedule(self, node, duration=0):
+        """Maybe schedule new items on the node
+
+        If there are any globally pending nodes left then this will
+        check if the given node should be given any more tests.  The
+        ``duration`` of the last test is optionally used as a
+        heuristic to influence how many tests the node is assigned.
+        """
         if self.pending:
             # how many nodes do we have?
             num_nodes = len(self.node2pending)
             # if our node goes below a heuristic minimum, fill it out to
             # heuristic maximum
-            items_per_node_min = max(
-                    2, len(self.pending) // num_nodes // 4)
-            items_per_node_max = max(
-                    2, len(self.pending) // num_nodes // 2)
+            items_per_node_min = max(2, len(self.pending) // num_nodes // 4)
+            items_per_node_max = max(2, len(self.pending) // num_nodes // 2)
             node_pending = self.node2pending[node]
             if len(node_pending) < items_per_node_min:
                 if duration >= 0.1 and len(node_pending) >= 2:
@@ -116,35 +224,59 @@ class LoadScheduling:
                     return
                 num_send = items_per_node_max - len(node_pending)
                 self._send_tests(node, num_send)
-
         self.log("num items waiting for node:", len(self.pending))
-        #self.log("node2pending:", self.node2pending)
 
     def remove_node(self, node):
-        self.nodes.remove(node)
+        """Remove an node from the scheduler
+
+        This should be called either when the node crashed or at
+        shutdown time.  In the former case any pending items assigned
+        to the node will be re-scheduled.  Called by the
+        ``DSession.slave_slavefinished`` and
+        ``DSession.slave_errordown`` hooks.
+
+        Return the item which was being executing while the node
+        crashed or None if the node has no more pending items.
+
+        """
         pending = self.node2pending.pop(node)
         if not pending:
             return
-        # the node has crashed on the item if there are pending ones
-        # and we are told to remove the node
-        crashitem = self.collection[pending.pop(0)]
 
-        # put the remaining items back to the general pending list
+        # The node crashed, reassing pending items
+        crashitem = self.collection[pending.pop(0)]
         self.pending.extend(pending)
-        # see if some nodes can pick the remaining tests up already
         for node in self.node2pending:
             self.check_schedule(node)
         return crashitem
 
     def init_distribute(self):
+        """Initiate distribution of the test collection
+
+        Initiate scheduling of the items across the nodes.  If this
+        gets called again later it behaves the same as calling
+        ``.check_schedule()`` on all nodes so that newly added odes
+        will start to be used.
+
+        This is called by the ``DSession.slave_collectionfinish`` hook
+        if ``.collection_is_completed`` is True.
+
+        XXX Perhaps this method should have been called ".schedule()".
+        """
         assert self.collection_is_completed
+
+        # Initial distribution already happend, reschedule on all nodes
+        if self.collection is not None:
+            for node in self.nodes:
+                self.check_schedule(node)
+            return
+
         # XXX allow nodes to have different collections
         if not self._check_nodes_have_same_collection():
             self.log('**Different tests collected, aborting run**')
             return
 
-        # all collections are the same, good.
-        # we now create an index
+        # Collections are identical, create the index of pending items.
         self.collection = list(self.node2collection.values())[0]
         self.pending[:] = range(len(self.collection))
         if not self.collection:
@@ -158,19 +290,18 @@ class LoadScheduling:
         for node in self.nodes:
             self._send_tests(node, node_chunksize)
 
-    #f = open("/tmp/sent", "w")
     def _send_tests(self, node, num):
         tests_per_node = self.pending[:num]
-        #print >>self.f, "sent", node, tests_per_node
         if tests_per_node:
             del self.pending[:num]
             self.node2pending[node].extend(tests_per_node)
             node.send_runtest_some(tests_per_node)
 
     def _check_nodes_have_same_collection(self):
-        """
-        Return True if all nodes have collected the same items, False otherwise.
-        This method also logs the collection differences as they are found.
+        """Return True if all nodes have collected the same items.
+
+        If collections differ this returns False and logs the
+        collection differences as they are found.
         """
         node_collection_items = list(self.node2collection.items())
         first_node, col = node_collection_items[0]
@@ -216,7 +347,20 @@ def report_collection_diff(from_collection, to_collection, from_id, to_id):
 class Interrupted(KeyboardInterrupt):
     """ signals an immediate interruption. """
 
+
 class DSession:
+    """A py.test plugin which runs a distributed test session
+
+    At the beginning of the test session this creates a NodeManager
+    instance which creates and starts all nodes.  Nodes then emit
+    events processed in the pytest_runtestloop hook using the slave_*
+    methods.
+
+    Once a node is started it will automatically start running the
+    py.test mainloop with some custom hooks.  This means a node
+    automatically starts collecting tests.  Once tests are collected
+    it will wait for instructions.
+    """
     def __init__(self, config):
         self.config = config
         self.log = py.log.Producer("dsession")
@@ -227,6 +371,7 @@ class DSession:
         self.maxfail = config.getvalue("maxfail")
         self.queue = queue.Queue()
         self._failed_collection_errors = {}
+        self._active_nodes = set()
         try:
             self.terminal = config.pluginmanager.getplugin("terminalreporter")
         except KeyError:
@@ -235,18 +380,33 @@ class DSession:
             self.trdist = TerminalDistReporter(config)
             config.pluginmanager.register(self.trdist, "terminaldistreporter")
 
+    @property
+    def session_finished(self):
+        """Return True if the distributed session has finished
+
+        This means all nodes have executed all test items.  This is
+        used to by pytest_runtestloop to break out of it's loop.
+        """
+        return bool(self.shuttingdown and not self._active_nodes)
+
     def report_line(self, line):
         if self.terminal and self.config.option.verbose >= 0:
             self.terminal.write_line(line)
 
     @pytest.mark.trylast
     def pytest_sessionstart(self, session):
+        """Creates and starts the nodes.
+
+        The nodes are setup to put their events onto self.queue.  As
+        soon as nodes start they will emit the slave_slaveready event.
+        """
         self.nodemanager = NodeManager(self.config)
-        self.nodemanager.setup_nodes(putevent=self.queue.put)
+        nodes = self.nodemanager.setup_nodes(putevent=self.queue.put)
+        self._active_nodes.update(nodes)
 
     def pytest_sessionfinish(self, session):
-        """ teardown any resources after a test run. """
-        nm = getattr(self, 'nodemanager', None) # if not fully initialized
+        """Shutdown all nodes."""
+        nm = getattr(self, 'nodemanager', None)  # if not fully initialized
         if nm is not None:
             nm.teardown_nodes()
 
@@ -264,7 +424,6 @@ class DSession:
         else:
             assert 0, dist
         self.shouldstop = False
-        self.session_finished = False
         while not self.session_finished:
             self.loop_once()
             if self.shouldstop:
@@ -272,7 +431,7 @@ class DSession:
         return True
 
     def loop_once(self):
-        """ process one callback from one of the slaves. """
+        """Process one callback from one of the slaves."""
         while 1:
             try:
                 eventcall = self.queue.get(timeout=2.0)
@@ -293,26 +452,40 @@ class DSession:
     #
 
     def slave_slaveready(self, node, slaveinfo):
+        """Emitted when a node first starts up.
+
+        This adds the node to the scheduler, nodes continue with
+        collection without any further input.
+        """
         node.slaveinfo = slaveinfo
         node.slaveinfo['id'] = node.gateway.id
         node.slaveinfo['spec'] = node.gateway.spec
         self.config.hook.pytest_testnodeready(node=node)
-        self.sched.addnode(node)
         if self.shuttingdown:
             node.shutdown()
+        else:
+            self.sched.addnode(node)
 
     def slave_slavefinished(self, node):
+        """Emitted when node executes its pytest_sessionfinish hook.
+
+        Removes the node from the scheduler.
+
+        The node might not be the scheduler if it had not emitted
+        slaveready before shutdown was triggered.
+        """
         self.config.hook.pytest_testnodedown(node=node, error=None)
-        if node.slaveoutput['exitstatus'] == 2: # keyboard-interrupt
+        if node.slaveoutput['exitstatus'] == 2:  # keyboard-interrupt
             self.shouldstop = "%s received keyboard-interrupt" % (node,)
             self.slave_errordown(node, "keyboard-interrupt")
             return
-        crashitem = self.sched.remove_node(node)
-        assert not crashitem, (crashitem, node)
-        if self.shuttingdown and not self.sched.hasnodes():
-            self.session_finished = True
+        if node in self.sched.nodes:
+            crashitem = self.sched.remove_node(node)
+            assert not crashitem, (crashitem, node)
+        self._active_nodes.remove(node)
 
     def slave_errordown(self, node, error):
+        """Emitted by the SlaveController when a node dies."""
         self.config.hook.pytest_testnodedown(node=node, error=error)
         try:
             crashitem = self.sched.remove_node(node)
@@ -321,40 +494,69 @@ class DSession:
         else:
             if crashitem:
                 self.handle_crashitem(crashitem, node)
-                #self.report_line("item crashed on node: %s" % crashitem)
-        if not self.sched.hasnodes():
-            self.session_finished = True
+        self.report_line("Replacing failed node %s" % node.gateway.id)
+        self._clone_node(node)
+        self._active_nodes.remove(node)
 
     def slave_collectionfinish(self, node, ids):
+        """Slave has finished test collection.
+
+        This adds the collection for this node to the scheduler.  If
+        the scheduler indicates collection is finished (i.e. all
+        initial nodes have submitted their collection), then tells the
+        scheduler to schedule the collected items.  When initiating
+        scheduling the first time it logs which scheduler is in use.
+        """
+        if self.shuttingdown:
+            return
         self.sched.addnode_collection(node, ids)
         if self.terminal:
-            self.trdist.setstatus(node.gateway.spec, "[%d]" %(len(ids)))
-
+            self.trdist.setstatus(node.gateway.spec, "[%d]" % (len(ids)))
         if self.sched.collection_is_completed:
-            if self.terminal:
+            if self.terminal and not self.sched.haspending():
                 self.trdist.ensure_show_status()
                 self.terminal.write_line("")
-                self.terminal.write_line("scheduling tests via %s" %(
+                self.terminal.write_line("scheduling tests via %s" % (
                     self.sched.__class__.__name__))
-
             self.sched.init_distribute()
 
     def slave_logstart(self, node, nodeid, location):
+        """Emitted when a node calls the pytest_runtest_logstart hook."""
         self.config.hook.pytest_runtest_logstart(
             nodeid=nodeid, location=location)
 
     def slave_testreport(self, node, rep):
-        if not (rep.passed and rep.when != "call"):
-            if rep.when in ("setup", "call"):
-                self.sched.remove_item(node, rep.item_index, rep.duration)
+        """Emitted when a node calls the pytest_runtest_logreport hook.
+
+        If the node indicates it is finished with a test item remove
+        the item from the pending list in the scheduler.
+        """
+        if rep.when == "call" or (rep.when == "setup" and not rep.passed):
+            self.sched.remove_item(node, rep.item_index, rep.duration)
         #self.report_line("testreport %s: %s" %(rep.id, rep.status))
         rep.node = node
         self.config.hook.pytest_runtest_logreport(report=rep)
         self._handlefailures(rep)
 
     def slave_collectreport(self, node, rep):
+        """Emitted when a node calls the pytest_collectreport hook."""
         if rep.failed:
             self._failed_slave_collectreport(node, rep)
+
+    def _clone_node(self, node):
+        """Return new node based on an existing one.
+
+        This is normally for when a node died, this will copy the spec
+        of the existing node and create a new one with a new id.  The
+        new node will have been setup so will start calling the
+        "slave_*" hooks and do work soon.
+        """
+        spec = node.gateway.spec
+        spec.id = None
+        self.nodemanager.group.allocate_id(spec)
+        node = self.nodemanager.setup_node(spec, self.queue.put)
+        self._active_nodes.add(node)
+        return node
 
     def _failed_slave_collectreport(self, node, rep):
         # Check we haven't already seen this report (from
@@ -374,18 +576,20 @@ class DSession:
     def triggershutdown(self):
         self.log("triggering shutdown")
         self.shuttingdown = True
-        for node in self.sched.node2pending:
+        for node in self.sched.nodes:
             node.shutdown()
 
     def handle_crashitem(self, nodeid, slave):
         # XXX get more reporting info by recording pytest_runtest_logstart?
+        # XXX count no of failures and retry N times
         runner = self.config.pluginmanager.getplugin("runner")
         fspath = nodeid.split("::")[0]
-        msg = "Slave %r crashed while running %r" %(slave.gateway.id, nodeid)
-        rep = runner.TestReport(nodeid, (fspath, None, fspath), (),
-            "failed", msg, "???")
+        msg = "Slave %r crashed while running %r" % (slave.gateway.id, nodeid)
+        rep = runner.TestReport(nodeid, (fspath, None, fspath),
+                                (), "failed", msg, "???")
         rep.node = slave
         self.config.hook.pytest_runtest_logreport(report=rep)
+
 
 class TerminalDistReporter:
     def __init__(self, config):

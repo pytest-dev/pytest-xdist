@@ -28,34 +28,32 @@ class NodeManager(object):
             self.specs.append(spec)
         self.roots = self._getrsyncdirs()
         self.rsyncoptions = self._getrsyncoptions()
+        self._rsynced_specs = py.builtin.set()
 
-    def rsync_roots(self):
-        """ make sure that all remote gateways
-            have the same set of roots in their
-            current directory.
-        """
+    def rsync_roots(self, gateway):
+        """Rsync the set of roots to the node's gateway cwd."""
         if self.roots:
-            # send each rsync root
             for root in self.roots:
-                self.rsync(root, **self.rsyncoptions)
-
-    def makegateways(self):
-        assert not list(self.group)
-        self.config.hook.pytest_xdist_setupnodes(config=self.config,
-            specs=self.specs)
-        for spec in self.specs:
-            gw = self.group.makegateway(spec)
-            self.config.hook.pytest_xdist_newgateway(gateway=gw)
+                self.rsync(gateway, root, **self.rsyncoptions)
 
     def setup_nodes(self, putevent):
-        self.makegateways()
-        self.rsync_roots()
+        self.config.hook.pytest_xdist_setupnodes(config=self.config,
+                                                 specs=self.specs)
         self.trace("setting up nodes")
-        for gateway in self.group:
-            node = SlaveController(self, gateway, self.config, putevent)
-            gateway.node = node  # to keep node alive
-            node.setup()
-            self.trace("started node %r" % node)
+        nodes = []
+        for spec in self.specs:
+            nodes.append(self.setup_node(spec, putevent))
+        return nodes
+
+    def setup_node(self, spec, putevent):
+        gw = self.group.makegateway(spec)
+        self.config.hook.pytest_xdist_newgateway(gateway=gw)
+        self.rsync_roots(gw)
+        node = SlaveController(self, gw, self.config, putevent)
+        gw.node = node          # keep the node alive
+        node.setup()
+        self.trace("started node %r" % node)
+        return node
 
     def teardown_nodes(self):
         self.group.terminate(self.EXIT_TIMEOUT)
@@ -110,39 +108,38 @@ class NodeManager(object):
             'verbose': self.config.option.verbose,
         }
 
-
-    def rsync(self, source, notify=None, verbose=False, ignores=None):
-        """ perform rsync to all remote hosts.
-        """
+    def rsync(self, gateway, source, notify=None, verbose=False, ignores=None):
+        """Perform rsync to remote hosts for node."""
+        # XXX Probably want to keep a list of rsynced specs to avoid
+        #     duplicate rsyncs.
+        # XXX This changes the calling behaviour of
+        #     pytest_xdist_rsyncstart and pytest_xdist_rsyncfinish to
+        #     be called once per rsync target.
         rsync = HostRSync(source, verbose=verbose, ignores=ignores)
-        seen = py.builtin.set()
-        gateways = []
-        for gateway in self.group:
-            spec = gateway.spec
-            if spec.popen and not spec.chdir:
-                # XXX this assumes that sources are python-packages
-                # and that adding the basedir does not hurt
-                gateway.remote_exec("""
-                    import sys ; sys.path.insert(0, %r)
-                """ % os.path.dirname(str(source))).waitclose()
-                continue
-            if spec not in seen:
-                def finished():
-                    if notify:
-                        notify("rsyncrootready", spec, source)
-                rsync.add_target_host(gateway, finished=finished)
-                seen.add(spec)
-                gateways.append(gateway)
-        if seen:
-            self.config.hook.pytest_xdist_rsyncstart(
-                source=source,
-                gateways=gateways,
-            )
-            rsync.send()
-            self.config.hook.pytest_xdist_rsyncfinish(
-                source=source,
-                gateways=gateways,
-            )
+        spec = gateway.spec
+        if spec.popen and not spec.chdir:
+            # XXX This assumes that sources are python-packages
+            #     and that adding the basedir does not hurt.
+            gateway.remote_exec("""
+                import sys ; sys.path.insert(0, %r)
+            """ % os.path.dirname(str(source))).waitclose()
+            return
+        if spec in self._rsynced_specs:
+            return
+        def finished():
+            if notify:
+                notify("rsyncrootready", spec, source)
+        rsync.add_target_host(gateway, finished=finished)
+        self._rsynced_specs.add(spec)
+        self.config.hook.pytest_xdist_rsyncstart(
+            source=source,
+            gateways=[gateway],
+        )
+        rsync.send()
+        self.config.hook.pytest_xdist_rsyncfinish(
+            source=source,
+            gateways=[gateway],
+        )
 
 class HostRSync(execnet.RSync):
     """ RSyncer that filters out common files
