@@ -57,7 +57,6 @@ class EachScheduling:
     def addnode(self, node):
         assert node not in self.node2pending
         self.node2pending[node] = []
-        self.node2collection[node] = None
 
     def tests_finished(self):
         if not self.collection_is_completed:
@@ -70,16 +69,34 @@ class EachScheduling:
         return True
 
     def addnode_collection(self, node, collection):
+        """Add the collected test items from a node
+
+        Collection is complete once all nodes have submitted their
+        collection.  In this case it's peding list is set to an empty
+        list.  When the collection is already completed this
+        submission is from a node which was restarted to replace a
+        dead node.  In this case we already assing the pending items
+        here.  In either case ``.init_distribute()`` will instruct the
+        node to start running the required tests.
+        """
         assert node in self.node2pending
         if not self.collection_is_completed:
             self.node2collection[node] = list(collection)
             self.node2pending[node] = []
-            if len(self.node2pending) >= self.numnodes:
+            if len(self.node2collection) >= self.numnodes:
                 self.collection_is_completed = True
         elif self._removed2pending:
-            for spec in self._removed2pending:
-                if spec == node.gateway.spec:
-                    self.node2pending[node] = self._removed2pending.pop(spec)
+            for deadnode in self._removed2pending:
+                if deadnode.gateway.spec == node.gateway.spec:
+                    if collection != self.node2collection[deadnode]:
+                        msg = report_collection_diff(self.collection,
+                                                     collection,
+                                                     deadnode.gateway.id,
+                                                     node.gateway.id)
+                        self.log(msg)
+                        return
+                    pending = self._removed2pending.pop(deadnode)
+                    self.node2pending[node] = pending
                     break
 
     def remove_item(self, node, item_index, duration=0):
@@ -92,10 +109,17 @@ class EachScheduling:
             return
         crashitem = self.node2collection[node][pending.pop(0)]
         if pending:
-            self._removed2pending[node.gateway.spec] = pending
+            self._removed2pending[node] = pending
         return crashitem
 
     def init_distribute(self):
+        """Schedule the test items on the nodes
+
+        If the node's pending list is empty it is a new node which
+        needs to run all the tests.  If the pending list is already
+        populated (by ``.addnode_collection()``) then it replaces a
+        died node and we only need to run those tests.
+        """
         assert self.collection_is_completed
         for node, pending in self.node2pending.items():
             if node in self._started:
@@ -105,6 +129,7 @@ class EachScheduling:
                 node.send_runtest_all()
             else:
                 node.send_runtest_some(pending)
+            self._started.append(node)
 
 
 class LoadScheduling:
