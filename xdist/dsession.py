@@ -9,35 +9,78 @@ queue = py.builtin._tryimport('queue', 'Queue')
 
 
 class EachScheduling:
+    """Implement scheduling of test items on all nodes
+
+    If a node gets added after the test run is started then it is
+    assumed to replace a node which got removed before it finished
+    it's collection.  In this case it will only be used if a a node
+    with the same spec got removed earlier.
+
+    Any nodes added after the run is started will only get items
+    assigned if a node with matching spec was removed before it
+    finished all it's pending items.  The new node will then be
+    assigned the remaining items from the removed node.
+    """
 
     def __init__(self, numnodes, log=None):
         self.numnodes = numnodes
         self.node2collection = {}
         self.node2pending = {}
+        self._started = []
+        self._removed2pending = {}
         if log is None:
             self.log = py.log.Producer("eachsched")
         else:
             self.log = log.eachsched
         self.collection_is_completed = False
 
+    @property
+    def nodes(self):
+        """A list of all nodes in the scheduler."""
+        return list(self.node2pending.keys())
+
     def hasnodes(self):
         return bool(self.node2pending)
 
+    def haspending(self):
+        """Return True if there are pending test items
+
+        This indicates that collection has finished and nodes are
+        still processing test items, so can be thought of as "the
+        scheduler is active".
+        """
+        for pending in self.node2pending.values():
+            if pending:
+                return True
+        return False
+
     def addnode(self, node):
+        assert node not in self.node2pending
+        self.node2pending[node] = []
         self.node2collection[node] = None
 
     def tests_finished(self):
         if not self.collection_is_completed:
             return False
+        if self._removed2pending:
+            return False
+        for pending in self.node2pending.values():
+            if len(pending) >= 2:
+                return False
         return True
 
     def addnode_collection(self, node, collection):
-        assert not self.collection_is_completed
-        assert self.node2collection[node] is None
-        self.node2collection[node] = list(collection)
-        self.node2pending[node] = []
-        if len(self.node2pending) >= self.numnodes:
-            self.collection_is_completed = True
+        assert node in self.node2pending
+        if not self.collection_is_completed:
+            self.node2collection[node] = list(collection)
+            self.node2pending[node] = []
+            if len(self.node2pending) >= self.numnodes:
+                self.collection_is_completed = True
+        elif self._removed2pending:
+            for spec in self._removed2pending:
+                if spec == node.gateway.spec:
+                    self.node2pending[node] = self._removed2pending.pop(spec)
+                    break
 
     def remove_item(self, node, item_index, duration=0):
         self.node2pending[node].remove(item_index)
@@ -48,14 +91,20 @@ class EachScheduling:
         if not pending:
             return
         crashitem = self.node2collection[node][pending.pop(0)]
-        # XXX do or report something wrt the remaining per-node pending items?
+        if pending:
+            self._removed2pending[node.gateway.spec] = pending
         return crashitem
 
     def init_distribute(self):
         assert self.collection_is_completed
         for node, pending in self.node2pending.items():
-            node.send_runtest_all()
-            pending[:] = range(len(self.node2collection[node]))
+            if node in self._started:
+                continue
+            if not pending:
+                pending[:] = range(len(self.node2collection[node]))
+                node.send_runtest_all()
+            else:
+                node.send_runtest_some(pending)
 
 
 class LoadScheduling:
@@ -65,8 +114,10 @@ class LoadScheduling:
     is run just once.  All nodes collect and submit the test suit and
     when all collections are received it is verified they are
     identical collections.  Then the collection gets devided up in
-    chunks and chunks get submitted to nodes.  The first node
-    finishing it's chunk gets the next chunk until all tests are done.
+    chunks and chunks get submitted to nodes.  Whenver a node finishes
+    an item they call ``.remove_item()`` which will trigger the
+    scheduler to assign more tests if the number of pending tests for
+    the node falls below a low-watermark.
 
     When created ``numnodes`` defines how many nodes are expected to
     submit a collection, this is used to know when all nodes have
@@ -255,7 +306,7 @@ class LoadScheduling:
 
         Initiate scheduling of the items across the nodes.  If this
         gets called again later it behaves the same as calling
-        ``.check_schedule()`` on all nodes so that newly added odes
+        ``.check_schedule()`` on all nodes so that newly added nodes
         will start to be used.
 
         This is called by the ``DSession.slave_collectionfinish`` hook
