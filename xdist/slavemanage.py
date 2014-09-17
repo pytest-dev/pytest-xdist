@@ -110,8 +110,6 @@ class NodeManager(object):
 
     def rsync(self, gateway, source, notify=None, verbose=False, ignores=None):
         """Perform rsync to remote hosts for node."""
-        # XXX Probably want to keep a list of rsynced specs to avoid
-        #     duplicate rsyncs.
         # XXX This changes the calling behaviour of
         #     pytest_xdist_rsyncstart and pytest_xdist_rsyncfinish to
         #     be called once per rsync target.
@@ -124,13 +122,13 @@ class NodeManager(object):
                 import sys ; sys.path.insert(0, %r)
             """ % os.path.dirname(str(source))).waitclose()
             return
-        if spec in self._rsynced_specs:
+        if (spec, source) in self._rsynced_specs:
             return
         def finished():
             if notify:
                 notify("rsyncrootready", spec, source)
         rsync.add_target_host(gateway, finished=finished)
-        self._rsynced_specs.add(spec)
+        self._rsynced_specs.add((spec, source))
         self.config.hook.pytest_xdist_rsyncstart(
             source=source,
             gateways=[gateway],
