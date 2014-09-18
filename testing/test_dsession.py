@@ -83,11 +83,10 @@ class TestEachScheduling:
 
 class TestLoadScheduling:
     def test_schedule_load_simple(self):
-        node1 = MockNode()
-        node2 = MockNode()
         sched = LoadScheduling(2)
-        sched.addnode(node1)
-        sched.addnode(node2)
+        sched.addnode(MockNode())
+        sched.addnode(MockNode())
+        node1, node2 = sched.nodes
         collection = ["a.py::test_1", "a.py::test_2"]
         assert not sched.collection_is_completed
         sched.addnode_collection(node1, collection)
