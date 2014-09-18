@@ -9,6 +9,11 @@
   pre-maturely (fixture teardown/setup is "nextitem" sensitive).
   Thanks to Andreas Pelme for bug analysis and failing test.
 
+- restart crashed nodes by internally refactoring setup handling
+  of nodes.  Also includes better code documentation.  
+  Many thanks to Floris Bruynooghe for the complete PR.
+
+
 1.10
 -------------------------
 

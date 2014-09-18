@@ -109,10 +109,9 @@ class TestLoadScheduling:
 
     def test_init_distribute_chunksize(self):
         sched = LoadScheduling(2)
-        node1 = MockNode()
-        node2 = MockNode()
-        sched.addnode(node1)
-        sched.addnode(node2)
+        sched.addnode(MockNode())
+        sched.addnode(MockNode())
+        node1, node2 = sched.nodes
         col = ["xyz"] * (6)
         sched.addnode_collection(node1, col)
         sched.addnode_collection(node2, col)

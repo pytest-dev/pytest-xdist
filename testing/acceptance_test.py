@@ -352,7 +352,7 @@ def test_teardownfails_one_function(testdir):
 @py.test.mark.xfail
 def test_terminate_on_hangingnode(testdir):
     p = testdir.makeconftest("""
-        def pytest_sessionfinishes(session):
+        def pytest_sessionfinish(session):
             if session.nodeid == "my": # running on slave
                 import time
                 time.sleep(3)
@@ -364,9 +364,7 @@ def test_terminate_on_hangingnode(testdir):
     ])
 
 
-# This test works when I reproduce it manually but hangs when running
-# in the test suite.  --flub
-@pytest.mark.skipif(True, reason="Weird hang")
+@pytest.mark.xfail(reason="works if run outside test suite", run=False)
 def test_session_hooks(testdir):
     testdir.makeconftest("""
         import sys
