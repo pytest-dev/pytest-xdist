@@ -487,4 +487,58 @@ def test_fixture_scope_caching_issue503(testdir):
     ])
 
 
+class TestNodeFailure:
 
+    def test_load_single(self, testdir):
+        f = testdir.makepyfile("""
+            import os
+            def test_a(): os._exit(1)
+            def test_b(): pass
+        """)
+        res = testdir.runpytest(f, '-n1')
+        res.stdout.fnmatch_lines([
+            "*Replacing failed node*",
+            "*Slave*crashed while running*",
+            "*1 failed*1 passed*",
+        ])
+
+    def test_load_multiple(self, testdir):
+        f = testdir.makepyfile("""
+            import os
+            def test_a(): pass
+            def test_b(): os._exit(1)
+            def test_c(): pass
+            def test_d(): pass
+        """)
+        res = testdir.runpytest(f, '-n2')
+        res.stdout.fnmatch_lines([
+            "*Replacing failed node*",
+            "*Slave*crashed while running*",
+            "*1 failed*3 passed*",
+        ])
+
+    def test_each_single(self, testdir):
+        f = testdir.makepyfile("""
+            import os
+            def test_a(): os._exit(1)
+            def test_b(): pass
+        """)
+        res = testdir.runpytest(f, '--dist=each', '--tx=popen')
+        res.stdout.fnmatch_lines([
+            "*Replacing failed node*",
+            "*Slave*crashed while running*",
+            "*1 failed*1 passed*",
+        ])
+
+    def test_each_multiple(self, testdir):
+        f = testdir.makepyfile("""
+            import os
+            def test_a(): os._exit(1)
+            def test_b(): pass
+        """)
+        res = testdir.runpytest(f, '--dist=each', '--tx=2*popen')
+        res.stdout.fnmatch_lines([
+            "*Replacing failed node*",
+            "*Slave*crashed while running*",
+            "*2 failed*2 passed*",
+        ])
