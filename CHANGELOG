@@ -1,3 +1,10 @@
+1.12.dev
+-------------------------
+
+- fix issue594: properly report errors when the test collection
+  is random.  Thanks Bruno Oliveira.
+
+
 1.11
 -------------------------
 
