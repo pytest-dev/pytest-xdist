@@ -485,6 +485,28 @@ def test_fixture_scope_caching_issue503(testdir):
     ])
 
 
+def test_issue_594_random_parametrize(testdir):
+    """
+    Make sure that tests that are randomly parametrized display an appropriate
+    error message, instead of silently skipping the entire test run.
+    """
+    p1 = testdir.makepyfile("""
+        import pytest
+        import random
+
+        xs = list(range(10))
+        random.shuffle(xs)
+        @pytest.mark.parametrize('x', xs)
+        def test_foo(x):
+            assert 1
+    """)
+    result = testdir.runpytest(p1, '-v', '-n4')
+    assert result.ret == 1
+    result.stdout.fnmatch_lines([
+        "Different tests were collected between gw* and gw*",
+    ])
+
+
 class TestNodeFailure:
 
     def test_load_single(self, testdir):

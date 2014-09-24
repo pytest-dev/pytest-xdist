@@ -1,4 +1,5 @@
 import difflib
+from _pytest.runner import CollectReport
 
 import pytest
 import py
@@ -88,8 +89,9 @@ class EachScheduling:
         elif self._removed2pending:
             for deadnode in self._removed2pending:
                 if deadnode.gateway.spec == node.gateway.spec:
-                    if collection != self.node2collection[deadnode]:
-                        msg = report_collection_diff(self.collection,
+                    dead_collection = self.node2collection[deadnode]
+                    if collection != dead_collection:
+                        msg = report_collection_diff(dead_collection,
                                                      collection,
                                                      deadnode.gateway.id,
                                                      node.gateway.id)
@@ -175,9 +177,10 @@ class LoadScheduling:
 
     :log: A py.log.Producer instance.
 
+    :config: Config object, used for handling hooks.
     """
 
-    def __init__(self, numnodes, log=None):
+    def __init__(self, numnodes, log=None, config=None):
         self.numnodes = numnodes
         self.node2collection = {}
         self.node2pending = {}
@@ -187,6 +190,7 @@ class LoadScheduling:
             self.log = py.log.Producer("loadsched")
         else:
             self.log = log.loadsched
+        self.config = config
 
     @property
     def nodes(self):
@@ -376,8 +380,9 @@ class LoadScheduling:
     def _check_nodes_have_same_collection(self):
         """Return True if all nodes have collected the same items.
 
-        If collections differ this returns False and logs the
-        collection differences as they are found.
+        If collections differ, this method returns False while logging
+        the collection differences and posting collection errors to
+        pytest_collectreport hook.
         """
         node_collection_items = list(self.node2collection.items())
         first_node, col = node_collection_items[0]
@@ -390,8 +395,12 @@ class LoadScheduling:
                 node.gateway.id,
             )
             if msg:
-                self.log(msg)
                 same_collection = False
+                self.log(msg)
+                if self.config is not None:
+                    rep = CollectReport(node.gateway.id, 'failed', longrepr=msg,
+                                        result=[])
+                    self.config.hook.pytest_collectreport(report=rep)
 
         return same_collection
 
@@ -494,7 +503,8 @@ class DSession:
         numnodes = len(self.nodemanager.specs)
         dist = self.config.getvalue("dist")
         if dist == "load":
-            self.sched = LoadScheduling(numnodes, log=self.log)
+            self.sched = LoadScheduling(numnodes, log=self.log,
+                                        config=self.config)
         elif dist == "each":
             self.sched = EachScheduling(numnodes, log=self.log)
         else:

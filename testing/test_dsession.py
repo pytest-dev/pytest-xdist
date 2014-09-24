@@ -144,24 +144,36 @@ class TestLoadScheduling:
         crashitem = sched.remove_node(node)
         assert crashitem == collection[0]
 
-    def test_schedule_different_tests_collected(self):
+    def test_different_tests_collected(self, testdir):
         """
-        Test that LoadScheduling is logging different tests were
-        collected by slaves when that happens.
+        Test that LoadScheduling is reporting collection errors when
+        different test ids are collected by slaves.
         """
+        class CollectHook(object):
+            """
+            Dummy hook that stores collection reports.
+            """
+
+            def __init__(self):
+                self.reports = []
+
+            def pytest_collectreport(self, report):
+                self.reports.append(report)
+
+        collect_hook = CollectHook()
+        config = testdir.parseconfig()
+        config.pluginmanager.register(collect_hook, "collect_hook")
         node1 = MockNode()
         node2 = MockNode()
-        sched = LoadScheduling(2)
-        logged_messages = []
-        py.log.setconsumer('loadsched', logged_messages.append)
+        sched = LoadScheduling(2, config=config)
         sched.addnode(node1)
         sched.addnode(node2)
         sched.addnode_collection(node1, ["a.py::test_1"])
         sched.addnode_collection(node2, ["a.py::test_2"])
         sched.init_distribute()
-        logged_content = ''.join(x.content() for x in logged_messages)
-        assert 'Different tests were collected between' in logged_content
-        assert 'Different tests collected, aborting run' in logged_content
+        assert len(collect_hook.reports) == 1
+        rep = collect_hook.reports[0]
+        assert 'Different tests were collected between' in rep.longrepr
 
 
 class TestDistReporter:
