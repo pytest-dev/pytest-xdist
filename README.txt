@@ -201,7 +201,7 @@ These directory specifications are relative to the directory
 where the configuration file was found.
 
 .. _`pytest-xdist`: http://pypi.python.org/pypi/pytest-xdist
-.. _`pytest-xdist repository`: http://bitbucket.org/hpk42/pytest-xdist
+.. _`pytest-xdist repository`: http://bitbucket.org/pytest-dev/pytest-xdist
 .. _`pytest`: http://pytest.org
 
 Issue and Bug Tracker
