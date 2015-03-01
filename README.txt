@@ -1,5 +1,10 @@
+.. image:: https://drone.io/bitbucket.org/pytest-dev/pytest-xdist/status.png
+   :target: https://drone.io/bitbucket.org/pytest-dev/pytest-xdist/latest
+.. image:: https://pypip.in/v/pytest-xdist/badge.png
+   :target: https://pypi.python.org/pypi/pytest-xdist
+
 xdist: pytest distributed testing plugin
-===============================================================
+============================
 
 The `pytest-xdist`_ plugin extends py.test with some unique
 test execution modes:
@@ -208,5 +213,3 @@ Issue and Bug Tracker
 ------------------------
 
 Please use the pytest issue tracker for bugs in this plugin, see https://bitbucket.org/hpk42/pytest/issues .
-
-
