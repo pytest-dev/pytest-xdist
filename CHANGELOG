@@ -1,4 +1,4 @@
-1.12.dev
+1.12
 -------------------------
 
 - fix issue594: properly report errors when the test collection

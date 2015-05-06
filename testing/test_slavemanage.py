@@ -2,13 +2,15 @@ import py
 import pytest
 import execnet
 from _pytest.pytester import HookRecorder
-from xdist import slavemanage
+from xdist import slavemanage, newhooks
 from xdist.slavemanage import HostRSync, NodeManager
 
-pytest_plugins = "pytester",
+pytest_plugins = "pytester"
 
 def pytest_funcarg__hookrecorder(request, config):
     hookrecorder = HookRecorder(config.pluginmanager)
+    if hasattr(hookrecorder, "start_recording"):
+        hookrecorder.start_recording(newhooks)
     request.addfinalizer(hookrecorder.finish_recording)
     return hookrecorder
 
