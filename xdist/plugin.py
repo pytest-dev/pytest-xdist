@@ -58,8 +58,8 @@ def pytest_cmdline_main(config):
         looponfail_main(config)
         return 2 # looponfail only can get stop with ctrl-C anyway
 
-def pytest_configure(config, __multicall__):
-    __multicall__.execute()
+@pytest.mark.trylast
+def pytest_configure(config):
     if config.getoption("dist") != "no":
         from xdist.dsession import DSession
         session = DSession(config)

@@ -113,7 +113,7 @@ class TestDistribution:
                 import py
                 assert tmpdir.relto(py.path.local(%r)), tmpdir
         """ % str(testdir.tmpdir))
-        result = testdir.runpytest(p1, "-n1")
+        result = testdir.runpytest_subprocess(p1, "-n1")
         assert result.ret == 0
         result.stdout.fnmatch_lines([
             "*1 passed*",
@@ -243,7 +243,7 @@ class TestDistribution:
                 print ("s2call-finished")
         """)
         args = ["-n1", "--debug"]
-        result = testdir.runpytest(*args)
+        result = testdir.runpytest_subprocess(*args)
         s = result.stdout.str()
         assert result.ret == 2
         assert 's2call' in s
@@ -256,9 +256,8 @@ class TestDistribution:
                 import time
                 time.sleep(10)
         """)
-        child = testdir.spawn_pytest("-n1")
-        py.std.time.sleep(0.1)
-        child.expect(".*test session starts.*")
+        child = testdir.spawn_pytest("-n1 -v")
+        child.expect(".*test_sleep.*")
         child.kill(2) # keyboard interrupt
         child.expect(".*KeyboardInterrupt.*")
         #child.expect(".*seconds.*")
@@ -271,7 +270,7 @@ class TestDistEach:
             def test_hello():
                 pass
         """)
-        result = testdir.runpytest("--debug", "--dist=each", "--tx=2*popen")
+        result = testdir.runpytest_subprocess("--debug", "--dist=each", "--tx=2*popen")
         assert not result.ret
         result.stdout.fnmatch_lines(["*2 pass*"])
 
@@ -408,7 +407,7 @@ def test_funcarg_teardown_failure(testdir):
         def test_hello(myarg):
             pass
     """)
-    result = testdir.runpytest("--debug", p) # , "-n1")
+    result = testdir.runpytest_subprocess("--debug", p) # , "-n1")
     result.stdout.fnmatch_lines([
         "*ValueError*42*",
         "*1 passed*1 error*",
@@ -455,7 +454,7 @@ def test_issue34_pluginloading_in_subprocess(testdir):
         def test_hello():
             assert pytest.sample_variable == "testing"
     """)
-    result = testdir.runpytest("-n1", "-p", "plugin123")
+    result = testdir.runpytest_subprocess("-n1", "-p", "plugin123")
     assert result.ret == 0
     result.stdout.fnmatch_lines([
         "*1 passed*",

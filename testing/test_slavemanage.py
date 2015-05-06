@@ -1,29 +1,25 @@
 import py
 import pytest
 import execnet
+from _pytest.pytester import HookRecorder
 from xdist import slavemanage
 from xdist.slavemanage import HostRSync, NodeManager
 
 pytest_plugins = "pytester",
 
-def pytest_funcarg__hookrecorder(request):
-    _pytest = request.getfuncargvalue('_pytest')
-    config = request.getfuncargvalue('config')
-    return _pytest.gethookrecorder(config.hook)
+def pytest_funcarg__hookrecorder(request, config):
+    hookrecorder = HookRecorder(config.pluginmanager)
+    request.addfinalizer(hookrecorder.finish_recording)
+    return hookrecorder
 
-def pytest_funcarg__config(request):
-    testdir = request.getfuncargvalue("testdir")
-    config = testdir.parseconfig()
-    return config
+def pytest_funcarg__config(testdir):
+    return testdir.parseconfig()
 
-def pytest_funcarg__mysetup(request):
+def pytest_funcarg__mysetup(tmpdir):
     class mysetup:
-        def __init__(self, request):
-            temp = request.getfuncargvalue("tmpdir")
-            self.source = temp.mkdir("source")
-            self.dest = temp.mkdir("dest")
-            request.getfuncargvalue("_pytest")
-    return mysetup(request)
+        source = tmpdir.mkdir("source")
+        dest = tmpdir.mkdir("dest")
+    return mysetup()
 
 @pytest.fixture
 def slavecontroller(monkeypatch):
@@ -45,8 +41,7 @@ class TestNodeManagerPopen:
         for spec in NodeManager(config, l, defaultchdir="abc").specs:
             assert spec.chdir == "abc"
 
-    def test_popen_makegateway_events(self, config,
-                                      hookrecorder, _pytest, slavecontroller):
+    def test_popen_makegateway_events(self, config, hookrecorder, slavecontroller):
         hm = NodeManager(config, ["popen"] * 2)
         hm.setup_nodes(None)
         call = hookrecorder.popcall("pytest_xdist_setupnodes")
@@ -114,14 +109,6 @@ class TestNodeManagerPopen:
         call = hookrecorder.popcall("pytest_xdist_rsyncfinish")
 
 class TestHRSync:
-    def pytest_funcarg__mysetup(self, request):
-        class mysetup:
-            def __init__(self, request):
-                tmp = request.getfuncargvalue('tmpdir')
-                self.source = tmp.mkdir("source")
-                self.dest = tmp.mkdir("dest")
-        return mysetup(request)
-
     def test_hrsync_filter(self, mysetup):
         source, _ = mysetup.source, mysetup.dest  # noqa
         source.ensure("dir", "file.txt")
@@ -151,7 +138,7 @@ class TestHRSync:
 
 
 class TestNodeManager:
-    @py.test.mark.xfail
+    @py.test.mark.xfail(run=False)
     def test_rsync_roots_no_roots(self, testdir, mysetup):
         mysetup.source.ensure("dir1", "file1").write("hello")
         config = testdir.parseconfig(mysetup.source)

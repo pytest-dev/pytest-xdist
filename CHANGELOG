@@ -4,6 +4,9 @@
 - fix issue594: properly report errors when the test collection
   is random.  Thanks Bruno Oliveira.
 
+- some internal test suite adaptation (to become forward
+  compatible with the upcoming pytest-2.8)
+
 
 1.11
 -------------------------
