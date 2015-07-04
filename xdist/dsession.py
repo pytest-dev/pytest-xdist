@@ -455,6 +455,7 @@ class DSession:
         self.countfailures = 0
         self.maxfail = config.getvalue("maxfail")
         self.queue = queue.Queue()
+        self._session = None
         self._failed_collection_errors = {}
         self._active_nodes = set()
         try:
@@ -488,12 +489,14 @@ class DSession:
         self.nodemanager = NodeManager(self.config)
         nodes = self.nodemanager.setup_nodes(putevent=self.queue.put)
         self._active_nodes.update(nodes)
+        self._session = session
 
     def pytest_sessionfinish(self, session):
         """Shutdown all nodes."""
         nm = getattr(self, 'nodemanager', None)  # if not fully initialized
         if nm is not None:
             nm.teardown_nodes()
+        self._session = None
 
     def pytest_collection(self):
         # prohibit collection of test items in master process
@@ -595,6 +598,9 @@ class DSession:
         """
         if self.shuttingdown:
             return
+        # tell session which items were effectively collected otherwise
+        # the master node will exit with EXIT_NOTESTSCOLLECTED
+        self._session._testscollected = len(ids)
         self.sched.addnode_collection(node, ids)
         if self.terminal:
             self.trdist.setstatus(node.gateway.spec, "[%d]" % (len(ids)))
