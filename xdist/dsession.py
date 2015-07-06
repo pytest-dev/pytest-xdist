@@ -599,8 +599,8 @@ class DSession:
         if self.shuttingdown:
             return
         # tell session which items were effectively collected otherwise
-        # the master node will exit with EXIT_NOTESTSCOLLECTED
-        self._session._testscollected = len(ids)
+        # the master node will finish the session with EXIT_NOTESTSCOLLECTED
+        self._session.testscollected = len(ids)
         self.sched.addnode_collection(node, ids)
         if self.terminal:
             self.trdist.setstatus(node.gateway.spec, "[%d]" % (len(ids)))
