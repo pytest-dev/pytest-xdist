@@ -1,6 +1,8 @@
 1.13.dev1
 -------------------------
 
+- conforming with new pytest-2.8 behavior of returning non-zero when all
+  tests were skipped or deselected.
 - release as wheel
 
 1.12
