@@ -1,3 +1,5 @@
+import multiprocessing
+
 import py
 import pytest
 
@@ -8,8 +10,10 @@ def pytest_addoption(parser):
            help="run tests in subprocess, wait for modified files "
                 "and re-run failing test set until all pass.")
     group._addoption('-n', dest="numprocesses", metavar="numprocesses",
-           action="store", type="int",
-           help="shortcut for '--dist=load --tx=NUM*popen'")
+           action="store",
+           help="shortcut for '--dist=load --tx=NUM*popen', "
+                "you can use 'auto' here for auto detection CPUs number on "
+                "host system")
     group.addoption('--boxed',
            action="store_true", dest="boxed", default=False,
            help="box each test run in a separate process (unix)")
@@ -73,8 +77,15 @@ def pytest_configure(config):
 
 def check_options(config):
     if config.option.numprocesses:
+        if config.option.numprocesses == 'auto':
+            config.option.numprocesses = multiprocessing.cpu_count()
+        else:
+            try:
+                config.option.numprocesses = int(config.option.numprocesses)
+            except ValueError:
+                config.option.numprocesses = 1
         config.option.dist = "load"
-        config.option.tx = ['popen'] * int(config.option.numprocesses)
+        config.option.tx = ['popen'] * config.option.numprocesses
     if config.option.distload:
         config.option.dist = "load"
     val = config.getvalue
