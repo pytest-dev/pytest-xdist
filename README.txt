@@ -62,6 +62,11 @@ Especially for longer running tests or tests requiring
 a lot of IO this can lead to considerable speed ups. This option can
 also be set to ``auto`` for automatic detection of the number of CPUs.
 
+If a test crashes the interpreter, pytest-xdist will automatically restart
+that slave and report the failure as usual. You can use the
+``--max-slave-restart`` option to limit the number of slaves that can
+be restarted, or disable restarting altogether using ``--max-slave-restart=0``.
+
 
 Running tests in a Python subprocess
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

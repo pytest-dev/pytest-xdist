@@ -529,7 +529,7 @@ class TestNodeFailure:
         """)
         res = testdir.runpytest(f, '-n1')
         res.stdout.fnmatch_lines([
-            "*Replacing failed node*",
+            "*Replacing crashed slave*",
             "*Slave*crashed while running*",
             "*1 failed*1 passed*",
         ])
@@ -544,7 +544,7 @@ class TestNodeFailure:
         """)
         res = testdir.runpytest(f, '-n2')
         res.stdout.fnmatch_lines([
-            "*Replacing failed node*",
+            "*Replacing crashed slave*",
             "*Slave*crashed while running*",
             "*1 failed*3 passed*",
         ])
@@ -557,7 +557,7 @@ class TestNodeFailure:
         """)
         res = testdir.runpytest(f, '--dist=each', '--tx=popen')
         res.stdout.fnmatch_lines([
-            "*Replacing failed node*",
+            "*Replacing crashed slave*",
             "*Slave*crashed while running*",
             "*1 failed*1 passed*",
         ])
@@ -570,7 +570,39 @@ class TestNodeFailure:
         """)
         res = testdir.runpytest(f, '--dist=each', '--tx=2*popen')
         res.stdout.fnmatch_lines([
-            "*Replacing failed node*",
+            "*Replacing crashed slave*",
             "*Slave*crashed while running*",
             "*2 failed*2 passed*",
+        ])
+
+    def test_max_slave_restart(self, testdir):
+        f = testdir.makepyfile("""
+            import os
+            def test_a(): pass
+            def test_b(): os._exit(1)
+            def test_c(): os._exit(1)
+            def test_d(): pass
+        """)
+        res = testdir.runpytest(f, '-n4', '--max-slave-restart=1')
+        res.stdout.fnmatch_lines([
+            "*Replacing crashed slave*",
+            "*Maximum crashed slaves reached: 1*",
+            "*Slave*crashed while running*",
+            "*Slave*crashed while running*",
+            "*2 failed*2 passed*",
+        ])
+
+
+    def test_disable_restart(self, testdir):
+        f = testdir.makepyfile("""
+            import os
+            def test_a(): pass
+            def test_b(): os._exit(1)
+            def test_c(): pass
+        """)
+        res = testdir.runpytest(f, '-n4', '--max-slave-restart=0')
+        res.stdout.fnmatch_lines([
+            "*Slave restarting disabled*",
+            "*Slave*crashed while running*",
+            "*1 failed*2 passed*",
         ])

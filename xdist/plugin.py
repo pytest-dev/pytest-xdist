@@ -14,6 +14,9 @@ def pytest_addoption(parser):
            help="shortcut for '--dist=load --tx=NUM*popen', "
                 "you can use 'auto' here for auto detection CPUs number on "
                 "host system")
+    group._addoption('--max-slave-restart', action="store", default=None,
+                     help="maximum number of slaves that can be restarted "
+                          "when crashed (set to zero to disable this feature)")
     group.addoption('--boxed',
            action="store_true", dest="boxed", default=False,
            help="box each test run in a separate process (unix)")

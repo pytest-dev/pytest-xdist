@@ -458,6 +458,10 @@ class DSession:
         self._session = None
         self._failed_collection_errors = {}
         self._active_nodes = set()
+        self._failed_nodes_count = 0
+        self._max_slave_restart = self.config.getoption('max_slave_restart')
+        if self._max_slave_restart is not None:
+            self._max_slave_restart = int(self._max_slave_restart)
         try:
             self.terminal = config.pluginmanager.getplugin("terminalreporter")
         except KeyError:
@@ -583,8 +587,20 @@ class DSession:
         else:
             if crashitem:
                 self.handle_crashitem(crashitem, node)
-        self.report_line("Replacing failed node %s" % node.gateway.id)
-        self._clone_node(node)
+
+        self._failed_nodes_count += 1
+        maximum_reached = (self._max_slave_restart is not None and
+                           self._failed_nodes_count > self._max_slave_restart)
+        if maximum_reached:
+            if self._max_slave_restart == 0:
+                msg = 'Slave restarting disabled'
+            else:
+                msg = "Maximum crashed slaves reached: %d" % \
+                      self._max_slave_restart
+            self.report_line(msg)
+        else:
+            self.report_line("Replacing crashed slave %s" % node.gateway.id)
+            self._clone_node(node)
         self._active_nodes.remove(node)
 
     def slave_collectionfinish(self, node, ids):
