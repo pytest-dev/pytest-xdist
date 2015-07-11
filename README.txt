@@ -59,7 +59,8 @@ To send tests to multiple CPUs, type::
     py.test -n NUM
 
 Especially for longer running tests or tests requiring
-a lot of IO this can lead to considerable speed ups.
+a lot of IO this can lead to considerable speed ups. This option can
+also be set to ``auto`` for automatic detection of the number of CPUs.
 
 
 Running tests in a Python subprocess

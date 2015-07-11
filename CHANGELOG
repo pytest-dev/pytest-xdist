@@ -2,6 +2,8 @@
 -------------------------
 
 - release as wheel
+- "-n" option now can be set to "auto" for automatic detection of number
+  of cpus in the host system. Thanks Suloev Dmitry for the PR.
 
 1.12
 -------------------------

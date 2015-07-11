@@ -363,6 +363,19 @@ def test_terminate_on_hangingnode(testdir):
     ])
 
 
+def test_auto_detect_cpus(testdir, monkeypatch):
+    import multiprocessing
+    monkeypatch.setattr(multiprocessing, 'cpu_count', lambda: 3)
+    testdir.makeconftest("""
+        def pytest_unconfigure(config):
+            with open('cpus', 'w') as f:
+                f.write('cpus = %s' % config.option.numprocesses)
+    """)
+    testdir.inline_run('-n=auto')
+    cpus_file = testdir.tmpdir.join('cpus')
+    assert cpus_file.read() == 'cpus = 3'
+
+
 @pytest.mark.xfail(reason="works if run outside test suite", run=False)
 def test_session_hooks(testdir):
     testdir.makeconftest("""
