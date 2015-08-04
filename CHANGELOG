@@ -1,10 +1,14 @@
 1.13.dev1
 -------------------------
 
+- conforming with new pytest-2.8 behavior of returning non-zero when all
+  tests were skipped or deselected.
+
 - new "--max-slave-restart" option that can be used to control maximum
   number of times pytest-xdist can restart slaves due to crashes. Thanks to
   Anatoly Bubenkov for the report and Bruno Oliveira for the PR.
 - release as wheel
+
 - "-n" option now can be set to "auto" for automatic detection of number
   of cpus in the host system. Thanks Suloev Dmitry for the PR.
 

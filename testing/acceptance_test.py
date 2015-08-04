@@ -410,6 +410,31 @@ def test_session_hooks(testdir):
     assert testdir.tmpdir.join("slave").check()
     assert testdir.tmpdir.join("master").check()
 
+
+def test_session_testscollected(testdir):
+    """
+    Make sure master node is updating the session object with the number
+    of tests collected from the slaves.
+    """
+    testdir.makepyfile(test_foo="""
+        import pytest
+        @pytest.mark.parametrize('i', range(3))
+        def test_ok(i):
+            pass
+    """)
+    testdir.makeconftest("""
+        def pytest_sessionfinish(session):
+            collected = getattr(session, 'testscollected', None)
+            with open('testscollected', 'w') as f:
+                f.write('collected = %s' % collected)
+    """)
+    result = testdir.inline_run("-n1")
+    result.assertoutcome(passed=3)
+    collected_file = testdir.tmpdir.join('testscollected')
+    assert collected_file.isfile()
+    assert collected_file.read() == 'collected = 3'
+
+
 def test_funcarg_teardown_failure(testdir):
     p = testdir.makepyfile("""
         def pytest_funcarg__myarg(request):
