@@ -144,10 +144,7 @@ class HostRSync(execnet.RSync):
     """
     def __init__(self, sourcedir, *args, **kwargs):
         self._synced = {}
-        ignores= None
-        if 'ignores' in kwargs:
-            ignores = kwargs.pop('ignores')
-        self._ignores = ignores or []
+        self._ignores = kwargs.pop('ignores', None) or []
         super(HostRSync, self).__init__(sourcedir=sourcedir, **kwargs)
 
     def filter(self, path):
