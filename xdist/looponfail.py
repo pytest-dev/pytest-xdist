@@ -11,6 +11,21 @@ import py, pytest
 import sys
 import execnet
 
+def pytest_addoption(parser):
+    group = parser.getgroup("xdist", "distributed and subprocess testing")
+    group._addoption('-f', '--looponfail',
+           action="store_true", dest="looponfail", default=False,
+           help="run tests in subprocess, wait for modified files "
+                "and re-run failing test set until all pass.")
+
+def pytest_cmdline_main(config):
+    
+    if config.getoption("looponfail"):
+        looponfail_main(config)
+        return 2 # looponfail only can get stop with ctrl-C anyway
+
+
+
 def looponfail_main(config):
     remotecontrol = RemoteControl(config)
     rootdirs = config.getini("looponfailroots")
@@ -227,4 +242,3 @@ class StatRecorder:
             changed = True
         self.statcache = newstat
         return changed
-

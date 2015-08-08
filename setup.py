@@ -11,7 +11,13 @@ setup(
     url='http://bitbucket.org/hpk42/pytest-xdist',
     platforms=['linux', 'osx', 'win32'],
     packages = ['xdist'],
-    entry_points = {'pytest11': ['xdist = xdist.plugin'],},
+    entry_points = {
+        'pytest11': [
+            'xdist = xdist.plugin',
+            'xdist.looponfail = xdist.looponfail',
+            'xdist.boxed = xdist.boxed',
+        ],
+    },
     zip_safe=False,
     install_requires = ['execnet>=1.1', 'pytest>=2.4.2', 'py>=1.4.22'],
     classifiers=[

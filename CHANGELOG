@@ -1,5 +1,13 @@
-1.13.dev1
+1.13.dev
 -------------------------
+
+- extended the tox matrix with the supported py.test versions
+
+- split up the plugin into 3 plugin's
+  to prepare the departure of boxed and looponfail
+  looponfail will become apart of core
+  and forked boxed will be replaced
+  with a more reliable primitive based on xdist
 
 - conforming with new pytest-2.8 behavior of returning non-zero when all
   tests were skipped or deselected.
@@ -34,7 +42,7 @@
   Thanks to Andreas Pelme for bug analysis and failing test.
 
 - restart crashed nodes by internally refactoring setup handling
-  of nodes.  Also includes better code documentation.  
+  of nodes.  Also includes better code documentation.
   Many thanks to Floris Bruynooghe for the complete PR.
 
 
@@ -47,7 +55,7 @@
 - fix pytest issue382 - produce "pytest_runtest_logstart" event again
   in master. Thanks Aron Curzon.
 
-- fix pytest issue419 by sending/receiving indices into the test 
+- fix pytest issue419 by sending/receiving indices into the test
   collection instead of node ids (which are not neccessarily unique
   for functions parametrized with duplicate values)
 
@@ -160,4 +168,3 @@
 - cleaned up termination handling
 - make -x cause hard killing of test nodes to decrease wait time
   until the traceback shows up on first failure
-

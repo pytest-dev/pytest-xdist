@@ -13,7 +13,7 @@ def test_dist_incompatibility_messages(testdir):
     assert "incompatible" in result.stderr.str()
 
 def test_dist_options(testdir):
-    from xdist.plugin import check_options
+    from xdist.plugin import pytest_cmdline_main as check_options
     config = testdir.parseconfigure("-n 2")
     check_options(config)
     assert config.option.dist == "load"
@@ -67,4 +67,3 @@ class TestDistOptions:
         assert py.path.local('y') in roots
         assert py.path.local('z') in roots
         assert testdir.tmpdir.join('x') in roots
-
