@@ -1,2 +1,1 @@
-#
-__version__ = '1.13.dev1'
+from xdist._version import version as __version__
