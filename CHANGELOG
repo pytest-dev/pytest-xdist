@@ -1,11 +1,12 @@
-1.13.dev
+1.13
 -------------------------
 
 - extended the tox matrix with the supported py.test versions
 
 - split up the plugin into 3 plugin's
-  to prepare the departure of boxed and looponfail
-  looponfail will become apart of core
+  to prepare the departure of boxed and looponfail.
+
+  looponfail will be a part of core
   and forked boxed will be replaced
   with a more reliable primitive based on xdist
 
