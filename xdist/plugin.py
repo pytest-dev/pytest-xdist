@@ -1,12 +1,20 @@
-import multiprocessing
-
 import py
 import pytest
+
+
+def parse_numprocesses(s):
+    if s == 'auto':
+        import multiprocessing
+        return multiprocessing.cpu_count()
+    else:
+        return int(s)
+
 
 def pytest_addoption(parser):
     group = parser.getgroup("xdist", "distributed and subprocess testing")
     group._addoption('-n', dest="numprocesses", metavar="numprocesses",
            action="store",
+           type=parse_numprocesses,
            help="shortcut for '--dist=load --tx=NUM*popen', "
                 "you can use 'auto' here for auto detection CPUs number on "
                 "host system")
@@ -68,13 +76,6 @@ def pytest_configure(config):
 @pytest.mark.tryfirst
 def pytest_cmdline_main(config):
     if config.option.numprocesses:
-        if config.option.numprocesses == 'auto':
-            config.option.numprocesses = multiprocessing.cpu_count()
-        else:
-            try:
-                config.option.numprocesses = int(config.option.numprocesses)
-            except ValueError:
-                config.option.numprocesses = 1
         config.option.dist = "load"
         config.option.tx = ['popen'] * config.option.numprocesses
     if config.option.distload:

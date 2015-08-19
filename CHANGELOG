@@ -1,3 +1,9 @@
+1.13.1
+-------
+
+- fix a regression -n 0 now disables xdist again
+
+
 1.13
 -------------------------
 
@@ -16,7 +22,7 @@
 - new "--max-slave-restart" option that can be used to control maximum
   number of times pytest-xdist can restart slaves due to crashes. Thanks to
   Anatoly Bubenkov for the report and Bruno Oliveira for the PR.
-  
+
 - release as wheel
 
 - "-n" option now can be set to "auto" for automatic detection of number
