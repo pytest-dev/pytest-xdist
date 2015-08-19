@@ -1,10 +1,11 @@
 .. image:: https://drone.io/bitbucket.org/pytest-dev/pytest-xdist/status.png
    :target: https://drone.io/bitbucket.org/pytest-dev/pytest-xdist/latest
+
 .. image:: https://pypip.in/v/pytest-xdist/badge.png
    :target: https://pypi.python.org/pypi/pytest-xdist
 
 xdist: pytest distributed testing plugin
-============================
+=========================================
 
 The `pytest-xdist`_ plugin extends py.test with some unique
 test execution modes:
@@ -118,24 +119,27 @@ you can ad-hoc distribute your tests by typing::
 
     py.test -d --tx ssh=myhostpopen --rsyncdir mypkg mypkg
 
-This will synchronize your ``mypkg`` package directory
+This will synchronize your :code:`mypkg` package directory
 to an remote ssh account and then locally collect tests
 and send them to remote places for execution.
 
-You can specify multiple ``--rsyncdir`` directories
+You can specify multiple :code:`--rsyncdir` directories
 to be sent to the remote side.
 
-**NOTE:** For py.test to collect and send tests correctly
-you not only need to make sure all code and tests
-directories are rsynced, but that any test (sub) directory
-also has an ``__init__.py`` file because internally
-py.test references tests as a fully qualified python
-module path.  **You will otherwise get strange errors**
-during setup of the remote side.
+.. note::
 
-You can specify multiple ``--rsyncignore`` glob-patterns
+  For py.test to collect and send tests correctly
+  you not only need to make sure all code and tests
+  directories are rsynced, but that any test (sub) directory
+  also has an :code:`__init__.py` file because internally
+  py.test references tests as a fully qualified python
+  module path.  **You will otherwise get strange errors**
+  during setup of the remote side.
+
+
+You can specify multiple :code:`--rsyncignore` glob patterns
 to be ignored when file are sent to the remote side.
-There are also internal ignores: .*, *.pyc, *.pyo, *~
+There are also internal ignores: :code:`.*, *.pyc, *.pyo, *~`
 Those you cannot override using rsyncignore command-line or
 ini-file option(s).
 
