@@ -1,0 +1,41 @@
+sudo: false
+language: python
+python:
+    - '3.5.0b3'
+# command to install dependencies
+install: "pip install -U tox"
+# # command to run tests
+env:
+  matrix:
+  - TOXENV=flakes
+  - TOXENV=readme
+  # matrix was trimmed to skip
+  # some builds that are unnecessary/perceived redundant
+  - TOXENV=py26-pytest24
+  - TOXENV=py26-pytest25
+  - TOXENV=py26-pytest26
+  - TOXENV=py26-pytest27
+  - TOXENV=py33-pytest27
+  - TOXENV=py34-pytest24
+  - TOXENV=py34-pytest25
+  - TOXENV=py34-pytest26
+  - TOXENV=py27-pytest24
+  - TOXENV=py27-pytest25
+  - TOXENV=py27-pytest26
+
+  - TOXENV=py27-pytest27-pexpect
+  - TOXENV=py34-pytest27-pexpect
+  - TOXENV=py35-pytest27
+  - TOXENV=pypy-pytest27
+
+script: tox --recreate -e $TESTENV
+
+notifications:
+  irc:
+    channels:
+      - "chat.freenode.net#pytest"
+    on_success: change
+    on_failure: change
+    skip_join: true
+  email:
+    - pytest-commit@python.org
