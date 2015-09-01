@@ -4,6 +4,7 @@ import os
 needsfork = pytest.mark.skipif(not hasattr(os, "fork"),
                                reason="os.fork required")
 
+
 @needsfork
 def test_functional_boxed(testdir):
     p1 = testdir.makepyfile("""
@@ -16,6 +17,7 @@ def test_functional_boxed(testdir):
         "*CRASHED*",
         "*1 failed*"
     ])
+
 
 @needsfork
 @pytest.mark.parametrize("capmode", [
@@ -41,6 +43,7 @@ def test_functional_boxed_capturing(testdir, capmode):
         *1 failed*
     """)
 
+
 class TestOptionEffects:
     def test_boxed_option_default(self, testdir):
         tmpdir = testdir.tmpdir.ensure("subdir", dir=1)
@@ -53,4 +56,3 @@ class TestOptionEffects:
     def test_is_not_boxed_by_default(self, testdir):
         config = testdir.parseconfig(testdir.tmpdir)
         assert not config.option.boxed
-

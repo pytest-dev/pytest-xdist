@@ -4,9 +4,10 @@ import py
 
 def pytest_addoption(parser):
     group = parser.getgroup("xdist", "distributed and subprocess testing")
-    group.addoption('--boxed',
-           action="store_true", dest="boxed", default=False,
-           help="box each test run in a separate process (unix)")
+    group.addoption(
+        '--boxed',
+        action="store_true", dest="boxed", default=False,
+        help="box each test run in a separate process (unix)")
 
 
 def pytest_runtest_protocol(item):
@@ -16,6 +17,7 @@ def pytest_runtest_protocol(item):
             item.ihook.pytest_runtest_logreport(report=rep)
         return True
 
+
 def forked_run_report(item):
     # for now, we run setup/teardown in the subprocess
     # XXX optionally allow sharing of setup/teardown
@@ -24,6 +26,7 @@ def forked_run_report(item):
     import marshal
     from xdist.remote import serialize_report
     from xdist.slavemanage import unserialize_report
+
     def runforked():
         try:
             reports = runtestprotocol(item, log=False)
@@ -38,8 +41,9 @@ def forked_run_report(item):
         return [unserialize_report("testreport", x) for x in report_dumps]
     else:
         if result.exitstatus == EXITSTATUS_TESTEXIT:
-            py.test.exit("forked test item %s raised Exit" %(item,))
+            py.test.exit("forked test item %s raised Exit" % (item,))
         return [report_process_crash(item, result)]
+
 
 def report_process_crash(item, result):
     path, lineno = item._getfslineno()

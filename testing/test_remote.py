@@ -7,6 +7,7 @@ import marshal
 
 WAIT_TIMEOUT = 10.0
 
+
 def check_marshallable(d):
     try:
         marshal.dumps(d)
@@ -14,12 +15,14 @@ def check_marshallable(d):
         py.std.pprint.pprint(d)
         raise ValueError("not marshallable")
 
+
 class EventCall:
     def __init__(self, eventcall):
         self.name, self.kwargs = eventcall
 
     def __str__(self):
-        return "<EventCall %s(**%s)>" %(self.name, self.kwargs)
+        return "<EventCall %s(**%s)>" % (self.name, self.kwargs)
+
 
 class SlaveSetup:
     use_callback = False
@@ -31,7 +34,7 @@ class SlaveSetup:
 
     def setup(self, ):
         self.testdir.chdir()
-        #import os ; os.environ['EXECNET_DEBUG'] = "2"
+        # import os ; os.environ['EXECNET_DEBUG'] = "2"
         self.gateway = execnet.makegateway()
         self.config = config = self.testdir.parseconfigure()
         putevent = self.use_callback and self.events.put or None
@@ -48,13 +51,15 @@ class SlaveSetup:
             ev = EventCall(data)
             if name is None or ev.name == name:
                 return ev
-            print("skipping %s" % (ev,))
+            print("skipping %s" % (ev, ))
 
     def sendcommand(self, name, **kwargs):
         self.slp.sendcommand(name, **kwargs)
 
+
 def pytest_funcarg__slave(request):
     return SlaveSetup(request)
+
 
 def test_remoteinitconfig(testdir):
     from xdist.remote import remote_initconfig
@@ -62,6 +67,7 @@ def test_remoteinitconfig(testdir):
     config2 = remote_initconfig(config1.option.__dict__, config1.args)
     assert config2.option.__dict__ == config1.option.__dict__
     assert config2.pluginmanager.getplugin("terminal") in (-1, None)
+
 
 class TestReportSerialization:
     def test_itemreport_outcomes(self, testdir):
@@ -79,7 +85,7 @@ class TestReportSerialization:
                 py.test.xfail("hello")
         """)
         reports = reprec.getreports("pytest_runtest_logreport")
-        assert len(reports) == 17 # with setup/teardown "passed" reports
+        assert len(reports) == 17  # with setup/teardown "passed" reports
         for rep in reports:
             d = serialize_report(rep)
             check_marshallable(d)
@@ -158,7 +164,7 @@ class TestSlaveInteractor:
         ev = slave.popevent("logstart")
         assert ev.kwargs["nodeid"].endswith("test_func")
         assert len(ev.kwargs["location"]) == 3
-        ev = slave.popevent("testreport") # setup
+        ev = slave.popevent("testreport")  # setup
         ev = slave.popevent("testreport")
         assert ev.name == "testreport"
         rep = unserialize_report(ev.name, ev.kwargs['data'])
@@ -245,4 +251,3 @@ class TestSlaveInteractor:
             ("pytest_pycollect_makeitem", "name == 'test_func'"),
             ("pytest_collectreport", "report.collector.fspath == bbb"),
         ])
-

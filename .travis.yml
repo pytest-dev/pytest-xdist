@@ -25,7 +25,7 @@ env:
 
   - TESTENV=py27-pytest27-pexpect
   - TESTENV=py34-pytest27-pexpect
-  - TESTENV=py35-pytest27
+#  - TESTENV=py35-pytest27
   - TESTENV=pypy-pytest27
 
 script: tox --recreate -e $TESTENV

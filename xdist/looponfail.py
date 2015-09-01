@@ -7,23 +7,26 @@
     the controlling process which should best never happen.
 """
 
-import py, pytest
+import py
+import pytest
 import sys
 import execnet
 
+
 def pytest_addoption(parser):
     group = parser.getgroup("xdist", "distributed and subprocess testing")
-    group._addoption('-f', '--looponfail',
-           action="store_true", dest="looponfail", default=False,
-           help="run tests in subprocess, wait for modified files "
-                "and re-run failing test set until all pass.")
+    group._addoption(
+        '-f', '--looponfail',
+        action="store_true", dest="looponfail", default=False,
+        help="run tests in subprocess, wait for modified files "
+             "and re-run failing test set until all pass.")
+
 
 def pytest_cmdline_main(config):
-    
+
     if config.getoption("looponfail"):
         looponfail_main(config)
-        return 2 # looponfail only can get stop with ctrl-C anyway
-
+        return 2  # looponfail only can get stop with ctrl-C anyway
 
 
 def looponfail_main(config):
@@ -34,13 +37,15 @@ def looponfail_main(config):
         while 1:
             remotecontrol.loop_once()
             if not remotecontrol.failures and remotecontrol.wasfailing:
-                continue # the last failures passed, let's immediately rerun all
+                # the last failures passed, let's immediately rerun all
+                continue
             repr_pytest_looponfailinfo(
                 failreports=remotecontrol.failures,
                 rootdirs=rootdirs)
             statrecorder.waitonchange(checkinterval=2.0)
     except KeyboardInterrupt:
         print()
+
 
 class RemoteControl(object):
     def __init__(self, config):
@@ -62,11 +67,13 @@ class RemoteControl(object):
             raise ValueError("already have gateway %r" % self.gateway)
         self.trace("setting up slave session")
         self.gateway = self.initgateway()
-        self.channel = channel = self.gateway.remote_exec(init_slave_session,
+        self.channel = channel = self.gateway.remote_exec(
+            init_slave_session,
             args=self.config.args,
             option_dict=vars(self.config.option),
         )
         remote_outchannel = channel.receive()
+
         def write(s):
             out._file.write(s)
             out._file.flush()
@@ -102,13 +109,14 @@ class RemoteControl(object):
         result = self.runsession()
         failures, reports, collection_failed = result
         if collection_failed:
-            pass # "Collection failed, keeping previous failure set"
+            pass  # "Collection failed, keeping previous failure set"
         else:
             uniq_failures = []
             for failure in failures:
                 if failure not in uniq_failures:
                     uniq_failures.append(failure)
             self.failures = uniq_failures
+
 
 def repr_pytest_looponfailinfo(failreports, rootdirs):
     tr = py.io.TerminalWriter()
@@ -119,11 +127,12 @@ def repr_pytest_looponfailinfo(failreports, rootdirs):
                 tr.line(report, red=True)
     tr.sep("#", "waiting for changes", bold=True)
     for rootdir in rootdirs:
-        tr.line("### Watching:   %s" %(rootdir,), bold=True)
+        tr.line("### Watching:   %s" % (rootdir,), bold=True)
 
 
 def init_slave_session(channel, args, option_dict):
-    import os, sys
+    import os
+    import sys
     outchannel = channel.gateway.newchannel()
     sys.stdout = sys.stderr = outchannel.makefile('w')
     channel.send(outchannel)
@@ -136,12 +145,13 @@ def init_slave_session(channel, args, option_dict):
             newpaths.append(p)
     sys.path[:] = newpaths
 
-    #fullwidth, hasmarkup = channel.receive()
+    # fullwidth, hasmarkup = channel.receive()
     from _pytest.config import Config
     config = Config.fromdictargs(option_dict, list(args))
     config.args = args
     from xdist.looponfail import SlaveFailSession
     SlaveFailSession(config, channel).main()
+
 
 class SlaveFailSession:
     def __init__(self, config, channel):
@@ -165,7 +175,8 @@ class SlaveFailSession:
             items = session.perform_collect(self.trails or None)
         except pytest.UsageError:
             items = session.perform_collect(None)
-        hook.pytest_collection_modifyitems(session=session, config=session.config, items=items)
+        hook.pytest_collection_modifyitems(
+            session=session, config=session.config, items=items)
         hook.pytest_collection_finish(session=session)
         return True
 
@@ -183,7 +194,7 @@ class SlaveFailSession:
         try:
             command = self.channel.receive()
         except KeyboardInterrupt:
-            return # in the slave we can't do much about this
+            return  # in the slave we can't do much about this
         self.DEBUG("received", command)
         self.current_command = command
         self.config.hook.pytest_cmdline_main(config=self.config)
@@ -195,14 +206,16 @@ class SlaveFailSession:
             failreports.append(loc)
         self.channel.send((trails, failreports, self.collection_failed))
 
+
 class StatRecorder:
     def __init__(self, rootdirlist):
         self.rootdirlist = rootdirlist
         self.statcache = {}
-        self.check() # snapshot state
+        self.check()  # snapshot state
 
     def fil(self, p):
         return p.check(file=1, dotfile=0) and p.ext != ".pyc"
+
     def rec(self, p):
         return p.check(dotfile=0)
 
@@ -213,7 +226,7 @@ class StatRecorder:
                 return
             py.std.time.sleep(checkinterval)
 
-    def check(self, removepycfiles=True):
+    def check(self, removepycfiles=True):  # noqa, too complex
         changed = False
         statcache = self.statcache
         newstat = {}
@@ -227,8 +240,8 @@ class StatRecorder:
                         changed = True
                 else:
                     if oldstat:
-                       if oldstat.mtime != curstat.mtime or \
-                          oldstat.size != curstat.size:
+                        if oldstat.mtime != curstat.mtime or \
+                           oldstat.size != curstat.size:
                             changed = True
                             py.builtin.print_("# MODIFIED", path)
                             if removepycfiles and path.ext == ".py":

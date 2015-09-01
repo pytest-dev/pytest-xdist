@@ -1,8 +1,5 @@
 from xdist.dsession import (
-    DSession,
-    LoadScheduling,
-    EachScheduling,
-    report_collection_diff,
+    DSession, LoadScheduling, EachScheduling, report_collection_diff,
 )
 import py
 import pytest
@@ -10,18 +7,21 @@ import execnet
 
 XSpec = execnet.XSpec
 
+
 def run(item, node, excinfo=None):
     runner = item.config.pluginmanager.getplugin("runner")
-    rep = runner.ItemTestReport(item=item,
-        excinfo=excinfo, when="call")
+    rep = runner.ItemTestReport(item=item, excinfo=excinfo, when="call")
     rep.node = node
     return rep
 
+
 class MockGateway:
     _count = 0
+
     def __init__(self):
         self.id = str(self._count)
         self._count += 1
+
 
 class MockNode:
     def __init__(self):
@@ -35,11 +35,13 @@ class MockNode:
         self.sent.append("ALL")
 
     def shutdown(self):
-        self._shutdown=True
+        self._shutdown = True
+
 
 def dumpqueue(queue):
     while queue.qsize():
         print(queue.get())
+
 
 class TestEachScheduling:
     def test_schedule_load_simple(self):
@@ -81,6 +83,7 @@ class TestEachScheduling:
         assert sched.tests_finished()
         assert not sched.hasnodes()
 
+
 class TestLoadScheduling:
     def test_schedule_load_simple(self):
         sched = LoadScheduling(2)
@@ -115,7 +118,7 @@ class TestLoadScheduling:
         sched.addnode_collection(node1, col)
         sched.addnode_collection(node2, col)
         sched.init_distribute()
-        #assert not sched.tests_finished()
+        # assert not sched.tests_finished()
         sent1 = node1.sent
         sent2 = node2.sent
         assert sent1 == [0, 1]
@@ -149,6 +152,7 @@ class TestLoadScheduling:
         Test that LoadScheduling is reporting collection errors when
         different test ids are collected by slaves.
         """
+
         class CollectHook(object):
             """
             Dummy hook that stores collection reports.
@@ -177,7 +181,6 @@ class TestLoadScheduling:
 
 
 class TestDistReporter:
-
     @py.test.mark.xfail
     def test_rsync_printing(self, testdir, linecomp):
         config = testdir.parseconfig()
@@ -185,26 +188,26 @@ class TestDistReporter:
         rep = TerminalReporter(config, file=linecomp.stringio)
         config.pluginmanager.register(rep, "terminalreporter")
         dsession = DSession(config)
+
         class gw1:
             id = "X1"
             spec = execnet.XSpec("popen")
+
         class gw2:
             id = "X2"
             spec = execnet.XSpec("popen")
-        #class rinfo:
+        # class rinfo:
         #    version_info = (2, 5, 1, 'final', 0)
         #    executable = "hello"
         #    platform = "xyz"
         #    cwd = "qwe"
 
-        #dsession.pytest_xdist_newgateway(gw1, rinfo)
-        #linecomp.assert_contains_lines([
-        #    "*X1*popen*xyz*2.5*"
-        #])
+        # dsession.pytest_xdist_newgateway(gw1, rinfo)
+        # linecomp.assert_contains_lines([
+        #     "*X1*popen*xyz*2.5*"
+        # ])
         dsession.pytest_xdist_rsyncstart(source="hello", gateways=[gw1, gw2])
-        linecomp.assert_contains_lines([
-            "[X1,X2] rsyncing: hello",
-        ])
+        linecomp.assert_contains_lines(["[X1,X2] rsyncing: hello", ])
 
 
 def test_report_collection_diff_equal():
@@ -230,11 +233,11 @@ def test_report_collection_diff_different():
         ' bbb\n'
         '+XXX\n'
         ' ccc\n'
-        '-YYY'
-    )
+        '-YYY')
 
     msg = report_collection_diff(from_collection, to_collection, 1, 2)
     assert msg == error_message
+
 
 @pytest.mark.xfail(reason="duplicate test ids not supported yet")
 def test_pytest_issue419(testdir):

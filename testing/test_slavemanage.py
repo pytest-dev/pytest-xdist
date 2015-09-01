@@ -7,6 +7,7 @@ from xdist.slavemanage import HostRSync, NodeManager
 
 pytest_plugins = "pytester"
 
+
 def pytest_funcarg__hookrecorder(request, config):
     hookrecorder = HookRecorder(config.pluginmanager)
     if hasattr(hookrecorder, "start_recording"):
@@ -14,22 +15,31 @@ def pytest_funcarg__hookrecorder(request, config):
     request.addfinalizer(hookrecorder.finish_recording)
     return hookrecorder
 
+
 def pytest_funcarg__config(testdir):
     return testdir.parseconfig()
+
 
 def pytest_funcarg__mysetup(tmpdir):
     class mysetup:
         source = tmpdir.mkdir("source")
         dest = tmpdir.mkdir("dest")
+
     return mysetup()
+
 
 @pytest.fixture
 def slavecontroller(monkeypatch):
     class MockController(object):
-        def __init__(self, *args): pass
-        def setup(self): pass
+        def __init__(self, *args):
+            pass
+
+        def setup(self):
+            pass
+
     monkeypatch.setattr(slavemanage, 'SlaveController', MockController)
     return MockController
+
 
 class TestNodeManagerPopen:
     def test_popen_no_default_chdir(self, config):
@@ -43,7 +53,8 @@ class TestNodeManagerPopen:
         for spec in NodeManager(config, l, defaultchdir="abc").specs:
             assert spec.chdir == "abc"
 
-    def test_popen_makegateway_events(self, config, hookrecorder, slavecontroller):
+    def test_popen_makegateway_events(self, config, hookrecorder,
+                                      slavecontroller):
         hm = NodeManager(config, ["popen"] * 2)
         hm.setup_nodes(None)
         call = hookrecorder.popcall("pytest_xdist_setupnodes")
@@ -64,12 +75,16 @@ class TestNodeManagerPopen:
         hm.setup_nodes(None)
         assert len(hm.group) == 2
         for gw in hm.group:
+
             class pseudoexec:
                 args = []
+
                 def __init__(self, *args):
                     self.args.extend(args)
+
                 def waitclose(self):
                     pass
+
             gw.remote_exec = pseudoexec
         l = []
         for gw in hm.group:
@@ -95,8 +110,8 @@ class TestNodeManagerPopen:
         assert dest.join("dir1", "dir2").check()
         assert dest.join("dir1", "dir2", 'hello').check()
 
-    def test_rsync_same_popen_twice(self, config, mysetup,
-                                    hookrecorder, slavecontroller):
+    def test_rsync_same_popen_twice(self, config, mysetup, hookrecorder,
+                                    slavecontroller):
         source, dest = mysetup.source, mysetup.dest
         hm = NodeManager(config, ["popen//chdir=%s" % dest] * 2)
         hm.roots = []
@@ -110,6 +125,7 @@ class TestNodeManagerPopen:
         assert call.gateways[0] in hm.group
         call = hookrecorder.popcall("pytest_xdist_rsyncfinish")
 
+
 class TestHRSync:
     def test_hrsync_filter(self, mysetup):
         source, _ = mysetup.source, mysetup.dest  # noqa
@@ -118,8 +134,7 @@ class TestHRSync:
         source.ensure(".somedotfile", "moreentries")
         source.ensure("somedir", "editfile~")
         syncer = HostRSync(source, ignores=NodeManager.DEFAULT_IGNORES)
-        l = list(source.visit(rec=syncer.filter,
-                                   fil=syncer.filter))
+        l = list(source.visit(rec=syncer.filter, fil=syncer.filter))
         assert len(l) == 3
         basenames = [x.basename for x in l]
         assert 'dir' in basenames
@@ -145,7 +160,7 @@ class TestNodeManager:
         mysetup.source.ensure("dir1", "file1").write("hello")
         config = testdir.parseconfig(mysetup.source)
         nodemanager = NodeManager(config, ["popen//chdir=%s" % mysetup.dest])
-        #assert nodemanager.config.topdir == source == config.topdir
+        # assert nodemanager.config.topdir == source == config.topdir
         nodemanager.makegateways()
         nodemanager.rsync_roots()
         p, = nodemanager.gwmanager.multi_exec(
@@ -164,10 +179,8 @@ class TestNodeManager:
         for rsyncroot in (dir1, source):
             dest.remove()
             nodemanager = NodeManager(testdir.parseconfig(
-                "--tx", "popen//chdir=%s" % dest,
-                "--rsyncdir", rsyncroot,
-                source,
-            ))
+                "--tx", "popen//chdir=%s" % dest, "--rsyncdir", rsyncroot,
+                source, ))
             nodemanager.setup_nodes(None)  # calls .rsync_roots()
             if rsyncroot == source:
                 dest = dest.join("source")
@@ -230,7 +243,8 @@ class TestNodeManager:
             assert not gwspec.chdir
 
     def test_ssh_setup_nodes(self, specssh, testdir):
-        testdir.makepyfile(__init__="", test_x="""
+        testdir.makepyfile(__init__="",
+                           test_x="""
             def test_one():
                 pass
         """)

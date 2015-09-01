@@ -10,9 +10,7 @@ class TestDistribution:
         """)
         result = testdir.runpytest(p1, "-n1")
         assert result.ret == 0
-        result.stdout.fnmatch_lines([
-            "*1 passed*",
-        ])
+        result.stdout.fnmatch_lines(["*1 passed*", ])
 
     def test_n1_fail(self, testdir):
         p1 = testdir.makepyfile("""
@@ -21,9 +19,7 @@ class TestDistribution:
         """)
         result = testdir.runpytest(p1, "-n1")
         assert result.ret == 1
-        result.stdout.fnmatch_lines([
-            "*1 failed*",
-        ])
+        result.stdout.fnmatch_lines(["*1 failed*", ])
 
     def test_n1_import_error(self, testdir):
         p1 = testdir.makepyfile("""
@@ -57,9 +53,7 @@ class TestDistribution:
         """)
         result = testdir.runpytest(p1, "-n1")
         assert result.ret == 0
-        result.stdout.fnmatch_lines([
-            "*1 skipped*",
-        ])
+        result.stdout.fnmatch_lines(["*1 skipped*", ])
 
     def test_manytests_to_one_import_error(self, testdir):
         p1 = testdir.makepyfile("""
@@ -84,8 +78,7 @@ class TestDistribution:
                     pass
                 def test_skip():
                     py.test.skip("hello")
-            """,
-        )
+            """, )
         result = testdir.runpytest(p1, "-v", '-d', '--tx=popen', '--tx=popen')
         result.stdout.fnmatch_lines([
             "*1*Python*",
@@ -115,9 +108,7 @@ class TestDistribution:
         """ % str(testdir.tmpdir))
         result = testdir.runpytest_subprocess(p1, "-n1")
         assert result.ret == 0
-        result.stdout.fnmatch_lines([
-            "*1 passed*",
-        ])
+        result.stdout.fnmatch_lines(["*1 passed*", ])
 
     def test_dist_ini_specified(self, testdir):
         p1 = testdir.makepyfile("""
@@ -130,8 +121,7 @@ class TestDistribution:
                     pass
                 def test_skip():
                     py.test.skip("hello")
-            """,
-        )
+            """, )
         testdir.makeini("""
             [pytest]
             addopts = --tx=3*popen
@@ -163,13 +153,10 @@ class TestDistribution:
                     import os
                     time.sleep(0.5)
                     os.kill(os.getpid(), 15)
-            """
-        )
+            """)
         result = testdir.runpytest(p1, "-v", '-d', '-n1')
         result.stdout.fnmatch_lines([
-            "*Python*",
-            "*PASS**test_ok*",
-            "*node*down*",
+            "*Python*", "*PASS**test_ok*", "*node*down*",
             "*3 failed, 1 passed, 1 skipped*"
         ])
         assert result.ret == 1
@@ -182,13 +169,13 @@ class TestDistribution:
         p = subdir.join("test_one.py")
         p.write("def test_5():\n  assert not __file__.startswith(%r)" % str(p))
         result = testdir.runpytest("-v", "-d",
-            "--rsyncdir=%(subdir)s" % locals(),
-            "--tx=popen//chdir=%(dest)s" % locals(), p)
+                                   "--rsyncdir=%(subdir)s" % locals(),
+                                   "--tx=popen//chdir=%(dest)s" % locals(), p)
         assert result.ret == 0
         result.stdout.fnmatch_lines([
             "*0* *cwd*",
-            #"RSyncStart: [G1]",
-            #"RSyncFinished: [G1]",
+            # "RSyncStart: [G1]",
+            # "RSyncFinished: [G1]",
             "*1 passed*"
         ])
         assert dest.join(subdir.basename).check(dir=1)
@@ -221,14 +208,13 @@ class TestDistribution:
         p1 = testdir.makepyfile("def test_func(): pass")
         result = testdir.runpytest("-v", p1, '-d', '--tx=popen')
         result.stdout.fnmatch_lines([
-            "*0*Python*",
-            "*calculated result is 49*",
-            "*1 passed*"
+            "*0*Python*", "*calculated result is 49*", "*1 passed*"
         ])
         assert result.ret == 0
 
     def test_keyboardinterrupt_hooks_issue79(self, testdir):
-        testdir.makepyfile(__init__="", test_one="""
+        testdir.makepyfile(__init__="",
+                           test_one="""
             def test_hello():
                 raise KeyboardInterrupt()
         """)
@@ -258,11 +244,12 @@ class TestDistribution:
         """)
         child = testdir.spawn_pytest("-n1 -v")
         child.expect(".*test_sleep.*")
-        child.kill(2) # keyboard interrupt
+        child.kill(2)  # keyboard interrupt
         child.expect(".*KeyboardInterrupt.*")
-        #child.expect(".*seconds.*")
+        # child.expect(".*seconds.*")
         child.close()
-        #assert ret == 2
+        # assert ret == 2
+
 
 class TestDistEach:
     def test_simple(self, testdir):
@@ -270,11 +257,13 @@ class TestDistEach:
             def test_hello():
                 pass
         """)
-        result = testdir.runpytest_subprocess("--debug", "--dist=each", "--tx=2*popen")
+        result = testdir.runpytest_subprocess("--debug", "--dist=each",
+                                              "--tx=2*popen")
         assert not result.ret
         result.stdout.fnmatch_lines(["*2 pass*"])
 
-    @py.test.mark.xfail(run=False,
+    @py.test.mark.xfail(
+        run=False,
         reason="other python versions might not have py.test installed")
     def test_simple_diffoutput(self, testdir):
         interpreters = []
@@ -284,7 +273,8 @@ class TestDistEach:
                 py.test.skip("%s not found" % name)
             interpreters.append(interp)
 
-        testdir.makepyfile(__init__="", test_one="""
+        testdir.makepyfile(__init__="",
+                           test_one="""
             import sys
             def test_hello():
                 print("%s...%s" % sys.version_info[:2])
@@ -297,6 +287,7 @@ class TestDistEach:
         s = result.stdout.str()
         assert "2...5" in s
         assert "2...6" in s
+
 
 class TestTerminalReporting:
     def test_pass_skip_fail(self, testdir):
@@ -335,6 +326,7 @@ class TestTerminalReporting:
             "E       assert 0",
         ])
 
+
 def test_teardownfails_one_function(testdir):
     p = testdir.makepyfile("""
         def test_func():
@@ -344,9 +336,9 @@ def test_teardownfails_one_function(testdir):
     """)
     result = testdir.runpytest(p, '-n1', '--tx=popen')
     result.stdout.fnmatch_lines([
-        "*def teardown_function(function):*",
-        "*1 passed*1 error*"
+        "*def teardown_function(function):*", "*1 passed*1 error*"
     ])
+
 
 @py.test.mark.xfail
 def test_terminate_on_hangingnode(testdir):
@@ -358,9 +350,7 @@ def test_terminate_on_hangingnode(testdir):
     """)
     result = testdir.runpytest(p, '--dist=each', '--tx=popen//id=my')
     assert result.duration < 2.0
-    result.stdout.fnmatch_lines([
-        "*killed*my*",
-    ])
+    result.stdout.fnmatch_lines(["*killed*my*", ])
 
 
 def test_auto_detect_cpus(testdir, monkeypatch):
@@ -400,10 +390,7 @@ def test_session_hooks(testdir):
             assert hasattr(sys, 'pytestsessionhooks')
     """)
     result = testdir.runpytest(p, "--dist=each", "--tx=popen")
-    result.stdout.fnmatch_lines([
-        "*ValueError*",
-        "*1 passed*",
-    ])
+    result.stdout.fnmatch_lines(["*ValueError*", "*1 passed*", ])
     assert not result.ret
     d = result.parseoutcomes()
     assert d['passed'] == 1
@@ -445,12 +432,10 @@ def test_funcarg_teardown_failure(testdir):
         def test_hello(myarg):
             pass
     """)
-    result = testdir.runpytest_subprocess("--debug", p) # , "-n1")
-    result.stdout.fnmatch_lines([
-        "*ValueError*42*",
-        "*1 passed*1 error*",
-    ])
+    result = testdir.runpytest_subprocess("--debug", p)  # , "-n1")
+    result.stdout.fnmatch_lines(["*ValueError*42*", "*1 passed*1 error*", ])
     assert result.ret
+
 
 def test_crashing_item(testdir):
     p = testdir.makepyfile("""
@@ -463,10 +448,8 @@ def test_crashing_item(testdir):
     """)
     result = testdir.runpytest("-n2", p)
     result.stdout.fnmatch_lines([
-        "*crashed*test_crash*",
-        "*1 failed*1 passed*"
+        "*crashed*test_crash*", "*1 failed*1 passed*"
     ])
-
 
 
 def test_skipping(testdir):
@@ -477,10 +460,8 @@ def test_skipping(testdir):
     """)
     result = testdir.runpytest("-n1", '-rs', p)
     assert result.ret == 0
-    result.stdout.fnmatch_lines([
-        "*hello*",
-        "*1 skipped*"
-    ])
+    result.stdout.fnmatch_lines(["*hello*", "*1 skipped*"])
+
 
 def test_issue34_pluginloading_in_subprocess(testdir):
     testdir.tmpdir.join("plugin123.py").write(py.code.Source("""
@@ -494,9 +475,7 @@ def test_issue34_pluginloading_in_subprocess(testdir):
     """)
     result = testdir.runpytest_subprocess("-n1", "-p", "plugin123")
     assert result.ret == 0
-    result.stdout.fnmatch_lines([
-        "*1 passed*",
-    ])
+    result.stdout.fnmatch_lines(["*1 passed*", ])
 
 
 def test_fixture_scope_caching_issue503(testdir):
@@ -505,7 +484,8 @@ def test_fixture_scope_caching_issue503(testdir):
 
             @pytest.fixture(scope='session')
             def fix():
-                assert fix.counter == 0, 'session fixture was invoked multiple times'
+                assert fix.counter == 0, \
+                    'session fixture was invoked multiple times'
                 fix.counter += 1
             fix.counter = 0
 
@@ -517,9 +497,7 @@ def test_fixture_scope_caching_issue503(testdir):
     """)
     result = testdir.runpytest(p1, '-v', '-n1')
     assert result.ret == 0
-    result.stdout.fnmatch_lines([
-    "*2 passed*",
-    ])
+    result.stdout.fnmatch_lines(["*2 passed*", ])
 
 
 def test_issue_594_random_parametrize(testdir):
@@ -545,7 +523,6 @@ def test_issue_594_random_parametrize(testdir):
 
 
 class TestNodeFailure:
-
     def test_load_single(self, testdir):
         f = testdir.makepyfile("""
             import os
@@ -616,7 +593,6 @@ class TestNodeFailure:
             "*Slave*crashed while running*",
             "*2 failed*2 passed*",
         ])
-
 
     def test_disable_restart(self, testdir):
         f = testdir.makepyfile("""

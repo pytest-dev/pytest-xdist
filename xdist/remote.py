@@ -6,7 +6,9 @@
     needs not to be installed in remote environments.
 """
 
-import sys, os
+import sys
+import os
+
 
 class SlaveInteractor:
     def __init__(self, config, channel):
@@ -72,7 +74,8 @@ class SlaveInteractor:
             nextitem=nextitem)
 
     def pytest_collection_finish(self, session):
-        self.sendevent("collectionfinish",
+        self.sendevent(
+            "collectionfinish",
             topdir=str(session.fspath),
             ids=[item.nodeid for item in session.items])
 
@@ -89,6 +92,7 @@ class SlaveInteractor:
         data = serialize_report(report)
         self.sendevent("collectreport", data=data)
 
+
 def serialize_report(rep):
     import py
     d = rep.__dict__.copy()
@@ -100,19 +104,21 @@ def serialize_report(rep):
         if isinstance(d[name], py.path.local):
             d[name] = str(d[name])
         elif name == "result":
-            d[name] = None # for now
+            d[name] = None  # for now
     return d
+
 
 def getinfodict():
     import platform
     return dict(
-        version = sys.version,
-        version_info = tuple(sys.version_info),
-        sysplatform = sys.platform,
-        platform = platform.platform(),
-        executable = sys.executable,
-        cwd = os.getcwd(),
+        version=sys.version,
+        version_info=tuple(sys.version_info),
+        sysplatform=sys.platform,
+        platform=platform.platform(),
+        executable=sys.executable,
+        cwd=os.getcwd(),
     )
+
 
 def remote_initconfig(option_dict, args):
     from _pytest.config import Config
@@ -131,14 +137,15 @@ if __name__ == '__channelexec__':
     channel = channel  # noqa
     # python3.2 is not concurrent import safe, so let's play it safe
     # https://bitbucket.org/hpk42/pytest/issue/347/pytest-xdist-and-python-32
-    if sys.version_info[:2] == (3,2):
+    if sys.version_info[:2] == (3, 2):
         os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
-    slaveinput,args,option_dict = channel.receive()
+    slaveinput, args, option_dict = channel.receive()
     importpath = os.getcwd()
-    sys.path.insert(0, importpath) # XXX only for remote situations
-    os.environ['PYTHONPATH'] = (importpath + os.pathsep +
+    sys.path.insert(0, importpath)  # XXX only for remote situations
+    os.environ['PYTHONPATH'] = (
+        importpath + os.pathsep +
         os.environ.get('PYTHONPATH', ''))
-    #os.environ['PYTHONPATH'] = importpath
+    # os.environ['PYTHONPATH'] = importpath
     import py
     config = remote_initconfig(option_dict, args)
     config.slaveinput = slaveinput

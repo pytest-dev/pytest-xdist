@@ -2,6 +2,7 @@ import py
 from xdist.looponfail import RemoteControl
 from xdist.looponfail import StatRecorder
 
+
 class TestStatRecorder:
     def test_filechange(self, tmpdir):
         tmp = tmpdir
@@ -87,6 +88,7 @@ class TestStatRecorder:
         sd.waitonchange(checkinterval=0.2)
         assert not l
 
+
 class TestRemoteControl:
     def test_nofailures(self, testdir):
         item = testdir.getitem("def test_func(): pass\n")
@@ -136,12 +138,13 @@ class TestRemoteControl:
         parent = modcol.fspath.dirpath().dirpath()
         parent.chdir()
         modcol.config.args = [py.path.local(x).relto(parent)
-                                for x in modcol.config.args]
+                              for x in modcol.config.args]
         control = RemoteControl(modcol.config)
         control.loop_once()
         assert control.failures
         control.loop_once()
         assert control.failures
+
 
 class TestLooponFailing:
     def test_looponfail_from_fail_to_ok(self, testdir):
@@ -225,7 +228,7 @@ class TestLooponFailing:
         def runsession_dups():
             # twisted.trial test cases may report multiple errors.
             failures, reports, collection_failed = orig_runsession()
-            print (failures)
+            print(failures)
             return failures * 2, reports, collection_failed
 
         monkeypatch.setattr(remotecontrol, 'runsession', runsession_dups)
@@ -240,8 +243,8 @@ class TestFunctional:
                 x = 0
                 assert x == 1
         """)
-        #p = testdir.mkdir("sub").join(p1.basename)
-        #p1.move(p)
+        # p = testdir.mkdir("sub").join(p1.basename)
+        # p1.move(p)
         child = testdir.spawn_pytest("-f %s --traceconfig" % p)
         child.expect("def test_one")
         child.expect("x == 1")
@@ -269,6 +272,7 @@ class TestFunctional:
         child.expect("waiting for changes")
         child.kill(15)
 
+
 def removepyc(path):
     # XXX damn those pyc files
     pyc = path + "c"
@@ -277,4 +281,3 @@ def removepyc(path):
     c = path.dirpath("__pycache__")
     if c.check():
         c.remove()
-

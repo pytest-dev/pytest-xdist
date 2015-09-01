@@ -257,8 +257,9 @@ class LoadScheduling:
         assert node in self.node2pending
         if self.collection_is_completed:
             # A new node has been added later, perhaps an original one died.
-            assert self.collection  # .init_distribute() should have
-                                    # been called by now
+            # .init_distribute() should have
+            # been called by now
+            assert self.collection
             if collection != self.collection:
                 other_node = next(iter(self.node2collection.keys()))
                 msg = report_collection_diff(self.collection,
@@ -398,8 +399,9 @@ class LoadScheduling:
                 same_collection = False
                 self.log(msg)
                 if self.config is not None:
-                    rep = CollectReport(node.gateway.id, 'failed', longrepr=msg,
-                                        result=[])
+                    rep = CollectReport(
+                        node.gateway.id, 'failed',
+                        longrepr=msg, result=[])
                     self.config.hook.pytest_collectreport(report=rep)
 
         return same_collection
@@ -641,7 +643,7 @@ class DSession:
         """
         if rep.when == "call" or (rep.when == "setup" and not rep.passed):
             self.sched.remove_item(node, rep.item_index, rep.duration)
-        #self.report_line("testreport %s: %s" %(rep.id, rep.status))
+        # self.report_line("testreport %s: %s" %(rep.id, rep.status))
         rep.node = node
         self.config.hook.pytest_runtest_logreport(report=rep)
         self._handlefailures(rep)
@@ -719,8 +721,8 @@ class TerminalDistReporter:
             self.rewrite(self.getstatus())
 
     def getstatus(self):
-        parts = ["%s %s" %(spec.id, self._status[spec.id])
-                   for spec in self._specs]
+        parts = ["%s %s" % (spec.id, self._status[spec.id])
+                 for spec in self._specs]
         return " / ".join(parts)
 
     def rewrite(self, line, newline=False):
@@ -751,7 +753,7 @@ class TerminalDistReporter:
     def pytest_testnodeready(self, node):
         if self.config.option.verbose > 0:
             d = node.slaveinfo
-            infoline = "[%s] Python %s" %(
+            infoline = "[%s] Python %s" % (
                 d['id'],
                 d['version'].replace('\n', ' -- '),)
             self.rewrite(infoline, newline=True)
@@ -760,13 +762,12 @@ class TerminalDistReporter:
     def pytest_testnodedown(self, node, error):
         if not error:
             return
-        self.write_line("[%s] node down: %s" %(node.gateway.id, error))
+        self.write_line("[%s] node down: %s" % (node.gateway.id, error))
 
-    #def pytest_xdist_rsyncstart(self, source, gateways):
+    # def pytest_xdist_rsyncstart(self, source, gateways):
     #    targets = ",".join([gw.id for gw in gateways])
     #    msg = "[%s] rsyncing: %s" %(targets, source)
     #    self.write_line(msg)
-    #def pytest_xdist_rsyncfinish(self, source, gateways):
+    # def pytest_xdist_rsyncfinish(self, source, gateways):
     #    targets = ", ".join(["[%s]" % gw.id for gw in gateways])
     #    self.write_line("rsyncfinish: %s -> %s" %(source, targets))
-

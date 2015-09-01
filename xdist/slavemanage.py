@@ -1,16 +1,19 @@
 import fnmatch
 import os
+import re
 
 import py
 import pytest
 import execnet
 import xdist.remote
 
-from _pytest import runner # XXX load dynamically
+from _pytest import runner  # XXX load dynamically
+
 
 class NodeManager(object):
     EXIT_TIMEOUT = 10
     DEFAULT_IGNORES = ['.*', '*.pyc', '*.pyo', '*~']
+
     def __init__(self, config, specs=None, defaultchdir="pyexecnetcache"):
         self.config = config
         self._nodesready = py.std.threading.Event()
@@ -79,11 +82,12 @@ class NodeManager(object):
                 break
         else:
             return []
-        import pytest, _pytest
+        import pytest
+        import _pytest
         pytestpath = pytest.__file__.rstrip("co")
         pytestdir = py.path.local(_pytest.__file__).dirpath()
         config = self.config
-        candidates = [py._pydir,pytestpath,pytestdir]
+        candidates = [py._pydir, pytestpath, pytestdir]
         candidates += config.option.rsyncdir
         rsyncroots = config.getini("rsyncdirs")
         if rsyncroots:
@@ -92,7 +96,7 @@ class NodeManager(object):
         for root in candidates:
             root = py.path.local(root).realpath()
             if not root.check():
-                raise pytest.UsageError("rsyncdir doesn't exist: %r" %(root,))
+                raise pytest.UsageError("rsyncdir doesn't exist: %r" % (root,))
             if root not in roots:
                 roots.append(root)
         return roots
@@ -124,6 +128,7 @@ class NodeManager(object):
             return
         if (spec, source) in self._rsynced_specs:
             return
+
         def finished():
             if notify:
                 notify("rsyncrootready", spec, source)
@@ -139,19 +144,23 @@ class NodeManager(object):
             gateways=[gateway],
         )
 
+
 class HostRSync(execnet.RSync):
     """ RSyncer that filters out common files
     """
     def __init__(self, sourcedir, *args, **kwargs):
         self._synced = {}
-        self._ignores = kwargs.pop('ignores', None) or []
+        self._ignores = []
+        ignores = kwargs.pop('ignores', None) or []
+        for x in ignores:
+            x = getattr(x, 'strpath', x)
+            self.ignores.append(re.compile(fnmatch.translate(x)))
         super(HostRSync, self).__init__(sourcedir=sourcedir, **kwargs)
 
     def filter(self, path):
         path = py.path.local(path)
-        for x in self._ignores:
-            x = getattr(x, 'strpath', x)
-            if fnmatch.fnmatch(path.basename, x) or fnmatch.fnmatch(path.strpath, x):
+        for check in self._ignores:
+            if check(path.basename) or check(path.strpath):
                 return False
         else:
             return True
@@ -187,6 +196,7 @@ def make_reltoroot(roots, args):
         l.append(splitcode.join(parts))
     return l
 
+
 class SlaveController(object):
     ENDMARK = -1
 
@@ -202,7 +212,7 @@ class SlaveController(object):
             py.log.setconsumer(self.log._keywords, None)
 
     def __repr__(self):
-        return "<%s %s>" %(self.__class__.__name__, self.gateway.id,)
+        return "<%s %s>" % (self.__class__.__name__, self.gateway.id,)
 
     def setup(self):
         self.log("setting up slave session")
@@ -219,7 +229,8 @@ class SlaveController(object):
         self.channel = self.gateway.remote_exec(xdist.remote)
         self.channel.send((self.slaveinput, args, option_dict))
         if self.putevent:
-            self.channel.setcallback(self.process_from_remote,
+            self.channel.setcallback(
+                self.process_from_remote,
                 endmarker=self.ENDMARK)
 
     def ensure_teardown(self):
@@ -227,11 +238,11 @@ class SlaveController(object):
             if not self.channel.isclosed():
                 self.log("closing", self.channel)
                 self.channel.close()
-            #del self.channel
+            # del self.channel
         if hasattr(self, 'gateway'):
             self.log("exiting", self.gateway)
             self.gateway.exit()
-            #del self.gateway
+            # del self.gateway
 
     def send_runtest_some(self, indices):
         self.sendcommand("runtests", indices=indices)
@@ -255,7 +266,7 @@ class SlaveController(object):
         self.log("queuing %s(**%s)" % (eventname, kwargs))
         self.putevent((eventname, kwargs))
 
-    def process_from_remote(self, eventcall):
+    def process_from_remote(self, eventcall):  # noqa too complex
         """ this gets called for each object we receive from
             the other side and if the channel closes.
 
@@ -268,13 +279,13 @@ class SlaveController(object):
                 err = self.channel._getremoteerror()
                 if not self._down:
                     if not err or isinstance(err, EOFError):
-                        err = "Not properly terminated" # lost connection?
+                        err = "Not properly terminated"  # lost connection?
                     self.notify_inproc("errordown", node=self, error=err)
                     self._down = True
                 return
             eventname, kwargs = eventcall
             if eventname in ("collectionstart"):
-                self.log("ignoring %s(%s)" %(eventname, kwargs))
+                self.log("ignoring %s(%s)" % (eventname, kwargs))
             elif eventname == "slaveready":
                 self.notify_inproc(eventname, node=self, **kwargs)
             elif eventname == "slavefinished":
@@ -283,7 +294,8 @@ class SlaveController(object):
                 self.notify_inproc("slavefinished", node=self)
             elif eventname == "logstart":
                 self.notify_inproc(eventname, node=self, **kwargs)
-            elif eventname in ("testreport", "collectreport", "teardownreport"):
+            elif eventname in (
+                    "testreport", "collectreport", "teardownreport"):
                 item_index = kwargs.pop("item_index", None)
                 rep = unserialize_report(eventname, kwargs['data'])
                 if item_index is not None:
@@ -292,7 +304,7 @@ class SlaveController(object):
             elif eventname == "collectionfinish":
                 self.notify_inproc(eventname, node=self, ids=kwargs['ids'])
             else:
-                raise ValueError("unknown event: %s" %(eventname,))
+                raise ValueError("unknown event: %s" % (eventname,))
         except KeyboardInterrupt:
             # should not land in receiver-thread
             raise
@@ -300,6 +312,7 @@ class SlaveController(object):
             excinfo = py.code.ExceptionInfo()
             py.builtin.print_("!" * 20, excinfo)
             self.config.pluginmanager.notify_exception(excinfo)
+
 
 def unserialize_report(name, reportdict):
     if name == "testreport":

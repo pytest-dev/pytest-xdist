@@ -3,15 +3,16 @@ from setuptools import setup
 setup(
     name="pytest-xdist",
     use_scm_version={'write_to': 'xdist/_version.py'},
-    description='py.test xdist plugin for distributed testing and loop-on-failing modes',
+    description='py.test xdist plugin for distributed testing'
+                ' and loop-on-failing modes',
     long_description=open('README.rst').read(),
     license='MIT',
     author='holger krekel and contributors',
     author_email='pytest-dev@python.org,holger@merlinux.eu',
     url='http://bitbucket.org/hpk42/pytest-xdist',
     platforms=['linux', 'osx', 'win32'],
-    packages = ['xdist'],
-    entry_points = {
+    packages=['xdist'],
+    entry_points={
         'pytest11': [
             'xdist = xdist.plugin',
             'xdist.looponfail = xdist.looponfail',
