@@ -2,7 +2,7 @@
 .. image:: https://travis-ci.org/pytest-dev/pytest-xdist.svg?branch=master
     :target: https://travis-ci.org/pytest-dev/pytest-xdist
 
-.. image:: https://pypip.in/v/pytest-xdist/badge.png
+.. image:: http://img.shields.io/pypi/v/pytest-xdist.svg
    :target: https://pypi.python.org/pypi/pytest-xdist
 
 xdist: pytest distributed testing plugin
