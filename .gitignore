@@ -22,10 +22,11 @@ dist/
 include/
 lib/
 bin/
-xdist/_version.py
+xdist/_version.py*
 pytest_xdist.egg-info
 issue/
 3rdparty/
 pytestdebug.log
-.tox
-.cache
+.tox/
+.cache/
+.eggs/
