@@ -1,5 +1,6 @@
-.. image:: https://drone.io/bitbucket.org/pytest-dev/pytest-xdist/status.png
-   :target: https://drone.io/bitbucket.org/pytest-dev/pytest-xdist/latest
+
+.. image:: https://travis-ci.org/pytest-dev/pytest-xdist.svg?branch=master
+    :target: https://travis-ci.org/pytest-dev/pytest-xdist
 
 .. image:: https://pypip.in/v/pytest-xdist/badge.png
    :target: https://pypi.python.org/pypi/pytest-xdist
