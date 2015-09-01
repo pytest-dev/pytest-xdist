@@ -9,7 +9,7 @@ setup(
     license='MIT',
     author='holger krekel and contributors',
     author_email='pytest-dev@python.org,holger@merlinux.eu',
-    url='http://bitbucket.org/hpk42/pytest-xdist',
+    url='https://github.com/pytest-dev/pytest-xdist',
     platforms=['linux', 'osx', 'win32'],
     packages=['xdist'],
     entry_points={
