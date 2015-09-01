@@ -154,13 +154,13 @@ class HostRSync(execnet.RSync):
         ignores = kwargs.pop('ignores', None) or []
         for x in ignores:
             x = getattr(x, 'strpath', x)
-            self.ignores.append(re.compile(fnmatch.translate(x)))
+            self._ignores.append(re.compile(fnmatch.translate(x)))
         super(HostRSync, self).__init__(sourcedir=sourcedir, **kwargs)
 
     def filter(self, path):
         path = py.path.local(path)
-        for check in self._ignores:
-            if check(path.basename) or check(path.strpath):
+        for cre in self._ignores:
+            if cre.match(path.basename) or cre.match(path.strpath):
                 return False
         else:
             return True
