@@ -176,7 +176,7 @@ environment this command will send each tests to all
 platforms - and report back failures from all platforms
 at once.   The specifications strings use the `xspec syntax`_.
 
-.. _`xspec syntax`: http://codespeak.net/execnet/trunk/basics.html#xspec
+.. _`xspec syntax`: http://codespeak.net/execnet/basics.html#xspec
 
 .. _`socketserver.py`: http://bitbucket.org/hpk42/execnet/raw/2af991418160/execnet/script/socketserver.py
 
@@ -217,10 +217,11 @@ These directory specifications are relative to the directory
 where the configuration file was found.
 
 .. _`pytest-xdist`: http://pypi.python.org/pypi/pytest-xdist
-.. _`pytest-xdist repository`: http://bitbucket.org/pytest-dev/pytest-xdist
+.. _`pytest-xdist repository`: https://github.com/pytest-dev/pytest-xdist
 .. _`pytest`: http://pytest.org
 
 Issue and Bug Tracker
 ------------------------
 
-Please use the pytest issue tracker for bugs in this plugin, see https://bitbucket.org/hpk42/pytest/issues .
+Please use the `pytest issue tracker <https://github.com/pytest-dev/pytest/issues>`_
+for reporting bugs in this plugin.
