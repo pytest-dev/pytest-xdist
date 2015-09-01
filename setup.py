@@ -24,7 +24,6 @@ setup(
         'pytest11': [
             'xdist = xdist.plugin',
             'xdist.looponfail = xdist.looponfail',
-            'xdist.boxed = xdist.boxed',
         ],
     },
     zip_safe=False,
