@@ -4,8 +4,15 @@ import pytest
 
 def parse_numprocesses(s):
     if s == 'auto':
-        import multiprocessing
-        return multiprocessing.cpu_count()
+        try:
+            from os import cpu_count
+        except ImportError:
+            from multiprocessing import cpu_count
+        try:
+            n = cpu_count()
+        except NotImplementedError:
+            return 1
+        return n if n else 1
     else:
         return int(s)
 
