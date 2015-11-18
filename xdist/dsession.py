@@ -1,4 +1,5 @@
 import difflib
+import itertools
 from _pytest.runner import CollectReport
 
 import pytest
@@ -289,6 +290,9 @@ class LoadScheduling:
         ``duration`` of the last test is optionally used as a
         heuristic to influence how many tests the node is assigned.
         """
+        if node.shutting_down:
+            return
+
         if self.pending:
             # how many nodes do we have?
             num_nodes = len(self.node2pending)
@@ -363,13 +367,21 @@ class LoadScheduling:
         if not self.collection:
             return
 
-        # how many items per node do we have about?
-        items_per_node = len(self.collection) // len(self.node2pending)
-        # take a fraction of tests for initial distribution
-        node_chunksize = max(items_per_node // 4, 2)
-        # and initialize each node with a chunk of tests
-        for node in self.nodes:
-            self._send_tests(node, node_chunksize)
+        # Send a batch of tests to run. If we don't have at least two
+        # tests per node, we have to send them all so that we can send
+        # shutdown signals and get all nodes working.
+        initial_batch = max(len(self.pending) // 4,
+                            2 * len(self.nodes))
+
+        # distribute tests round-robin up to the batch size (or until we run out)
+        nodes = itertools.cycle(self.nodes)
+        for i in xrange(initial_batch):
+            self._send_tests(nodes.next(), 1)
+
+        if not self.pending:
+            # initial distribution sent all tests, start node shutdown
+            for node in self.nodes:
+                node.shutdown()
 
     def _send_tests(self, node, num):
         tests_per_node = self.pending[:num]

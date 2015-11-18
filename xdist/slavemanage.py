@@ -207,12 +207,17 @@ class SlaveController(object):
         self.config = config
         self.slaveinput = {'slaveid': gateway.id}
         self._down = False
+        self._shutdown_sent = False
         self.log = py.log.Producer("slavectl-%s" % gateway.id)
         if not self.config.option.debug:
             py.log.setconsumer(self.log._keywords, None)
 
     def __repr__(self):
         return "<%s %s>" % (self.__class__.__name__, self.gateway.id,)
+
+    @property
+    def shutting_down(self):
+        return self._down or self._shutdown_sent
 
     def setup(self):
         self.log("setting up slave session")
@@ -256,6 +261,7 @@ class SlaveController(object):
                 self.sendcommand("shutdown")
             except IOError:
                 pass
+            self._shutdown_sent = True
 
     def sendcommand(self, name, **kwargs):
         """ send a named parametrized command to the other side. """
