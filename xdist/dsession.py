@@ -373,10 +373,11 @@ class LoadScheduling:
         initial_batch = max(len(self.pending) // 4,
                             2 * len(self.nodes))
 
-        # distribute tests round-robin up to the batch size (or until we run out)
+        # distribute tests round-robin up to the batch size
+        # (or until we run out)
         nodes = itertools.cycle(self.nodes)
         for i in range(initial_batch):
-            self._send_tests(nodes.next(), 1)
+            self._send_tests(next(nodes), 1)
 
         if not self.pending:
             # initial distribution sent all tests, start node shutdown
