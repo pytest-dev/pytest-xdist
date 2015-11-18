@@ -375,7 +375,7 @@ class LoadScheduling:
 
         # distribute tests round-robin up to the batch size (or until we run out)
         nodes = itertools.cycle(self.nodes)
-        for i in xrange(initial_batch):
+        for i in range(initial_batch):
             self._send_tests(nodes.next(), 1)
 
         if not self.pending:
