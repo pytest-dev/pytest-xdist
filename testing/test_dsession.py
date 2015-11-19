@@ -27,6 +27,7 @@ class MockNode:
     def __init__(self):
         self.sent = []
         self.gateway = MockGateway()
+        self._shutdown = False
 
     def send_runtest_some(self, indices):
         self.sent.extend(indices)
@@ -36,6 +37,10 @@ class MockNode:
 
     def shutdown(self):
         self._shutdown = True
+
+    @property
+    def shutting_down(self):
+        return self._shutdown
 
 
 def dumpqueue(queue):
@@ -100,16 +105,15 @@ class TestLoadScheduling:
         assert sched.node2collection[node2] == collection
         sched.init_distribute()
         assert not sched.pending
-        assert not sched.tests_finished()
-        assert len(node1.sent) == 2
-        assert len(node2.sent) == 0
-        assert node1.sent == [0, 1]
+        assert sched.tests_finished()
+        assert len(node1.sent) == 1
+        assert len(node2.sent) == 1
+        assert node1.sent == [0]
+        assert node2.sent == [1]
         sched.remove_item(node1, node1.sent[0])
         assert sched.tests_finished()
-        sched.remove_item(node1, node1.sent[1])
-        assert sched.tests_finished()
 
-    def test_init_distribute_chunksize(self):
+    def test_init_distribute_batch_size(self):
         sched = LoadScheduling(2)
         sched.addnode(MockNode())
         sched.addnode(MockNode())
@@ -121,18 +125,56 @@ class TestLoadScheduling:
         # assert not sched.tests_finished()
         sent1 = node1.sent
         sent2 = node2.sent
-        assert sent1 == [0, 1]
-        assert sent2 == [2, 3]
+        assert sent1 == [0, 2]
+        assert sent2 == [1, 3]
         assert sched.pending == [4, 5]
         assert sched.node2pending[node1] == sent1
         assert sched.node2pending[node2] == sent2
         assert len(sched.pending) == 2
         sched.remove_item(node1, 0)
-        assert node1.sent == [0, 1, 4]
+        assert node1.sent == [0, 2, 4]
         assert sched.pending == [5]
-        assert node2.sent == [2, 3]
-        sched.remove_item(node1, 1)
-        assert node1.sent == [0, 1, 4, 5]
+        assert node2.sent == [1, 3]
+        sched.remove_item(node1, 2)
+        assert node1.sent == [0, 2, 4, 5]
+        assert not sched.pending
+
+    def test_init_distribute_fewer_tests_than_nodes(self):
+        sched = LoadScheduling(2)
+        sched.addnode(MockNode())
+        sched.addnode(MockNode())
+        sched.addnode(MockNode())
+        node1, node2, node3 = sched.nodes
+        col = ["xyz"] * 2
+        sched.addnode_collection(node1, col)
+        sched.addnode_collection(node2, col)
+        sched.init_distribute()
+        # assert not sched.tests_finished()
+        sent1 = node1.sent
+        sent2 = node2.sent
+        sent3 = node3.sent
+        assert sent1 == [0]
+        assert sent2 == [1]
+        assert sent3 == []
+        assert not sched.pending
+
+    def test_init_distribute_fewer_than_two_tests_per_node(self):
+        sched = LoadScheduling(2)
+        sched.addnode(MockNode())
+        sched.addnode(MockNode())
+        sched.addnode(MockNode())
+        node1, node2, node3 = sched.nodes
+        col = ["xyz"] * 5
+        sched.addnode_collection(node1, col)
+        sched.addnode_collection(node2, col)
+        sched.init_distribute()
+        # assert not sched.tests_finished()
+        sent1 = node1.sent
+        sent2 = node2.sent
+        sent3 = node3.sent
+        assert sent1 == [0, 3]
+        assert sent2 == [1, 4]
+        assert sent3 == [2]
         assert not sched.pending
 
     def test_add_remove_node(self):
