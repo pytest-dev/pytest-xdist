@@ -277,7 +277,7 @@ def test_report_collection_diff_different():
         ' ccc\n'
         '-YYY')
 
-    msg = report_collection_diff(from_collection, to_collection, 1, 2)
+    msg = report_collection_diff(from_collection, to_collection, '1', '2')
     assert msg == error_message
 
 
