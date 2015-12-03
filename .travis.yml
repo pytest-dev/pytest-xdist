@@ -13,6 +13,7 @@ env:
   # some builds that are unnecessary/perceived redundant:
   # py27 and py35 are tested with all pytest versions we declare to support;
   # py26 and py34 only with latest pytest versions.
+  # pytest24,25,26 don't work on py35 due to changes in ast module
   - TESTENV=py26-pytest27
   - TESTENV=py26-pytest28
 
@@ -25,9 +26,6 @@ env:
   - TESTENV=py34-pytest27
   - TESTENV=py34-pytest28
 
-  - TESTENV=py35-pytest24
-  - TESTENV=py35-pytest25
-  - TESTENV=py35-pytest26
   - TESTENV=py35-pytest27
   - TESTENV=py35-pytest28
 
