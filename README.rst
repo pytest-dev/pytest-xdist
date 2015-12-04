@@ -5,6 +5,9 @@
 .. image:: http://img.shields.io/pypi/v/pytest-xdist.svg
    :target: https://pypi.python.org/pypi/pytest-xdist
 
+.. image:: https://ci.appveyor.com/api/projects/status/56eq1a1avd4sdd7e/branch/master?svg=true
+    :target: https://ci.appveyor.com/project/pytestbot/pytest-xdist
+
 xdist: pytest distributed testing plugin
 =========================================
 
