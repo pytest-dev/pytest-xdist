@@ -564,6 +564,7 @@ class TestNodeFailure:
             "*1 failed*1 passed*",
         ])
 
+    @pytest.mark.xfail(reason='#20: xdist race condition on node restart')
     def test_each_multiple(self, testdir):
         f = testdir.makepyfile("""
             import os
