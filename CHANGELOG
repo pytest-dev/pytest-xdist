@@ -2,6 +2,7 @@
 -------
 
 - fix readme display on pypi
+- fix #22: xdist now works if the internal tmpdir plugin is disabled.
 
 
 1.13.1
