@@ -228,8 +228,9 @@ class SlaveController(object):
         option_dict = vars(self.config.option)
         if spec.popen:
             name = "popen-%s" % self.gateway.id
-            basetemp = self.config._tmpdirhandler.getbasetemp()
-            option_dict['basetemp'] = str(basetemp.join(name))
+            if hasattr(self.config, '_tmpdirhandler'):
+                basetemp = self.config._tmpdirhandler.getbasetemp()
+                option_dict['basetemp'] = str(basetemp.join(name))
         self.config.hook.pytest_configure_node(node=self)
         self.channel = self.gateway.remote_exec(xdist.remote)
         self.channel.send((self.slaveinput, args, option_dict))

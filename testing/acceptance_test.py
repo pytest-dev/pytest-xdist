@@ -522,6 +522,18 @@ def test_issue_594_random_parametrize(testdir):
     ])
 
 
+def test_tmpdir_disabled(testdir):
+    """Test xdist doesn't break if internal tmpdir plugin is disabled (#22).
+    """
+    p1 = testdir.makepyfile("""
+        def test_ok():
+            pass
+    """)
+    result = testdir.runpytest(p1, "-n1", '-p', 'no:tmpdir')
+    assert result.ret == 0
+    result.stdout.fnmatch_lines("*1 passed*")
+
+
 class TestNodeFailure:
     def test_load_single(self, testdir):
         f = testdir.makepyfile("""
