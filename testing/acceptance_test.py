@@ -353,6 +353,7 @@ def test_terminate_on_hangingnode(testdir):
     result.stdout.fnmatch_lines(["*killed*my*", ])
 
 
+@pytest.mark.xfail(reason='see #30')
 def test_auto_detect_cpus(testdir, monkeypatch):
     import multiprocessing
     monkeypatch.setattr(multiprocessing, 'cpu_count', lambda: 3)
