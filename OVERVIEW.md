@@ -1,15 +1,12 @@
 # Overview #
 
-Here it is described a brief overview of xdist's internal architecture.
-
-
 `xdist` works by spawning one or more **worker nodes**, which are controlled
 by the **master node**. Each **worker node** is responsible for performing 
 a full test collection and afterwards running tests as dictated by the **master node**.
 
 The execution flow is:
 
-1. **master node** spawns one or more **worker nodes** at the begginning of
+1. **master node** spawns one or more **worker nodes** at the beginning of
    the test session. The communication between **master** and **worker** nodes makes use of 
    [execnet](http://codespeak.net/execnet/) and its [gateways](http://codespeak.net/execnet/basics.html#gateways-bootstrapping-python-interpreters).
    The actual interpreters executing the code for the **worker nodes** might
