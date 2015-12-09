@@ -136,7 +136,7 @@ class EachScheduling:
 
 
 class LoadScheduling:
-    """Implement load scheduling accross nodes.
+    """Implement load scheduling across nodes.
 
     This distributes the tests collected across all nodes so each test
     is run just once.  All nodes collect and submit the test suite and
@@ -233,7 +233,7 @@ class LoadScheduling:
         execute.
 
         Called by the ``DSession.slave_slaveready`` hook when it
-        sucessfully bootstraps a new node.
+        successfully bootstraps a new node.
         """
         assert node not in self.node2pending
         self.node2pending[node] = []
@@ -350,7 +350,7 @@ class LoadScheduling:
         """
         assert self.collection_is_completed
 
-        # Initial distribution already happend, reschedule on all nodes
+        # Initial distribution already happened, reschedule on all nodes
         if self.collection is not None:
             for node in self.nodes:
                 self.check_schedule(node)
