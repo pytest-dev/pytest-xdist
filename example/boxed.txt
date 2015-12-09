@@ -2,7 +2,7 @@
 
 If your testing involves C or C++ libraries you might have to deal
 with crashing processes.  The xdist-plugin provides the ``--boxed`` option
-to run each test in a controled subprocess.  Here is a basic example::
+to run each test in a controlled subprocess.  Here is a basic example::
 
     # content of test_module.py
 
