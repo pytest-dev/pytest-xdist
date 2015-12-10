@@ -40,11 +40,12 @@ The execution flow is:
    the `pytest_runtest_protocol` for each test item, but in xdist **workers** sit idly 
    waiting for **master node** to send tests for execution. As tests are
    received by **workers**, `pytest_runtest_protocol` is executed for each test. 
-   Here it worth noting an implementation detail: at least one
-   test is kept always in **worker nodes** must they comply with 
-   `pytest_runtest_protocol` in that it needs to know which will be the 
-   `nextitem` in the hook call: either a new test in case the **master node** sends
-   a new test, or `None` if the **worker** receives a "shutdown" request.
+   Here it worth noting an implementation detail: **workers** always must keep at 
+   least one test item on their queue due to how the `pytest_runtest_protocol(item, nextitem)` 
+   hook is defined: in order to pass the `nextitem` to the hook, the worker must wait for more 
+   instructions from master before executing that remaining test. If it receives more tests, 
+   then it can safely call `pytest_runtest_protocol` because it knows what the `nextitem` parameter will be. 
+   If it receives a "shutdown" signal, then it can execute the hook passing `nextitem` as `None`. 
    
 1. As tests are started and completed at the **workers**, the results are sent
    back to the **master node**, which then just forwards the results to 
