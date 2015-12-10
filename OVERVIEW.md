@@ -62,3 +62,15 @@ The execution flow is:
    **master** will sit waiting for **workers** to shut down, still
    processing events such as `pytest_runtest_logreport`.
  
+## FAQ ##
+
+> Why does each worker do its own collection, as opposed to having 
+the master collect once and distribute from that collection to the workers?
+
+If collection was performed by master then it would have to 
+serialize collected items to send them through the wire, as workers live in another process. 
+The problem is that test items are not easily (impossible?) to serialize, as they contain references to 
+the test functions, fixture managers, config objects, etc. Even if one manages to serialize it, 
+it seems it would be very hard to get it right and easy to break by any small change in pytest. 
+  
+
