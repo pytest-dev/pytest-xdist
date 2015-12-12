@@ -1,8 +1,13 @@
-1.13.2
--------
+1.13.2.dev
+----------
 
-- fix readme display on pypi
+- fix README display on pypi
+
 - fix #22: xdist now works if the internal tmpdir plugin is disabled.
+  Thanks Bruno Oliveira for the PR.
+
+- fix #32: xdist now works if looponfail or boxed are disabled.
+  Thanks Bruno Oliveira for the PR.
 
 
 1.13.1

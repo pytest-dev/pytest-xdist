@@ -94,12 +94,8 @@ def pytest_cmdline_main(config):
         config.option.dist = "load"
     val = config.getvalue
     if not val("collectonly"):
-        usepdb = config.option.usepdb  # a core option
-        if val("looponfail"):
-            if usepdb:
-                raise pytest.UsageError(
-                    "--pdb incompatible with --looponfail.")
-        elif val("dist") != "no":
+        usepdb = config.getoption('usepdb')  # a core option
+        if val("dist") != "no":
             if usepdb:
                 raise pytest.UsageError(
                     "--pdb incompatible with distributing tests.")
