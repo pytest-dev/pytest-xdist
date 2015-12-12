@@ -535,6 +535,19 @@ def test_tmpdir_disabled(testdir):
     result.stdout.fnmatch_lines("*1 passed*")
 
 
+@pytest.mark.parametrize('plugin', ['xdist.looponfail', 'xdist.boxed'])
+def test_sub_plugins_disabled(testdir, plugin):
+    """Test that xdist doesn't break if we disable any of its sub-plugins. (#32)
+    """
+    p1 = testdir.makepyfile("""
+        def test_ok():
+            pass
+    """)
+    result = testdir.runpytest(p1, "-n1", '-p', 'no:%s' % plugin)
+    assert result.ret == 0
+    result.stdout.fnmatch_lines("*1 passed*")
+
+
 class TestNodeFailure:
     def test_load_single(self, testdir):
         f = testdir.makepyfile("""
