@@ -353,17 +353,6 @@ def test_terminate_on_hangingnode(testdir):
     result.stdout.fnmatch_lines(["*killed*my*", ])
 
 
-def test_auto_detect_cpus(testdir, monkeypatch):
-    import multiprocessing
-    count = multiprocessing.cpu_count()
-    testdir.makeconftest("""
-        def pytest_configure(config):
-            print("numprocesses: (%s)" % config.getoption("numprocesses"))
-    """)
-    result = testdir.runpytest('-n=auto', '-s')
-    result.stdout.fnmatch_lines(["*numprocesses: (%s)*" % count])
-
-
 @pytest.mark.xfail(reason="works if run outside test suite", run=False)
 def test_session_hooks(testdir):
     testdir.makeconftest("""
