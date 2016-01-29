@@ -1,3 +1,10 @@
+1.14.0.dev
+----------
+
+- new hook: ``pytest_xdist_node_collection_finished(node, ids)``, called when
+  a worker has finished collection. Thanks Omer Katz for the request and
+  Bruno Oliveira for the PR.
+
 1.13.2.dev
 ----------
 
