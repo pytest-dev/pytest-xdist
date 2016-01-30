@@ -7,31 +7,28 @@ install: "pip install -U tox setuptools_scm"
 # # command to run tests
 env:
   matrix:
-  - TESTENV=flakes
-  - TESTENV=readme
-  # matrix was trimmed to skip
-  # some builds that are unnecessary/perceived redundant:
-  # py27 and py35 are tested with all pytest versions we declare to support;
-  # py26 and py34 only with latest pytest versions.
-  # pytest24,25,26 don't work on py35 due to changes in ast module
+  # note: please use "tox --listenvs" to populate the build matrix
+  - TESTENV=py26-pytest24
+  - TESTENV=py26-pytest25
+  - TESTENV=py26-pytest26
   - TESTENV=py26-pytest27
   - TESTENV=py26-pytest28
-
   - TESTENV=py27-pytest24
   - TESTENV=py27-pytest25
   - TESTENV=py27-pytest26
   - TESTENV=py27-pytest27
   - TESTENV=py27-pytest28
-
+  - TESTENV=py34-pytest24
+  - TESTENV=py34-pytest25
+  - TESTENV=py34-pytest26
   - TESTENV=py34-pytest27
   - TESTENV=py34-pytest28
-
   - TESTENV=py35-pytest27
   - TESTENV=py35-pytest28
-
   - TESTENV=py27-pytest28-pexpect
-  - TESTENV=py34-pytest28-pexpect
-  - TESTENV=pypy-pytest28
+  - TESTENV=py35-pytest28-pexpect
+  - TESTENV=flakes
+  - TESTENV=readme
 
 script: tox --recreate -e $TESTENV
 

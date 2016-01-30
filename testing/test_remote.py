@@ -2,8 +2,9 @@ import py
 from xdist.slavemanage import SlaveController, unserialize_report
 from xdist.remote import serialize_report
 import execnet
-queue = py.builtin._tryimport("queue", "Queue")
 import marshal
+
+queue = py.builtin._tryimport("queue", "Queue")
 
 WAIT_TIMEOUT = 10.0
 

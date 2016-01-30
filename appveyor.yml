@@ -1,17 +1,7 @@
-environment:
-  matrix:
-    - PYTHON: "C:\\Python35"
-      TESTENV: "py35"
-
-    - PYTHON: "C:\\Python27"
-      TESTENV: "py27"
-
 install:
-  - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
-  - pip install tox setuptools_scm"
+  - C:\Python35\python -m pip install tox setuptools_scm
 
 build: false  # Not a C# project, build stuff at the test step instead.
 
 test_script:
-  # Build the compiled extension and run the project tests
-  - tox -e %TESTENV%-pytest27,%TESTENV%-pytest28,readme,flakes
+  - C:\Python35\python -m tox
