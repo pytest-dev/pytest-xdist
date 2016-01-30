@@ -629,6 +629,8 @@ class DSession:
         """
         if self.shuttingdown:
             return
+        self.config.hook.pytest_xdist_node_collection_finished(node=node,
+                                                               ids=ids)
         # tell session which items were effectively collected otherwise
         # the master node will finish the session with EXIT_NOTESTSCOLLECTED
         self._session.testscollected = len(ids)
