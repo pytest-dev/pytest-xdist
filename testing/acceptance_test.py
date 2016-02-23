@@ -621,6 +621,7 @@ class TestNodeFailure:
             "*1 failed*2 passed*",
         ])
 
+
 def test_worker_id_fixture(testdir):
     f = testdir.makepyfile("""
         import pytest
@@ -630,8 +631,9 @@ def test_worker_id_fixture(testdir):
                 f.write(worker_id)
     """)
     result = testdir.runpytest(f, "-n2")
+    result.stdout.fnmatch_lines('* 2 passed in *')
     worker_ids = []
-    for run_num in [1,2]:
-        worker_id_file_path = testdir.tmpdir.join("worker_id%s" % run_num).strpath
-        worker_ids.append(open(worker_id_file_path, "r").read())
+    for run_num in [1, 2]:
+        worker_id_file_path = testdir.tmpdir.join("worker_id%s" % run_num)
+        worker_ids.append(open(str(worker_id_file_path), "r").read())
     assert "gw0" in worker_ids and "gw1" in worker_ids
