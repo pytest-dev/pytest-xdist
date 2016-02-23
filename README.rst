@@ -195,6 +195,9 @@ a test or fixture, you may use the ``worker_id`` fixture to do so::
         """ use a different account in each xdist worker """
         return "account_%s" % worker_id
 
+When ``xdist`` is disabled (running with ``-n0`` for example), then
+``worker_id`` will return ``"master"``.
+
 Specifying test exec environments in an ini file
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 

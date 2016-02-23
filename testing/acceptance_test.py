@@ -622,18 +622,23 @@ class TestNodeFailure:
         ])
 
 
-def test_worker_id_fixture(testdir):
+@pytest.mark.parametrize('n', [0, 2])
+def test_worker_id_fixture(testdir, n):
+    import glob
     f = testdir.makepyfile("""
         import pytest
-        @pytest.mark.parametrize("run_num", [1,2])
+        @pytest.mark.parametrize("run_num", range(2))
         def test_worker_id1(worker_id, run_num):
-            with open("worker_id%s" % run_num, "w") as f:
+            with open("worker_id%s.txt" % run_num, "w") as f:
                 f.write(worker_id)
     """)
-    result = testdir.runpytest(f, "-n2")
+    result = testdir.runpytest(f, "-n%d" % n)
     result.stdout.fnmatch_lines('* 2 passed in *')
-    worker_ids = []
-    for run_num in [1, 2]:
-        worker_id_file_path = testdir.tmpdir.join("worker_id%s" % run_num)
-        worker_ids.append(open(str(worker_id_file_path), "r").read())
-    assert "gw0" in worker_ids and "gw1" in worker_ids
+    worker_ids = set()
+    for fname in glob.glob(str(testdir.tmpdir.join("*.txt"))):
+        with open(fname) as f:
+            worker_ids.add(f.read().strip())
+    if n == 0:
+        assert worker_ids == set(['master'])
+    else:
+        assert worker_ids == set(['gw0', 'gw1'])
