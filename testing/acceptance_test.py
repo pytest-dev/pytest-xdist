@@ -620,3 +620,18 @@ class TestNodeFailure:
             "*Slave*crashed while running*",
             "*1 failed*2 passed*",
         ])
+
+def test_worker_id_fixture(testdir):
+    f = testdir.makepyfile("""
+        import pytest
+        @pytest.mark.parametrize("run_num", [1,2])
+        def test_worker_id1(worker_id, run_num):
+            with open("worker_id%s" % run_num, "w") as f:
+                f.write(worker_id)
+    """)
+    result = testdir.runpytest(f, "-n2")
+    worker_ids = []
+    for run_num in [1,2]:
+        worker_id_file_path = testdir.tmpdir.join("worker_id%s" % run_num).strpath
+        worker_ids.append(open(worker_id_file_path, "r").read())
+    assert "gw0" in worker_ids and "gw1" in worker_ids

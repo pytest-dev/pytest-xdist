@@ -99,3 +99,15 @@ def pytest_cmdline_main(config):
             if usepdb:
                 raise pytest.UsageError(
                     "--pdb incompatible with distributing tests.")
+
+# -------------------------------------------------------------------------
+# fixtures
+# -------------------------------------------------------------------------
+
+
+@pytest.fixture(scope="session")
+def worker_id(request):
+    if hasattr(request.config, 'slaveinput'):
+        return request.config.slaveinput['slaveid']
+    else:
+        return 'master'
