@@ -1,5 +1,8 @@
-1.14.1.dev
+1.15.0.dev
 ----------
+
+- new ``worker_id`` fixture, returns the id of the worker in a test or fixture.
+  Thanks Jared Hellman for the PR.
 
 
 1.14

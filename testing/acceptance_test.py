@@ -620,3 +620,25 @@ class TestNodeFailure:
             "*Slave*crashed while running*",
             "*1 failed*2 passed*",
         ])
+
+
+@pytest.mark.parametrize('n', [0, 2])
+def test_worker_id_fixture(testdir, n):
+    import glob
+    f = testdir.makepyfile("""
+        import pytest
+        @pytest.mark.parametrize("run_num", range(2))
+        def test_worker_id1(worker_id, run_num):
+            with open("worker_id%s.txt" % run_num, "w") as f:
+                f.write(worker_id)
+    """)
+    result = testdir.runpytest(f, "-n%d" % n)
+    result.stdout.fnmatch_lines('* 2 passed in *')
+    worker_ids = set()
+    for fname in glob.glob(str(testdir.tmpdir.join("*.txt"))):
+        with open(fname) as f:
+            worker_ids.add(f.read().strip())
+    if n == 0:
+        assert worker_ids == set(['master'])
+    else:
+        assert worker_ids == set(['gw0', 'gw1'])

@@ -185,6 +185,19 @@ at once.   The specifications strings use the `xspec syntax`_.
 
 .. _`execnet`: http://codespeak.net/execnet
 
+Identifying the worker process during a test
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+If you need to determine the identity of a worker process in
+a test or fixture, you may use the ``worker_id`` fixture to do so::
+
+    @pytest.fixture()
+    def user_account(worker_id):
+        """ use a different account in each xdist worker """
+        return "account_%s" % worker_id
+
+When ``xdist`` is disabled (running with ``-n0`` for example), then
+``worker_id`` will return ``"master"``.
+
 Specifying test exec environments in an ini file
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
