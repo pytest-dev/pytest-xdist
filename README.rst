@@ -188,7 +188,9 @@ at once.   The specifications strings use the `xspec syntax`_.
 Identifying the worker process during a test
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 If you need to determine the identity of a worker process in
-a test or fixture, you may use the ``worker_id`` fixture to do so::
+a test or fixture, you may use the ``worker_id`` fixture to do so:
+
+.. code-block:: python
 
     @pytest.fixture()
     def user_account(worker_id):
@@ -203,12 +205,16 @@ Specifying test exec environments in an ini file
 
 pytest (since version 2.0) supports ini-style cofiguration.
 You can for example make running with three subprocesses
-your default like this::
+your default like this:
+
+.. code-block:: ini
 
     [pytest]
     addopts = -n3
 
-You can also add default environments like this::
+You can also add default environments like this:
+
+.. code-block:: ini
 
     [pytest]
     addopts = --tx ssh=myhost//python=python2.5 --tx ssh=myhost//python=python2.6
@@ -223,7 +229,9 @@ Specifying "rsync" dirs in an ini-file
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 In a ``tox.ini`` or ``setup.cfg`` file in your root project directory
-you may specify directories to include or to exclude in synchronisation::
+you may specify directories to include or to exclude in synchronisation:
+
+.. code-block:: ini
 
     [pytest]
     rsyncdirs = . mypkg helperpkg
