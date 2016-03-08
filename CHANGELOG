@@ -4,6 +4,9 @@
 - new ``worker_id`` fixture, returns the id of the worker in a test or fixture.
   Thanks Jared Hellman for the PR.
 
+- display progress during collection only when in a terminal, similar to pytest #1397 issue.
+  Thanks Bruno Oliveira for the PR.
+
 
 1.14
 ----

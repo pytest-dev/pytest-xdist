@@ -722,17 +722,18 @@ class TerminalDistReporter:
         self.tr = config.pluginmanager.getplugin("terminalreporter")
         self._status = {}
         self._lastlen = 0
+        self._isatty = getattr(self.tr, 'isatty', self.tr.hasmarkup)
 
     def write_line(self, msg):
         self.tr.write_line(msg)
 
     def ensure_show_status(self):
-        if not self.tr.hasmarkup:
+        if not self._isatty:
             self.write_line(self.getstatus())
 
     def setstatus(self, spec, status, show=True):
         self._status[spec.id] = status
-        if show and self.tr.hasmarkup:
+        if show and self._isatty:
             self.rewrite(self.getstatus())
 
     def getstatus(self):
