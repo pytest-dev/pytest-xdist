@@ -1,4 +1,5 @@
 import py
+import pytest
 from xdist.slavemanage import SlaveController, unserialize_report
 from xdist.remote import serialize_report
 import execnet
@@ -62,6 +63,7 @@ def pytest_funcarg__slave(request):
     return SlaveSetup(request)
 
 
+@pytest.mark.xfail(reason='#59')
 def test_remoteinitconfig(testdir):
     from xdist.remote import remote_initconfig
     config1 = testdir.parseconfig()
