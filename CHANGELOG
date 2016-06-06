@@ -7,6 +7,9 @@
 - display progress during collection only when in a terminal, similar to pytest #1397 issue.
   Thanks Bruno Oliveira for the PR.
 
+- fix internal error message when ``--maxfail`` is used (#62, #65).
+  Thanks Collin RM Stocks and Bryan A. Jones for reports and Bruno Oliveira for the PR.
+
 
 1.14
 ----
