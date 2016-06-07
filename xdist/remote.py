@@ -46,7 +46,10 @@ class SlaveInteractor:
         self.log("entering main loop")
         torun = []
         while 1:
-            name, kwargs = self.channel.receive()
+            try:
+                name, kwargs = self.channel.receive()
+            except EOFError:
+                return True
             self.log("received command", name, kwargs)
             if name == "runtests":
                 torun.extend(kwargs['indices'])

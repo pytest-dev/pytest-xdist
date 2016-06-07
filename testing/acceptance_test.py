@@ -664,3 +664,24 @@ def test_color_yes_collection_on_non_atty(testdir, request):
     assert '\x1b[1m' in result.stdout.str()
     assert 'gw0 [10] / gw1 [10]' in result.stdout.str()
     assert 'gw0 C / gw1 C' not in result.stdout.str()
+
+
+def test_internal_error_with_maxfail(testdir):
+    """
+    Internal error when using --maxfail option (#62, #65).
+    """
+    testdir.makepyfile("""
+        import pytest
+
+        @pytest.fixture(params=['1', '2'])
+        def crasher():
+            raise RuntimeError
+
+        def test_aaa0(crasher):
+            pass
+        def test_aaa1(crasher):
+            pass
+    """)
+    result = testdir.runpytest_subprocess('--maxfail=1', '-n1')
+    result.stdout.fnmatch_lines(['* 1 error in *'])
+    assert 'INTERNALERROR' not in result.stderr.str()
