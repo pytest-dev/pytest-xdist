@@ -535,6 +535,7 @@ class DSession:
         while not self.session_finished:
             self.loop_once()
             if self.shouldstop:
+                self.triggershutdown()
                 raise Interrupted(str(self.shouldstop))
         return True
 
