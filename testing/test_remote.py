@@ -59,7 +59,8 @@ class SlaveSetup:
         self.slp.sendcommand(name, **kwargs)
 
 
-def pytest_funcarg__slave(request):
+@pytest.fixture
+def slave(request):
     return SlaveSetup(request)
 
 

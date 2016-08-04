@@ -411,7 +411,9 @@ def test_session_testscollected(testdir):
 
 def test_funcarg_teardown_failure(testdir):
     p = testdir.makepyfile("""
-        def pytest_funcarg__myarg(request):
+        import pytest
+        @pytest.fixture
+        def myarg(request):
             def teardown(val):
                 raise ValueError(val)
             return request.cached_setup(setup=lambda: 42, teardown=teardown,
