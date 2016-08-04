@@ -37,7 +37,8 @@ def pytest_addoption(parser):
                      help=("add a global test environment, XSpec-syntax. "))
 
 
-def pytest_funcarg__specssh(request):
+@pytest.fixture
+def specssh(request):
     return getspecssh(request.config)
 
 

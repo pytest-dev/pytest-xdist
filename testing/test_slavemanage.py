@@ -8,7 +8,8 @@ from xdist.slavemanage import HostRSync, NodeManager
 pytest_plugins = "pytester"
 
 
-def pytest_funcarg__hookrecorder(request, config):
+@pytest.fixture
+def hookrecorder(request, config):
     hookrecorder = HookRecorder(config.pluginmanager)
     if hasattr(hookrecorder, "start_recording"):
         hookrecorder.start_recording(newhooks)
@@ -16,11 +17,13 @@ def pytest_funcarg__hookrecorder(request, config):
     return hookrecorder
 
 
-def pytest_funcarg__config(testdir):
+@pytest.fixture
+def config(testdir):
     return testdir.parseconfig()
 
 
-def pytest_funcarg__mysetup(tmpdir):
+@pytest.fixture
+def mysetup(tmpdir):
     class mysetup:
         source = tmpdir.mkdir("source")
         dest = tmpdir.mkdir("dest")
