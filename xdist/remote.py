@@ -148,6 +148,8 @@ if __name__ == '__channelexec__':
     os.environ['PYTHONPATH'] = (
         importpath + os.pathsep +
         os.environ.get('PYTHONPATH', ''))
+    os.environ['PYTEST_XDIST_WORKER'] = slaveinput['slaveid']
+    os.environ['PYTEST_XDIST_WORKER_COUNT'] = str(slaveinput['slavecount'])
     # os.environ['PYTHONPATH'] = importpath
     import py
     config = remote_initconfig(option_dict, args)

@@ -187,6 +187,8 @@ at once.   The specifications strings use the `xspec syntax`_.
 
 Identifying the worker process during a test
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
 If you need to determine the identity of a worker process in
 a test or fixture, you may use the ``worker_id`` fixture to do so:
 
@@ -199,6 +201,15 @@ a test or fixture, you may use the ``worker_id`` fixture to do so:
 
 When ``xdist`` is disabled (running with ``-n0`` for example), then
 ``worker_id`` will return ``"master"``.
+
+Additionally, worker processes have the following environment variables
+defined:
+
+* ``PYTEST_XDIST_WORKER``: the name of the worker, e.g., ``"gw2"``.
+* ``PYTEST_XDIST_WORKER_COUNT``: the total number of workers in this session,
+  e.g., ``"4"`` when ``-n 4`` is given in the command-line.
+
+*New in version 1.15.*
 
 Specifying test exec environments in an ini file
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

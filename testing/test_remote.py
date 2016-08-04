@@ -40,7 +40,12 @@ class SlaveSetup:
         self.gateway = execnet.makegateway()
         self.config = config = self.testdir.parseconfigure()
         putevent = self.use_callback and self.events.put or None
-        self.slp = SlaveController(None, self.gateway, config, putevent)
+
+        class DummyMananger:
+            specs = [0, 1]
+
+        self.slp = SlaveController(DummyMananger, self.gateway, config,
+                                   putevent)
         self.request.addfinalizer(self.slp.ensure_teardown)
         self.slp.setup()
 
@@ -178,6 +183,8 @@ class TestSlaveInteractor:
         ev = slave.popevent("slavefinished")
         assert 'slaveoutput' in ev.kwargs
 
+    @pytest.mark.skipif(pytest.__version__ >= '3.0',
+                        reason='skip at module level illegal in pytest 3.0')
     def test_remote_collect_skip(self, slave):
         slave.testdir.makepyfile("""
             import py
@@ -255,3 +262,14 @@ class TestSlaveInteractor:
             ("pytest_pycollect_makeitem", "name == 'test_func'"),
             ("pytest_collectreport", "report.collector.fspath == bbb"),
         ])
+
+
+def test_remote_env_vars(testdir):
+    testdir.makepyfile('''
+        import os
+        def test():
+            assert os.environ['PYTEST_XDIST_WORKER'] in ('gw0', 'gw1')
+            assert os.environ['PYTEST_XDIST_WORKER_COUNT'] == '2'
+    ''')
+    result = testdir.runpytest('-n2', '--max-slave-restart=0')
+    assert result.ret == 0
