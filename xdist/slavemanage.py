@@ -205,7 +205,8 @@ class SlaveController(object):
         self.putevent = putevent
         self.gateway = gateway
         self.config = config
-        self.slaveinput = {'slaveid': gateway.id}
+        self.slaveinput = {'slaveid': gateway.id,
+                           'slavecount': len(nodemanager.specs)}
         self._down = False
         self._shutdown_sent = False
         self.log = py.log.Producer("slavectl-%s" % gateway.id)
