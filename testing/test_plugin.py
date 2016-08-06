@@ -26,8 +26,12 @@ def test_dist_options(testdir):
 
 
 def test_auto_detect_cpus(testdir, monkeypatch):
-    import multiprocessing
-    monkeypatch.setattr(multiprocessing, 'cpu_count', lambda: 99)
+    import os
+    if hasattr(os, 'cpu_count'):
+        monkeypatch.setattr(os, 'cpu_count', lambda: 99)
+    else:
+        import multiprocessing
+        monkeypatch.setattr(multiprocessing, 'cpu_count', lambda: 99)
 
     config = testdir.parseconfigure("-n2")
     assert config.getoption('numprocesses') == 2
