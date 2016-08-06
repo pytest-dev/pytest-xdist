@@ -353,19 +353,6 @@ def test_terminate_on_hangingnode(testdir):
     result.stdout.fnmatch_lines(["*killed*my*", ])
 
 
-def test_auto_detect_cpus(testdir, monkeypatch):
-    import multiprocessing
-    monkeypatch.setattr(multiprocessing, 'cpu_count', lambda: 3)
-    testdir.makeconftest("""
-        def pytest_unconfigure(config):
-            with open('cpus', 'w') as f:
-                f.write('cpus = %s' % config.option.numprocesses)
-    """)
-    testdir.inline_run('-n=auto')
-    cpus_file = testdir.tmpdir.join('cpus')
-    assert cpus_file.read() == 'cpus = 3'
-
-
 @pytest.mark.xfail(reason="works if run outside test suite", run=False)
 def test_session_hooks(testdir):
     testdir.makeconftest("""
@@ -424,7 +411,9 @@ def test_session_testscollected(testdir):
 
 def test_funcarg_teardown_failure(testdir):
     p = testdir.makepyfile("""
-        def pytest_funcarg__myarg(request):
+        import pytest
+        @pytest.fixture
+        def myarg(request):
             def teardown(val):
                 raise ValueError(val)
             return request.cached_setup(setup=lambda: 42, teardown=teardown,
@@ -522,6 +511,31 @@ def test_issue_594_random_parametrize(testdir):
     ])
 
 
+def test_tmpdir_disabled(testdir):
+    """Test xdist doesn't break if internal tmpdir plugin is disabled (#22).
+    """
+    p1 = testdir.makepyfile("""
+        def test_ok():
+            pass
+    """)
+    result = testdir.runpytest(p1, "-n1", '-p', 'no:tmpdir')
+    assert result.ret == 0
+    result.stdout.fnmatch_lines("*1 passed*")
+
+
+@pytest.mark.parametrize('plugin', ['xdist.looponfail', 'xdist.boxed'])
+def test_sub_plugins_disabled(testdir, plugin):
+    """Test that xdist doesn't break if we disable any of its sub-plugins. (#32)
+    """
+    p1 = testdir.makepyfile("""
+        def test_ok():
+            pass
+    """)
+    result = testdir.runpytest(p1, "-n1", '-p', 'no:%s' % plugin)
+    assert result.ret == 0
+    result.stdout.fnmatch_lines("*1 passed*")
+
+
 class TestNodeFailure:
     def test_load_single(self, testdir):
         f = testdir.makepyfile("""
@@ -564,6 +578,7 @@ class TestNodeFailure:
             "*1 failed*1 passed*",
         ])
 
+    @pytest.mark.xfail(reason='#20: xdist race condition on node restart')
     def test_each_multiple(self, testdir):
         f = testdir.makepyfile("""
             import os
@@ -607,3 +622,68 @@ class TestNodeFailure:
             "*Slave*crashed while running*",
             "*1 failed*2 passed*",
         ])
+
+
+@pytest.mark.parametrize('n', [0, 2])
+def test_worker_id_fixture(testdir, n):
+    import glob
+    f = testdir.makepyfile("""
+        import pytest
+        @pytest.mark.parametrize("run_num", range(2))
+        def test_worker_id1(worker_id, run_num):
+            with open("worker_id%s.txt" % run_num, "w") as f:
+                f.write(worker_id)
+    """)
+    result = testdir.runpytest(f, "-n%d" % n)
+    result.stdout.fnmatch_lines('* 2 passed in *')
+    worker_ids = set()
+    for fname in glob.glob(str(testdir.tmpdir.join("*.txt"))):
+        with open(fname) as f:
+            worker_ids.add(f.read().strip())
+    if n == 0:
+        assert worker_ids == set(['master'])
+    else:
+        assert worker_ids == set(['gw0', 'gw1'])
+
+
+def test_color_yes_collection_on_non_atty(testdir, request):
+    """skip collect progress report when working on non-terminals.
+
+    Similar to pytest-dev/pytest#1397
+    """
+    tr = request.config.pluginmanager.getplugin("terminalreporter")
+    if not hasattr(tr, 'isatty'):
+        pytest.skip('only valid for newer pytest versions')
+    testdir.makepyfile("""
+        import pytest
+        @pytest.mark.parametrize('i', range(10))
+        def test_this(i):
+            assert 1
+    """)
+    args = ['--color=yes', '-n2']
+    result = testdir.runpytest(*args)
+    assert 'test session starts' in result.stdout.str()
+    assert '\x1b[1m' in result.stdout.str()
+    assert 'gw0 [10] / gw1 [10]' in result.stdout.str()
+    assert 'gw0 C / gw1 C' not in result.stdout.str()
+
+
+def test_internal_error_with_maxfail(testdir):
+    """
+    Internal error when using --maxfail option (#62, #65).
+    """
+    testdir.makepyfile("""
+        import pytest
+
+        @pytest.fixture(params=['1', '2'])
+        def crasher():
+            raise RuntimeError
+
+        def test_aaa0(crasher):
+            pass
+        def test_aaa1(crasher):
+            pass
+    """)
+    result = testdir.runpytest_subprocess('--maxfail=1', '-n1')
+    result.stdout.fnmatch_lines(['* 1 error in *'])
+    assert 'INTERNALERROR' not in result.stderr.str()

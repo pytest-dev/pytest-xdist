@@ -1,3 +1,17 @@
+"""
+xdist hooks.
+
+Additionally, pytest-xdist will also decorate a few other hooks
+with the worker instance that executed the hook originally:
+
+``pytest_runtest_logreport``: ``rep`` parameter has a ``node`` attribute.
+
+You can use this hooks just as you would use normal pytest hooks, but some care
+must be taken in plugins in case ``xdist`` is not installed. Please see:
+
+    http://pytest.org/latest/writing_plugins.html#optionally-using-hooks-from-3rd-party-plugins
+"""
+
 
 def pytest_xdist_setupnodes(config, specs):
     """ called before any remote node is set up. """
@@ -25,3 +39,8 @@ def pytest_testnodeready(node):
 
 def pytest_testnodedown(node, error):
     """ Test Node is down. """
+
+
+def pytest_xdist_node_collection_finished(node, ids):
+    """called by the master node when a node finishes collecting.
+    """

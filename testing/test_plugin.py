@@ -25,6 +25,17 @@ def test_dist_options(testdir):
     assert config.option.dist == "load"
 
 
+def test_auto_detect_cpus(testdir, monkeypatch):
+    import multiprocessing
+    monkeypatch.setattr(multiprocessing, 'cpu_count', lambda: 99)
+
+    config = testdir.parseconfigure("-n2")
+    assert config.getoption('numprocesses') == 2
+
+    config = testdir.parseconfigure("-nauto")
+    assert config.getoption('numprocesses') == 99
+
+
 class TestDistOptions:
     def test_getxspecs(self, testdir):
         config = testdir.parseconfigure("--tx=popen", "--tx", "ssh=xyz")

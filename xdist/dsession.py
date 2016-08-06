@@ -1,4 +1,5 @@
 import difflib
+import itertools
 from _pytest.runner import CollectReport
 
 import pytest
@@ -14,12 +15,12 @@ class EachScheduling:
 
     If a node gets added after the test run is started then it is
     assumed to replace a node which got removed before it finished
-    it's collection.  In this case it will only be used if a a node
+    its collection.  In this case it will only be used if a node
     with the same spec got removed earlier.
 
     Any nodes added after the run is started will only get items
-    assigned if a node with matching spec was removed before it
-    finished all it's pending items.  The new node will then be
+    assigned if a node with a matching spec was removed before it
+    finished all its pending items.  The new node will then be
     assigned the remaining items from the removed node.
     """
 
@@ -47,8 +48,8 @@ class EachScheduling:
         """Return True if there are pending test items
 
         This indicates that collection has finished and nodes are
-        still processing test items, so can be thought of as "the
-        scheduler is active".
+        still processing test items, so this can be thought of as
+        "the scheduler is active".
         """
         for pending in self.node2pending.values():
             if pending:
@@ -73,10 +74,10 @@ class EachScheduling:
         """Add the collected test items from a node
 
         Collection is complete once all nodes have submitted their
-        collection.  In this case it's peding list is set to an empty
+        collection.  In this case its pending list is set to an empty
         list.  When the collection is already completed this
         submission is from a node which was restarted to replace a
-        dead node.  In this case we already assing the pending items
+        dead node.  In this case we already assign the pending items
         here.  In either case ``.init_distribute()`` will instruct the
         node to start running the required tests.
         """
@@ -120,7 +121,7 @@ class EachScheduling:
         If the node's pending list is empty it is a new node which
         needs to run all the tests.  If the pending list is already
         populated (by ``.addnode_collection()``) then it replaces a
-        died node and we only need to run those tests.
+        dead node and we only need to run those tests.
         """
         assert self.collection_is_completed
         for node, pending in self.node2pending.items():
@@ -135,19 +136,19 @@ class EachScheduling:
 
 
 class LoadScheduling:
-    """Implement load scheduling accross nodes.
+    """Implement load scheduling across nodes.
 
     This distributes the tests collected across all nodes so each test
-    is run just once.  All nodes collect and submit the test suit and
+    is run just once.  All nodes collect and submit the test suite and
     when all collections are received it is verified they are
-    identical collections.  Then the collection gets devided up in
-    chunks and chunks get submitted to nodes.  Whenver a node finishes
-    an item they call ``.remove_item()`` which will trigger the
+    identical collections.  Then the collection gets divided up in
+    chunks and chunks get submitted to nodes.  Whenever a node finishes
+    an item, it calls ``.remove_item()`` which will trigger the
     scheduler to assign more tests if the number of pending tests for
     the node falls below a low-watermark.
 
-    When created ``numnodes`` defines how many nodes are expected to
-    submit a collection, this is used to know when all nodes have
+    When created, ``numnodes`` defines how many nodes are expected to
+    submit a collection. This is used to know when all nodes have
     finished collection or how large the chunks need to be created.
 
     Attributes:
@@ -155,7 +156,7 @@ class LoadScheduling:
     :numnodes: The expected number of nodes taking part.  The actual
        number of nodes will vary during the scheduler's lifetime as
        nodes are added by the DSession as they are brought up and
-       removed either because of a died node or normal shutdown.  This
+       removed either because of a dead node or normal shutdown.  This
        number is primarily used to know when the initial collection is
        completed.
 
@@ -211,8 +212,8 @@ class LoadScheduling:
         """Return True if there are pending test items
 
         This indicates that collection has finished and nodes are
-        still processing test items, so can be thought of as "the
-        scheduler is active".
+        still processing test items, so this can be thought of as
+        "the scheduler is active".
         """
         if self.pending:
             return True
@@ -226,13 +227,13 @@ class LoadScheduling:
         return bool(self.node2pending)
 
     def addnode(self, node):
-        """Add a new node in the scheduler.
+        """Add a new node to the scheduler.
 
         From now on the node will be allocated chunks of tests to
         execute.
 
         Called by the ``DSession.slave_slaveready`` hook when it
-        sucessfully bootstrapped a new node.
+        successfully bootstraps a new node.
         """
         assert node not in self.node2pending
         self.node2pending[node] = []
@@ -289,6 +290,9 @@ class LoadScheduling:
         ``duration`` of the last test is optionally used as a
         heuristic to influence how many tests the node is assigned.
         """
+        if node.shutting_down:
+            return
+
         if self.pending:
             # how many nodes do we have?
             num_nodes = len(self.node2pending)
@@ -308,7 +312,7 @@ class LoadScheduling:
         self.log("num items waiting for node:", len(self.pending))
 
     def remove_node(self, node):
-        """Remove an node from the scheduler
+        """Remove a node from the scheduler
 
         This should be called either when the node crashed or at
         shutdown time.  In the former case any pending items assigned
@@ -346,7 +350,7 @@ class LoadScheduling:
         """
         assert self.collection_is_completed
 
-        # Initial distribution already happend, reschedule on all nodes
+        # Initial distribution already happened, reschedule on all nodes
         if self.collection is not None:
             for node in self.nodes:
                 self.check_schedule(node)
@@ -363,13 +367,22 @@ class LoadScheduling:
         if not self.collection:
             return
 
-        # how many items per node do we have about?
-        items_per_node = len(self.collection) // len(self.node2pending)
-        # take a fraction of tests for initial distribution
-        node_chunksize = max(items_per_node // 4, 2)
-        # and initialize each node with a chunk of tests
-        for node in self.nodes:
-            self._send_tests(node, node_chunksize)
+        # Send a batch of tests to run. If we don't have at least two
+        # tests per node, we have to send them all so that we can send
+        # shutdown signals and get all nodes working.
+        initial_batch = max(len(self.pending) // 4,
+                            2 * len(self.nodes))
+
+        # distribute tests round-robin up to the batch size
+        # (or until we run out)
+        nodes = itertools.cycle(self.nodes)
+        for i in range(initial_batch):
+            self._send_tests(next(nodes), 1)
+
+        if not self.pending:
+            # initial distribution sent all tests, start node shutdown
+            for node in self.nodes:
+                node.shutdown()
 
     def _send_tests(self, node, num):
         tests_per_node = self.pending[:num]
@@ -477,7 +490,7 @@ class DSession:
         """Return True if the distributed session has finished
 
         This means all nodes have executed all test items.  This is
-        used to by pytest_runtestloop to break out of it's loop.
+        used by pytest_runtestloop to break out of its loop.
         """
         return bool(self.shuttingdown and not self._active_nodes)
 
@@ -522,6 +535,7 @@ class DSession:
         while not self.session_finished:
             self.loop_once()
             if self.shouldstop:
+                self.triggershutdown()
                 raise Interrupted(str(self.shouldstop))
         return True
 
@@ -566,7 +580,7 @@ class DSession:
 
         Removes the node from the scheduler.
 
-        The node might not be the scheduler if it had not emitted
+        The node might not be in the scheduler if it had not emitted
         slaveready before shutdown was triggered.
         """
         self.config.hook.pytest_testnodedown(node=node, error=None)
@@ -610,12 +624,14 @@ class DSession:
 
         This adds the collection for this node to the scheduler.  If
         the scheduler indicates collection is finished (i.e. all
-        initial nodes have submitted their collection), then tells the
+        initial nodes have submitted their collections), then tells the
         scheduler to schedule the collected items.  When initiating
         scheduling the first time it logs which scheduler is in use.
         """
         if self.shuttingdown:
             return
+        self.config.hook.pytest_xdist_node_collection_finished(node=node,
+                                                               ids=ids)
         # tell session which items were effectively collected otherwise
         # the master node will finish the session with EXIT_NOTESTSCOLLECTED
         self._session.testscollected = len(ids)
@@ -638,7 +654,7 @@ class DSession:
     def slave_testreport(self, node, rep):
         """Emitted when a node calls the pytest_runtest_logreport hook.
 
-        If the node indicates it is finished with a test item remove
+        If the node indicates it is finished with a test item, remove
         the item from the pending list in the scheduler.
         """
         if rep.when == "call" or (rep.when == "setup" and not rep.passed):
@@ -656,9 +672,9 @@ class DSession:
     def _clone_node(self, node):
         """Return new node based on an existing one.
 
-        This is normally for when a node died, this will copy the spec
+        This is normally for when a node dies, this will copy the spec
         of the existing node and create a new one with a new id.  The
-        new node will have been setup so will start calling the
+        new node will have been setup so it will start calling the
         "slave_*" hooks and do work soon.
         """
         spec = node.gateway.spec
@@ -707,17 +723,18 @@ class TerminalDistReporter:
         self.tr = config.pluginmanager.getplugin("terminalreporter")
         self._status = {}
         self._lastlen = 0
+        self._isatty = getattr(self.tr, 'isatty', self.tr.hasmarkup)
 
     def write_line(self, msg):
         self.tr.write_line(msg)
 
     def ensure_show_status(self):
-        if not self.tr.hasmarkup:
+        if not self._isatty:
             self.write_line(self.getstatus())
 
     def setstatus(self, spec, status, show=True):
         self._status[spec.id] = status
-        if show and self.tr.hasmarkup:
+        if show and self._isatty:
             self.rewrite(self.getstatus())
 
     def getstatus(self):

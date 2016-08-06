@@ -1,32 +1,32 @@
 sudo: false
 language: python
 python:
-    - '3.5.0b3'
+    - '3.5'
 # command to install dependencies
 install: "pip install -U tox setuptools_scm"
 # # command to run tests
 env:
   matrix:
-  - TESTENV=flakes
-  - TESTENV=readme
-  # matrix was trimmed to skip
-  # some builds that are unnecessary/perceived redundant
-  - TESTENV=py26-pytest24
-  - TESTENV=py26-pytest25
+  # note: please use "tox --listenvs" to populate the build matrix
   - TESTENV=py26-pytest26
   - TESTENV=py26-pytest27
-  - TESTENV=py33-pytest27
-  - TESTENV=py34-pytest24
-  - TESTENV=py34-pytest25
-  - TESTENV=py34-pytest26
-  - TESTENV=py27-pytest24
-  - TESTENV=py27-pytest25
+  - TESTENV=py26-pytest28
+  - TESTENV=py26-pytest29
   - TESTENV=py27-pytest26
-
-  - TESTENV=py27-pytest27-pexpect
-  - TESTENV=py34-pytest27-pexpect
-#  - TESTENV=py35-pytest27
-  - TESTENV=pypy-pytest27
+  - TESTENV=py27-pytest27
+  - TESTENV=py27-pytest28
+  - TESTENV=py27-pytest29
+  - TESTENV=py34-pytest26
+  - TESTENV=py34-pytest27
+  - TESTENV=py34-pytest28
+  - TESTENV=py34-pytest29
+  - TESTENV=py35-pytest27
+  - TESTENV=py35-pytest28
+  - TESTENV=py35-pytest29
+  - TESTENV=py27-pytest28-pexpect
+  - TESTENV=py35-pytest28-pexpect
+  - TESTENV=flakes
+  - TESTENV=readme
 
 script: tox --recreate -e $TESTENV
 

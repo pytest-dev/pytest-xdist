@@ -1,9 +1,11 @@
 import py
+import pytest
 from xdist.slavemanage import SlaveController, unserialize_report
 from xdist.remote import serialize_report
 import execnet
-queue = py.builtin._tryimport("queue", "Queue")
 import marshal
+
+queue = py.builtin._tryimport("queue", "Queue")
 
 WAIT_TIMEOUT = 10.0
 
@@ -38,7 +40,12 @@ class SlaveSetup:
         self.gateway = execnet.makegateway()
         self.config = config = self.testdir.parseconfigure()
         putevent = self.use_callback and self.events.put or None
-        self.slp = SlaveController(None, self.gateway, config, putevent)
+
+        class DummyMananger:
+            specs = [0, 1]
+
+        self.slp = SlaveController(DummyMananger, self.gateway, config,
+                                   putevent)
         self.request.addfinalizer(self.slp.ensure_teardown)
         self.slp.setup()
 
@@ -57,10 +64,12 @@ class SlaveSetup:
         self.slp.sendcommand(name, **kwargs)
 
 
-def pytest_funcarg__slave(request):
+@pytest.fixture
+def slave(request):
     return SlaveSetup(request)
 
 
+@pytest.mark.xfail(reason='#59')
 def test_remoteinitconfig(testdir):
     from xdist.remote import remote_initconfig
     config1 = testdir.parseconfig()
@@ -174,6 +183,8 @@ class TestSlaveInteractor:
         ev = slave.popevent("slavefinished")
         assert 'slaveoutput' in ev.kwargs
 
+    @pytest.mark.skipif(pytest.__version__ >= '3.0',
+                        reason='skip at module level illegal in pytest 3.0')
     def test_remote_collect_skip(self, slave):
         slave.testdir.makepyfile("""
             import py
@@ -251,3 +262,14 @@ class TestSlaveInteractor:
             ("pytest_pycollect_makeitem", "name == 'test_func'"),
             ("pytest_collectreport", "report.collector.fspath == bbb"),
         ])
+
+
+def test_remote_env_vars(testdir):
+    testdir.makepyfile('''
+        import os
+        def test():
+            assert os.environ['PYTEST_XDIST_WORKER'] in ('gw0', 'gw1')
+            assert os.environ['PYTEST_XDIST_WORKER_COUNT'] == '2'
+    ''')
+    result = testdir.runpytest('-n2', '--max-slave-restart=0')
+    assert result.ret == 0

@@ -1,7 +1,30 @@
-1.13.2
--------
+1.15.0.dev
+----------
 
-- fix readme display on pypi
+- new ``worker_id`` fixture, returns the id of the worker in a test or fixture.
+  Thanks Jared Hellman for the PR.
+
+- display progress during collection only when in a terminal, similar to pytest #1397 issue.
+  Thanks Bruno Oliveira for the PR.
+
+- fix internal error message when ``--maxfail`` is used (#62, #65).
+  Thanks Collin RM Stocks and Bryan A. Jones for reports and Bruno Oliveira for the PR.
+
+
+1.14
+----
+
+- new hook: ``pytest_xdist_node_collection_finished(node, ids)``, called when
+  a worker has finished collection. Thanks Omer Katz for the request and
+  Bruno Oliveira for the PR.
+
+- fix README display on pypi
+
+- fix #22: xdist now works if the internal tmpdir plugin is disabled.
+  Thanks Bruno Oliveira for the PR.
+
+- fix #32: xdist now works if looponfail or boxed are disabled.
+  Thanks Bruno Oliveira for the PR.
 
 
 1.13.1

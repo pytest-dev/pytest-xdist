@@ -205,14 +205,20 @@ class SlaveController(object):
         self.putevent = putevent
         self.gateway = gateway
         self.config = config
-        self.slaveinput = {'slaveid': gateway.id}
+        self.slaveinput = {'slaveid': gateway.id,
+                           'slavecount': len(nodemanager.specs)}
         self._down = False
+        self._shutdown_sent = False
         self.log = py.log.Producer("slavectl-%s" % gateway.id)
         if not self.config.option.debug:
             py.log.setconsumer(self.log._keywords, None)
 
     def __repr__(self):
         return "<%s %s>" % (self.__class__.__name__, self.gateway.id,)
+
+    @property
+    def shutting_down(self):
+        return self._down or self._shutdown_sent
 
     def setup(self):
         self.log("setting up slave session")
@@ -223,8 +229,9 @@ class SlaveController(object):
         option_dict = vars(self.config.option)
         if spec.popen:
             name = "popen-%s" % self.gateway.id
-            basetemp = self.config._tmpdirhandler.getbasetemp()
-            option_dict['basetemp'] = str(basetemp.join(name))
+            if hasattr(self.config, '_tmpdirhandler'):
+                basetemp = self.config._tmpdirhandler.getbasetemp()
+                option_dict['basetemp'] = str(basetemp.join(name))
         self.config.hook.pytest_configure_node(node=self)
         self.channel = self.gateway.remote_exec(xdist.remote)
         self.channel.send((self.slaveinput, args, option_dict))
@@ -256,6 +263,7 @@ class SlaveController(object):
                 self.sendcommand("shutdown")
             except IOError:
                 pass
+            self._shutdown_sent = True
 
     def sendcommand(self, name, **kwargs):
         """ send a named parametrized command to the other side. """
