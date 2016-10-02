@@ -1,4 +1,5 @@
 import difflib
+import importlib
 import itertools
 from _pytest.runner import CollectReport
 
@@ -24,7 +25,7 @@ class EachScheduling:
     assigned the remaining items from the removed node.
     """
 
-    def __init__(self, numnodes, log=None):
+    def __init__(self, numnodes, log=None, config=None):
         self.numnodes = numnodes
         self.node2collection = {}
         self.node2pending = {}
@@ -485,6 +486,17 @@ class DSession:
             self.trdist = TerminalDistReporter(config)
             config.pluginmanager.register(self.trdist, "terminaldistreporter")
 
+        self.sched = None
+        dist = self.config.getvalue("dist")
+        if dist == "load":
+            self.ScheduleCls = LoadScheduling
+        elif dist == "each":
+            self.ScheduleCls = EachScheduling
+        else:
+            mod_name, cls_name = dist.rsplit('.', 1)
+            mod = importlib.import_module(mod_name)
+            self.ScheduleCls = getattr(mod, cls_name)
+
     @property
     def session_finished(self):
         """Return True if the distributed session has finished
@@ -523,15 +535,9 @@ class DSession:
 
     def pytest_runtestloop(self):
         numnodes = len(self.nodemanager.specs)
-        dist = self.config.getvalue("dist")
-        if dist == "load":
-            self.sched = LoadScheduling(numnodes, log=self.log,
-                                        config=self.config)
-        elif dist == "each":
-            self.sched = EachScheduling(numnodes, log=self.log)
-        else:
-            assert 0, dist
         self.shouldstop = False
+        self.sched = self.ScheduleCls(numnodes, log=self.log,
+                                      config=self.config)
         while not self.session_finished:
             self.loop_once()
             if self.shouldstop:
