@@ -25,6 +25,13 @@ def test_dist_options(testdir):
     assert config.option.dist == "load"
 
 
+def test_dist_custom_options(testdir):
+    from xdist.plugin import pytest_cmdline_main as check_options
+    config = testdir.parseconfigure("-n2", "--dc=foo.bar.Class")
+    check_options(config)
+    assert config.option.dist == "foo.bar.Class"
+
+
 def test_auto_detect_cpus(testdir, monkeypatch):
     import os
     if hasattr(os, 'cpu_count'):
