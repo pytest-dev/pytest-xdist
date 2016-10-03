@@ -38,7 +38,7 @@ def pytest_addoption(parser):
               "load: send each test to available environment.\n\n"
               "(default) no: run tests inprocess, don't distribute."))
     group._addoption('--dc', dest='distcustom',
-                    help="Custom scheduler implementation")
+                     help="Custom scheduler implementation")
     group._addoption(
         '--tx', dest="tx", action="append", default=[],
         metavar="xspec",
