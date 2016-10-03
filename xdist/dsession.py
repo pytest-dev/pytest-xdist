@@ -1,5 +1,4 @@
 import difflib
-import importlib
 import itertools
 from _pytest.runner import CollectReport
 
@@ -494,7 +493,7 @@ class DSession:
             self.ScheduleCls = EachScheduling
         else:
             mod_name, cls_name = dist.rsplit('.', 1)
-            mod = importlib.import_module(mod_name)
+            mod = __import__(mod_name)
             self.ScheduleCls = getattr(mod, cls_name)
 
     @property
