@@ -521,7 +521,7 @@ class DSession:
         # prohibit collection of test items in master process
         return True
 
-    @pytest.hookimpl(trylast=True)
+    @pytest.mark.trylast
     def pytest_xdist_make_scheduler(self, numnodes, log, config):
         dist = config.getvalue("dist")
         if dist == "load":

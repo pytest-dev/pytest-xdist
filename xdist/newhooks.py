@@ -47,7 +47,7 @@ def pytest_xdist_node_collection_finished(node, ids):
     """
 
 
-@pytest.hookspec(firstresult=True)
+@pytest.mark.firstresult
 def pytest_xdist_make_scheduler(numnodes, log, config):
     """Return a node scheduler implementation, or None.
     """
