@@ -485,17 +485,6 @@ class DSession:
             self.trdist = TerminalDistReporter(config)
             config.pluginmanager.register(self.trdist, "terminaldistreporter")
 
-        self.sched = None
-        dist = self.config.getvalue("dist")
-        if dist == "load":
-            self.ScheduleCls = LoadScheduling
-        elif dist == "each":
-            self.ScheduleCls = EachScheduling
-        else:
-            mod_name, cls_name = dist.rsplit('.', 1)
-            mod = __import__(mod_name)
-            self.ScheduleCls = getattr(mod, cls_name)
-
     @property
     def session_finished(self):
         """Return True if the distributed session has finished
@@ -532,11 +521,22 @@ class DSession:
         # prohibit collection of test items in master process
         return True
 
+    @pytest.hookimpl(trylast=True)
+    def pytest_xdist_make_scheduler(self, numnodes, log, config):
+        dist = config.getvalue("dist")
+        if dist == "load":
+            return LoadScheduling(numnodes, log=log, config=config)
+        elif dist == "each":
+            return EachScheduling(numnodes, log=log, config=config)
+
     def pytest_runtestloop(self):
         numnodes = len(self.nodemanager.specs)
+        self.sched = self.config.hook.pytest_xdist_make_scheduler(numnodes=numnodes,
+                                                                  log=self.log,
+                                                                  config=self.config)
+        assert self.sched is not None
+
         self.shouldstop = False
-        self.sched = self.ScheduleCls(numnodes, log=self.log,
-                                      config=self.config)
         while not self.session_finished:
             self.loop_once()
             if self.shouldstop:

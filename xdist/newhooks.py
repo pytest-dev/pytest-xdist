@@ -11,6 +11,7 @@ must be taken in plugins in case ``xdist`` is not installed. Please see:
 
     http://pytest.org/latest/writing_plugins.html#optionally-using-hooks-from-3rd-party-plugins
 """
+import pytest
 
 
 def pytest_xdist_setupnodes(config, specs):
@@ -43,4 +44,10 @@ def pytest_testnodedown(node, error):
 
 def pytest_xdist_node_collection_finished(node, ids):
     """called by the master node when a node finishes collecting.
+    """
+
+
+@pytest.hookspec(firstresult=True)
+def pytest_xdist_make_scheduler(numnodes, log, config):
+    """Return a node scheduler implementation, or None.
     """

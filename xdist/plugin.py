@@ -37,8 +37,6 @@ def pytest_addoption(parser):
               "each: send each test to each available environment.\n\n"
               "load: send each test to available environment.\n\n"
               "(default) no: run tests inprocess, don't distribute."))
-    group._addoption('--dc', dest='distcustom',
-                     help="Custom scheduler implementation")
     group._addoption(
         '--tx', dest="tx", action="append", default=[],
         metavar="xspec",
@@ -101,8 +99,6 @@ def pytest_cmdline_main(config):
         config.option.tx = ['popen'] * config.option.numprocesses
     if config.option.distload:
         config.option.dist = "load"
-    if config.option.distcustom:
-        config.option.dist = config.option.distcustom
     val = config.getvalue
     if not val("collectonly"):
         usepdb = config.getoption('usepdb')  # a core option

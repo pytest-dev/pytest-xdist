@@ -131,7 +131,6 @@ def remote_initconfig(option_dict, args):
     config.option.usepdb = False
     config.option.dist = "no"
     config.option.distload = False
-    config.option.distcustom = None
     config.option.numprocesses = None
     config.args = args
     return config
