@@ -258,5 +258,5 @@ where the configuration file was found.
 Issue and Bug Tracker
 ------------------------
 
-Please use the `pytest issue tracker <https://github.com/pytest-dev/pytest/issues>`_
+Please use the `pytest issue tracker <https://github.com/pytest-dev/pytest-xdisr/issues>`_
 for reporting bugs in this plugin.
