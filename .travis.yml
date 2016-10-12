@@ -2,6 +2,7 @@ sudo: false
 language: python
 python:
 - '3.5'
+cache: pip
 install: pip install -U tox setuptools_scm
 env:
   matrix:
