@@ -531,9 +531,11 @@ class DSession:
 
     def pytest_runtestloop(self):
         numnodes = len(self.nodemanager.specs)
-        self.sched = self.config.hook.pytest_xdist_make_scheduler(numnodes=numnodes,
-                                                                  log=self.log,
-                                                                  config=self.config)
+        self.sched = self.config.hook.pytest_xdist_make_scheduler(
+            numnodes=numnodes,
+            log=self.log,
+            config=self.config
+        )
         assert self.sched is not None
 
         self.shouldstop = False
