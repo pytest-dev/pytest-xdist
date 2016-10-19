@@ -24,7 +24,7 @@ class EachScheduling:
     assigned the remaining items from the removed node.
     """
 
-    def __init__(self, numnodes, log=None, config=None):
+    def __init__(self, numnodes, config, log=None):
         self.numnodes = numnodes
         self.node2collection = {}
         self.node2pending = {}
@@ -181,7 +181,7 @@ class LoadScheduling:
     :config: Config object, used for handling hooks.
     """
 
-    def __init__(self, numnodes, log=None, config=None):
+    def __init__(self, numnodes, config, log=None):
         self.numnodes = numnodes
         self.node2collection = {}
         self.node2pending = {}
@@ -466,6 +466,8 @@ class DSession:
         self.log = py.log.Producer("dsession")
         if not config.option.debug:
             py.log.setconsumer(self.log._keywords, None)
+        self.nodemanager = None
+        self.sched = None
         self.shuttingdown = False
         self.countfailures = 0
         self.maxfail = config.getvalue("maxfail")
@@ -522,19 +524,19 @@ class DSession:
         return True
 
     @pytest.mark.trylast
-    def pytest_xdist_make_scheduler(self, numnodes, log, config):
+    def pytest_xdist_make_scheduler(self, numnodes, config, log):
         dist = config.getvalue("dist")
         if dist == "load":
-            return LoadScheduling(numnodes, log=log, config=config)
+            return LoadScheduling(numnodes, config, log)
         elif dist == "each":
-            return EachScheduling(numnodes, log=log, config=config)
+            return EachScheduling(numnodes, config, log)
 
     def pytest_runtestloop(self):
         numnodes = len(self.nodemanager.specs)
         self.sched = self.config.hook.pytest_xdist_make_scheduler(
             numnodes=numnodes,
-            log=self.log,
-            config=self.config
+            config=self.config,
+            log=self.log
         )
         assert self.sched is not None
 

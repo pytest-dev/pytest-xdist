@@ -49,10 +49,11 @@ def dumpqueue(queue):
 
 
 class TestEachScheduling:
-    def test_schedule_load_simple(self):
+    def test_schedule_load_simple(self, testdir):
         node1 = MockNode()
         node2 = MockNode()
-        sched = EachScheduling(2)
+        config = testdir.parseconfig()
+        sched = EachScheduling(2, config)
         sched.addnode(node1)
         sched.addnode(node2)
         collection = ["a.py::test_1", ]
@@ -72,9 +73,10 @@ class TestEachScheduling:
         sched.remove_item(node2, 0)
         assert sched.tests_finished()
 
-    def test_schedule_remove_node(self):
+    def test_schedule_remove_node(self, testdir):
         node1 = MockNode()
-        sched = EachScheduling(1)
+        config = testdir.parseconfig()
+        sched = EachScheduling(1, config)
         sched.addnode(node1)
         collection = ["a.py::test_1", ]
         assert not sched.collection_is_completed
@@ -90,8 +92,9 @@ class TestEachScheduling:
 
 
 class TestLoadScheduling:
-    def test_schedule_load_simple(self):
-        sched = LoadScheduling(2)
+    def test_schedule_load_simple(self, testdir):
+        config = testdir.parseconfig()
+        sched = LoadScheduling(2, config)
         sched.addnode(MockNode())
         sched.addnode(MockNode())
         node1, node2 = sched.nodes
@@ -113,8 +116,9 @@ class TestLoadScheduling:
         sched.remove_item(node1, node1.sent[0])
         assert sched.tests_finished()
 
-    def test_init_distribute_batch_size(self):
-        sched = LoadScheduling(2)
+    def test_init_distribute_batch_size(self, testdir):
+        config = testdir.parseconfig()
+        sched = LoadScheduling(2, config)
         sched.addnode(MockNode())
         sched.addnode(MockNode())
         node1, node2 = sched.nodes
@@ -139,8 +143,9 @@ class TestLoadScheduling:
         assert node1.sent == [0, 2, 4, 5]
         assert not sched.pending
 
-    def test_init_distribute_fewer_tests_than_nodes(self):
-        sched = LoadScheduling(2)
+    def test_init_distribute_fewer_tests_than_nodes(self, testdir):
+        config = testdir.parseconfig()
+        sched = LoadScheduling(2, config)
         sched.addnode(MockNode())
         sched.addnode(MockNode())
         sched.addnode(MockNode())
@@ -158,8 +163,9 @@ class TestLoadScheduling:
         assert sent3 == []
         assert not sched.pending
 
-    def test_init_distribute_fewer_than_two_tests_per_node(self):
-        sched = LoadScheduling(2)
+    def test_init_distribute_fewer_than_two_tests_per_node(self, testdir):
+        config = testdir.parseconfig()
+        sched = LoadScheduling(2, config)
         sched.addnode(MockNode())
         sched.addnode(MockNode())
         sched.addnode(MockNode())
@@ -177,9 +183,10 @@ class TestLoadScheduling:
         assert sent3 == [2]
         assert not sched.pending
 
-    def test_add_remove_node(self):
+    def test_add_remove_node(self, testdir):
         node = MockNode()
-        sched = LoadScheduling(1)
+        config = testdir.parseconfig()
+        sched = LoadScheduling(1, config)
         sched.addnode(node)
         collection = ["test_file.py::test_func"]
         sched.addnode_collection(node, collection)
@@ -211,7 +218,7 @@ class TestLoadScheduling:
         config.pluginmanager.register(collect_hook, "collect_hook")
         node1 = MockNode()
         node2 = MockNode()
-        sched = LoadScheduling(2, config=config)
+        sched = LoadScheduling(2, config)
         sched.addnode(node1)
         sched.addnode(node2)
         sched.addnode_collection(node1, ["a.py::test_1"])
