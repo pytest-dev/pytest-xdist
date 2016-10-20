@@ -78,7 +78,7 @@ class EachScheduling:
         list.  When the collection is already completed this
         submission is from a node which was restarted to replace a
         dead node.  In this case we already assign the pending items
-        here.  In either case ``.init_distribute()`` will instruct the
+        here.  In either case ``.schedule()`` will instruct the
         node to start running the required tests.
         """
         assert node in self.node2pending
@@ -115,7 +115,7 @@ class EachScheduling:
             self._removed2pending[node] = pending
         return crashitem
 
-    def init_distribute(self):
+    def schedule(self):
         """Schedule the test items on the nodes
 
         If the node's pending list is empty it is a new node which
@@ -170,7 +170,7 @@ class LoadScheduling:
 
     :collection: The one collection once it is validated to be
        identical between all the nodes.  It is initialised to None
-       until ``.init_distribute()`` is called.
+       until ``.schedule()`` is called.
 
     :pending: List of indices of globally pending tests.  These are
        tests which have not yet been allocated to a chunk for a node
@@ -258,7 +258,7 @@ class LoadScheduling:
         assert node in self.node2pending
         if self.collection_is_completed:
             # A new node has been added later, perhaps an original one died.
-            # .init_distribute() should have
+            # .schedule() should have
             # been called by now
             assert self.collection
             if collection != self.collection:
@@ -335,7 +335,7 @@ class LoadScheduling:
             self.check_schedule(node)
         return crashitem
 
-    def init_distribute(self):
+    def schedule(self):
         """Initiate distribution of the test collection
 
         Initiate scheduling of the items across the nodes.  If this
@@ -345,8 +345,6 @@ class LoadScheduling:
 
         This is called by the ``DSession.slave_collectionfinish`` hook
         if ``.collection_is_completed`` is True.
-
-        XXX Perhaps this method should have been called ".schedule()".
         """
         assert self.collection_is_completed
 
@@ -653,7 +651,7 @@ class DSession:
                 self.terminal.write_line("")
                 self.terminal.write_line("scheduling tests via %s" % (
                     self.sched.__class__.__name__))
-            self.sched.init_distribute()
+            self.sched.schedule()
 
     def slave_logstart(self, node, nodeid, location):
         """Emitted when a node calls the pytest_runtest_logstart hook."""
