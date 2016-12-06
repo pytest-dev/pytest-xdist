@@ -62,7 +62,7 @@ class TestDistribution:
                 pass
         """)
         result = testdir.runpytest(p1, '--tx=popen', '--tx=popen')
-        assert result.ret == 1
+        assert result.ret in (1, 2)
         result.stdout.fnmatch_lines([
             "E   ImportError: *__import_of_missing_module*",
         ])

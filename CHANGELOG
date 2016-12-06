@@ -1,3 +1,8 @@
+1.16.0
+------
+
+- ``pytest-xdist`` now requires pytest 2.7 or later.
+
 1.15.0
 ------
 
