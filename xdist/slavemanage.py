@@ -292,7 +292,7 @@ class SlaveController(object):
                     self._down = True
                 return
             eventname, kwargs = eventcall
-            if eventname in ("collectionstart"):
+            if eventname in ("collectionstart",):
                 self.log("ignoring %s(%s)" % (eventname, kwargs))
             elif eventname == "slaveready":
                 self.notify_inproc(eventname, node=self, **kwargs)
