@@ -32,7 +32,7 @@ def pytest_addoption(parser):
     group._addoption(
         '--dist', metavar="distmode",
         action="store", choices=['load', 'each', 'no'],
-        type=str, dest="dist", default="no",
+        dest="dist", default="no",
         help=("set mode for distributing tests to exec environments.\n\n"
               "each: send each test to each available environment.\n\n"
               "load: send each test to available environment.\n\n"
