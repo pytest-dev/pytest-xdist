@@ -46,7 +46,7 @@ Install the plugin with::
 
     pip install pytest-xdist
 
-or use the package in develope/in-place mode with
+or use the package in develop/in-place mode with
 a checkout of the `pytest-xdist repository`_ ::
 
     python setup.py develop
