@@ -52,8 +52,8 @@ class TestEachScheduling:
     def test_schedule_load_simple(self, testdir):
         node1 = MockNode()
         node2 = MockNode()
-        config = testdir.parseconfig()
-        sched = EachScheduling(2, config)
+        config = testdir.parseconfig("--tx=2*popen")
+        sched = EachScheduling(config)
         sched.addnode(node1)
         sched.addnode(node2)
         collection = ["a.py::test_1", ]
@@ -75,8 +75,8 @@ class TestEachScheduling:
 
     def test_schedule_remove_node(self, testdir):
         node1 = MockNode()
-        config = testdir.parseconfig()
-        sched = EachScheduling(1, config)
+        config = testdir.parseconfig("--tx=popen")
+        sched = EachScheduling(config)
         sched.addnode(node1)
         collection = ["a.py::test_1", ]
         assert not sched.collection_is_completed
@@ -93,8 +93,8 @@ class TestEachScheduling:
 
 class TestLoadScheduling:
     def test_schedule_load_simple(self, testdir):
-        config = testdir.parseconfig()
-        sched = LoadScheduling(2, config)
+        config = testdir.parseconfig("--tx=2*popen")
+        sched = LoadScheduling(config)
         sched.addnode(MockNode())
         sched.addnode(MockNode())
         node1, node2 = sched.nodes
@@ -117,8 +117,8 @@ class TestLoadScheduling:
         assert sched.tests_finished()
 
     def test_schedule_batch_size(self, testdir):
-        config = testdir.parseconfig()
-        sched = LoadScheduling(2, config)
+        config = testdir.parseconfig("--tx=2*popen")
+        sched = LoadScheduling(config)
         sched.addnode(MockNode())
         sched.addnode(MockNode())
         node1, node2 = sched.nodes
@@ -144,8 +144,8 @@ class TestLoadScheduling:
         assert not sched.pending
 
     def test_schedule_fewer_tests_than_nodes(self, testdir):
-        config = testdir.parseconfig()
-        sched = LoadScheduling(2, config)
+        config = testdir.parseconfig("--tx=2*popen")
+        sched = LoadScheduling(config)
         sched.addnode(MockNode())
         sched.addnode(MockNode())
         sched.addnode(MockNode())
@@ -164,8 +164,8 @@ class TestLoadScheduling:
         assert not sched.pending
 
     def test_schedule_fewer_than_two_tests_per_node(self, testdir):
-        config = testdir.parseconfig()
-        sched = LoadScheduling(2, config)
+        config = testdir.parseconfig("--tx=2*popen")
+        sched = LoadScheduling(config)
         sched.addnode(MockNode())
         sched.addnode(MockNode())
         sched.addnode(MockNode())
@@ -185,8 +185,8 @@ class TestLoadScheduling:
 
     def test_add_remove_node(self, testdir):
         node = MockNode()
-        config = testdir.parseconfig()
-        sched = LoadScheduling(1, config)
+        config = testdir.parseconfig("--tx=popen")
+        sched = LoadScheduling(config)
         sched.addnode(node)
         collection = ["test_file.py::test_func"]
         sched.addnode_collection(node, collection)
@@ -214,11 +214,11 @@ class TestLoadScheduling:
                 self.reports.append(report)
 
         collect_hook = CollectHook()
-        config = testdir.parseconfig()
+        config = testdir.parseconfig("--tx=2*popen")
         config.pluginmanager.register(collect_hook, "collect_hook")
         node1 = MockNode()
         node2 = MockNode()
-        sched = LoadScheduling(2, config)
+        sched = LoadScheduling(config)
         sched.addnode(node1)
         sched.addnode(node2)
         sched.addnode_collection(node1, ["a.py::test_1"])

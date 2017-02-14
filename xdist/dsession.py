@@ -4,7 +4,7 @@ from _pytest.runner import CollectReport
 
 import pytest
 import py
-from xdist.slavemanage import NodeManager
+from xdist.slavemanage import NodeManager, parse_spec_config
 
 
 queue = py.builtin._tryimport('queue', 'Queue')
@@ -24,8 +24,9 @@ class EachScheduling:
     assigned the remaining items from the removed node.
     """
 
-    def __init__(self, numnodes, config, log=None):
-        self.numnodes = numnodes
+    def __init__(self, config, log=None):
+        self.config = config
+        self.numnodes = len(parse_spec_config(config))
         self.node2collection = {}
         self.node2pending = {}
         self._started = []
@@ -181,8 +182,8 @@ class LoadScheduling:
     :config: Config object, used for handling hooks.
     """
 
-    def __init__(self, numnodes, config, log=None):
-        self.numnodes = numnodes
+    def __init__(self, config, log=None):
+        self.numnodes = len(parse_spec_config(config))
         self.node2collection = {}
         self.node2pending = {}
         self.pending = []
@@ -522,17 +523,15 @@ class DSession:
         return True
 
     @pytest.mark.trylast
-    def pytest_xdist_make_scheduler(self, numnodes, config, log):
+    def pytest_xdist_make_scheduler(self, config, log):
         dist = config.getvalue("dist")
         if dist == "load":
-            return LoadScheduling(numnodes, config, log)
+            return LoadScheduling(config, log)
         elif dist == "each":
-            return EachScheduling(numnodes, config, log)
+            return EachScheduling(config, log)
 
     def pytest_runtestloop(self):
-        numnodes = len(self.nodemanager.specs)
         self.sched = self.config.hook.pytest_xdist_make_scheduler(
-            numnodes=numnodes,
             config=self.config,
             log=self.log
         )

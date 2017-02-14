@@ -48,5 +48,5 @@ def pytest_xdist_node_collection_finished(node, ids):
 
 
 @pytest.mark.firstresult
-def pytest_xdist_make_scheduler(numnodes, config, log):
+def pytest_xdist_make_scheduler(config, log):
     """ return a node scheduler implementation """
