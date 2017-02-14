@@ -54,13 +54,13 @@ class TestEachScheduling:
         node2 = MockNode()
         config = testdir.parseconfig("--tx=2*popen")
         sched = EachScheduling(config)
-        sched.addnode(node1)
-        sched.addnode(node2)
+        sched.add_node(node1)
+        sched.add_node(node2)
         collection = ["a.py::test_1", ]
         assert not sched.collection_is_completed
-        sched.addnode_collection(node1, collection)
+        sched.add_node_collection(node1, collection)
         assert not sched.collection_is_completed
-        sched.addnode_collection(node2, collection)
+        sched.add_node_collection(node2, collection)
         assert sched.collection_is_completed
         assert sched.node2collection[node1] == collection
         assert sched.node2collection[node2] == collection
@@ -77,10 +77,10 @@ class TestEachScheduling:
         node1 = MockNode()
         config = testdir.parseconfig("--tx=popen")
         sched = EachScheduling(config)
-        sched.addnode(node1)
+        sched.add_node(node1)
         collection = ["a.py::test_1", ]
         assert not sched.collection_is_completed
-        sched.addnode_collection(node1, collection)
+        sched.add_node_collection(node1, collection)
         assert sched.collection_is_completed
         assert sched.node2collection[node1] == collection
         sched.schedule()
@@ -88,21 +88,21 @@ class TestEachScheduling:
         crashitem = sched.remove_node(node1)
         assert crashitem
         assert sched.tests_finished()
-        assert not sched.hasnodes()
+        assert not sched.has_nodes()
 
 
 class TestLoadScheduling:
     def test_schedule_load_simple(self, testdir):
         config = testdir.parseconfig("--tx=2*popen")
         sched = LoadScheduling(config)
-        sched.addnode(MockNode())
-        sched.addnode(MockNode())
+        sched.add_node(MockNode())
+        sched.add_node(MockNode())
         node1, node2 = sched.nodes
         collection = ["a.py::test_1", "a.py::test_2"]
         assert not sched.collection_is_completed
-        sched.addnode_collection(node1, collection)
+        sched.add_node_collection(node1, collection)
         assert not sched.collection_is_completed
-        sched.addnode_collection(node2, collection)
+        sched.add_node_collection(node2, collection)
         assert sched.collection_is_completed
         assert sched.node2collection[node1] == collection
         assert sched.node2collection[node2] == collection
@@ -119,12 +119,12 @@ class TestLoadScheduling:
     def test_schedule_batch_size(self, testdir):
         config = testdir.parseconfig("--tx=2*popen")
         sched = LoadScheduling(config)
-        sched.addnode(MockNode())
-        sched.addnode(MockNode())
+        sched.add_node(MockNode())
+        sched.add_node(MockNode())
         node1, node2 = sched.nodes
         col = ["xyz"] * (6)
-        sched.addnode_collection(node1, col)
-        sched.addnode_collection(node2, col)
+        sched.add_node_collection(node1, col)
+        sched.add_node_collection(node2, col)
         sched.schedule()
         # assert not sched.tests_finished()
         sent1 = node1.sent
@@ -146,13 +146,13 @@ class TestLoadScheduling:
     def test_schedule_fewer_tests_than_nodes(self, testdir):
         config = testdir.parseconfig("--tx=2*popen")
         sched = LoadScheduling(config)
-        sched.addnode(MockNode())
-        sched.addnode(MockNode())
-        sched.addnode(MockNode())
+        sched.add_node(MockNode())
+        sched.add_node(MockNode())
+        sched.add_node(MockNode())
         node1, node2, node3 = sched.nodes
         col = ["xyz"] * 2
-        sched.addnode_collection(node1, col)
-        sched.addnode_collection(node2, col)
+        sched.add_node_collection(node1, col)
+        sched.add_node_collection(node2, col)
         sched.schedule()
         # assert not sched.tests_finished()
         sent1 = node1.sent
@@ -166,13 +166,13 @@ class TestLoadScheduling:
     def test_schedule_fewer_than_two_tests_per_node(self, testdir):
         config = testdir.parseconfig("--tx=2*popen")
         sched = LoadScheduling(config)
-        sched.addnode(MockNode())
-        sched.addnode(MockNode())
-        sched.addnode(MockNode())
+        sched.add_node(MockNode())
+        sched.add_node(MockNode())
+        sched.add_node(MockNode())
         node1, node2, node3 = sched.nodes
         col = ["xyz"] * 5
-        sched.addnode_collection(node1, col)
-        sched.addnode_collection(node2, col)
+        sched.add_node_collection(node1, col)
+        sched.add_node_collection(node2, col)
         sched.schedule()
         # assert not sched.tests_finished()
         sent1 = node1.sent
@@ -187,9 +187,9 @@ class TestLoadScheduling:
         node = MockNode()
         config = testdir.parseconfig("--tx=popen")
         sched = LoadScheduling(config)
-        sched.addnode(node)
+        sched.add_node(node)
         collection = ["test_file.py::test_func"]
-        sched.addnode_collection(node, collection)
+        sched.add_node_collection(node, collection)
         assert sched.collection_is_completed
         sched.schedule()
         assert not sched.pending
@@ -219,10 +219,10 @@ class TestLoadScheduling:
         node1 = MockNode()
         node2 = MockNode()
         sched = LoadScheduling(config)
-        sched.addnode(node1)
-        sched.addnode(node2)
-        sched.addnode_collection(node1, ["a.py::test_1"])
-        sched.addnode_collection(node2, ["a.py::test_2"])
+        sched.add_node(node1)
+        sched.add_node(node2)
+        sched.add_node_collection(node1, ["a.py::test_1"])
+        sched.add_node_collection(node2, ["a.py::test_2"])
         sched.schedule()
         assert len(collect_hook.reports) == 1
         rep = collect_hook.reports[0]

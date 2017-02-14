@@ -42,10 +42,10 @@ class EachScheduling:
         """A list of all nodes in the scheduler."""
         return list(self.node2pending.keys())
 
-    def hasnodes(self):
+    def has_nodes(self):
         return bool(self.node2pending)
 
-    def haspending(self):
+    def has_pending(self):
         """Return True if there are pending test items
 
         This indicates that collection has finished and nodes are
@@ -57,7 +57,7 @@ class EachScheduling:
                 return True
         return False
 
-    def addnode(self, node):
+    def add_node(self, node):
         assert node not in self.node2pending
         self.node2pending[node] = []
 
@@ -71,7 +71,7 @@ class EachScheduling:
                 return False
         return True
 
-    def addnode_collection(self, node, collection):
+    def add_node_collection(self, node, collection):
         """Add the collected test items from a node
 
         Collection is complete once all nodes have submitted their
@@ -107,7 +107,7 @@ class EachScheduling:
         self.node2pending[node].remove(item_index)
 
     def remove_node(self, node):
-        # KeyError if we didn't get an addnode() yet
+        # KeyError if we didn't get an add_node() yet
         pending = self.node2pending.pop(node)
         if not pending:
             return
@@ -121,7 +121,7 @@ class EachScheduling:
 
         If the node's pending list is empty it is a new node which
         needs to run all the tests.  If the pending list is already
-        populated (by ``.addnode_collection()``) then it replaces a
+        populated (by ``.add_node_collection()``) then it replaces a
         dead node and we only need to run those tests.
         """
         assert self.collection_is_completed
@@ -209,7 +209,7 @@ class LoadScheduling:
         """
         return len(self.node2collection) >= self.numnodes
 
-    def haspending(self):
+    def has_pending(self):
         """Return True if there are pending test items
 
         This indicates that collection has finished and nodes are
@@ -223,11 +223,11 @@ class LoadScheduling:
                 return True
         return False
 
-    def hasnodes(self):
+    def has_nodes(self):
         """Return True if nodes exist in the scheduler."""
         return bool(self.node2pending)
 
-    def addnode(self, node):
+    def add_node(self, node):
         """Add a new node to the scheduler.
 
         From now on the node will be allocated chunks of tests to
@@ -250,7 +250,7 @@ class LoadScheduling:
                 return False
         return True
 
-    def addnode_collection(self, node, collection):
+    def add_node_collection(self, node, collection):
         """Add the collected test items from a node
 
         The collection is stored in the ``.node2collection`` map.
@@ -579,7 +579,7 @@ class DSession:
         if self.shuttingdown:
             node.shutdown()
         else:
-            self.sched.addnode(node)
+            self.sched.add_node(node)
 
     def slave_slavefinished(self, node):
         """Emitted when node executes its pytest_sessionfinish hook.
@@ -641,11 +641,11 @@ class DSession:
         # tell session which items were effectively collected otherwise
         # the master node will finish the session with EXIT_NOTESTSCOLLECTED
         self._session.testscollected = len(ids)
-        self.sched.addnode_collection(node, ids)
+        self.sched.add_node_collection(node, ids)
         if self.terminal:
             self.trdist.setstatus(node.gateway.spec, "[%d]" % (len(ids)))
         if self.sched.collection_is_completed:
-            if self.terminal and not self.sched.haspending():
+            if self.terminal and not self.sched.has_pending():
                 self.trdist.ensure_show_status()
                 self.terminal.write_line("")
                 self.terminal.write_line("scheduling tests via %s" % (
