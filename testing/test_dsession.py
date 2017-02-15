@@ -65,13 +65,13 @@ class TestEachScheduling:
         assert sched.node2collection[node1] == collection
         assert sched.node2collection[node2] == collection
         sched.schedule()
-        assert sched.tests_finished()
+        assert sched.tests_finished
         assert node1.sent == ['ALL']
         assert node2.sent == ['ALL']
         sched.remove_item(node1, 0)
-        assert sched.tests_finished()
+        assert sched.tests_finished
         sched.remove_item(node2, 0)
-        assert sched.tests_finished()
+        assert sched.tests_finished
 
     def test_schedule_remove_node(self, testdir):
         node1 = MockNode()
@@ -84,11 +84,11 @@ class TestEachScheduling:
         assert sched.collection_is_completed
         assert sched.node2collection[node1] == collection
         sched.schedule()
-        assert sched.tests_finished()
+        assert sched.tests_finished
         crashitem = sched.remove_node(node1)
         assert crashitem
-        assert sched.tests_finished()
-        assert not sched.has_nodes()
+        assert sched.tests_finished
+        assert not sched.nodes
 
 
 class TestLoadScheduling:
@@ -108,13 +108,13 @@ class TestLoadScheduling:
         assert sched.node2collection[node2] == collection
         sched.schedule()
         assert not sched.pending
-        assert sched.tests_finished()
+        assert sched.tests_finished
         assert len(node1.sent) == 1
         assert len(node2.sent) == 1
         assert node1.sent == [0]
         assert node2.sent == [1]
         sched.remove_item(node1, node1.sent[0])
-        assert sched.tests_finished()
+        assert sched.tests_finished
 
     def test_schedule_batch_size(self, testdir):
         config = testdir.parseconfig("--tx=2*popen")
@@ -126,7 +126,7 @@ class TestLoadScheduling:
         sched.add_node_collection(node1, col)
         sched.add_node_collection(node2, col)
         sched.schedule()
-        # assert not sched.tests_finished()
+        # assert not sched.tests_finished
         sent1 = node1.sent
         sent2 = node2.sent
         assert sent1 == [0, 2]
@@ -154,7 +154,7 @@ class TestLoadScheduling:
         sched.add_node_collection(node1, col)
         sched.add_node_collection(node2, col)
         sched.schedule()
-        # assert not sched.tests_finished()
+        # assert not sched.tests_finished
         sent1 = node1.sent
         sent2 = node2.sent
         sent3 = node3.sent
@@ -174,7 +174,7 @@ class TestLoadScheduling:
         sched.add_node_collection(node1, col)
         sched.add_node_collection(node2, col)
         sched.schedule()
-        # assert not sched.tests_finished()
+        # assert not sched.tests_finished
         sent1 = node1.sent
         sent2 = node2.sent
         sent3 = node3.sent

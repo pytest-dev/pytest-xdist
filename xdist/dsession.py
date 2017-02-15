@@ -42,9 +42,18 @@ class EachScheduling:
         """A list of all nodes in the scheduler."""
         return list(self.node2pending.keys())
 
-    def has_nodes(self):
-        return bool(self.node2pending)
+    @property
+    def tests_finished(self):
+        if not self.collection_is_completed:
+            return False
+        if self._removed2pending:
+            return False
+        for pending in self.node2pending.values():
+            if len(pending) >= 2:
+                return False
+        return True
 
+    @property
     def has_pending(self):
         """Return True if there are pending test items
 
@@ -60,16 +69,6 @@ class EachScheduling:
     def add_node(self, node):
         assert node not in self.node2pending
         self.node2pending[node] = []
-
-    def tests_finished(self):
-        if not self.collection_is_completed:
-            return False
-        if self._removed2pending:
-            return False
-        for pending in self.node2pending.values():
-            if len(pending) >= 2:
-                return False
-        return True
 
     def add_node_collection(self, node, collection):
         """Add the collected test items from a node
@@ -209,6 +208,19 @@ class LoadScheduling:
         """
         return len(self.node2collection) >= self.numnodes
 
+    @property
+    def tests_finished(self):
+        """Return True if all tests have been executed by the nodes."""
+        if not self.collection_is_completed:
+            return False
+        if self.pending:
+            return False
+        for pending in self.node2pending.values():
+            if len(pending) >= 2:
+                return False
+        return True
+
+    @property
     def has_pending(self):
         """Return True if there are pending test items
 
@@ -223,10 +235,6 @@ class LoadScheduling:
                 return True
         return False
 
-    def has_nodes(self):
-        """Return True if nodes exist in the scheduler."""
-        return bool(self.node2pending)
-
     def add_node(self, node):
         """Add a new node to the scheduler.
 
@@ -238,17 +246,6 @@ class LoadScheduling:
         """
         assert node not in self.node2pending
         self.node2pending[node] = []
-
-    def tests_finished(self):
-        """Return True if all tests have been executed by the nodes."""
-        if not self.collection_is_completed:
-            return False
-        if self.pending:
-            return False
-        for pending in self.node2pending.values():
-            if len(pending) >= 2:
-                return False
-        return True
 
     def add_node_collection(self, node, collection):
         """Add the collected test items from a node
@@ -559,7 +556,7 @@ class DSession:
         call = getattr(self, method)
         self.log("calling method", method, kwargs)
         call(**kwargs)
-        if self.sched.tests_finished():
+        if self.sched.tests_finished:
             self.triggershutdown()
 
     #
@@ -645,7 +642,7 @@ class DSession:
         if self.terminal:
             self.trdist.setstatus(node.gateway.spec, "[%d]" % (len(ids)))
         if self.sched.collection_is_completed:
-            if self.terminal and not self.sched.has_pending():
+            if self.terminal and not self.sched.has_pending:
                 self.trdist.ensure_show_status()
                 self.terminal.write_line("")
                 self.terminal.write_line("scheduling tests via %s" % (
