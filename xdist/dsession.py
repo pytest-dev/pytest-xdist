@@ -102,7 +102,7 @@ class EachScheduling:
                     self.node2pending[node] = pending
                     break
 
-    def remove_item(self, node, item_index, duration=0):
+    def mark_test_complete(self, node, item_index, duration=0):
         self.node2pending[node].remove(item_index)
 
     def remove_node(self, node):
@@ -143,7 +143,7 @@ class LoadScheduling:
     when all collections are received it is verified they are
     identical collections.  Then the collection gets divided up in
     chunks and chunks get submitted to nodes.  Whenever a node finishes
-    an item, it calls ``.remove_item()`` which will trigger the
+    an item, it calls ``.mark_test_complete()`` which will trigger the
     scheduler to assign more tests if the number of pending tests for
     the node falls below a low-watermark.
 
@@ -269,7 +269,7 @@ class LoadScheduling:
                 return
         self.node2collection[node] = list(collection)
 
-    def remove_item(self, node, item_index, duration=0):
+    def mark_test_complete(self, node, item_index, duration=0):
         """Mark test item as completed by node
 
         The duration it took to execute the item is used as a hint to
@@ -661,7 +661,7 @@ class DSession:
         the item from the pending list in the scheduler.
         """
         if rep.when == "call" or (rep.when == "setup" and not rep.passed):
-            self.sched.remove_item(node, rep.item_index, rep.duration)
+            self.sched.mark_test_complete(node, rep.item_index, rep.duration)
         # self.report_line("testreport %s: %s" %(rep.id, rep.status))
         rep.node = node
         self.config.hook.pytest_runtest_logreport(report=rep)

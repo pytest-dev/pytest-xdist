@@ -68,9 +68,9 @@ class TestEachScheduling:
         assert sched.tests_finished
         assert node1.sent == ['ALL']
         assert node2.sent == ['ALL']
-        sched.remove_item(node1, 0)
+        sched.mark_test_complete(node1, 0)
         assert sched.tests_finished
-        sched.remove_item(node2, 0)
+        sched.mark_test_complete(node2, 0)
         assert sched.tests_finished
 
     def test_schedule_remove_node(self, testdir):
@@ -113,7 +113,7 @@ class TestLoadScheduling:
         assert len(node2.sent) == 1
         assert node1.sent == [0]
         assert node2.sent == [1]
-        sched.remove_item(node1, node1.sent[0])
+        sched.mark_test_complete(node1, node1.sent[0])
         assert sched.tests_finished
 
     def test_schedule_batch_size(self, testdir):
@@ -135,11 +135,11 @@ class TestLoadScheduling:
         assert sched.node2pending[node1] == sent1
         assert sched.node2pending[node2] == sent2
         assert len(sched.pending) == 2
-        sched.remove_item(node1, 0)
+        sched.mark_test_complete(node1, 0)
         assert node1.sent == [0, 2, 4]
         assert sched.pending == [5]
         assert node2.sent == [1, 3]
-        sched.remove_item(node1, 2)
+        sched.mark_test_complete(node1, 2)
         assert node1.sent == [0, 2, 4, 5]
         assert not sched.pending
 
