@@ -14,14 +14,19 @@ class TestHooks:
 
     def test_runtest_logreport(self, testdir):
         """Test that log reports from pytest_runtest_logreport when running
-        with xdist contain a "node" attribute. (#8)
+        with xdist contain "node", "nodeid" and "worker_id" attributes. (#8)
         """
         testdir.makeconftest("""
             def pytest_runtest_logreport(report):
                 if hasattr(report, 'node'):
-                    slaveid = report.node.slaveinput['slaveid']
                     if report.when == "call":
-                        print("HOOK: %s %s" % (report.nodeid, slaveid))
+                        slaveid = report.node.slaveinput['slaveid']
+                        if slaveid != report.worker_id:
+                            print("HOOK: Worker id mismatch: %s %s"
+                                   % (slaveid, report.worker_id))
+                        else:
+                            print("HOOK: %s %s"
+                                   % (report.nodeid, report.worker_id))
         """)
         res = testdir.runpytest('-n1', '-s')
         res.stdout.fnmatch_lines([

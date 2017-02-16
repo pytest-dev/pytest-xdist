@@ -209,6 +209,10 @@ defined:
 * ``PYTEST_XDIST_WORKER_COUNT``: the total number of workers in this session,
   e.g., ``"4"`` when ``-n 4`` is given in the command-line.
 
+The information about the worker_id in a test is stored in the TestReport as
+well, under worker_id attribute.
+
+
 *New in version 1.15.*
 
 Specifying test exec environments in an ini file

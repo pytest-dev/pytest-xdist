@@ -3,6 +3,8 @@
 
 - ``pytest-xdist`` now requires pytest 2.7 or later.
 
+- Add ``worker_id`` attribute in the TestReport
+
 1.15.0
 ------
 
