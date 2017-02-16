@@ -4,7 +4,7 @@ from _pytest.runner import CollectReport
 
 import pytest
 import py
-from xdist.slavemanage import NodeManager
+from xdist.slavemanage import NodeManager, parse_spec_config
 
 
 queue = py.builtin._tryimport('queue', 'Queue')
@@ -24,8 +24,9 @@ class EachScheduling:
     assigned the remaining items from the removed node.
     """
 
-    def __init__(self, numnodes, log=None):
-        self.numnodes = numnodes
+    def __init__(self, config, log=None):
+        self.config = config
+        self.numnodes = len(parse_spec_config(config))
         self.node2collection = {}
         self.node2pending = {}
         self._started = []
@@ -41,10 +42,19 @@ class EachScheduling:
         """A list of all nodes in the scheduler."""
         return list(self.node2pending.keys())
 
-    def hasnodes(self):
-        return bool(self.node2pending)
+    @property
+    def tests_finished(self):
+        if not self.collection_is_completed:
+            return False
+        if self._removed2pending:
+            return False
+        for pending in self.node2pending.values():
+            if len(pending) >= 2:
+                return False
+        return True
 
-    def haspending(self):
+    @property
+    def has_pending(self):
         """Return True if there are pending test items
 
         This indicates that collection has finished and nodes are
@@ -56,21 +66,11 @@ class EachScheduling:
                 return True
         return False
 
-    def addnode(self, node):
+    def add_node(self, node):
         assert node not in self.node2pending
         self.node2pending[node] = []
 
-    def tests_finished(self):
-        if not self.collection_is_completed:
-            return False
-        if self._removed2pending:
-            return False
-        for pending in self.node2pending.values():
-            if len(pending) >= 2:
-                return False
-        return True
-
-    def addnode_collection(self, node, collection):
+    def add_node_collection(self, node, collection):
         """Add the collected test items from a node
 
         Collection is complete once all nodes have submitted their
@@ -78,7 +78,7 @@ class EachScheduling:
         list.  When the collection is already completed this
         submission is from a node which was restarted to replace a
         dead node.  In this case we already assign the pending items
-        here.  In either case ``.init_distribute()`` will instruct the
+        here.  In either case ``.schedule()`` will instruct the
         node to start running the required tests.
         """
         assert node in self.node2pending
@@ -102,11 +102,11 @@ class EachScheduling:
                     self.node2pending[node] = pending
                     break
 
-    def remove_item(self, node, item_index, duration=0):
+    def mark_test_complete(self, node, item_index, duration=0):
         self.node2pending[node].remove(item_index)
 
     def remove_node(self, node):
-        # KeyError if we didn't get an addnode() yet
+        # KeyError if we didn't get an add_node() yet
         pending = self.node2pending.pop(node)
         if not pending:
             return
@@ -115,12 +115,12 @@ class EachScheduling:
             self._removed2pending[node] = pending
         return crashitem
 
-    def init_distribute(self):
+    def schedule(self):
         """Schedule the test items on the nodes
 
         If the node's pending list is empty it is a new node which
         needs to run all the tests.  If the pending list is already
-        populated (by ``.addnode_collection()``) then it replaces a
+        populated (by ``.add_node_collection()``) then it replaces a
         dead node and we only need to run those tests.
         """
         assert self.collection_is_completed
@@ -143,7 +143,7 @@ class LoadScheduling:
     when all collections are received it is verified they are
     identical collections.  Then the collection gets divided up in
     chunks and chunks get submitted to nodes.  Whenever a node finishes
-    an item, it calls ``.remove_item()`` which will trigger the
+    an item, it calls ``.mark_test_complete()`` which will trigger the
     scheduler to assign more tests if the number of pending tests for
     the node falls below a low-watermark.
 
@@ -170,7 +170,7 @@ class LoadScheduling:
 
     :collection: The one collection once it is validated to be
        identical between all the nodes.  It is initialised to None
-       until ``.init_distribute()`` is called.
+       until ``.schedule()`` is called.
 
     :pending: List of indices of globally pending tests.  These are
        tests which have not yet been allocated to a chunk for a node
@@ -181,8 +181,8 @@ class LoadScheduling:
     :config: Config object, used for handling hooks.
     """
 
-    def __init__(self, numnodes, log=None, config=None):
-        self.numnodes = numnodes
+    def __init__(self, config, log=None):
+        self.numnodes = len(parse_spec_config(config))
         self.node2collection = {}
         self.node2pending = {}
         self.pending = []
@@ -208,7 +208,20 @@ class LoadScheduling:
         """
         return len(self.node2collection) >= self.numnodes
 
-    def haspending(self):
+    @property
+    def tests_finished(self):
+        """Return True if all tests have been executed by the nodes."""
+        if not self.collection_is_completed:
+            return False
+        if self.pending:
+            return False
+        for pending in self.node2pending.values():
+            if len(pending) >= 2:
+                return False
+        return True
+
+    @property
+    def has_pending(self):
         """Return True if there are pending test items
 
         This indicates that collection has finished and nodes are
@@ -222,11 +235,7 @@ class LoadScheduling:
                 return True
         return False
 
-    def hasnodes(self):
-        """Return True if nodes exist in the scheduler."""
-        return bool(self.node2pending)
-
-    def addnode(self, node):
+    def add_node(self, node):
         """Add a new node to the scheduler.
 
         From now on the node will be allocated chunks of tests to
@@ -238,18 +247,7 @@ class LoadScheduling:
         assert node not in self.node2pending
         self.node2pending[node] = []
 
-    def tests_finished(self):
-        """Return True if all tests have been executed by the nodes."""
-        if not self.collection_is_completed:
-            return False
-        if self.pending:
-            return False
-        for pending in self.node2pending.values():
-            if len(pending) >= 2:
-                return False
-        return True
-
-    def addnode_collection(self, node, collection):
+    def add_node_collection(self, node, collection):
         """Add the collected test items from a node
 
         The collection is stored in the ``.node2collection`` map.
@@ -258,7 +256,7 @@ class LoadScheduling:
         assert node in self.node2pending
         if self.collection_is_completed:
             # A new node has been added later, perhaps an original one died.
-            # .init_distribute() should have
+            # .schedule() should have
             # been called by now
             assert self.collection
             if collection != self.collection:
@@ -271,7 +269,7 @@ class LoadScheduling:
                 return
         self.node2collection[node] = list(collection)
 
-    def remove_item(self, node, item_index, duration=0):
+    def mark_test_complete(self, node, item_index, duration=0):
         """Mark test item as completed by node
 
         The duration it took to execute the item is used as a hint to
@@ -335,7 +333,7 @@ class LoadScheduling:
             self.check_schedule(node)
         return crashitem
 
-    def init_distribute(self):
+    def schedule(self):
         """Initiate distribution of the test collection
 
         Initiate scheduling of the items across the nodes.  If this
@@ -345,8 +343,6 @@ class LoadScheduling:
 
         This is called by the ``DSession.slave_collectionfinish`` hook
         if ``.collection_is_completed`` is True.
-
-        XXX Perhaps this method should have been called ".schedule()".
         """
         assert self.collection_is_completed
 
@@ -466,6 +462,8 @@ class DSession:
         self.log = py.log.Producer("dsession")
         if not config.option.debug:
             py.log.setconsumer(self.log._keywords, None)
+        self.nodemanager = None
+        self.sched = None
         self.shuttingdown = False
         self.countfailures = 0
         self.maxfail = config.getvalue("maxfail")
@@ -521,16 +519,21 @@ class DSession:
         # prohibit collection of test items in master process
         return True
 
-    def pytest_runtestloop(self):
-        numnodes = len(self.nodemanager.specs)
-        dist = self.config.getvalue("dist")
+    @pytest.mark.trylast
+    def pytest_xdist_make_scheduler(self, config, log):
+        dist = config.getvalue("dist")
         if dist == "load":
-            self.sched = LoadScheduling(numnodes, log=self.log,
-                                        config=self.config)
+            return LoadScheduling(config, log)
         elif dist == "each":
-            self.sched = EachScheduling(numnodes, log=self.log)
-        else:
-            assert 0, dist
+            return EachScheduling(config, log)
+
+    def pytest_runtestloop(self):
+        self.sched = self.config.hook.pytest_xdist_make_scheduler(
+            config=self.config,
+            log=self.log
+        )
+        assert self.sched is not None
+
         self.shouldstop = False
         while not self.session_finished:
             self.loop_once()
@@ -553,7 +556,7 @@ class DSession:
         call = getattr(self, method)
         self.log("calling method", method, kwargs)
         call(**kwargs)
-        if self.sched.tests_finished():
+        if self.sched.tests_finished:
             self.triggershutdown()
 
     #
@@ -573,7 +576,7 @@ class DSession:
         if self.shuttingdown:
             node.shutdown()
         else:
-            self.sched.addnode(node)
+            self.sched.add_node(node)
 
     def slave_slavefinished(self, node):
         """Emitted when node executes its pytest_sessionfinish hook.
@@ -635,16 +638,16 @@ class DSession:
         # tell session which items were effectively collected otherwise
         # the master node will finish the session with EXIT_NOTESTSCOLLECTED
         self._session.testscollected = len(ids)
-        self.sched.addnode_collection(node, ids)
+        self.sched.add_node_collection(node, ids)
         if self.terminal:
             self.trdist.setstatus(node.gateway.spec, "[%d]" % (len(ids)))
         if self.sched.collection_is_completed:
-            if self.terminal and not self.sched.haspending():
+            if self.terminal and not self.sched.has_pending:
                 self.trdist.ensure_show_status()
                 self.terminal.write_line("")
                 self.terminal.write_line("scheduling tests via %s" % (
                     self.sched.__class__.__name__))
-            self.sched.init_distribute()
+            self.sched.schedule()
 
     def slave_logstart(self, node, nodeid, location):
         """Emitted when a node calls the pytest_runtest_logstart hook."""
@@ -658,7 +661,7 @@ class DSession:
         the item from the pending list in the scheduler.
         """
         if rep.when == "call" or (rep.when == "setup" and not rep.passed):
-            self.sched.remove_item(node, rep.item_index, rep.duration)
+            self.sched.mark_test_complete(node, rep.item_index, rep.duration)
         # self.report_line("testreport %s: %s" %(rep.id, rep.status))
         rep.node = node
         self.config.hook.pytest_runtest_logreport(report=rep)

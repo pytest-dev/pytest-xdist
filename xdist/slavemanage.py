@@ -10,6 +10,22 @@ import xdist.remote
 from _pytest import runner  # XXX load dynamically
 
 
+def parse_spec_config(config):
+    xspeclist = []
+    for xspec in config.getvalue("tx"):
+        i = xspec.find("*")
+        try:
+            num = int(xspec[:i])
+        except ValueError:
+            xspeclist.append(xspec)
+        else:
+            xspeclist.extend([xspec[i + 1:]] * num)
+    if not xspeclist:
+        raise pytest.UsageError(
+            "MISSING test execution (tx) nodes: please specify --tx")
+    return xspeclist
+
+
 class NodeManager(object):
     EXIT_TIMEOUT = 10
     DEFAULT_IGNORES = ['.*', '*.pyc', '*.pyo', '*~']
@@ -62,19 +78,7 @@ class NodeManager(object):
         self.group.terminate(self.EXIT_TIMEOUT)
 
     def _getxspecs(self):
-        xspeclist = []
-        for xspec in self.config.getvalue("tx"):
-            i = xspec.find("*")
-            try:
-                num = int(xspec[:i])
-            except ValueError:
-                xspeclist.append(xspec)
-            else:
-                xspeclist.extend([xspec[i+1:]] * num)
-        if not xspeclist:
-            raise pytest.UsageError(
-                "MISSING test execution (tx) nodes: please specify --tx")
-        return [execnet.XSpec(x) for x in xspeclist]
+        return [execnet.XSpec(x) for x in parse_spec_config(self.config)]
 
     def _getrsyncdirs(self):
         for spec in self.specs:
