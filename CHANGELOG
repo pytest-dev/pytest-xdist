@@ -5,6 +5,11 @@
 
 - Add ``worker_id`` attribute in the TestReport
 
+- new hook: ``pytest_xdist_make_scheduler(config, log)``, can return custom tests items
+  distribution logic implementation. You can take a look at built-in ``LoadScheduling``
+  and ``EachScheduling`` implementations. Note that required scheduler class public
+  API may change in next ``pytest-xdist`` versions.
+
 1.15.0
 ------
 

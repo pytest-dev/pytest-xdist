@@ -34,6 +34,8 @@ The execution flow is:
    tests and sends them one by one to each **worker** in a round robin
    fashion. The rest of the tests will be distributed later as **workers**
    finish tests (see below).
+
+1. Note that `pytest_xdist_make_scheduler` hook can be used to implement custom tests distribution logic.
    
 1. **workers** re-implement `pytest_runtestloop`: pytest's default implementation
    basically loops over all collected items in the `session` object and executes
