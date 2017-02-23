@@ -440,6 +440,7 @@ def test_crashing_item(testdir):
         "*crashed*::test_crash*", "*1 failed*1 passed*"
     ])
 
+
 def test_crashing_item_teardown(testdir):
     p = testdir.makepyfile("""
         import py
