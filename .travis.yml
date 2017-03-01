@@ -21,6 +21,11 @@ env:
   - TOXENV=py35-pytest27
   - TOXENV=py35-pytest28
   - TOXENV=py35-pytest29
+  - TOXENV=py35-pytest30
+  - TOXENV=py36-pytest27
+  - TOXENV=py36-pytest28
+  - TOXENV=py36-pytest29
+  - TOXENV=py36-pytest30
   - TOXENV=py27-pytest28-pexpect
   - TOXENV=py35-pytest28-pexpect
   - TOXENV=flakes
