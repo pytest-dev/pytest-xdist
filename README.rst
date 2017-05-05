@@ -1,9 +1,13 @@
 
-.. image:: https://travis-ci.org/pytest-dev/pytest-xdist.svg?branch=master
-    :target: https://travis-ci.org/pytest-dev/pytest-xdist
 
 .. image:: http://img.shields.io/pypi/v/pytest-xdist.svg
-   :target: https://pypi.python.org/pypi/pytest-xdist
+    :target: https://pypi.python.org/pypi/pytest-xdist
+
+.. image:: https://anaconda.org/conda-forge/pytest-xdist/badges/version.svg
+    :target: https://anaconda.org/conda-forge/pytest-xdist
+
+.. image:: https://travis-ci.org/pytest-dev/pytest-xdist.svg?branch=master
+    :target: https://travis-ci.org/pytest-dev/pytest-xdist
 
 .. image:: https://ci.appveyor.com/api/projects/status/56eq1a1avd4sdd7e/branch/master?svg=true
     :target: https://ci.appveyor.com/project/pytestbot/pytest-xdist
