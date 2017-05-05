@@ -10,6 +10,10 @@
   and ``EachScheduling`` implementations. Note that required scheduler class public
   API may change in next ``pytest-xdist`` versions.
 
+- fix #124: xdist would mark test as complete after 'call' step. As a result,
+  xdist could identify the wrong test as failing when test crashes at teardown.
+  To address this issue, xdist now marks test as complete at teardown.
+
 1.15.0
 ------
 
