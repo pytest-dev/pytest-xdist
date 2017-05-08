@@ -10,7 +10,9 @@ class TestDistribution:
         """)
         result = testdir.runpytest(p1, "-n1")
         assert result.ret == 0
-        result.stdout.fnmatch_lines(["*1 passed*", ])
+        result.stdout.fnmatch_lines([
+            "*1 passed*",
+        ])
 
     def test_n1_fail(self, testdir):
         p1 = testdir.makepyfile("""
@@ -19,7 +21,9 @@ class TestDistribution:
         """)
         result = testdir.runpytest(p1, "-n1")
         assert result.ret == 1
-        result.stdout.fnmatch_lines(["*1 failed*", ])
+        result.stdout.fnmatch_lines([
+            "*1 failed*",
+        ])
 
     def test_n1_import_error(self, testdir):
         p1 = testdir.makepyfile("""
@@ -30,7 +34,7 @@ class TestDistribution:
         result = testdir.runpytest(p1, "-n1")
         assert result.ret == 1
         result.stdout.fnmatch_lines([
-            "E   ImportError: *__import_of_missing_module*",
+            "E   *Error: No module named *__import_of_missing_module*",
         ])
 
     def test_n2_import_error(self, testdir):
@@ -53,7 +57,9 @@ class TestDistribution:
         """)
         result = testdir.runpytest(p1, "-n1")
         assert result.ret == 0
-        result.stdout.fnmatch_lines(["*1 skipped*", ])
+        result.stdout.fnmatch_lines([
+            "*1 skipped*",
+        ])
 
     def test_manytests_to_one_import_error(self, testdir):
         p1 = testdir.makepyfile("""
@@ -64,11 +70,12 @@ class TestDistribution:
         result = testdir.runpytest(p1, '--tx=popen', '--tx=popen')
         assert result.ret in (1, 2)
         result.stdout.fnmatch_lines([
-            "E   ImportError: *__import_of_missing_module*",
+            "E   *Error: No module named *__import_of_missing_module*",
         ])
 
     def test_manytests_to_one_popen(self, testdir):
-        p1 = testdir.makepyfile("""
+        p1 = testdir.makepyfile(
+            """
                 import py
                 def test_fail0():
                     assert 0
@@ -108,10 +115,13 @@ class TestDistribution:
         """ % str(testdir.tmpdir))
         result = testdir.runpytest_subprocess(p1, "-n1")
         assert result.ret == 0
-        result.stdout.fnmatch_lines(["*1 passed*", ])
+        result.stdout.fnmatch_lines([
+            "*1 passed*",
+        ])
 
     def test_dist_ini_specified(self, testdir):
-        p1 = testdir.makepyfile("""
+        p1 = testdir.makepyfile(
+            """
                 import py
                 def test_fail0():
                     assert 0
@@ -207,14 +217,14 @@ class TestDistribution:
         """)
         p1 = testdir.makepyfile("def test_func(): pass")
         result = testdir.runpytest("-v", p1, '-d', '--tx=popen')
-        result.stdout.fnmatch_lines([
-            "*0*Python*", "*calculated result is 49*", "*1 passed*"
-        ])
+        result.stdout.fnmatch_lines(
+            ["*0*Python*", "*calculated result is 49*", "*1 passed*"])
         assert result.ret == 0
 
     def test_keyboardinterrupt_hooks_issue79(self, testdir):
-        testdir.makepyfile(__init__="",
-                           test_one="""
+        testdir.makepyfile(
+            __init__="",
+            test_one="""
             def test_hello():
                 raise KeyboardInterrupt()
         """)
@@ -273,8 +283,9 @@ class TestDistEach:
                 py.test.skip("%s not found" % name)
             interpreters.append(interp)
 
-        testdir.makepyfile(__init__="",
-                           test_one="""
+        testdir.makepyfile(
+            __init__="",
+            test_one="""
             import sys
             def test_hello():
                 print("%s...%s" % sys.version_info[:2])
@@ -335,9 +346,8 @@ def test_teardownfails_one_function(testdir):
             assert 0
     """)
     result = testdir.runpytest(p, '-n1', '--tx=popen')
-    result.stdout.fnmatch_lines([
-        "*def teardown_function(function):*", "*1 passed*1 error*"
-    ])
+    result.stdout.fnmatch_lines(
+        ["*def teardown_function(function):*", "*1 passed*1 error*"])
 
 
 @py.test.mark.xfail
@@ -350,7 +360,9 @@ def test_terminate_on_hangingnode(testdir):
     """)
     result = testdir.runpytest(p, '--dist=each', '--tx=popen//id=my')
     assert result.duration < 2.0
-    result.stdout.fnmatch_lines(["*killed*my*", ])
+    result.stdout.fnmatch_lines([
+        "*killed*my*",
+    ])
 
 
 @pytest.mark.xfail(reason="works if run outside test suite", run=False)
@@ -377,7 +389,10 @@ def test_session_hooks(testdir):
             assert hasattr(sys, 'pytestsessionhooks')
     """)
     result = testdir.runpytest(p, "--dist=each", "--tx=popen")
-    result.stdout.fnmatch_lines(["*ValueError*", "*1 passed*", ])
+    result.stdout.fnmatch_lines([
+        "*ValueError*",
+        "*1 passed*",
+    ])
     assert not result.ret
     d = result.parseoutcomes()
     assert d['passed'] == 1
@@ -422,7 +437,10 @@ def test_funcarg_teardown_failure(testdir):
             pass
     """)
     result = testdir.runpytest_subprocess("--debug", p)  # , "-n1")
-    result.stdout.fnmatch_lines(["*ValueError*42*", "*1 passed*1 error*", ])
+    result.stdout.fnmatch_lines([
+        "*ValueError*42*",
+        "*1 passed*1 error*",
+    ])
     assert result.ret
 
 
@@ -436,9 +454,8 @@ def test_crashing_item(testdir):
             pass
     """)
     result = testdir.runpytest("-n2", p)
-    result.stdout.fnmatch_lines([
-        "*crashed*::test_crash*", "*1 failed*1 passed*"
-    ])
+    result.stdout.fnmatch_lines(
+        ["*crashed*::test_crash*", "*1 failed*1 passed*"])
 
 
 def test_crashing_item_teardown(testdir):
@@ -461,9 +478,7 @@ def test_crashing_item_teardown(testdir):
             pass
     """)
     result = testdir.runpytest("-n1", p)
-    result.stdout.fnmatch_lines([
-        "*crashed*::test_a*", "*1 failed*2 passed*"
-    ])
+    result.stdout.fnmatch_lines(["*crashed*::test_a*", "*1 failed*2 passed*"])
 
 
 def test_skipping(testdir):
@@ -478,7 +493,8 @@ def test_skipping(testdir):
 
 
 def test_issue34_pluginloading_in_subprocess(testdir):
-    testdir.tmpdir.join("plugin123.py").write(py.code.Source("""
+    testdir.tmpdir.join("plugin123.py").write(
+        py.code.Source("""
         def pytest_namespace():
             return {'sample_variable': 'testing'}
     """))
@@ -489,7 +505,9 @@ def test_issue34_pluginloading_in_subprocess(testdir):
     """)
     result = testdir.runpytest_subprocess("-n1", "-p", "plugin123")
     assert result.ret == 0
-    result.stdout.fnmatch_lines(["*1 passed*", ])
+    result.stdout.fnmatch_lines([
+        "*1 passed*",
+    ])
 
 
 def test_fixture_scope_caching_issue503(testdir):
@@ -511,7 +529,9 @@ def test_fixture_scope_caching_issue503(testdir):
     """)
     result = testdir.runpytest(p1, '-v', '-n1')
     assert result.ret == 0
-    result.stdout.fnmatch_lines(["*2 passed*", ])
+    result.stdout.fnmatch_lines([
+        "*2 passed*",
+    ])
 
 
 def test_issue_594_random_parametrize(testdir):
