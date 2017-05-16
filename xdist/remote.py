@@ -144,6 +144,8 @@ if __name__ == '__channelexec__':
     if sys.version_info[:2] == (3, 2):
         os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
     slaveinput, args, option_dict = channel.receive()
+    os.environ['XDIST_SLAVE_ID'] = slaveinput.get('slaveid', "?")
+
     importpath = os.getcwd()
     sys.path.insert(0, importpath)  # XXX only for remote situations
     os.environ['PYTHONPATH'] = (
