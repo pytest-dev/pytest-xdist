@@ -83,7 +83,7 @@ class EachScheduling:
         """
         assert node in self.node2pending
         if not self.collection_is_completed:
-            self.node2collection[node] = list(collection)
+            self.node2collection[node] = list(sorted(collection))
             self.node2pending[node] = []
             if len(self.node2collection) >= self.numnodes:
                 self.collection_is_completed = True
@@ -267,7 +267,7 @@ class LoadScheduling:
                                              node.gateway.id)
                 self.log(msg)
                 return
-        self.node2collection[node] = list(collection)
+        self.node2collection[node] = list(sorted(collection))
 
     def mark_test_complete(self, node, item_index, duration=0):
         """Mark test item as completed by node
