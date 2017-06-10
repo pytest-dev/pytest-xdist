@@ -1,3 +1,22 @@
+pytest-xdist 1.17.1 (2017-06-10)
+================================
+
+Bug Fixes
+---------
+
+- Hot fix release reverting the change introduced by #124, unfortunately it
+  broke a number of test suites so we are reversing this change while we
+  investigate the problem. (#157)
+
+
+Improved Documentation
+----------------------
+
+- Introduced ``towncrier`` for ``CHANGELOG`` management. (#154)
+
+- Added ``HOWTORELEASE`` documentation. (#155)
+
+
 ..
     You should *NOT* be adding new change log entries to this file, this
     file is managed by towncrier. You *may* edit previous change logs to
