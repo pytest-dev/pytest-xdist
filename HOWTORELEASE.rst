@@ -22,7 +22,7 @@ Steps
 
 To publish a new release ``X.Y.Z``, the steps are as follows:
 
-#. Create a new branch named ``release-X.Y.Z``.
+#. Create a new branch named ``release-X.Y.Z`` from the latest ``master``.
 
 #. Install ``pytest-xdist`` and dev requirements in a virtualenv::
 
@@ -30,7 +30,7 @@ To publish a new release ``X.Y.Z``, the steps are as follows:
 
 #. Update ``CHANGELOG.rst`` file by running::
 
-    $ towncrier
+    $ towncrier --version X.Y.Z
 
    It might ask for confirmation to remove news fragments; answer yes.
 
