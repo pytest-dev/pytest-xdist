@@ -457,7 +457,6 @@ def test_crashing_item(testdir):
     result.stdout.fnmatch_lines(
         ["*crashed*::test_crash*", "*1 failed*1 passed*"])
 
-
 def test_crashing_item_teardown(testdir):
     p = testdir.makepyfile("""
         import py
