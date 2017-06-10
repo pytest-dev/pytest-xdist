@@ -660,7 +660,7 @@ class DSession:
         If the node indicates it is finished with a test item, remove
         the item from the pending list in the scheduler.
         """
-        if rep.when == "teardown" or (rep.when == "setup" and not rep.passed):
+        if rep.when == "call" or (rep.when == "setup" and not rep.passed):
             self.sched.mark_test_complete(node, rep.item_index, rep.duration)
         # self.report_line("testreport %s: %s" %(rep.id, rep.status))
         rep.node = node

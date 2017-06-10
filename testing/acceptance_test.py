@@ -454,31 +454,9 @@ def test_crashing_item(testdir):
             pass
     """)
     result = testdir.runpytest("-n2", p)
-    result.stdout.fnmatch_lines(
-        ["*crashed*::test_crash*", "*1 failed*1 passed*"])
-
-
-def test_crashing_item_teardown(testdir):
-    p = testdir.makepyfile("""
-        import py
-        import pytest
-        import os
-        import time
-
-        @pytest.fixture
-        def crash_fixture(request):
-            def kill_me():
-                py.process.kill(os.getpid())
-            request.addfinalizer(kill_me)
-
-        def test_a(crash_fixture):
-            pass
-
-        def test_b():
-            pass
-    """)
-    result = testdir.runpytest("-n1", p)
-    result.stdout.fnmatch_lines(["*crashed*::test_a*", "*1 failed*2 passed*"])
+    result.stdout.fnmatch_lines([
+        "*crashed*test_crash*", "*1 failed*1 passed*"
+    ])
 
 
 def test_skipping(testdir):
