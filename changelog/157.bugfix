@@ -1,0 +1,1 @@
+Hot fix release reverting the change introduced by #124, unfortunately it broke a number of test suites so we are reversing this change while we investigate the problem.
