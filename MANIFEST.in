@@ -1,7 +1,0 @@
-include CHANGELOG
-include LICENSE 
-include README.txt
-include setup.py
-include tox.ini
-graft testing
-prune .git
