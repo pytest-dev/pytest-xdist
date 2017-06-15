@@ -79,6 +79,20 @@ def test_remoteinitconfig(testdir):
 
 
 class TestReportSerialization:
+    def test_xdist_report_longrepr_reprcrash_130(self, testdir):
+        reprec = testdir.inline_runsource("""
+                    import py
+                    def test_fail(): assert False, 'Expected Message'
+                """)
+        reports = reprec.getreports("pytest_runtest_logreport")
+        assert len(reports) == 3
+        initial_failure_report = reports[1]
+        d = serialize_report(initial_failure_report)
+        check_marshallable(d)
+        processed_report = unserialize_report("testreport", d)
+        assert 'Expected Message' \
+               in processed_report.longrepr.reprcrash.message
+
     def test_itemreport_outcomes(self, testdir):
         reprec = testdir.inline_runsource("""
             import py
@@ -108,7 +122,7 @@ class TestReportSerialization:
             assert newrep.when == rep.when
             assert newrep.keywords == rep.keywords
             if rep.failed:
-                assert newrep.longrepr == str(rep.longrepr)
+                assert newrep.longreprtext == rep.longreprtext
 
     def test_collectreport_passed(self, testdir):
         reprec = testdir.inline_runsource("def test_func(): pass")
