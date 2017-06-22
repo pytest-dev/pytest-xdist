@@ -20,7 +20,7 @@ def parse_numprocesses(s):
 def pytest_addoption(parser):
     group = parser.getgroup("xdist", "distributed and subprocess testing")
     group._addoption(
-        '-n', dest="numprocesses", metavar="numprocesses",
+        '-n', '--numprocesses', dest="numprocesses", metavar="numprocesses",
         action="store",
         type=parse_numprocesses,
         help="shortcut for '--dist=load --tx=NUM*popen', "
