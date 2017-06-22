@@ -4,7 +4,7 @@ Here's a quick checklist that should be present in PRs:
 
 - [ ] Make sure to include reasonable tests for your change if necessary
 
-- [ ] Add a new news fragment into the changelog folder, following these guidelines:
+- [ ] Add a *news* file into the `changelog` folder, following these guidelines:
   * Name it `$issue_id.$type` for example `588.bug`
   * If you don't have an issue_id change it to the PR id after creating it
   * Ensure type is one of `removal`, `feature`, `bugfix`, `vendor`, `doc` or `trivial`
