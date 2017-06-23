@@ -98,10 +98,33 @@ class SlaveInteractor:
 
 
 def serialize_report(rep):
+    def disassembled_report(rep):
+        reprtraceback = rep.longrepr.reprtraceback.__dict__
+        reprcrash = rep.longrepr.reprcrash.__dict__
+
+        new_entries = []
+        for entry in reprtraceback['reprentries']:
+            new_entry = entry.__dict__
+            for key, value in new_entry.items():
+                if hasattr(value, '__dict__'):
+                    new_entry[key] = value.__dict__
+            new_entries.append(new_entry)
+
+        reprtraceback['reprentries'] = new_entries
+
+        return {
+            'reprcrash': reprcrash,
+            'reprtraceback': reprtraceback
+        }
+
     import py
     d = rep.__dict__.copy()
     if hasattr(rep.longrepr, 'toterminal'):
-        d['longrepr'] = str(rep.longrepr)
+        if hasattr(rep.longrepr, 'reprtraceback') \
+                and hasattr(rep.longrepr, 'reprcrash'):
+            d['longrepr'] = disassembled_report(rep)
+        else:
+            d['longrepr'] = str(rep.longrepr)
     else:
         d['longrepr'] = rep.longrepr
     for name in d:

@@ -268,7 +268,7 @@ class TestFunctional:
         """)
         child = testdir.spawn_pytest("-f %s" % p)
         child.expect("1 xpass")
-        child.expect("### LOOPONFAILING ####")
+        # child.expect("### LOOPONFAILING ####")
         child.expect("waiting for changes")
         child.kill(15)
 

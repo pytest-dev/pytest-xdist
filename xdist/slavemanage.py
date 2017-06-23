@@ -327,7 +327,45 @@ class SlaveController(object):
 
 
 def unserialize_report(name, reportdict):
+    def assembled_report(reportdict):
+        from _pytest._code.code import (
+            ReprExceptionInfo,
+            ReprFileLocation,
+            ReprEntry,
+            ReprFuncArgs,
+            ReprTraceback
+        )
+        if reportdict['longrepr']:
+            if 'reprcrash' and 'reprtraceback' in reportdict['longrepr']:
+
+                reprtraceback = reportdict['longrepr']['reprtraceback']
+                reprcrash = reportdict['longrepr']['reprcrash']
+
+                unserialized_entries = []
+                for entry in reprtraceback['reprentries']:
+                    reprfuncargs, reprfileloc = None, None
+                    if entry['reprfuncargs']:
+                        reprfuncargs = ReprFuncArgs(**entry['reprfuncargs'])
+                    if entry['reprfileloc']:
+                        reprfileloc = ReprFileLocation(**entry['reprfileloc'])
+
+                    reprentry = ReprEntry(
+                        lines=entry['lines'],
+                        reprfuncargs=reprfuncargs,
+                        reprlocals=entry['reprlocals'],
+                        filelocrepr=reprfileloc,
+                        style=entry['style']
+                    )
+                    unserialized_entries.append(reprentry)
+                reprtraceback['reprentries'] = unserialized_entries
+
+                reportdict['longrepr'] = ReprExceptionInfo(
+                    reprtraceback=ReprTraceback(**reprtraceback),
+                    reprcrash=ReprFileLocation(**reprcrash),
+                )
+        return reportdict
+
     if name == "testreport":
-        return runner.TestReport(**reportdict)
+        return runner.TestReport(**assembled_report(reportdict))
     elif name == "collectreport":
-        return runner.CollectReport(**reportdict)
+        return runner.CollectReport(**assembled_report(reportdict))
