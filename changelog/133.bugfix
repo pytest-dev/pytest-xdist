@@ -1,1 +1,0 @@
-Fix serialization and deserialization dropping longrepr details. 

@@ -1,3 +1,18 @@
+pytest-xdist 1.18.0 (2017-06-26)
+================================
+
+Features
+--------
+
+- Add long option `--numprocesses` as alternative for `-n`. (#168)
+
+
+Bug Fixes
+---------
+
+- Fix serialization and deserialization dropping longrepr details. (#133)
+
+
 pytest-xdist 1.17.1 (2017-06-10)
 ================================
 
