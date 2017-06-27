@@ -359,10 +359,14 @@ def unserialize_report(name, reportdict):
                     unserialized_entries.append(reprentry)
                 reprtraceback['reprentries'] = unserialized_entries
 
-                reportdict['longrepr'] = ReprExceptionInfo(
+                exception_info = ReprExceptionInfo(
                     reprtraceback=ReprTraceback(**reprtraceback),
                     reprcrash=ReprFileLocation(**reprcrash),
                 )
+
+                for section in reportdict['longrepr']['sections']:
+                    exception_info.addsection(*section)
+                reportdict['longrepr'] = exception_info
         return reportdict
 
     if name == "testreport":

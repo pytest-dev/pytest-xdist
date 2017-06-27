@@ -114,7 +114,8 @@ def serialize_report(rep):
 
         return {
             'reprcrash': reprcrash,
-            'reprtraceback': reprtraceback
+            'reprtraceback': reprtraceback,
+            'sections': rep.longrepr.sections
         }
 
     import py
