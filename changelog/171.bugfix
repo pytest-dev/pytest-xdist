@@ -1,0 +1,1 @@
+Fixed serialization of ``longrepr.sections`` during error reporting from workers.
