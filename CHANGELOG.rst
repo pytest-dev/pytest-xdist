@@ -1,3 +1,13 @@
+pytest-xdist 1.18.1 (2017-06-28)
+================================
+
+Bug Fixes
+---------
+
+- Fixed serialization of ``longrepr.sections`` during error reporting from
+  workers. (#171)
+
+
 pytest-xdist 1.18.0 (2017-06-26)
 ================================
 
