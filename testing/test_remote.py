@@ -87,11 +87,14 @@ class TestReportSerialization:
         reports = reprec.getreports("pytest_runtest_logreport")
         assert len(reports) == 3
         initial_failure_report = reports[1]
+        added_section = ('Failure Metadata', str("metadata metadata"), "*")
+        initial_failure_report.longrepr.sections.append(added_section)
         d = serialize_report(initial_failure_report)
         check_marshallable(d)
         processed_report = unserialize_report("testreport", d)
         assert 'Expected Message' \
                in processed_report.longrepr.reprcrash.message
+        assert added_section in processed_report.longrepr.sections
 
     def test_itemreport_outcomes(self, testdir):
         reprec = testdir.inline_runsource("""
