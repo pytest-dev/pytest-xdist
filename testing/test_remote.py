@@ -86,15 +86,54 @@ class TestReportSerialization:
                 """)
         reports = reprec.getreports("pytest_runtest_logreport")
         assert len(reports) == 3
-        initial_failure_report = reports[1]
+        rep = reports[1]
         added_section = ('Failure Metadata', str("metadata metadata"), "*")
-        initial_failure_report.longrepr.sections.append(added_section)
-        d = serialize_report(initial_failure_report)
+        rep.longrepr.sections.append(added_section)
+        d = serialize_report(rep)
         check_marshallable(d)
-        processed_report = unserialize_report("testreport", d)
-        assert 'Expected Message' \
-               in processed_report.longrepr.reprcrash.message
-        assert added_section in processed_report.longrepr.sections
+        a = unserialize_report("testreport", d)
+        # Check assembled == rep
+        assert a.__dict__.keys() == rep.__dict__.keys()
+        for key in rep.__dict__.keys():
+            if key != 'longrepr':
+                assert getattr(a, key) == getattr(rep, key)
+        assert rep.longrepr.reprcrash.lineno == a.longrepr.reprcrash.lineno
+        assert rep.longrepr.reprcrash.message == a.longrepr.reprcrash.message
+        assert rep.longrepr.reprcrash.path == a.longrepr.reprcrash.path
+        assert rep.longrepr.reprtraceback.entrysep \
+            == a.longrepr.reprtraceback.entrysep
+        assert rep.longrepr.reprtraceback.extraline \
+            == a.longrepr.reprtraceback.extraline
+        assert rep.longrepr.reprtraceback.style \
+            == a.longrepr.reprtraceback.style
+        assert rep.longrepr.sections == a.longrepr.sections
+        assert rep.longrepr.reprtraceback.reprentries \
+            == a.longrepr.reprtraceback.reprentries
+        # Missing section attribute PR171
+        assert added_section in a.longrepr.sections
+
+    def test_reprentries_serialization_170(self, testdir):
+        reprec = testdir.inline_runsource("""
+                            def test_fail():
+                                x = 0
+                                assert x
+                        """, '--showlocals', '-n1')
+        reports = reprec.getreports("pytest_runtest_logreport")
+        assert len(reports) == 3
+        rep = reports[1]
+        d = serialize_report(rep)
+        a = unserialize_report("testreport", d)
+
+        rep_entries = rep.longrepr.reprtraceback.reprentries
+        a_entries = a.longrepr.reprtraceback.reprentries
+        assert rep_entries == a_entries
+        for i in range(len(a_entries)):
+            assert rep_entries[i].lines == a_entries[i].lines
+            assert rep_entries[i].localssep == a_entries[i].localssep
+            assert rep_entries[i].reprfileloc == a_entries[i].reprfileloc
+            assert rep_entries[i].reprfuncargs == a_entries[i].reprfuncargs
+            assert rep_entries[i].reprlocals == a_entries[i].reprlocals
+            assert rep_entries[i].style == a_entries[i].style
 
     def test_itemreport_outcomes(self, testdir):
         reprec = testdir.inline_runsource("""
