@@ -1,7 +1,7 @@
 pytest-xdist 1.18.0 (2017-06-26)
 ================================
 
-- ``pytest-xdist`` now requires pytest 3.0 or later.
+- ``pytest-xdist`` now requires `pytest>=3.0.0`.
 
 Features
 --------
