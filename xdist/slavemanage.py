@@ -329,10 +329,11 @@ class SlaveController(object):
 def unserialize_report(name, reportdict):
     def assembled_report(reportdict):
         from _pytest._code.code import (
+            ReprEntry,
             ReprExceptionInfo,
             ReprFileLocation,
-            ReprEntry,
             ReprFuncArgs,
+            ReprLocals,
             ReprTraceback
         )
         if reportdict['longrepr']:
@@ -343,16 +344,18 @@ def unserialize_report(name, reportdict):
 
                 unserialized_entries = []
                 for entry in reprtraceback['reprentries']:
-                    reprfuncargs, reprfileloc = None, None
+                    reprfuncargs, reprfileloc, reprlocals = None, None, None
                     if entry['reprfuncargs']:
                         reprfuncargs = ReprFuncArgs(**entry['reprfuncargs'])
                     if entry['reprfileloc']:
                         reprfileloc = ReprFileLocation(**entry['reprfileloc'])
+                    if entry['reprlocals']:
+                        reprlocals = ReprLocals(entry['reprlocals']['lines'])
 
                     reprentry = ReprEntry(
                         lines=entry['lines'],
                         reprfuncargs=reprfuncargs,
-                        reprlocals=entry['reprlocals'],
+                        reprlocals=reprlocals,
                         filelocrepr=reprfileloc,
                         style=entry['style']
                     )
