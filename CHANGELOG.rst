@@ -1,3 +1,16 @@
+pytest-xdist 1.18.1 (2017-07-05)
+================================
+
+Bug Fixes
+---------
+
+- Fixed serialization of ``longrepr.sections`` during error reporting from
+  workers. (`#171 <https://github.com/pytest-dev/pytest-xdist/issues/171>`_)
+
+- Fix ``ReprLocal`` not being unserialized breaking --showlocals usages. (`#176
+  <https://github.com/pytest-dev/pytest-xdist/issues/176>`_)
+
+
 pytest-xdist 1.18.0 (2017-06-26)
 ================================
 
