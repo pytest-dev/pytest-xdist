@@ -20,7 +20,7 @@ setup(
         ],
     },
     zip_safe=False,
-    install_requires=['execnet>=1.1', 'pytest>=3.0.0', 'py>=1.4.22'],
+    install_requires=['execnet>=1.1', 'pytest>=3.0.0'],
     setup_requires=['setuptools_scm'],
     classifiers=[
         'Development Status :: 5 - Production/Stable',
