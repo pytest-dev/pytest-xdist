@@ -1,6 +1,10 @@
-from xdist.dsession import (
-    DSession, LoadScheduling, EachScheduling, report_collection_diff,
+from xdist.dsession import DSession
+from xdist.report import report_collection_diff
+from xdist.scheduler import (
+    EachScheduling,
+    LoadScheduling,
 )
+
 import py
 import pytest
 import execnet

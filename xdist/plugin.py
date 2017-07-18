@@ -31,11 +31,12 @@ def pytest_addoption(parser):
                           "when crashed (set to zero to disable this feature)")
     group._addoption(
         '--dist', metavar="distmode",
-        action="store", choices=['load', 'each', 'no'],
+        action="store", choices=['each', 'load', 'no'],
         dest="dist", default="no",
         help=("set mode for distributing tests to exec environments.\n\n"
-              "each: send each test to each available environment.\n\n"
-              "load: send each test to available environment.\n\n"
+              "each: send each test to all available environments.\n\n"
+              "load: load balance by sending any pending test to any"
+              " available environment.\n\n"
               "(default) no: run tests inprocess, don't distribute."))
     group._addoption(
         '--tx', dest="tx", action="append", default=[],

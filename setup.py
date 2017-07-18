@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(
     name="pytest-xdist",
@@ -11,7 +11,7 @@ setup(
     author_email='pytest-dev@python.org,holger@merlinux.eu',
     url='https://github.com/pytest-dev/pytest-xdist',
     platforms=['linux', 'osx', 'win32'],
-    packages=['xdist'],
+    packages=find_packages(exclude=['testing', 'example']),
     entry_points={
         'pytest11': [
             'xdist = xdist.plugin',
