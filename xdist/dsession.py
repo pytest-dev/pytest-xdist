@@ -5,6 +5,7 @@ from xdist.slavemanage import NodeManager
 from xdist.scheduler import (
     EachScheduling,
     LoadScheduling,
+    LoadScopeScheduling,
 )
 
 
@@ -97,6 +98,7 @@ class DSession:
         schedulers = {
             'each': EachScheduling,
             'load': LoadScheduling,
+            'loadscope': LoadScopeScheduling,
         }
         return schedulers[dist](config, log)
 
