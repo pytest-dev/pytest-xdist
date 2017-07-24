@@ -44,10 +44,6 @@ Installation
 
 Install the plugin with::
 
-    easy_install pytest-xdist
-
-    # or
-
     pip install pytest-xdist
 
 or use the package in develop/in-place mode with
@@ -262,9 +258,3 @@ where the configuration file was found.
 .. _`pytest-xdist`: http://pypi.python.org/pypi/pytest-xdist
 .. _`pytest-xdist repository`: https://github.com/pytest-dev/pytest-xdist
 .. _`pytest`: http://pytest.org
-
-Issue and Bug Tracker
-------------------------
-
-Please use the `pytest issue tracker <https://github.com/pytest-dev/pytest/issues>`_
-for reporting bugs in this plugin.
