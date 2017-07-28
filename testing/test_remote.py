@@ -29,9 +29,9 @@ class EventCall:
 class SlaveSetup:
     use_callback = False
 
-    def __init__(self, request):
-        self.testdir = request.getfuncargvalue("testdir")
+    def __init__(self, request, testdir):
         self.request = request
+        self.testdir = testdir
         self.events = queue.Queue()
 
     def setup(self, ):
@@ -65,8 +65,8 @@ class SlaveSetup:
 
 
 @pytest.fixture
-def slave(request):
-    return SlaveSetup(request)
+def slave(request, testdir):
+    return SlaveSetup(request, testdir)
 
 
 @pytest.mark.xfail(reason='#59')
@@ -318,6 +318,15 @@ class TestSlaveInteractor:
             ("pytest_pycollect_makeitem", "name == 'test_func'"),
             ("pytest_collectreport", "report.collector.fspath == bbb"),
         ])
+
+    def test_process_from_remote_error_handling(self, slave, capsys):
+        slave.use_callback = True
+        slave.setup()
+        slave.slp.process_from_remote(('<nonono>', ()))
+        out, err = capsys.readouterr()
+        assert 'INTERNALERROR> ValueError: unknown event: <nonono>' in out
+        ev = slave.popevent()
+        assert ev.name == "errordown"
 
 
 def test_remote_env_vars(testdir):

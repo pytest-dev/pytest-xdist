@@ -323,7 +323,9 @@ class SlaveController(object):
         except:
             excinfo = py.code.ExceptionInfo()
             py.builtin.print_("!" * 20, excinfo)
-            self.config.pluginmanager.notify_exception(excinfo)
+            self.config.notify_exception(excinfo)
+            self.shutdown()
+            self.notify_inproc("errordown", node=self, error=excinfo)
 
 
 def unserialize_report(name, reportdict):
