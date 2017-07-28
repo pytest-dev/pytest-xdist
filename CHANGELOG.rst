@@ -1,3 +1,18 @@
+pytest-xdist 1.18.2 (2017-07-28)
+================================
+
+Bug Fixes
+---------
+
+- Removal of unnecessary dependency on incorrect version of py. (`#105
+  <https://github.com/pytest-dev/pytest-xdist/issues/105>`_)
+
+- Fix bug in internal event-loop error handler in the master node. This bug
+  would shadow the original errors making extremely hard/impossible for users
+  to diagnose the problem properly. (`#175 <https://github.com/pytest-
+  dev/pytest-xdist/issues/175>`_)
+
+
 pytest-xdist 1.18.1 (2017-07-05)
 ================================
 
