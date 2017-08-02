@@ -1,2 +1,0 @@
-Fix error internal error handling during event loop in the master node. This bug would shadow the original errors
-making extremely hard/impossible for users to diagnose the problem properly.
