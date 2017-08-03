@@ -728,8 +728,10 @@ class TestLoadScope:
             test_b=test_file,
         )
         result = testdir.runpytest('-n2', '--dist=loadscope', '-v')
-        assert get_workers_and_test_count_by_prefix('test_a.py::test', result.outlines) == {'gw0': 10}
-        assert get_workers_and_test_count_by_prefix('test_b.py::test', result.outlines) == {'gw1': 10}
+        assert get_workers_and_test_count_by_prefix(
+            'test_a.py::test', result.outlines) == {'gw0': 10}
+        assert get_workers_and_test_count_by_prefix(
+            'test_b.py::test', result.outlines) == {'gw1': 10}
 
     def test_by_class(self, testdir):
         testdir.makepyfile(test_a="""
@@ -745,8 +747,10 @@ class TestLoadScope:
                     pass
         """)
         result = testdir.runpytest('-n2', '--dist=loadscope', '-v')
-        assert get_workers_and_test_count_by_prefix('test_a.py::TestA', result.outlines) == {'gw0': 10}
-        assert get_workers_and_test_count_by_prefix('test_a.py::TestB', result.outlines) == {'gw1': 10}
+        assert get_workers_and_test_count_by_prefix(
+            'test_a.py::TestA', result.outlines) == {'gw0': 10}
+        assert get_workers_and_test_count_by_prefix(
+            'test_a.py::TestB', result.outlines) == {'gw1': 10}
 
 
 def parse_tests_and_workers_from_output(lines):
@@ -760,7 +764,8 @@ def parse_tests_and_workers_from_output(lines):
     return result
 
 
-def get_workers_and_test_count_by_prefix(prefix, lines, expected_status='PASSED'):
+def get_workers_and_test_count_by_prefix(prefix, lines,
+                                         expected_status='PASSED'):
     result = {}
     for worker, status, nodeid in parse_tests_and_workers_from_output(lines):
         if expected_status == status and nodeid.startswith(prefix):
