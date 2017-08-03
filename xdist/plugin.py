@@ -98,7 +98,8 @@ def pytest_configure(config):
 @pytest.mark.tryfirst
 def pytest_cmdline_main(config):
     if config.option.numprocesses:
-        config.option.dist = "load"
+        if config.option.dist == 'no':
+            config.option.dist = "load"
         config.option.tx = ['popen'] * config.option.numprocesses
     if config.option.distload:
         config.option.dist = "load"

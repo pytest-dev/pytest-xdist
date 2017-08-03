@@ -727,7 +727,7 @@ class TestLoadScope:
             test_a=test_file,
             test_b=test_file,
         )
-        result = testdir.runpytest('--tx=2*popen', '--dist=loadscope', '-v')
+        result = testdir.runpytest('-n2', '--dist=loadscope', '-v')
         assert get_workers_and_test_count_by_prefix('test_a.py::test', result.outlines) == {'gw0': 10}
         assert get_workers_and_test_count_by_prefix('test_b.py::test', result.outlines) == {'gw1': 10}
 
@@ -744,7 +744,7 @@ class TestLoadScope:
                 def test(self, i):
                     pass
         """)
-        result = testdir.runpytest('--tx=2*popen', '--dist=loadscope', '-v')
+        result = testdir.runpytest('-n2', '--dist=loadscope', '-v')
         assert get_workers_and_test_count_by_prefix('test_a.py::TestA', result.outlines) == {'gw0': 10}
         assert get_workers_and_test_count_by_prefix('test_a.py::TestB', result.outlines) == {'gw1': 10}
 
