@@ -1,3 +1,5 @@
+import re
+
 import py
 import pytest
 
@@ -710,3 +712,57 @@ def test_internal_error_with_maxfail(testdir):
     result = testdir.runpytest_subprocess('--maxfail=1', '-n1')
     result.stdout.fnmatch_lines(['* 1 error in *'])
     assert 'INTERNALERROR' not in result.stderr.str()
+
+
+class TestLoadScope:
+
+    def test_by_module(self, testdir):
+        test_file = """
+            import pytest
+            @pytest.mark.parametrize('i', range(10))
+            def test(i):
+                pass
+        """
+        testdir.makepyfile(
+            test_a=test_file,
+            test_b=test_file,
+        )
+        result = testdir.runpytest('--tx=2*popen', '--dist=loadscope', '-v')
+        assert get_workers_and_test_count_by_prefix('test_a.py::test', result.outlines) == {'gw0': 10}
+        assert get_workers_and_test_count_by_prefix('test_b.py::test', result.outlines) == {'gw1': 10}
+
+    def test_by_class(self, testdir):
+        testdir.makepyfile(test_a="""
+            import pytest
+            class TestA:
+                @pytest.mark.parametrize('i', range(10))
+                def test(self, i):
+                    pass
+
+            class TestB:
+                @pytest.mark.parametrize('i', range(10))
+                def test(self, i):
+                    pass
+        """)
+        result = testdir.runpytest('--tx=2*popen', '--dist=loadscope', '-v')
+        assert get_workers_and_test_count_by_prefix('test_a.py::TestA', result.outlines) == {'gw0': 10}
+        assert get_workers_and_test_count_by_prefix('test_a.py::TestB', result.outlines) == {'gw1': 10}
+
+
+def parse_tests_and_workers_from_output(lines):
+    result = []
+    for line in lines:
+        # example match: "[gw0] PASSED test_a.py::test[7]"
+        m = re.match(r'\[(gw\d)\]\s(.*?)\s(.*::.*)', line.strip())
+        if m:
+            worker, status, nodeid = m.groups()
+            result.append((worker, status, nodeid))
+    return result
+
+
+def get_workers_and_test_count_by_prefix(prefix, lines, expected_status='PASSED'):
+    result = {}
+    for worker, status, nodeid in parse_tests_and_workers_from_output(lines):
+        if expected_status == status and nodeid.startswith(prefix):
+            result[worker] = result.get(worker, 0) + 1
+    return result
