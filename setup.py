@@ -1,4 +1,12 @@
-from setuptools import setup
+from sys import version_info
+
+from setuptools import setup, find_packages
+
+install_requires = ['execnet>=1.1', 'pytest>=3.0.0']
+
+if version_info < (2, 7):
+    install_requires.append('ordereddict')
+
 
 setup(
     name="pytest-xdist",
@@ -11,7 +19,7 @@ setup(
     author_email='pytest-dev@python.org,holger@merlinux.eu',
     url='https://github.com/pytest-dev/pytest-xdist',
     platforms=['linux', 'osx', 'win32'],
-    packages=['xdist'],
+    packages=find_packages(exclude=['testing', 'example']),
     entry_points={
         'pytest11': [
             'xdist = xdist.plugin',
@@ -20,7 +28,7 @@ setup(
         ],
     },
     zip_safe=False,
-    install_requires=['execnet>=1.1', 'pytest>=3.0.0'],
+    install_requires=install_requires,
     setup_requires=['setuptools_scm'],
     classifiers=[
         'Development Status :: 5 - Production/Stable',

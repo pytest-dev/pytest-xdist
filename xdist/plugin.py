@@ -31,11 +31,14 @@ def pytest_addoption(parser):
                           "when crashed (set to zero to disable this feature)")
     group._addoption(
         '--dist', metavar="distmode",
-        action="store", choices=['load', 'each', 'no'],
+        action="store", choices=['each', 'load', 'loadscope', 'no'],
         dest="dist", default="no",
         help=("set mode for distributing tests to exec environments.\n\n"
-              "each: send each test to each available environment.\n\n"
-              "load: send each test to available environment.\n\n"
+              "each: send each test to all available environments.\n\n"
+              "load: load balance by sending any pending test to any"
+              " available environment.\n\n"
+              "loadscope: load balance by sending pending groups of tests in"
+              " the same scope to any available environment.\n\n"
               "(default) no: run tests inprocess, don't distribute."))
     group._addoption(
         '--tx', dest="tx", action="append", default=[],
@@ -95,7 +98,8 @@ def pytest_configure(config):
 @pytest.mark.tryfirst
 def pytest_cmdline_main(config):
     if config.option.numprocesses:
-        config.option.dist = "load"
+        if config.option.dist == 'no':
+            config.option.dist = "load"
         config.option.tx = ['popen'] * config.option.numprocesses
     if config.option.distload:
         config.option.dist = "load"
