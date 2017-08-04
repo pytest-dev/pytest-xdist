@@ -104,11 +104,14 @@ def serialize_report(rep):
 
         new_entries = []
         for entry in reprtraceback['reprentries']:
-            new_entry = entry.__dict__
-            for key, value in new_entry.items():
+            entry_data = {
+                'type': type(entry).__name__,
+                'data': entry.__dict__,
+            }
+            for key, value in entry_data['data'].items():
                 if hasattr(value, '__dict__'):
-                    new_entry[key] = value.__dict__
-            new_entries.append(new_entry)
+                    entry_data['data'][key] = value.__dict__
+            new_entries.append(entry_data)
 
         reprtraceback['reprentries'] = new_entries
 

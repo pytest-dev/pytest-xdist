@@ -332,6 +332,7 @@ def unserialize_report(name, reportdict):
     def assembled_report(reportdict):
         from _pytest._code.code import (
             ReprEntry,
+            ReprEntryNative,
             ReprExceptionInfo,
             ReprFileLocation,
             ReprFuncArgs,
@@ -345,22 +346,36 @@ def unserialize_report(name, reportdict):
                 reprcrash = reportdict['longrepr']['reprcrash']
 
                 unserialized_entries = []
-                for entry in reprtraceback['reprentries']:
-                    reprfuncargs, reprfileloc, reprlocals = None, None, None
-                    if entry['reprfuncargs']:
-                        reprfuncargs = ReprFuncArgs(**entry['reprfuncargs'])
-                    if entry['reprfileloc']:
-                        reprfileloc = ReprFileLocation(**entry['reprfileloc'])
-                    if entry['reprlocals']:
-                        reprlocals = ReprLocals(entry['reprlocals']['lines'])
+                reprentry = None
+                for entry_data in reprtraceback['reprentries']:
+                    data = entry_data['data']
+                    entry_type = entry_data['type']
+                    if entry_type == 'ReprEntry':
+                        reprfuncargs = None
+                        reprfileloc = None
+                        reprlocals = None
+                        if data['reprfuncargs']:
+                            reprfuncargs = ReprFuncArgs(
+                                **data['reprfuncargs'])
+                        if data['reprfileloc']:
+                            reprfileloc = ReprFileLocation(
+                                **data['reprfileloc'])
+                        if data['reprlocals']:
+                            reprlocals = ReprLocals(
+                                data['reprlocals']['lines'])
 
-                    reprentry = ReprEntry(
-                        lines=entry['lines'],
-                        reprfuncargs=reprfuncargs,
-                        reprlocals=reprlocals,
-                        filelocrepr=reprfileloc,
-                        style=entry['style']
-                    )
+                        reprentry = ReprEntry(
+                            lines=data['lines'],
+                            reprfuncargs=reprfuncargs,
+                            reprlocals=reprlocals,
+                            filelocrepr=reprfileloc,
+                            style=data['style']
+                        )
+                    elif entry_type == 'ReprEntryNative':
+                        reprentry = ReprEntryNative(data['lines'])
+                    else:
+                        report_unserialization_failure(
+                            entry_type, name, reportdict)
                     unserialized_entries.append(reprentry)
                 reprtraceback['reprentries'] = unserialized_entries
 
@@ -378,3 +393,17 @@ def unserialize_report(name, reportdict):
         return runner.TestReport(**assembled_report(reportdict))
     elif name == "collectreport":
         return runner.CollectReport(**assembled_report(reportdict))
+
+
+def report_unserialization_failure(type_name, report_name, reportdict):
+    from pprint import pprint
+    url = 'https://github.com/pytest-dev/pytest-xdist/issues'
+    stream = py.io.TextIO()
+    pprint('-' * 100, stream=stream)
+    pprint('INTERNALERROR: Unknown entry type returned: %s' % type_name,
+           stream=stream)
+    pprint('report_name: %s' % report_name, stream=stream)
+    pprint(reportdict, stream=stream)
+    pprint('Please report this bug at %s' % url, stream=stream)
+    pprint('-' * 100, stream=stream)
+    assert 0, stream.getvalue()
