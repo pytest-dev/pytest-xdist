@@ -729,9 +729,9 @@ class TestLoadScope:
         )
         result = testdir.runpytest('-n2', '--dist=loadscope', '-v')
         assert get_workers_and_test_count_by_prefix(
-            'test_a.py::test', result.outlines) == {'gw0': 10}
+            'test_a.py::test', result.outlines) in ({'gw0': 10}, {'gw1': 10})
         assert get_workers_and_test_count_by_prefix(
-            'test_b.py::test', result.outlines) == {'gw1': 10}
+            'test_b.py::test', result.outlines) in ({'gw0': 10}, {'gw1': 10})
 
     def test_by_class(self, testdir):
         testdir.makepyfile(test_a="""
@@ -748,9 +748,9 @@ class TestLoadScope:
         """)
         result = testdir.runpytest('-n2', '--dist=loadscope', '-v')
         assert get_workers_and_test_count_by_prefix(
-            'test_a.py::TestA', result.outlines) == {'gw0': 10}
+            'test_a.py::TestA', result.outlines) in ({'gw0': 10}, {'gw1': 10})
         assert get_workers_and_test_count_by_prefix(
-            'test_a.py::TestB', result.outlines) == {'gw1': 10}
+            'test_a.py::TestB', result.outlines) in ({'gw0': 10}, {'gw1': 10})
 
 
 def parse_tests_and_workers_from_output(lines):
