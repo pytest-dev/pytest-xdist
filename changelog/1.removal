@@ -1,0 +1,1 @@
+remove the implementation of "boxed" and use pytest-forked for providing ``--boxed``
