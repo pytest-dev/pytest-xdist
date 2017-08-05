@@ -26,10 +26,10 @@ def pytest_addoption(parser):
         help="shortcut for '--dist=load --tx=NUM*popen', "
              "you can use 'auto' here for auto detection CPUs number on "
              "host system")
-    group._addoption('--max-slave-restart', action="store", default=None,
-                     help="maximum number of slaves that can be restarted "
-                          "when crashed (set to zero to disable this feature)")
-    group._addoption(
+    group.addoption('--max-slave-restart', action="store", default=None,
+                    help="maximum number of slaves that can be restarted "
+                         "when crashed (set to zero to disable this feature)")
+    group.addoption(
         '--dist', metavar="distmode",
         action="store", choices=['each', 'load', 'loadscope', 'no'],
         dest="dist", default="no",
@@ -40,7 +40,7 @@ def pytest_addoption(parser):
               "loadscope: load balance by sending pending groups of tests in"
               " the same scope to any available environment.\n\n"
               "(default) no: run tests inprocess, don't distribute."))
-    group._addoption(
+    group.addoption(
         '--tx', dest="tx", action="append", default=[],
         metavar="xspec",
         help=("add a test execution environment. some examples: "
@@ -57,6 +57,9 @@ def pytest_addoption(parser):
         '--rsyncignore', action="append", default=[], metavar="GLOB",
         help="add expression for ignores when rsyncing to remote tx nodes.")
 
+    group.addoption(
+        "--boxed", action="store_true",
+        help="backward compatibility alias for pytest-forked --forked")
     parser.addini(
         'rsyncdirs', 'list of (relative) paths to be rsynced for'
         ' remote distributed testing.', type="pathlist")
@@ -66,6 +69,7 @@ def pytest_addoption(parser):
     parser.addini(
         "looponfailroots", type="pathlist",
         help="directories to check for changes", default=[py.path.local()])
+
 
 # -------------------------------------------------------------------------
 # distributed testing hooks
@@ -93,6 +97,8 @@ def pytest_configure(config):
         config.pluginmanager.register(session, "dsession")
         tr = config.pluginmanager.getplugin("terminalreporter")
         tr.showfspath = False
+    if config.getoption("boxed"):
+        config.option.forked = True
 
 
 @pytest.mark.tryfirst

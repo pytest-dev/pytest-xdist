@@ -1,0 +1,1 @@
+``--boxed`` functionality has been moved to a separate plugin, `pytest-forked <https://github.com/pytest-dev/pytest-forked>`_. This release now depends on `` pytest-forked`` and provides ``--boxed`` as a backward compatibility option.

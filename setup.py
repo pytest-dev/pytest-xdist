@@ -2,7 +2,7 @@ from sys import version_info
 
 from setuptools import setup, find_packages
 
-install_requires = ['execnet>=1.1', 'pytest>=3.0.0']
+install_requires = ['execnet>=1.1', 'pytest>=3.0.0', 'pytest-forked']
 
 if version_info < (2, 7):
     install_requires.append('ordereddict')
@@ -24,7 +24,6 @@ setup(
         'pytest11': [
             'xdist = xdist.plugin',
             'xdist.looponfail = xdist.looponfail',
-            'xdist.boxed = xdist.boxed',
         ],
     },
     zip_safe=False,
