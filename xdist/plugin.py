@@ -27,8 +27,8 @@ def pytest_addoption(parser):
              "you can use 'auto' here for auto detection CPUs number on "
              "host system")
     group.addoption('--max-slave-restart', action="store", default=None,
-                     help="maximum number of slaves that can be restarted "
-                          "when crashed (set to zero to disable this feature)")
+                    help="maximum number of slaves that can be restarted "
+                         "when crashed (set to zero to disable this feature)")
     group.addoption(
         '--dist', metavar="distmode",
         action="store", choices=['each', 'load', 'loadscope', 'no'],
