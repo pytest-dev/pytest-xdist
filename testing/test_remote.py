@@ -118,7 +118,7 @@ class TestReportSerialization:
                             def test_repr_entry():
                                 x = 0
                                 assert x
-                        """, '--showlocals', '-n1')
+                        """, '--showlocals')
         reports = reprec.getreports("pytest_runtest_logreport")
         assert len(reports) == 3
         rep = reports[1]
@@ -143,7 +143,7 @@ class TestReportSerialization:
                             def test_repr_entry_native():
                                 x = 0
                                 assert x
-                        """, '--tb=native', '-n1')
+                        """, '--tb=native')
         reports = reprec.getreports("pytest_runtest_logreport")
         assert len(reports) == 3
         rep = reports[1]
