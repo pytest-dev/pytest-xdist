@@ -671,6 +671,20 @@ def test_worker_id_fixture(testdir, n):
         assert worker_ids == set(['gw0', 'gw1'])
 
 
+@pytest.mark.parametrize('tb',
+                         ['auto', 'long', 'short', 'no', 'line', 'native'])
+def test_error_report_styles(testdir, tb):
+    testdir.makepyfile("""
+        import pytest
+        def test_error_report_styles():
+            raise RuntimeError('some failure happened')
+    """)
+    result = testdir.runpytest('-n1', '--tb=%s' % tb)
+    if tb != 'no':
+        result.stdout.fnmatch_lines('*some failure happened*')
+    result.assert_outcomes(failed=1)
+
+
 def test_color_yes_collection_on_non_atty(testdir, request):
     """skip collect progress report when working on non-terminals.
 
