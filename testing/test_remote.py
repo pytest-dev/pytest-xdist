@@ -113,11 +113,12 @@ class TestReportSerialization:
         assert added_section in a.longrepr.sections
 
     def test_reprentries_serialization_170(self, testdir):
+        from _pytest._code.code import ReprEntry
         reprec = testdir.inline_runsource("""
-                            def test_fail():
+                            def test_repr_entry():
                                 x = 0
                                 assert x
-                        """, '--showlocals', '-n1')
+                        """, '--showlocals')
         reports = reprec.getreports("pytest_runtest_logreport")
         assert len(reports) == 3
         rep = reports[1]
@@ -128,12 +129,33 @@ class TestReportSerialization:
         a_entries = a.longrepr.reprtraceback.reprentries
         assert rep_entries == a_entries
         for i in range(len(a_entries)):
+            assert isinstance(rep_entries[i], ReprEntry)
             assert rep_entries[i].lines == a_entries[i].lines
             assert rep_entries[i].localssep == a_entries[i].localssep
             assert rep_entries[i].reprfileloc == a_entries[i].reprfileloc
             assert rep_entries[i].reprfuncargs == a_entries[i].reprfuncargs
             assert rep_entries[i].reprlocals == a_entries[i].reprlocals
             assert rep_entries[i].style == a_entries[i].style
+
+    def test_reprentries_serialization_196(self, testdir):
+        from _pytest._code.code import ReprEntryNative
+        reprec = testdir.inline_runsource("""
+                            def test_repr_entry_native():
+                                x = 0
+                                assert x
+                        """, '--tb=native')
+        reports = reprec.getreports("pytest_runtest_logreport")
+        assert len(reports) == 3
+        rep = reports[1]
+        d = serialize_report(rep)
+        a = unserialize_report("testreport", d)
+
+        rep_entries = rep.longrepr.reprtraceback.reprentries
+        a_entries = a.longrepr.reprtraceback.reprentries
+        assert rep_entries == a_entries
+        for i in range(len(a_entries)):
+            assert isinstance(rep_entries[i], ReprEntryNative)
+            assert rep_entries[i].lines == a_entries[i].lines
 
     def test_itemreport_outcomes(self, testdir):
         reprec = testdir.inline_runsource("""
