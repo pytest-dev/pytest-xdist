@@ -186,6 +186,7 @@ at once.   The specifications strings use the `xspec syntax`_.
 Identifying the worker process during a test
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+*New in version 1.15.*
 
 If you need to determine the identity of a worker process in
 a test or fixture, you may use the ``worker_id`` fixture to do so:
@@ -211,8 +212,6 @@ The information about the worker_id in a test is stored in the TestReport as
 well, under worker_id attribute.
 
 
-*New in version 1.15.*
-
 Specifying test exec environments in an ini file
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -237,6 +236,83 @@ and then just type::
     py.test --dist=each
 
 to run tests in each of the environments.
+
+
+Sending groups of related tests to the same worker
+++++++++++++++++++++++++++++++++++++++++++++++++++
+
+*New in version 1.19.*
+
+.. note::
+    This is a **experimental** feature: the actual functionality will
+    likely stay the same, but the CLI might change slightly in future versions.
+
+You can send groups of related tests to the same worker by using the
+``--dist=loadscope`` option. Tests will be grouped by **module**
+for *test functions* and by **class** for *test methods*.
+
+For example, consider this two test files:
+
+.. code-block:: python
+
+    # content of test_container.py
+    import pytest
+
+    def test_container_startup():
+        pass
+
+    def test_container_logging():
+        pass
+
+    @pytest.mark.parametrize('methods', ['ssh', 'http'])
+    def test_container_communication(methods):
+        pass
+
+    # content of test_io.py
+    class TestHDF:
+
+        def test_listing(self):
+            pass
+
+        def test_search(self):
+            pass
+
+
+    class TestXML:
+
+        def test_listing(self):
+            pass
+
+        def test_search(self):
+            pass
+
+
+By executing ``pytest -v --dist=loadscope -n4`` you might get this output
+(sorted by worker for readability)::
+
+    ============================= test session starts =============================
+    <skip header>
+    gw0 [8] / gw1 [8] / gw2 [8] / gw3 [8]
+    scheduling tests via LoadScopeScheduling
+
+    [gw0] PASSED test_container.py::test_container_communication[http]
+    [gw0] PASSED test_container.py::test_container_communication[ssh]
+    [gw0] PASSED test_container.py::test_container_logging
+    [gw0] PASSED test_container.py::test_container_startup
+    [gw1] PASSED test_io.py::TestHDF::test_listing
+    [gw1] PASSED test_io.py::TestHDF::test_search
+    [gw2] PASSED test_io.py::TestXML::test_listing
+    [gw2] PASSED test_io.py::TestXML::test_search
+
+    ========================== 8 passed in 0.56 seconds ===========================
+
+As you can see, all test functions from ``test_container.py`` executed on
+the same worker ``gw0``, while the test methods from classes ``TestHDF`` and
+``TestXML`` executed in workers ``gw1`` and ``gw2`` respectively.
+
+Currently the groupings can't be customized, with grouping by class takes
+priority over grouping by module.
+
 
 Specifying "rsync" dirs in an ini-file
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
