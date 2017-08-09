@@ -9,10 +9,9 @@ python:
 install: pip install tox-travis setuptools_scm
 matrix:
   include:
-  # note: please use "tox --listenvs" to populate the build matrix
-  - python: "3.5"
+  - python: "3.6"
     env: TOXENV=flakes
-  - python: "3.5"
+  - python: "3.6"
     env: TOXENV=readme
 
 script: tox
