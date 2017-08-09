@@ -8,7 +8,7 @@
 
 import sys
 import os
-
+import pytest
 
 class SlaveInteractor:
     def __init__(self, config, channel):
@@ -33,11 +33,11 @@ class SlaveInteractor:
         slaveinfo = getinfodict()
         self.sendevent("slaveready", slaveinfo=slaveinfo)
 
-    def pytest_sessionfinish(self, __multicall__, exitstatus):
+    @pytest.hookimpl(hookwrapper=True)
+    def pytest_sessionfinish(self, exitstatus):
         self.config.slaveoutput['exitstatus'] = exitstatus
-        res = __multicall__.execute()
+        yield
         self.sendevent("slavefinished", slaveoutput=self.config.slaveoutput)
-        return res
 
     def pytest_collection(self, session):
         self.sendevent("collectionstart")
