@@ -1,1 +1,0 @@
-Fix serialization of native tracebacks (``--tb=native``).
