@@ -344,7 +344,7 @@ def unserialize_report(name, reportdict):
             ReprTraceback
         )
         if reportdict['longrepr']:
-            if 'reprcrash' and 'reprtraceback' in reportdict['longrepr']:
+            if 'reprcrash' in reportdict['longrepr'] and 'reprtraceback' in reportdict['longrepr']:
 
                 reprtraceback = reportdict['longrepr']['reprtraceback']
                 reprcrash = reportdict['longrepr']['reprcrash']
