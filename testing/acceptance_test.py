@@ -340,6 +340,7 @@ class TestTerminalReporting:
         ])
 
     @pytest.mark.parametrize('n', ['-n0', '-n1'])
+    @pytest.mark.skipif(pytest.__version__ < "3.1", reason='pytest warnings requires >= 3.1')
     def test_logwarning(self, testdir, n):
         testdir.makepyfile("""
             import warnings
