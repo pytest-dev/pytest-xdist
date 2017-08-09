@@ -10,6 +10,7 @@ import sys
 import os
 import pytest
 
+
 class SlaveInteractor:
     def __init__(self, config, channel):
         self.config = config
@@ -97,7 +98,8 @@ class SlaveInteractor:
         self.sendevent("collectreport", data=data)
 
     def pytest_logwarning(self, message, code, nodeid, fslocation):
-        self.sendevent("logwarning", message=message, code=code, nodeid=nodeid, fslocation=fslocation)
+        self.sendevent("logwarning", message=message, code=code, nodeid=nodeid,
+                       fslocation=fslocation)
 
 
 def serialize_report(rep):
