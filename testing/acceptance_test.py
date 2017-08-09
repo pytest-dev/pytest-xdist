@@ -340,18 +340,28 @@ class TestTerminalReporting:
         ])
 
     @pytest.mark.parametrize('n', ['-n0', '-n1'])
-    def test_logwarning(self, testdir, n):
+    @pytest.mark.parametrize('warn_type', ['pytest', 'builtin'])
+    def test_logwarning(self, testdir, n, warn_type):
         from pkg_resources import parse_version
         if parse_version(pytest.__version__) < parse_version('3.1'):
             pytest.skip('pytest warnings requires >= 3.1')
+
+        if warn_type == 'builtin':
+            warn_code = """warnings.warn(UserWarning('this is a warning'))"""
+        elif warn_type == 'pytest':
+            warn_code = """request.config.warn('', 'this is a warning',
+                           fslocation=py.path.local())"""
+        else:
+            assert False
         testdir.makepyfile("""
-            import warnings
-            def test_func():
-                warnings.warn('this is a warning')
-        """)
+            import warnings, py
+            def test_func(request):
+                {warn_code}
+        """.format(warn_code=warn_code))
         result = testdir.runpytest(n)
         result.stdout.fnmatch_lines([
             "*this is a warning*",
+            "*1 passed, 1 warnings*",
         ])
 
 
