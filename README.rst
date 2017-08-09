@@ -244,7 +244,7 @@ Sending groups of related tests to the same worker
 *New in version 1.19.*
 
 .. note::
-    This is a **experimental** feature: the actual functionality will
+    This is an **experimental** feature: the actual functionality will
     likely stay the same, but the CLI might change slightly in future versions.
 
 You can send groups of related tests to the same worker by using the
