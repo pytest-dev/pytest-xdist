@@ -315,6 +315,10 @@ class SlaveController(object):
                 self.notify_inproc(eventname, node=self, rep=rep)
             elif eventname == "collectionfinish":
                 self.notify_inproc(eventname, node=self, ids=kwargs['ids'])
+            elif eventname == "logwarning":
+                self.notify_inproc(eventname, message=kwargs['message'],
+                                   code=kwargs['code'], nodeid=kwargs['nodeid'],
+                                   fslocation=kwargs['nodeid'])
             else:
                 raise ValueError("unknown event: %s" % (eventname,))
         except KeyboardInterrupt:

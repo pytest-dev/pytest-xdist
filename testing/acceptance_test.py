@@ -339,6 +339,21 @@ class TestTerminalReporting:
             "E       assert 0",
         ])
 
+    @pytest.mark.parametrize('n', ['-n0', '-n1'])
+    def test_logwarning(self, testdir, n):
+        from pkg_resources import parse_version
+        if parse_version(pytest.__version__) < parse_version('3.1'):
+            pytest.skip('pytest warnings requires >= 3.1')
+        testdir.makepyfile("""
+            import warnings
+            def test_func():
+                warnings.warn('this is a warning')
+        """)
+        result = testdir.runpytest(n)
+        result.stdout.fnmatch_lines([
+            "*this is a warning*",
+        ])
+
 
 def test_teardownfails_one_function(testdir):
     p = testdir.makepyfile("""

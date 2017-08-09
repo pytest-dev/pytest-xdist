@@ -8,6 +8,7 @@
 
 import sys
 import os
+import pytest
 
 
 class SlaveInteractor:
@@ -33,11 +34,11 @@ class SlaveInteractor:
         slaveinfo = getinfodict()
         self.sendevent("slaveready", slaveinfo=slaveinfo)
 
-    def pytest_sessionfinish(self, __multicall__, exitstatus):
+    @pytest.hookimpl(hookwrapper=True)
+    def pytest_sessionfinish(self, exitstatus):
         self.config.slaveoutput['exitstatus'] = exitstatus
-        res = __multicall__.execute()
+        yield
         self.sendevent("slavefinished", slaveoutput=self.config.slaveoutput)
-        return res
 
     def pytest_collection(self, session):
         self.sendevent("collectionstart")
@@ -95,6 +96,10 @@ class SlaveInteractor:
     def pytest_collectreport(self, report):
         data = serialize_report(report)
         self.sendevent("collectreport", data=data)
+
+    def pytest_logwarning(self, message, code, nodeid, fslocation):
+        self.sendevent("logwarning", message=message, code=code, nodeid=nodeid,
+                       fslocation=fslocation)
 
 
 def serialize_report(rep):
