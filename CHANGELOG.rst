@@ -1,3 +1,34 @@
+pytest-xdist 1.19.0 (2017-08-09)
+================================
+
+Deprecations and Removals
+-------------------------
+
+- ``--boxed`` functionality has been moved to a separate plugin, `pytest-forked
+  <https://github.com/pytest-dev/pytest-forked>`_. This release now depends on
+  `` pytest-forked`` and provides ``--boxed`` as a backward compatibility
+  option. (`#1 <https://github.com/pytest-dev/pytest-xdist/issues/1>`_)
+
+
+Features
+--------
+
+- New ``--dist=loadscope`` option: sends group of related tests to the same
+  worker. Tests are grouped by module for test functions and by class for test
+  methods. See ``README.rst`` for more information. (`#191 <https://github.com
+  /pytest-dev/pytest-xdist/issues/191>`_)
+
+- Warnings are now properly transferred from workers to the master node. (`#92
+  <https://github.com/pytest-dev/pytest-xdist/issues/92>`_)
+
+
+Bug Fixes
+---------
+
+- Fix serialization of native tracebacks (``--tb=native``). (`#196
+  <https://github.com/pytest-dev/pytest-xdist/issues/196>`_)
+
+
 pytest-xdist 1.18.2 (2017-07-28)
 ================================
 
