@@ -247,6 +247,11 @@ class DSession:
         if rep.failed:
             self._failed_slave_collectreport(node, rep)
 
+    def slave_logwarning(self, message, code, nodeid, fslocation):
+        """Emitted when a node calls the pytest_logwarning hook."""
+        kwargs = dict(message=message, code=code, nodeid=nodeid, fslocation=fslocation)
+        self.config.hook.pytest_logwarning.call_historic(kwargs=kwargs)
+
     def _clone_node(self, node):
         """Return new node based on an existing one.
 

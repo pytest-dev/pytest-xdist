@@ -339,6 +339,18 @@ class TestTerminalReporting:
             "E       assert 0",
         ])
 
+    @pytest.mark.parametrize('n', ['-n0', '-n1'])
+    def test_logwarning(self, testdir, n):
+        testdir.makepyfile("""
+            import warnings
+            def test_func():
+                warnings.warn('this is a warning')
+        """)
+        result = testdir.runpytest(n)
+        result.stdout.fnmatch_lines([
+            "*this is a warning*",
+        ])
+
 
 def test_teardownfails_one_function(testdir):
     p = testdir.makepyfile("""
