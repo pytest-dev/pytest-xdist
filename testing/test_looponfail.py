@@ -193,6 +193,8 @@ class TestLooponFailing:
         assert 'test_one' not in remotecontrol.failures[0]
         assert 'test_two' in remotecontrol.failures[0]
 
+    @py.test.mark.xfail(py.test.__version__ >= "3.1",
+                        reason="broken by pytest 3.1+")
     def test_looponfail_removed_test(self, testdir):
         modcol = testdir.getmodulecol("""
             def test_one():

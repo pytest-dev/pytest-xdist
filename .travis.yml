@@ -6,13 +6,17 @@ python:
 - '3.4'
 - '3.5'
 - '3.6'
-install: pip install tox-travis setuptools_scm
+env:
+- TOXENV=py-pytest30
+- TOXENV=py-pytest31
+- TOXENV=py-pytest32
+install: pip install tox setuptools_scm
 matrix:
   include:
   # note: please use "tox --listenvs" to populate the build matrix
-  - python: "3.5"
+  - python: "3.6"
     env: TOXENV=flakes
-  - python: "3.5"
+  - python: "3.6"
     env: TOXENV=readme
 
 script: tox
