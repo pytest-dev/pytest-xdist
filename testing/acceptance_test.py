@@ -502,6 +502,32 @@ def test_crashing_item(testdir, when):
     ])
 
 
+def test_multiple_log_reports(testdir):
+    """
+    Ensure that pytest-xdist supports plugins that emit multiple logreports
+    (#206).
+    Inspired by pytest-rerunfailures.
+    """
+    testdir.makeconftest("""
+        from _pytest.runner import runtestprotocol
+        def pytest_runtest_protocol(item, nextitem):
+            item.ihook.pytest_runtest_logstart(nodeid=item.nodeid,
+                                               location=item.location)
+            reports = runtestprotocol(item, nextitem=nextitem)
+            for report in reports:
+                item.ihook.pytest_runtest_logreport(report=report)
+            return True
+    """)
+    testdir.makepyfile("""
+        def test():
+            pass
+    """)
+    result = testdir.runpytest("-n1")
+    result.stdout.fnmatch_lines([
+        "*2 passed*",
+    ])
+
+
 def test_skipping(testdir):
     p = testdir.makepyfile("""
         import pytest
