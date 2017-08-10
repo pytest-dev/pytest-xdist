@@ -8,6 +8,7 @@
 
 import sys
 import os
+import time
 import pytest
 
 
@@ -59,23 +60,29 @@ class SlaveInteractor:
             self.log("items to run:", torun)
             # only run if we have an item and a next item
             while len(torun) >= 2:
-                self.run_tests(torun)
+                self.run_one_test(torun)
             if name == "shutdown":
                 if torun:
-                    self.run_tests(torun)
+                    self.run_one_test(torun)
                 break
         return True
 
-    def run_tests(self, torun):
+    def run_one_test(self, torun):
         items = self.session.items
         self.item_index = torun.pop(0)
+        item = items[self.item_index]
         if torun:
             nextitem = items[torun[0]]
         else:
             nextitem = None
+
+        start = time.time()
         self.config.hook.pytest_runtest_protocol(
-            item=items[self.item_index],
+            item=item,
             nextitem=nextitem)
+        duration = time.time() - start
+        self.sendevent("runtest_protocol_complete", item_index=self.item_index,
+                       duration=duration)
 
     def pytest_collection_finish(self, session):
         self.sendevent(

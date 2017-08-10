@@ -230,17 +230,18 @@ class DSession:
             nodeid=nodeid, location=location)
 
     def slave_testreport(self, node, rep):
-        """Emitted when a node calls the pytest_runtest_logreport hook.
-
-        If the node indicates it is finished with a test item, remove
-        the item from the pending list in the scheduler.
-        """
-        if rep.when == "call" or (rep.when == "setup" and not rep.passed):
-            self.sched.mark_test_complete(node, rep.item_index, rep.duration)
-        # self.report_line("testreport %s: %s" %(rep.id, rep.status))
+        """Emitted when a node calls the pytest_runtest_logreport hook."""
         rep.node = node
         self.config.hook.pytest_runtest_logreport(report=rep)
         self._handlefailures(rep)
+
+    def slave_runtest_protocol_complete(self, node, item_index, duration):
+        """
+        Emitted when a node fires the 'runtest_protocol_complete' event,
+        signalling that a test has completed the runtestprotocol and should be
+        removed from the pending list in the scheduler.
+        """
+        self.sched.mark_test_complete(node, item_index, duration)
 
     def slave_collectreport(self, node, rep):
         """Emitted when a node calls the pytest_collectreport hook."""
