@@ -1,3 +1,14 @@
+pytest-xdist 1.19.1 (2017-08-10)
+================================
+
+Bug Fixes
+---------
+
+- Fix crash when transferring internal pytest warnings from workers to the
+  master node. (`#214 <https://github.com/pytest-dev/pytest-
+  xdist/issues/214>`_)
+
+
 pytest-xdist 1.19.0 (2017-08-09)
 ================================
 

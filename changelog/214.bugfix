@@ -1,1 +1,0 @@
-Fix crash when transferring internal pytest warnings from workers to the master node.
