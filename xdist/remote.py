@@ -99,7 +99,7 @@ class SlaveInteractor:
 
     def pytest_logwarning(self, message, code, nodeid, fslocation):
         self.sendevent("logwarning", message=message, code=code, nodeid=nodeid,
-                       fslocation=fslocation)
+                       fslocation=str(fslocation))
 
 
 def serialize_report(rep):
