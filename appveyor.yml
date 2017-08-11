@@ -2,19 +2,37 @@ environment:
   matrix:
   # note: please use "tox --listenvs" to populate the build matrix
   - TOXENV: "py26-pytest30"
+  - TOXENV: "py26-pytest31"
+  - TOXENV: "py26-pytest32"
   - TOXENV: "py27-pytest30"
+  - TOXENV: "py27-pytest31"
+  - TOXENV: "py27-pytest32"
   - TOXENV: "py34-pytest30"
+  - TOXENV: "py34-pytest31"
+  - TOXENV: "py34-pytest32"
   - TOXENV: "py35-pytest30"
+  - TOXENV: "py35-pytest31"
+  - TOXENV: "py35-pytest32"
   - TOXENV: "py36-pytest30"
+  - TOXENV: "py36-pytest31"
+  - TOXENV: "py36-pytest32"
   - TOXENV: "py27-pytest30-pexpect"
-  - TOXENV: "py35-pytest30-pexpect"
+  - TOXENV: "py27-pytest31-pexpect"
+  - TOXENV: "py27-pytest32-pexpect"
+  - TOXENV: "py36-pytest30-pexpect"
+  - TOXENV: "py36-pytest31-pexpect"
+  - TOXENV: "py36-pytest32-pexpect"
+  - TOXENV: "py27-pytestmaster"
+  - TOXENV: "py27-pytestfeatures"
+  - TOXENV: "py36-pytestmaster"
+  - TOXENV: "py36-pytestfeatures"
   - TOXENV: "flakes"
   - TOXENV: "readme"
 
 install:
-  - C:\Python35\python -m pip install tox setuptools_scm
+  - C:\Python36\python -m pip install tox setuptools_scm
 
 build: false  # Not a C# project, build stuff at the test step instead.
 
 test_script:
-  - C:\Python35\python -m tox
+  - C:\Python36\python -m tox
