@@ -471,18 +471,60 @@ def test_funcarg_teardown_failure(testdir):
     assert result.ret
 
 
-def test_crashing_item(testdir):
+@pytest.mark.parametrize('when', ['setup', 'call', 'teardown'])
+def test_crashing_item(testdir, when):
+    """Ensure crashing item is correctly reported during all testing stages"""
+    code = dict(setup='', call='', teardown='')
+    code[when] = 'py.process.kill(os.getpid())'
     p = testdir.makepyfile("""
-        import py
         import os
-        def test_crash():
-            py.process.kill(os.getpid())
-        def test_noncrash():
+        import py
+        import pytest
+
+        @pytest.fixture
+        def fix():
+            {setup}
+            yield
+            {teardown}
+
+        def test_crash(fix):
+            {call}
             pass
-    """)
+
+        def test_ok():
+            pass
+    """.format(**code))
+    passes = 2 if when == 'teardown' else 1
     result = testdir.runpytest("-n2", p)
     result.stdout.fnmatch_lines([
-        "*crashed*test_crash*", "*1 failed*1 passed*"
+        "*crashed*test_crash*",
+        "*1 failed*%d passed*" % passes,
+    ])
+
+
+def test_multiple_log_reports(testdir):
+    """
+    Ensure that pytest-xdist supports plugins that emit multiple logreports
+    (#206).
+    Inspired by pytest-rerunfailures.
+    """
+    testdir.makeconftest("""
+        from _pytest.runner import runtestprotocol
+        def pytest_runtest_protocol(item, nextitem):
+            item.ihook.pytest_runtest_logstart(nodeid=item.nodeid,
+                                               location=item.location)
+            reports = runtestprotocol(item, nextitem=nextitem)
+            for report in reports:
+                item.ihook.pytest_runtest_logreport(report=report)
+            return True
+    """)
+    testdir.makepyfile("""
+        def test():
+            pass
+    """)
+    result = testdir.runpytest("-n1")
+    result.stdout.fnmatch_lines([
+        "*2 passed*",
     ])
 
 
