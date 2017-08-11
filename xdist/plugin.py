@@ -124,6 +124,9 @@ def pytest_cmdline_main(config):
 
 @pytest.fixture(scope="session")
 def worker_id(request):
+    """Return the id of the current worker ('gw0', 'gw1', etc) or 'master'
+    if running on the master node.
+    """
     if hasattr(request.config, 'slaveinput'):
         return request.config.slaveinput['slaveid']
     else:
