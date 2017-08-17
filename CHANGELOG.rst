@@ -1,3 +1,24 @@
+pytest-xdist 1.20.0 (2017-08-17)
+================================
+
+Features
+--------
+
+- ``xdist`` now supports tests to log results multiple times, improving
+  integration with plugins which require it like `pytest-rerunfailures
+  <https://github.com/gocept/pytest-rerunfailures>_` and `flaky
+  <https://pypi.python.org/pypi/flaky>`_. (`#206 <https://github.com/pytest-
+  dev/pytest-xdist/issues/206>`_)
+
+
+Bug Fixes
+---------
+
+- Fix issue where tests were being incorrectly identified if a worker crashed
+  during the ``teardown`` stage of the test. (`#124 <https://github.com/pytest-
+  dev/pytest-xdist/issues/124>`_)
+
+
 pytest-xdist 1.19.1 (2017-08-10)
 ================================
 
