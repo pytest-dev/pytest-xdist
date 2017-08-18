@@ -1,1 +1,0 @@
-Fix issue where tests were being incorrectly identified if a worker crashed during the ``teardown`` stage of the test.
