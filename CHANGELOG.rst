@@ -250,7 +250,7 @@ Improved Documentation
   in master. Thanks Aron Curzon.
 
 - fix pytest issue419 by sending/receiving indices into the test
-  collection instead of node ids (which are not neccessarily unique
+  collection instead of node ids (which are not necessarily unique
   for functions parametrized with duplicate values)
 
 - send multiple "to test" indices in one network message to a slave
