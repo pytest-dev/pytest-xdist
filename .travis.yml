@@ -29,6 +29,14 @@ jobs:
   include:
     - stage: test
     # python x env above are already included into this stage
+    - python: "2.7"
+      env: TOXENV=py27-pytestmaster
+    - python: "2.7"
+      env: TOXENV=py27-pytestfeatures
+    - python: "3.6"
+      env: TOXENV=py36-pytestmaster
+    - python: "3.6"
+      env: TOXENV=py36-pytestfeatures
     - python: "3.6"
       env: TOXENV=flakes
     - python: "3.6"
