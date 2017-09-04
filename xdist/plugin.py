@@ -91,14 +91,15 @@ def pytest_addhooks(pluginmanager):
 
 @pytest.mark.trylast
 def pytest_configure(config):
-    if config.getoption("dist") != "no":
-        from xdist.dsession import DSession
-        session = DSession(config)
-        config.pluginmanager.register(session, "dsession")
-        tr = config.pluginmanager.getplugin("terminalreporter")
-        tr.showfspath = False
-    if config.getoption("boxed"):
-        config.option.forked = True
+    if not config.getvalue("collectonly"):
+        if config.getoption("dist") != "no":
+            from xdist.dsession import DSession
+            session = DSession(config)
+            config.pluginmanager.register(session, "dsession")
+            tr = config.pluginmanager.getplugin("terminalreporter")
+            tr.showfspath = False
+        if config.getoption("boxed"):
+            config.option.forked = True
 
 
 @pytest.mark.tryfirst
