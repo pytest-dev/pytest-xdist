@@ -43,6 +43,7 @@ def test_auto_detect_cpus(testdir, monkeypatch):
     config = testdir.parseconfigure("-nauto")
     assert config.getoption('numprocesses') == 99
 
+
 def test_boxed_with_collect_only(testdir):
     from xdist.plugin import pytest_cmdline_main as check_options
     config = testdir.parseconfigure("-n1", "--boxed")
@@ -57,6 +58,7 @@ def test_boxed_with_collect_only(testdir):
     check_options(config)
     assert config.option.forked
 
+
 def test_dsession_with_collect_only(testdir):
     from xdist.plugin import pytest_cmdline_main as check_options
     from xdist.plugin import pytest_configure as configure
@@ -70,6 +72,7 @@ def test_dsession_with_collect_only(testdir):
     check_options(config)
     configure(config)
     assert not config.pluginmanager.hasplugin("dsession")
+
 
 class TestDistOptions:
     def test_getxspecs(self, testdir):

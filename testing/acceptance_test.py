@@ -273,6 +273,7 @@ class TestDistribution:
             "*collected 1 item*",
         ])
 
+
 class TestDistEach:
     def test_simple(self, testdir):
         testdir.makepyfile("""
