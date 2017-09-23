@@ -105,7 +105,7 @@ def pytest_cmdline_main(config):
         if val("dist") != "no":
             if usepdb:
                 raise pytest.UsageError(
-                    "--pdb incompatible with distributing tests.")
+                    "--pdb is incompatible with distributing tests; try using -n0.")  # noqa: E501
 
 # -------------------------------------------------------------------------
 # fixtures
