@@ -701,6 +701,17 @@ class TestNodeFailure:
             "*2 failed*2 passed*",
         ])
 
+    def test_max_slave_restart_die(self, testdir):
+        f = testdir.makepyfile("""
+            import os
+            os._exit(1)
+        """)
+        res = testdir.runpytest(f, '-n4', '--max-slave-restart=0')
+        res.stdout.fnmatch_lines([
+            "*Unexpectedly no active workers*",
+            "*INTERNALERROR*"
+        ])
+
     def test_disable_restart(self, testdir):
         f = testdir.makepyfile("""
             import os

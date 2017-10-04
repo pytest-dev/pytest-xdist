@@ -120,6 +120,10 @@ class DSession:
     def loop_once(self):
         """Process one callback from one of the slaves."""
         while 1:
+            if not self._active_nodes:
+                # If everything has died stop looping
+                self.triggershutdown()
+                raise RuntimeError("Unexpectedly no active workers available")
             try:
                 eventcall = self.queue.get(timeout=2.0)
                 break
