@@ -262,6 +262,17 @@ class TestDistribution:
         child.close()
         # assert ret == 2
 
+    def test_dist_with_collectonly(self, testdir):
+        p1 = testdir.makepyfile("""
+            def test_ok():
+                pass
+        """)
+        result = testdir.runpytest(p1, "-n1", "--collect-only")
+        assert result.ret == 0
+        result.stdout.fnmatch_lines([
+            "*collected 1 item*",
+        ])
+
 
 class TestDistEach:
     def test_simple(self, testdir):

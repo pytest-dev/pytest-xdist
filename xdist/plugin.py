@@ -91,7 +91,7 @@ def pytest_addhooks(pluginmanager):
 
 @pytest.mark.trylast
 def pytest_configure(config):
-    if config.getoption("dist") != "no":
+    if config.getoption("dist") != "no" and not config.getvalue("collectonly"):
         from xdist.dsession import DSession
         session = DSession(config)
         config.pluginmanager.register(session, "dsession")
