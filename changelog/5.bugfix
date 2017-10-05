@@ -1,1 +1,0 @@
-Fix issue where the -n option would still run distributed tests when pytest was run with the --collect-only option

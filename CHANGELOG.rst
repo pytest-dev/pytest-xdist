@@ -1,3 +1,17 @@
+pytest-xdist 1.20.1 (2017-10-05)
+================================
+
+Bug Fixes
+---------
+
+- Fix hang when all worker nodes crash and restart limit is reached (`#45
+  <https://github.com/pytest-dev/pytest-xdist/issues/45>`_)
+
+- Fix issue where the -n option would still run distributed tests when pytest
+  was run with the --collect-only option (`#5
+  <https://github.com/pytest-dev/pytest-xdist/issues/5>`_)
+
+
 pytest-xdist 1.20.0 (2017-08-17)
 ================================
 
