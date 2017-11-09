@@ -856,6 +856,61 @@ class TestLoadScope:
             'test_a.py::TestB', result.outlines) in ({'gw0': 10}, {'gw1': 10})
 
 
+class TestFileScope:
+
+    def test_by_module(self, testdir):
+        test_file = """
+            import pytest
+            class TestA:
+                @pytest.mark.parametrize('i', range(10))
+                def test(self, i):
+                    pass
+
+            class TestB:
+                @pytest.mark.parametrize('i', range(10))
+                def test(self, i):
+                    pass
+        """
+        testdir.makepyfile(
+            test_a=test_file,
+            test_b=test_file,
+        )
+        result = testdir.runpytest('-n2', '--dist=loadfile', '-v')
+        test_a_workers_and_test_count = get_workers_and_test_count_by_prefix(
+            'test_a.py::TestA', result.outlines)
+        test_b_workers_and_test_count = get_workers_and_test_count_by_prefix(
+            'test_b.py::TestB', result.outlines)
+
+        assert test_a_workers_and_test_count in ({'gw0': 10}, {'gw1': 0}) or \
+            test_a_workers_and_test_count in ({'gw0': 0}, {'gw1': 10})
+        assert test_b_workers_and_test_count in ({'gw0': 10}, {'gw1': 0}) or \
+            test_b_workers_and_test_count in ({'gw0': 0}, {'gw1': 10})
+
+    def test_by_class(self, testdir):
+        testdir.makepyfile(test_a="""
+            import pytest
+            class TestA:
+                @pytest.mark.parametrize('i', range(10))
+                def test(self, i):
+                    pass
+
+            class TestB:
+                @pytest.mark.parametrize('i', range(10))
+                def test(self, i):
+                    pass
+        """)
+        result = testdir.runpytest('-n2', '--dist=loadfile', '-v')
+        test_a_workers_and_test_count = get_workers_and_test_count_by_prefix(
+            'test_a.py::TestA', result.outlines)
+        test_b_workers_and_test_count = get_workers_and_test_count_by_prefix(
+            'test_a.py::TestB', result.outlines)
+
+        assert test_a_workers_and_test_count in ({'gw0': 10}, {'gw1': 0}) or \
+            test_a_workers_and_test_count in ({'gw0': 0}, {'gw1': 10})
+        assert test_b_workers_and_test_count in ({'gw0': 10}, {'gw1': 0}) or \
+            test_b_workers_and_test_count in ({'gw0': 0}, {'gw1': 10})
+
+
 def parse_tests_and_workers_from_output(lines):
     result = []
     for line in lines:

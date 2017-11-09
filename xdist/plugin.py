@@ -31,7 +31,7 @@ def pytest_addoption(parser):
                          "when crashed (set to zero to disable this feature)")
     group.addoption(
         '--dist', metavar="distmode",
-        action="store", choices=['each', 'load', 'loadscope', 'no'],
+        action="store", choices=['each', 'load', 'loadscope', 'loadfile', 'no'],
         dest="dist", default="no",
         help=("set mode for distributing tests to exec environments.\n\n"
               "each: send each test to all available environments.\n\n"
@@ -39,6 +39,8 @@ def pytest_addoption(parser):
               " available environment.\n\n"
               "loadscope: load balance by sending pending groups of tests in"
               " the same scope to any available environment.\n\n"
+              "loadfile: load balance by sending test grouped by file"
+              " to any available environment.\n\n"
               "(default) no: run tests inprocess, don't distribute."))
     group.addoption(
         '--tx', dest="tx", action="append", default=[],
