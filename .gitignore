@@ -30,3 +30,4 @@ pytestdebug.log
 .tox/
 .cache/
 .eggs/
+.idea/
