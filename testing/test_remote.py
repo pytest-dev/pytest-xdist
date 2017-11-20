@@ -79,6 +79,21 @@ def test_remoteinitconfig(testdir):
 
 
 class TestReportSerialization:
+    def test_xdist_longrepr_to_str_issue_241(self, testdir):
+        testdir.makepyfile("""
+            import os
+            def test_a(): assert False
+            def test_b(): pass
+        """)
+        testdir.makeconftest("""
+            def pytest_runtest_logreport(report):
+                print(report.longrepr)
+        """)
+        res = testdir.runpytest('-n1', '-s')
+        res.stdout.fnmatch_lines([
+            '*1 failed, 1 passed *'
+        ])
+
     def test_xdist_report_longrepr_reprcrash_130(self, testdir):
         reprec = testdir.inline_runsource("""
                     import py
@@ -107,8 +122,6 @@ class TestReportSerialization:
         assert rep.longrepr.reprtraceback.style \
             == a.longrepr.reprtraceback.style
         assert rep.longrepr.sections == a.longrepr.sections
-        assert rep.longrepr.reprtraceback.reprentries \
-            == a.longrepr.reprtraceback.reprentries
         # Missing section attribute PR171
         assert added_section in a.longrepr.sections
 
@@ -127,14 +140,15 @@ class TestReportSerialization:
 
         rep_entries = rep.longrepr.reprtraceback.reprentries
         a_entries = a.longrepr.reprtraceback.reprentries
-        assert rep_entries == a_entries
         for i in range(len(a_entries)):
             assert isinstance(rep_entries[i], ReprEntry)
             assert rep_entries[i].lines == a_entries[i].lines
             assert rep_entries[i].localssep == a_entries[i].localssep
-            assert rep_entries[i].reprfileloc == a_entries[i].reprfileloc
-            assert rep_entries[i].reprfuncargs == a_entries[i].reprfuncargs
-            assert rep_entries[i].reprlocals == a_entries[i].reprlocals
+            assert rep_entries[i].reprfileloc.lineno == a_entries[i].reprfileloc.lineno
+            assert rep_entries[i].reprfileloc.message == a_entries[i].reprfileloc.message
+            assert rep_entries[i].reprfileloc.path == a_entries[i].reprfileloc.path
+            assert rep_entries[i].reprfuncargs.args == a_entries[i].reprfuncargs.args
+            assert rep_entries[i].reprlocals.lines == a_entries[i].reprlocals.lines
             assert rep_entries[i].style == a_entries[i].style
 
     def test_reprentries_serialization_196(self, testdir):
@@ -152,7 +166,6 @@ class TestReportSerialization:
 
         rep_entries = rep.longrepr.reprtraceback.reprentries
         a_entries = a.longrepr.reprtraceback.reprentries
-        assert rep_entries == a_entries
         for i in range(len(a_entries)):
             assert isinstance(rep_entries[i], ReprEntryNative)
             assert rep_entries[i].lines == a_entries[i].lines
