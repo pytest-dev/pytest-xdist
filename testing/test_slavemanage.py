@@ -50,10 +50,10 @@ class TestNodeManagerPopen:
         assert gm.specs[0].chdir is None
 
     def test_default_chdir(self, config):
-        l = ["ssh=noco", "socket=xyz"]
-        for spec in NodeManager(config, l).specs:
+        specs = ["ssh=noco", "socket=xyz"]
+        for spec in NodeManager(config, specs).specs:
             assert spec.chdir == "pyexecnetcache"
-        for spec in NodeManager(config, l, defaultchdir="abc").specs:
+        for spec in NodeManager(config, specs, defaultchdir="abc").specs:
             assert spec.chdir == "abc"
 
     def test_popen_makegateway_events(self, config, hookrecorder,
@@ -89,10 +89,10 @@ class TestNodeManagerPopen:
                     pass
 
             gw.remote_exec = pseudoexec
-        l = []
+        notifications = []
         for gw in hm.group:
-            hm.rsync(gw, source, notify=lambda *args: l.append(args))
-        assert not l
+            hm.rsync(gw, source, notify=lambda *args: notifications.append(args))
+        assert not notifications
         hm.teardown_nodes()
         assert not len(hm.group)
         assert "sys.path.insert" in gw.remote_exec.args[0]
@@ -102,11 +102,11 @@ class TestNodeManagerPopen:
         hm = NodeManager(config, ["popen//chdir=%s" % dest] * 1)
         hm.setup_nodes(None)
         source.ensure("dir1", "dir2", "hello")
-        l = []
+        notifications = []
         for gw in hm.group:
-            hm.rsync(gw, source, notify=lambda *args: l.append(args))
-        assert len(l) == 1
-        assert l[0] == ("rsyncrootready", hm.group['gw0'].spec, source)
+            hm.rsync(gw, source, notify=lambda *args: notifications.append(args))
+        assert len(notifications) == 1
+        assert notifications[0] == ("rsyncrootready", hm.group['gw0'].spec, source)
         hm.teardown_nodes()
         dest = dest.join(source.basename)
         assert dest.join("dir1").check()
@@ -137,9 +137,9 @@ class TestHRSync:
         source.ensure(".somedotfile", "moreentries")
         source.ensure("somedir", "editfile~")
         syncer = HostRSync(source, ignores=NodeManager.DEFAULT_IGNORES)
-        l = list(source.visit(rec=syncer.filter, fil=syncer.filter))
-        assert len(l) == 3
-        basenames = [x.basename for x in l]
+        files = list(source.visit(rec=syncer.filter, fil=syncer.filter))
+        assert len(files) == 3
+        basenames = [x.basename for x in files]
         assert 'dir' in basenames
         assert 'file.txt' in basenames
         assert 'somedir' in basenames

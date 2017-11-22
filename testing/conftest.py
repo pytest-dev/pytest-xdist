@@ -20,13 +20,13 @@ pytest_plugins = "pytester"
 @pytest.fixture(autouse=True)
 def _divert_atexit(request, monkeypatch):
     import atexit
-    l = []
+    finalizers = []
 
     def finish():
-        while l:
-            l.pop()()
+        while finalizers:
+            finalizers.pop()()
 
-    monkeypatch.setattr(atexit, "register", l.append)
+    monkeypatch.setattr(atexit, "register", finalizers.append)
     request.addfinalizer(finish)
 
 

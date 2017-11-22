@@ -83,10 +83,10 @@ class TestStatRecorder:
         tmp = tmpdir
         sd = StatRecorder([tmp])
 
-        l = [True, False]
-        monkeypatch.setattr(StatRecorder, 'check', lambda self: l.pop())
+        ret_values = [True, False]
+        monkeypatch.setattr(StatRecorder, 'check', lambda self: ret_values.pop())
         sd.waitonchange(checkinterval=0.2)
-        assert not l
+        assert not ret_values
 
 
 class TestRemoteControl:
