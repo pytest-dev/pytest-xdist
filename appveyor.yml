@@ -12,7 +12,7 @@ environment:
   - TOXENV: "readme"
 
 install:
-  - C:\Python35\python -m pip install tox setuptools_scm
+  - C:\Python35\python -m pip install -U tox setuptools_scm pip
 
 build: false  # Not a C# project, build stuff at the test step instead.
 
