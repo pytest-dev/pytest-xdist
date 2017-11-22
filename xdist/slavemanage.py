@@ -186,7 +186,7 @@ class HostRSync(execnet.RSync):
 def make_reltoroot(roots, args):
     # XXX introduce/use public API for splitting py.test args
     splitcode = "::"
-    l = []
+    result = []
     for arg in args:
         parts = arg.split(splitcode)
         fspath = py.path.local(parts[0])
@@ -197,8 +197,8 @@ def make_reltoroot(roots, args):
                 break
         else:
             raise ValueError("arg %s not relative to an rsync root" % (arg,))
-        l.append(splitcode.join(parts))
-    return l
+        result.append(splitcode.join(parts))
+    return result
 
 
 class SlaveController(object):
@@ -326,7 +326,7 @@ class SlaveController(object):
         except KeyboardInterrupt:
             # should not land in receiver-thread
             raise
-        except:
+        except:  # noqa
             excinfo = py.code.ExceptionInfo()
             py.builtin.print_("!" * 20, excinfo)
             self.config.notify_exception(excinfo)
