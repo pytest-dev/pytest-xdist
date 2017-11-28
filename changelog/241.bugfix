@@ -1,0 +1,1 @@
+Fix accidental mutation of test report during serialization causing longrepr string-ification to break.
