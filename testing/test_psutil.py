@@ -14,7 +14,7 @@ def test_run_executable():
     prog = sys.executable
 
     for x in range(100):
-        _run_executable(prog, [verbose_file]):
+        _run_executable(prog, [verbose_file])
 
 
 def _run_executable(prog, args, run_from_path=False, runtime=5):
