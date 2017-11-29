@@ -2,6 +2,7 @@ import sys
 import os
 import copy
 import psutil
+import tempfile
 
 from os.path import join, dirname
 from contextlib import suppress
@@ -32,7 +33,7 @@ def _run_executable(prog, args, run_from_path=False, runtime=5):
         # Run executable in the temp directory
         # Add the directory containing the executable to $PATH
         # Basically, pretend we are a shell executing the program from $PATH.
-        prog_cwd = self._tmpdir
+        prog_cwd = tempfile.mkdtemp()
         prog_name = os.path.basename(prog)
         prog_env['PATH'] = os.pathsep.join([prog_env.get('PATH', ''), os.path.dirname(prog)])
 
@@ -53,7 +54,7 @@ def _run_executable(prog, args, run_from_path=False, runtime=5):
     # If not timeout was specified then it is 'None' - no timeout, just waiting.
     # Runtime is useful mostly for interactive tests.
     try:
-        timeout = runtime if runtime else _EXE_TIMEOUT
+        timeout = runtime
         retcode = process.wait(timeout=timeout)
     except psutil.TimeoutExpired:
         if runtime:
