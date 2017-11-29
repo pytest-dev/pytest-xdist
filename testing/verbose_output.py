@@ -1,5 +1,5 @@
 import sys
 
 while True:
-    print("HELLO THERE!")
+    sys.stdout.write("HELLO THERE!")
     sys.stderr.write("HI!")
