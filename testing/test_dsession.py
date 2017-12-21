@@ -126,7 +126,7 @@ class TestLoadScheduling:
         sched.add_node(MockNode())
         sched.add_node(MockNode())
         node1, node2 = sched.nodes
-        col = ["xyz"] * (6)
+        col = ["xyz"] * 6
         sched.add_node_collection(node1, col)
         sched.add_node_collection(node2, col)
         sched.schedule()
