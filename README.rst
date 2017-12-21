@@ -229,7 +229,7 @@ You can also add default environments like this:
 .. code-block:: ini
 
     [pytest]
-    addopts = --tx ssh=myhost//python=python2.5 --tx ssh=myhost//python=python2.6
+    addopts = --tx ssh=myhost//python=python2.5 --tx ssh=myhost//python=python3.6
 
 and then just type::
 
