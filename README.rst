@@ -21,7 +21,7 @@
     :target: https://ci.appveyor.com/project/pytestbot/pytest-xdist
 
 xdist: pytest distributed testing plugin
-=========================================
+========================================
 
 The `pytest-xdist`_ plugin extends py.test with some unique
 test execution modes:
@@ -46,7 +46,7 @@ You may specify different Python versions and interpreters.
 
 
 Installation
------------------------
+------------
 
 Install the plugin with::
 
@@ -67,13 +67,27 @@ To send tests to multiple CPUs, type::
     py.test -n NUM
 
 Especially for longer running tests or tests requiring
-a lot of IO this can lead to considerable speed ups. This option can
+a lot of I/O this can lead to considerable speed ups. This option can
 also be set to ``auto`` for automatic detection of the number of CPUs.
 
 If a test crashes the interpreter, pytest-xdist will automatically restart
 that slave and report the failure as usual. You can use the
 ``--max-slave-restart`` option to limit the number of slaves that can
 be restarted, or disable restarting altogether using ``--max-slave-restart=0``.
+
+By default, the ``-n`` option will send pending tests to any worker that is available, without
+any guaranteed order, but you can control this with these options:
+
+* ``--dist=loadscope``: tests will be grouped by **module** for *test functions* and
+  by **class** for *test methods*, then each group will be sent to an available worker,
+  guaranteeing that all tests in a group run in the same process. This can be useful if you have
+  expensive module-level or class-level fixtures. Currently the groupings can't be customized,
+  with grouping by class takes priority over grouping by module.
+  This feature was added in version ``1.19``.
+
+* ``--dist=loadfile``: tests will be grouped by file name, and then will be sent to an available
+  worker, guaranteeing that all tests in a group run in the same worker. This feature was added
+  in version ``1.21``.
 
 
 Running tests in a Python subprocess
@@ -180,7 +194,7 @@ The basic command to run tests on multiple platforms is::
 If you specify a windows host, an OSX host and a Linux
 environment this command will send each tests to all
 platforms - and report back failures from all platforms
-at once.   The specifications strings use the `xspec syntax`_.
+at once. The specifications strings use the `xspec syntax`_.
 
 .. _`xspec syntax`: http://codespeak.net/execnet/basics.html#xspec
 
@@ -213,8 +227,8 @@ defined:
 * ``PYTEST_XDIST_WORKER_COUNT``: the total number of workers in this session,
   e.g., ``"4"`` when ``-n 4`` is given in the command-line.
 
-The information about the worker_id in a test is stored in the TestReport as
-well, under worker_id attribute.
+The information about the worker_id in a test is stored in the ``TestReport`` as
+well, under the ``worker_id`` attribute.
 
 
 Specifying test exec environments in an ini file
@@ -241,98 +255,6 @@ and then just type::
     py.test --dist=each
 
 to run tests in each of the environments.
-
-
-Sending groups of related tests to the same worker
---------------------------------------------------
-
-*New in version 1.19.*
-
-.. note::
-    This is an **experimental** feature: the actual functionality will
-    likely stay the same, but the CLI might change slightly in future versions.
-
-You can send groups of related tests to the same worker by using the
-``--dist=loadscope`` option. Tests will be grouped by **module**
-for *test functions* and by **class** for *test methods*.
-
-For example, consider this two test files:
-
-.. code-block:: python
-
-    # content of test_container.py
-    import pytest
-
-    def test_container_startup():
-        pass
-
-    def test_container_logging():
-        pass
-
-    @pytest.mark.parametrize('methods', ['ssh', 'http'])
-    def test_container_communication(methods):
-        pass
-
-    # content of test_io.py
-    class TestHDF:
-
-        def test_listing(self):
-            pass
-
-        def test_search(self):
-            pass
-
-
-    class TestXML:
-
-        def test_listing(self):
-            pass
-
-        def test_search(self):
-            pass
-
-
-By executing ``pytest -v --dist=loadscope -n4`` you might get this output
-(sorted by worker for readability)::
-
-    ============================= test session starts =============================
-    <skip header>
-    gw0 [8] / gw1 [8] / gw2 [8] / gw3 [8]
-    scheduling tests via LoadScopeScheduling
-
-    [gw0] PASSED test_container.py::test_container_communication[http]
-    [gw0] PASSED test_container.py::test_container_communication[ssh]
-    [gw0] PASSED test_container.py::test_container_logging
-    [gw0] PASSED test_container.py::test_container_startup
-    [gw1] PASSED test_io.py::TestHDF::test_listing
-    [gw1] PASSED test_io.py::TestHDF::test_search
-    [gw2] PASSED test_io.py::TestXML::test_listing
-    [gw2] PASSED test_io.py::TestXML::test_search
-
-    ========================== 8 passed in 0.56 seconds ===========================
-
-As you can see, all test functions from ``test_container.py`` executed on
-the same worker ``gw0``, while the test methods from classes ``TestHDF`` and
-``TestXML`` executed in workers ``gw1`` and ``gw2`` respectively.
-
-Currently the groupings can't be customized, with grouping by class takes
-priority over grouping by module.
-
-Sending tests to the same worker based on their file
-----------------------------------------------------
-
-*New in version 1.21.*
-
-.. note::
-    This is an **experimental** feature: the actual functionality will
-    likely stay the same, but the CLI might change slightly in future versions.
-
-You can send tests to the same worker grouped by their filename by using the
-``--dist=loadfile`` option, so tests of the same file are guaranteed to run
-in the same worker.
-
-Using the example in the previous section, all tests from ``test_container.py`` will
-run in the same worker, as well as the tests in ``test_io.py``.
 
 
 Specifying "rsync" dirs in an ini-file
