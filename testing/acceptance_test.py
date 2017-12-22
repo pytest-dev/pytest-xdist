@@ -755,9 +755,9 @@ def test_worker_id_fixture(testdir, n):
         with open(fname) as f:
             worker_ids.add(f.read().strip())
     if n == 0:
-        assert worker_ids == set(['master'])
+        assert worker_ids == {'master'}
     else:
-        assert worker_ids == set(['gw0', 'gw1'])
+        assert worker_ids == {'gw0', 'gw1'}
 
 
 @pytest.mark.parametrize('tb',

@@ -1,7 +1,6 @@
 environment:
   matrix:
   # note: please use "tox --listenvs" to populate the build matrix
-  - TOXENV: "py26-pytest30"
   - TOXENV: "py27-pytest30"
   - TOXENV: "py34-pytest30"
   - TOXENV: "py35-pytest30"

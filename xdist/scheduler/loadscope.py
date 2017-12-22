@@ -1,14 +1,9 @@
-try:
-    from collections import OrderedDict
-except ImportError:
-    # Support for Python 2.6
-    from ordereddict import OrderedDict
+from collections import OrderedDict
 
-from py.log import Producer
 from _pytest.runner import CollectReport
-
-from xdist.slavemanage import parse_spec_config
+from py.log import Producer
 from xdist.report import report_collection_diff
+from xdist.slavemanage import parse_spec_config
 
 
 class LoadScopeScheduling:

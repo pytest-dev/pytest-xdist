@@ -1,11 +1,6 @@
-from sys import version_info
-
 from setuptools import setup, find_packages
 
 install_requires = ['execnet>=1.1', 'pytest>=3.0.0', 'pytest-forked']
-
-if version_info < (2, 7):
-    install_requires.append('ordereddict')
 
 
 setup(
@@ -27,6 +22,7 @@ setup(
         ],
     },
     zip_safe=False,
+    python_requires='>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*',
     install_requires=install_requires,
     setup_requires=['setuptools_scm'],
     classifiers=[
@@ -41,6 +37,11 @@ setup(
         'Topic :: Software Development :: Quality Assurance',
         'Topic :: Utilities',
         'Programming Language :: Python',
+        'Programming Language :: Python :: 2',
+        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
     ],
 )
