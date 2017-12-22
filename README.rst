@@ -112,21 +112,9 @@ will be load-balanced across these three processes.
 Running tests in a boxed subprocess
 -----------------------------------
 
-If you have tests involving C or C++ libraries you might have to deal
-with tests crashing the process.  For this case you may use the boxing
-options::
-
-    py.test --boxed
-
-which will run each test in a subprocess and will report if a test
-crashed the process.  You can also combine this option with
-running multiple processes to speed up the test run and use your CPU cores::
-
-    py.test -n3 --boxed
-
-this would run 3 testing subprocesses in parallel which each
-create new boxed subprocesses for each test.
-
+This functionality has been moved to the
+`pytest-forked <https://github.com/pytest-dev/pytest-forked>`_ plugin, but the ``--boxed`` option
+is still kept for backward compatibility.
 
 .. _`remote machines`:
 
