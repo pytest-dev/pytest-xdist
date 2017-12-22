@@ -755,9 +755,9 @@ def test_worker_id_fixture(testdir, n):
         with open(fname) as f:
             worker_ids.add(f.read().strip())
     if n == 0:
-        assert worker_ids == set(['master'])
+        assert worker_ids == {'master'}
     else:
-        assert worker_ids == set(['gw0', 'gw1'])
+        assert worker_ids == {'gw0', 'gw1'}
 
 
 @pytest.mark.parametrize('tb',
@@ -915,7 +915,13 @@ def parse_tests_and_workers_from_output(lines):
     result = []
     for line in lines:
         # example match: "[gw0] PASSED test_a.py::test[7]"
-        m = re.match(r'\[(gw\d)\]\s(.*?)\s(.*::.*)', line.strip())
+        m = re.match(r'''
+            \[(gw\d)\]  # worker
+            \s*
+            (?:\[\s*\d+%\])? # progress indicator (pytest >=3.3)
+            \s(.*?)     # status string ("PASSED")
+            \s(.*::.*)  # nodeid
+        ''', line.strip(), re.VERBOSE)
         if m:
             worker, status, nodeid = m.groups()
             result.append((worker, status, nodeid))

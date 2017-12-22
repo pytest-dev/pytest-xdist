@@ -1,15 +1,23 @@
 
 
 .. image:: http://img.shields.io/pypi/v/pytest-xdist.svg
+    :alt: PyPI version
+    :target: https://pypi.python.org/pypi/pytest-xdist
+
+.. image:: https://img.shields.io/pypi/pyversions/pytest-xdist.svg
+    :alt: Python versions
     :target: https://pypi.python.org/pypi/pytest-xdist
 
 .. image:: https://anaconda.org/conda-forge/pytest-xdist/badges/version.svg
+    :alt: Anaconda version
     :target: https://anaconda.org/conda-forge/pytest-xdist
 
 .. image:: https://travis-ci.org/pytest-dev/pytest-xdist.svg?branch=master
+    :alt: Travis CI build status
     :target: https://travis-ci.org/pytest-dev/pytest-xdist
 
 .. image:: https://ci.appveyor.com/api/projects/status/56eq1a1avd4sdd7e/branch/master?svg=true
+    :alt: AppVeyor build status
     :target: https://ci.appveyor.com/project/pytestbot/pytest-xdist
 
 xdist: pytest distributed testing plugin
@@ -229,7 +237,7 @@ You can also add default environments like this:
 .. code-block:: ini
 
     [pytest]
-    addopts = --tx ssh=myhost//python=python2.5 --tx ssh=myhost//python=python2.6
+    addopts = --tx ssh=myhost//python=python2.5 --tx ssh=myhost//python=python3.6
 
 and then just type::
 

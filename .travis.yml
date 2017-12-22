@@ -12,7 +12,6 @@ notifications:
   - pytest-commit@python.org
 
 python:
-- '2.6'
 - '2.7'
 - '3.4'
 - '3.5'
@@ -21,6 +20,7 @@ env:
 - TOXENV=py-pytest30
 - TOXENV=py-pytest31
 - TOXENV=py-pytest32
+- TOXENV=py-pytest33
 
 install: pip install tox setuptools_scm
 script: tox

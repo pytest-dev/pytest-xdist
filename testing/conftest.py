@@ -34,7 +34,7 @@ def pytest_addoption(parser):
     parser.addoption('--gx',
                      action="append",
                      dest="gspecs",
-                     help=("add a global test environment, XSpec-syntax. "))
+                     help="add a global test environment, XSpec-syntax. ")
 
 
 @pytest.fixture
