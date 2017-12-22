@@ -313,6 +313,22 @@ the same worker ``gw0``, while the test methods from classes ``TestHDF`` and
 Currently the groupings can't be customized, with grouping by class takes
 priority over grouping by module.
 
+Sending tests to the same worker based on their file
+++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+*New in version 1.21.*
+
+.. note::
+    This is an **experimental** feature: the actual functionality will
+    likely stay the same, but the CLI might change slightly in future versions.
+
+You can send tests to the same worker grouped by their filename by using the
+``--dist=loadfile`` option, so tests of the same file are guaranteed to run
+in the same worker.
+
+Using the example in the previous section, all tests from ``test_container.py`` will
+run in the same worker, as well as the tests in ``test_io.py``.
+
 
 Specifying "rsync" dirs in an ini-file
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
