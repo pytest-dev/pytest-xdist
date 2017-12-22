@@ -55,15 +55,12 @@ Install the plugin with::
 or use the package in develop/in-place mode with
 a checkout of the `pytest-xdist repository`_ ::
 
-    python setup.py develop
-
-Usage examples
----------------------
+    pip install --editable .
 
 .. _parallelization:
 
 Speed up test runs by sending tests to multiple CPUs
-+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+----------------------------------------------------
 
 To send tests to multiple CPUs, type::
 
@@ -80,7 +77,7 @@ be restarted, or disable restarting altogether using ``--max-slave-restart=0``.
 
 
 Running tests in a Python subprocess
-+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+------------------------------------
 
 To instantiate a python2.5 sub process and send tests to it, you may type::
 
@@ -99,7 +96,7 @@ will be load-balanced across these three processes.
 .. _boxed:
 
 Running tests in a boxed subprocess
-+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+-----------------------------------
 
 If you have tests involving C or C++ libraries you might have to deal
 with tests crashing the process.  For this case you may use the boxing
@@ -120,7 +117,7 @@ create new boxed subprocesses for each test.
 .. _`remote machines`:
 
 Sending tests to remote SSH accounts
-+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+------------------------------------
 
 Suppose you have a package ``mypkg`` which contains some
 tests that you can successfully run locally. And you
@@ -155,7 +152,7 @@ ini-file option(s).
 
 
 Sending tests to remote Socket Servers
-+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+--------------------------------------
 
 Download the single-module `socketserver.py`_ Python program
 and run it like this::
@@ -174,7 +171,7 @@ new socket host with something like this::
 
 
 Running tests on many platforms at once
-+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+---------------------------------------
 
 The basic command to run tests on multiple platforms is::
 
@@ -192,7 +189,7 @@ at once.   The specifications strings use the `xspec syntax`_.
 .. _`execnet`: http://codespeak.net/execnet
 
 Identifying the worker process during a test
-+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+--------------------------------------------
 
 *New in version 1.15.*
 
@@ -221,9 +218,9 @@ well, under worker_id attribute.
 
 
 Specifying test exec environments in an ini file
-+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+------------------------------------------------
 
-pytest (since version 2.0) supports ini-style cofiguration.
+pytest supports ini-style cofiguration.
 You can for example make running with three subprocesses
 your default like this:
 
@@ -247,7 +244,7 @@ to run tests in each of the environments.
 
 
 Sending groups of related tests to the same worker
-++++++++++++++++++++++++++++++++++++++++++++++++++
+--------------------------------------------------
 
 *New in version 1.19.*
 
@@ -322,7 +319,7 @@ Currently the groupings can't be customized, with grouping by class takes
 priority over grouping by module.
 
 Sending tests to the same worker based on their file
-++++++++++++++++++++++++++++++++++++++++++++++++++++
+----------------------------------------------------
 
 *New in version 1.21.*
 
@@ -339,7 +336,7 @@ run in the same worker, as well as the tests in ``test_io.py``.
 
 
 Specifying "rsync" dirs in an ini-file
-+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+-------------------------------------
 
 In a ``tox.ini`` or ``setup.cfg`` file in your root project directory
 you may specify directories to include or to exclude in synchronisation:
