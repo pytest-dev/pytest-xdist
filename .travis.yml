@@ -20,6 +20,7 @@ env:
 - TOXENV=py-pytest30
 - TOXENV=py-pytest31
 - TOXENV=py-pytest32
+- TOXENV=py-pytest33
 
 install: pip install tox setuptools_scm
 script: tox
