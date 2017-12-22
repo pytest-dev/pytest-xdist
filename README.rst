@@ -245,7 +245,7 @@ to run tests in each of the environments.
 
 
 Specifying "rsync" dirs in an ini-file
--------------------------------------
+--------------------------------------
 
 In a ``tox.ini`` or ``setup.cfg`` file in your root project directory
 you may specify directories to include or to exclude in synchronisation:
