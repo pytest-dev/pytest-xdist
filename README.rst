@@ -93,16 +93,16 @@ any guaranteed order, but you can control this with these options:
 Running tests in a Python subprocess
 ------------------------------------
 
-To instantiate a python2.5 sub process and send tests to it, you may type::
+To instantiate a python3.5 subprocess and send tests to it, you may type::
 
-    py.test -d --tx popen//python=python2.5
+    py.test -d --tx popen//python=python3.5
 
-This will start a subprocess which is run with the "python2.5"
+This will start a subprocess which is run with the ``python3.5``
 Python interpreter, found in your system binary lookup path.
 
 If you prefix the --tx option value like this::
 
-    --tx 3*popen//python=python2.5
+    --tx 3*popen//python=python3.5
 
 then three subprocesses would be created and tests
 will be load-balanced across these three processes.
@@ -222,9 +222,8 @@ well, under the ``worker_id`` attribute.
 Specifying test exec environments in an ini file
 ------------------------------------------------
 
-pytest supports ini-style cofiguration.
-You can for example make running with three subprocesses
-your default like this:
+You can use pytest's ini file configuration to avoid typing common options.
+You can for example make running with three subprocesses your default like this:
 
 .. code-block:: ini
 
@@ -236,7 +235,7 @@ You can also add default environments like this:
 .. code-block:: ini
 
     [pytest]
-    addopts = --tx ssh=myhost//python=python2.5 --tx ssh=myhost//python=python3.6
+    addopts = --tx ssh=myhost//python=python3.5 --tx ssh=myhost//python=python3.6
 
 and then just type::
 
