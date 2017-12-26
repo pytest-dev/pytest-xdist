@@ -1,3 +1,29 @@
+pytest-xdist 1.21.0 (2017-12-22)
+================================
+
+Deprecations and Removals
+-------------------------
+
+- Drop support for EOL Python 2.6. (`#259
+  <https://github.com/pytest-dev/pytest-xdist/issues/259>`_)
+
+
+Features
+--------
+
+- New ``--dist=loadfile`` option which load-distributes test to workers grouped
+  by the file the tests live in. (`#242
+  <https://github.com/pytest-dev/pytest-xdist/issues/242>`_)
+
+
+Bug Fixes
+---------
+
+- Fix accidental mutation of test report during serialization causing longrepr
+  string-ification to break. (`#241
+  <https://github.com/pytest-dev/pytest-xdist/issues/241>`_)
+
+
 pytest-xdist 1.20.1 (2017-10-05)
 ================================
 
