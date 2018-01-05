@@ -44,6 +44,9 @@ program source code to the remote place.  All test results
 are reported back and displayed to your local terminal.
 You may specify different Python versions and interpreters.
 
+If you would like to know how pytest-xdist works under the covers, checkout 
+`OVERVIEW <https://github.com/pytest-dev/pytest-xdist/blob/master/OVERVIEW.md>`_.
+
 
 Installation
 -----------------------
