@@ -9,6 +9,8 @@
 import sys
 import os
 import time
+
+import _pytest.hookspec
 import pytest
 
 
@@ -92,6 +94,11 @@ class SlaveInteractor:
 
     def pytest_runtest_logstart(self, nodeid, location):
         self.sendevent("logstart", nodeid=nodeid, location=location)
+
+    # the pytest_runtest_logfinish hook was introduced in pytest 3.4
+    if hasattr(_pytest.hookspec, 'pytest_runtest_logfinish'):
+        def pytest_runtest_logfinish(self, nodeid, location):
+            self.sendevent("logfinish", nodeid=nodeid, location=location)
 
     def pytest_runtest_logreport(self, report):
         data = serialize_report(report)

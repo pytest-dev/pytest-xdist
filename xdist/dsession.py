@@ -235,6 +235,11 @@ class DSession:
         self.config.hook.pytest_runtest_logstart(
             nodeid=nodeid, location=location)
 
+    def slave_logfinish(self, node, nodeid, location):
+        """Emitted when a node calls the pytest_runtest_logfinish hook."""
+        self.config.hook.pytest_runtest_logfinish(
+            nodeid=nodeid, location=location)
+
     def slave_testreport(self, node, rep):
         """Emitted when a node calls the pytest_runtest_logreport hook."""
         rep.node = node

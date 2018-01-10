@@ -375,6 +375,25 @@ class TestTerminalReporting:
             "*1 passed, 1 warnings*",
         ])
 
+    def test_logfinish_hook(self, testdir):
+        """Ensure the pytest_runtest_logfinish hook is being properly handled"""
+        from _pytest import hookspec
+        if not hasattr(hookspec, 'pytest_runtest_logfinish'):
+            pytest.skip('test requires pytest_runtest_logfinish hook in pytest (3.4+)')
+
+        testdir.makeconftest("""
+            def pytest_runtest_logfinish():
+                print('pytest_runtest_logfinish hook called')
+        """)
+        testdir.makepyfile("""
+            def test_func():
+                pass
+        """)
+        result = testdir.runpytest("-n1", "-s")
+        result.stdout.fnmatch_lines([
+            "*pytest_runtest_logfinish hook called*",
+        ])
+
 
 def test_teardownfails_one_function(testdir):
     p = testdir.makepyfile("""
