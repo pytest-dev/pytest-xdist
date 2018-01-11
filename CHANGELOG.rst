@@ -1,3 +1,14 @@
+pytest-xdist 1.22.0 (2018-01-11)
+================================
+
+Features
+--------
+
+- Add support for the ``pytest_runtest_logfinish`` hook which will be released
+  in pytest 3.4. (`#266
+  <https://github.com/pytest-dev/pytest-xdist/issues/266>`_)
+
+
 pytest-xdist 1.21.0 (2017-12-22)
 ================================
 
