@@ -304,7 +304,7 @@ class SlaveController(object):
                 self._down = True
                 self.slaveoutput = kwargs['slaveoutput']
                 self.notify_inproc("slavefinished", node=self)
-            elif eventname == "logstart":
+            elif eventname in ("logstart", "logfinish"):
                 self.notify_inproc(eventname, node=self, **kwargs)
             elif eventname in (
                     "testreport", "collectreport", "teardownreport"):
