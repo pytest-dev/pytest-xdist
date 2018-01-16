@@ -1,1 +1,1 @@
-Change terminology to master/worker in arguments to xdist (--max-worker-reset)
+Change terminology used by ``pytest-xdist`` to *master* and *worker* in arguments and messages (for example ``--max-worker-reset``).
