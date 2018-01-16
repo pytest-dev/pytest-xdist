@@ -46,7 +46,7 @@ class DSession:
         self._failed_collection_errors = {}
         self._active_nodes = set()
         self._failed_nodes_count = 0
-        self._max_slave_restart = self.config.getoption('max_slave_restart')
+        self._max_slave_restart = self.config.getoption('max_worker_restart')
         if self._max_slave_restart is not None:
             self._max_slave_restart = int(self._max_slave_restart)
         try:
@@ -193,13 +193,13 @@ class DSession:
                            self._failed_nodes_count > self._max_slave_restart)
         if maximum_reached:
             if self._max_slave_restart == 0:
-                msg = 'Slave restarting disabled'
+                msg = 'Worker restarting disabled'
             else:
-                msg = "Maximum crashed slaves reached: %d" % \
+                msg = "Maximum crashed workers reached: %d" % \
                       self._max_slave_restart
             self.report_line(msg)
         else:
-            self.report_line("Replacing crashed slave %s" % node.gateway.id)
+            self.report_line("Replacing crashed worker %s" % node.gateway.id)
             self._clone_node(node)
         self._active_nodes.remove(node)
 
@@ -305,7 +305,7 @@ class DSession:
         # XXX count no of failures and retry N times
         runner = self.config.pluginmanager.getplugin("runner")
         fspath = nodeid.split("::")[0]
-        msg = "Slave %r crashed while running %r" % (slave.gateway.id, nodeid)
+        msg = "Worker %r crashed while running %r" % (slave.gateway.id, nodeid)
         rep = runner.TestReport(nodeid, (fspath, None, fspath),
                                 (), "failed", msg, "???")
         rep.node = slave

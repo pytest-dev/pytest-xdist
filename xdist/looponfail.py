@@ -69,7 +69,7 @@ class RemoteControl(object):
             out = py.io.TerminalWriter()
         if hasattr(self, 'gateway'):
             raise ValueError("already have gateway %r" % self.gateway)
-        self.trace("setting up slave session")
+        self.trace("setting up worker session")
         self.gateway = self.initgateway()
         self.channel = channel = self.gateway.remote_exec(
             init_slave_session,
@@ -194,7 +194,7 @@ class SlaveFailSession:
             self.collection_failed = True
 
     def main(self):
-        self.DEBUG("SLAVE: received configuration, waiting for command trails")
+        self.DEBUG("WORKER: received configuration, waiting for command trails")
         try:
             command = self.channel.receive()
         except KeyboardInterrupt:

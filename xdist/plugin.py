@@ -26,8 +26,8 @@ def pytest_addoption(parser):
         help="shortcut for '--dist=load --tx=NUM*popen', "
              "you can use 'auto' here for auto detection CPUs number on "
              "host system")
-    group.addoption('--max-slave-restart', action="store", default=None,
-                    help="maximum number of slaves that can be restarted "
+    group.addoption('--max-worker-restart', action="store", default=None,
+                    help="maximum number of workers that can be restarted "
                          "when crashed (set to zero to disable this feature)")
     group.addoption(
         '--dist', metavar="distmode",

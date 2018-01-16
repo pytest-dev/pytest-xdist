@@ -371,5 +371,5 @@ def test_remote_env_vars(testdir):
             assert os.environ['PYTEST_XDIST_WORKER'] in ('gw0', 'gw1')
             assert os.environ['PYTEST_XDIST_WORKER_COUNT'] == '2'
     ''')
-    result = testdir.runpytest('-n2', '--max-slave-restart=0')
+    result = testdir.runpytest('-n2', '--max-worker-restart=0')
     assert result.ret == 0
