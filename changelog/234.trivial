@@ -1,0 +1,1 @@
+Change terminology to master/worker in arguments to xdist (--max-worker-reset)
