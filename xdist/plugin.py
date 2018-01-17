@@ -30,7 +30,8 @@ def pytest_addoption(parser):
                     dest="maxworkerrestart",
                     help="maximum number of workers that can be restarted "
                          "when crashed (set to zero to disable this feature)\n"
-                         "'--max-slave-restart' option is deprecated and will be removed in a future release")
+                         "'--max-slave-restart' option is deprecated and will be removed in "
+                         "a future release")
     group.addoption(
         '--dist', metavar="distmode",
         action="store", choices=['each', 'load', 'loadscope', 'loadfile', 'no'],

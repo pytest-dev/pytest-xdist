@@ -182,7 +182,7 @@ class DSession:
         self._active_nodes.remove(node)
 
     def worker_errordown(self, node, error):
-        """Emitted by the workerController when a node dies."""
+        """Emitted by the WorkerController when a node dies."""
         self.config.hook.pytest_testnodedown(node=node, error=error)
         try:
             crashitem = self.sched.remove_node(node)

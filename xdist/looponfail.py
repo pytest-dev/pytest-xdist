@@ -153,11 +153,11 @@ def init_worker_session(channel, args, option_dict):
     from _pytest.config import Config
     config = Config.fromdictargs(option_dict, list(args))
     config.args = args
-    from xdist.looponfail import workerFailSession
-    workerFailSession(config, channel).main()
+    from xdist.looponfail import WorkerFailSession
+    WorkerFailSession(config, channel).main()
 
 
-class workerFailSession:
+class WorkerFailSession:
     def __init__(self, config, channel):
         self.config = config
         self.channel = channel

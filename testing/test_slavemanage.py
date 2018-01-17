@@ -40,7 +40,7 @@ def workercontroller(monkeypatch):
         def setup(self):
             pass
 
-    monkeypatch.setattr(workermanage, 'workerController', MockController)
+    monkeypatch.setattr(workermanage, 'WorkerController', MockController)
     return MockController
 
 

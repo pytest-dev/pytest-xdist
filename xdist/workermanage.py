@@ -68,7 +68,7 @@ class NodeManager(object):
         gw = self.group.makegateway(spec)
         self.config.hook.pytest_xdist_newgateway(gateway=gw)
         self.rsync_roots(gw)
-        node = workerController(self, gw, self.config, putevent)
+        node = WorkerController(self, gw, self.config, putevent)
         gw.node = node          # keep the node alive
         node.setup()
         self.trace("started node %r" % node)
@@ -201,7 +201,7 @@ def make_reltoroot(roots, args):
     return result
 
 
-class workerController(object):
+class WorkerController(object):
     ENDMARK = -1
 
     def __init__(self, nodemanager, gateway, config, putevent):
@@ -210,7 +210,9 @@ class workerController(object):
         self.gateway = gateway
         self.config = config
         self.workerinput = {'workerid': gateway.id,
-                           'workercount': len(nodemanager.specs)}
+                            'workercount': len(nodemanager.specs)}
+        # TODO: deprecated name, backward compatibility only. Remove it in future
+        self.slaveinput = self.workerinput
         self._down = False
         self._shutdown_sent = False
         self.log = py.log.Producer("workerctl-%s" % gateway.id)

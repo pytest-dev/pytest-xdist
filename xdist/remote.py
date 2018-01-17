@@ -14,7 +14,7 @@ import _pytest.hookspec
 import pytest
 
 
-class workerInteractor:
+class WorkerInteractor:
     def __init__(self, config, channel):
         self.config = config
         self.workerid = config.workerinput.get('workerid', "?")
@@ -198,5 +198,8 @@ if __name__ == '__channelexec__':
     config = remote_initconfig(option_dict, args)
     config.workerinput = workerinput
     config.workeroutput = {}
-    interactor = workerInteractor(config, channel)
+    # TODO: deprecated name, backward compatibility only. Remove it in future
+    config.slaveinput = config.workerinput
+    config.slaveoutput = config.workeroutput
+    interactor = WorkerInteractor(config, channel)
     config.hook.pytest_cmdline_main(config=config)

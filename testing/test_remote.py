@@ -1,6 +1,6 @@
 import py
 import pytest
-from xdist.workermanage import workerController, unserialize_report
+from xdist.workermanage import WorkerController, unserialize_report
 from xdist.remote import serialize_report
 import execnet
 import marshal
@@ -26,7 +26,7 @@ class EventCall:
         return "<EventCall %s(**%s)>" % (self.name, self.kwargs)
 
 
-class workerSetup:
+class WorkerSetup:
     use_callback = False
 
     def __init__(self, request, testdir):
@@ -44,8 +44,8 @@ class workerSetup:
         class DummyMananger:
             specs = [0, 1]
 
-        self.slp = workerController(DummyMananger, self.gateway, config,
-                                   putevent)
+        self.slp = WorkerController(DummyMananger, self.gateway, config,
+                                    putevent)
         self.request.addfinalizer(self.slp.ensure_teardown)
         self.slp.setup()
 
@@ -66,7 +66,7 @@ class workerSetup:
 
 @pytest.fixture
 def worker(request, testdir):
-    return workerSetup(request, testdir)
+    return WorkerSetup(request, testdir)
 
 
 @pytest.mark.xfail(reason='#59')
@@ -243,7 +243,7 @@ class TestReportSerialization:
                 assert newrep.longrepr == str(rep.longrepr)
 
 
-class TestworkerInteractor:
+class TestWorkerInteractor:
     def test_basic_collect_and_runtests(self, worker):
         worker.testdir.makepyfile("""
             def test_func():
