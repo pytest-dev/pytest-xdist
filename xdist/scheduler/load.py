@@ -3,7 +3,7 @@ from itertools import cycle
 from py.log import Producer
 from _pytest.runner import CollectReport
 
-from xdist.slavemanage import parse_spec_config
+from xdist.workermanage import parse_spec_config
 from xdist.report import report_collection_diff
 
 
@@ -113,7 +113,7 @@ class LoadScheduling:
         From now on the node will be allocated chunks of tests to
         execute.
 
-        Called by the ``DSession.slave_slaveready`` hook when it
+        Called by the ``DSession.worker_workerready`` hook when it
         successfully bootstraps a new node.
         """
         assert node not in self.node2pending
@@ -123,7 +123,7 @@ class LoadScheduling:
         """Add the collected test items from a node
 
         The collection is stored in the ``.node2collection`` map.
-        Called by the ``DSession.slave_collectionfinish`` hook.
+        Called by the ``DSession.worker_collectionfinish`` hook.
         """
         assert node in self.node2pending
         if self.collection_is_completed:
@@ -147,7 +147,7 @@ class LoadScheduling:
         The duration it took to execute the item is used as a hint to
         the scheduler.
 
-        This is called by the ``DSession.slave_testreport`` hook.
+        This is called by the ``DSession.worker_testreport`` hook.
         """
         self.node2pending[node].remove(item_index)
         self.check_schedule(node, duration=duration)
@@ -187,8 +187,8 @@ class LoadScheduling:
         This should be called either when the node crashed or at
         shutdown time.  In the former case any pending items assigned
         to the node will be re-scheduled.  Called by the
-        ``DSession.slave_slavefinished`` and
-        ``DSession.slave_errordown`` hooks.
+        ``DSession.worker_workerfinished`` and
+        ``DSession.worker_errordown`` hooks.
 
         Return the item which was being executing while the node
         crashed or None if the node has no more pending items.
@@ -213,7 +213,7 @@ class LoadScheduling:
         ``.check_schedule()`` on all nodes so that newly added nodes
         will start to be used.
 
-        This is called by the ``DSession.slave_collectionfinish`` hook
+        This is called by the ``DSession.worker_collectionfinish`` hook
         if ``.collection_is_completed`` is True.
         """
         assert self.collection_is_completed

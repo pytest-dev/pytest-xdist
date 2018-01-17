@@ -1,7 +1,7 @@
 import py
 import pytest
 
-from xdist.slavemanage import NodeManager
+from xdist.workermanage import NodeManager
 from xdist.scheduler import (
     EachScheduling,
     LoadScheduling,
@@ -22,7 +22,7 @@ class DSession:
 
     At the beginning of the test session this creates a NodeManager
     instance which creates and starts all nodes.  Nodes then emit
-    events processed in the pytest_runtestloop hook using the slave_*
+    events processed in the pytest_runtestloop hook using the worker_*
     methods.
 
     Once a node is started it will automatically start running the
@@ -46,9 +46,9 @@ class DSession:
         self._failed_collection_errors = {}
         self._active_nodes = set()
         self._failed_nodes_count = 0
-        self._max_slave_restart = self.config.getoption('max_worker_restart')
-        if self._max_slave_restart is not None:
-            self._max_slave_restart = int(self._max_slave_restart)
+        self._max_worker_restart = self.config.option.maxworkerrestart
+        if self._max_worker_restart is not None:
+            self._max_worker_restart = int(self._max_worker_restart)
         try:
             self.terminal = config.pluginmanager.getplugin("terminalreporter")
         except KeyError:
@@ -75,7 +75,7 @@ class DSession:
         """Creates and starts the nodes.
 
         The nodes are setup to put their events onto self.queue.  As
-        soon as nodes start they will emit the slave_slaveready event.
+        soon as nodes start they will emit the worker_workerready event.
         """
         self.nodemanager = NodeManager(self.config)
         nodes = self.nodemanager.setup_nodes(putevent=self.queue.put)
@@ -120,7 +120,7 @@ class DSession:
         return True
 
     def loop_once(self):
-        """Process one callback from one of the slaves."""
+        """Process one callback from one of the workers."""
         while 1:
             if not self._active_nodes:
                 # If everything has died stop looping
@@ -133,7 +133,7 @@ class DSession:
                 continue
         callname, kwargs = eventcall
         assert callname, kwargs
-        method = "slave_" + callname
+        method = "worker_" + callname
         call = getattr(self, method)
         self.log("calling method", method, kwargs)
         call(**kwargs)
@@ -141,44 +141,48 @@ class DSession:
             self.triggershutdown()
 
     #
-    # callbacks for processing events from slaves
+    # callbacks for processing events from workers
     #
 
-    def slave_slaveready(self, node, slaveinfo):
+    def worker_workerready(self, node, workerinfo):
         """Emitted when a node first starts up.
 
         This adds the node to the scheduler, nodes continue with
         collection without any further input.
         """
-        node.slaveinfo = slaveinfo
-        node.slaveinfo['id'] = node.gateway.id
-        node.slaveinfo['spec'] = node.gateway.spec
+        node.workerinfo = workerinfo
+        node.workerinfo['id'] = node.gateway.id
+        node.workerinfo['spec'] = node.gateway.spec
+
+        # TODO: (#234 task) needs this for pytest. Remove when refactor in pytest repo
+        node.slaveinfo = node.workerinfo
+
         self.config.hook.pytest_testnodeready(node=node)
         if self.shuttingdown:
             node.shutdown()
         else:
             self.sched.add_node(node)
 
-    def slave_slavefinished(self, node):
+    def worker_workerfinished(self, node):
         """Emitted when node executes its pytest_sessionfinish hook.
 
         Removes the node from the scheduler.
 
         The node might not be in the scheduler if it had not emitted
-        slaveready before shutdown was triggered.
+        workerready before shutdown was triggered.
         """
         self.config.hook.pytest_testnodedown(node=node, error=None)
-        if node.slaveoutput['exitstatus'] == 2:  # keyboard-interrupt
+        if node.workeroutput['exitstatus'] == 2:  # keyboard-interrupt
             self.shouldstop = "%s received keyboard-interrupt" % (node,)
-            self.slave_errordown(node, "keyboard-interrupt")
+            self.worker_errordown(node, "keyboard-interrupt")
             return
         if node in self.sched.nodes:
             crashitem = self.sched.remove_node(node)
             assert not crashitem, (crashitem, node)
         self._active_nodes.remove(node)
 
-    def slave_errordown(self, node, error):
-        """Emitted by the SlaveController when a node dies."""
+    def worker_errordown(self, node, error):
+        """Emitted by the workerController when a node dies."""
         self.config.hook.pytest_testnodedown(node=node, error=error)
         try:
             crashitem = self.sched.remove_node(node)
@@ -189,22 +193,22 @@ class DSession:
                 self.handle_crashitem(crashitem, node)
 
         self._failed_nodes_count += 1
-        maximum_reached = (self._max_slave_restart is not None and
-                           self._failed_nodes_count > self._max_slave_restart)
+        maximum_reached = (self._max_worker_restart is not None and
+                           self._failed_nodes_count > self._max_worker_restart)
         if maximum_reached:
-            if self._max_slave_restart == 0:
+            if self._max_worker_restart == 0:
                 msg = 'Worker restarting disabled'
             else:
                 msg = "Maximum crashed workers reached: %d" % \
-                      self._max_slave_restart
+                      self._max_worker_restart
             self.report_line(msg)
         else:
             self.report_line("Replacing crashed worker %s" % node.gateway.id)
             self._clone_node(node)
         self._active_nodes.remove(node)
 
-    def slave_collectionfinish(self, node, ids):
-        """Slave has finished test collection.
+    def worker_collectionfinish(self, node, ids):
+        """worker has finished test collection.
 
         This adds the collection for this node to the scheduler.  If
         the scheduler indicates collection is finished (i.e. all
@@ -230,23 +234,23 @@ class DSession:
                     self.sched.__class__.__name__))
             self.sched.schedule()
 
-    def slave_logstart(self, node, nodeid, location):
+    def worker_logstart(self, node, nodeid, location):
         """Emitted when a node calls the pytest_runtest_logstart hook."""
         self.config.hook.pytest_runtest_logstart(
             nodeid=nodeid, location=location)
 
-    def slave_logfinish(self, node, nodeid, location):
+    def worker_logfinish(self, node, nodeid, location):
         """Emitted when a node calls the pytest_runtest_logfinish hook."""
         self.config.hook.pytest_runtest_logfinish(
             nodeid=nodeid, location=location)
 
-    def slave_testreport(self, node, rep):
+    def worker_testreport(self, node, rep):
         """Emitted when a node calls the pytest_runtest_logreport hook."""
         rep.node = node
         self.config.hook.pytest_runtest_logreport(report=rep)
         self._handlefailures(rep)
 
-    def slave_runtest_protocol_complete(self, node, item_index, duration):
+    def worker_runtest_protocol_complete(self, node, item_index, duration):
         """
         Emitted when a node fires the 'runtest_protocol_complete' event,
         signalling that a test has completed the runtestprotocol and should be
@@ -254,12 +258,12 @@ class DSession:
         """
         self.sched.mark_test_complete(node, item_index, duration)
 
-    def slave_collectreport(self, node, rep):
+    def worker_collectreport(self, node, rep):
         """Emitted when a node calls the pytest_collectreport hook."""
         if rep.failed:
-            self._failed_slave_collectreport(node, rep)
+            self._failed_worker_collectreport(node, rep)
 
-    def slave_logwarning(self, message, code, nodeid, fslocation):
+    def worker_logwarning(self, message, code, nodeid, fslocation):
         """Emitted when a node calls the pytest_logwarning hook."""
         kwargs = dict(message=message, code=code, nodeid=nodeid, fslocation=fslocation)
         self.config.hook.pytest_logwarning.call_historic(kwargs=kwargs)
@@ -270,7 +274,7 @@ class DSession:
         This is normally for when a node dies, this will copy the spec
         of the existing node and create a new one with a new id.  The
         new node will have been setup so it will start calling the
-        "slave_*" hooks and do work soon.
+        "worker_*" hooks and do work soon.
         """
         spec = node.gateway.spec
         spec.id = None
@@ -279,9 +283,9 @@ class DSession:
         self._active_nodes.add(node)
         return node
 
-    def _failed_slave_collectreport(self, node, rep):
+    def _failed_worker_collectreport(self, node, rep):
         # Check we haven't already seen this report (from
-        # another slave).
+        # another worker).
         if rep.longrepr not in self._failed_collection_errors:
             self._failed_collection_errors[rep.longrepr] = True
             self.config.hook.pytest_collectreport(report=rep)
@@ -300,15 +304,15 @@ class DSession:
         for node in self.sched.nodes:
             node.shutdown()
 
-    def handle_crashitem(self, nodeid, slave):
+    def handle_crashitem(self, nodeid, worker):
         # XXX get more reporting info by recording pytest_runtest_logstart?
         # XXX count no of failures and retry N times
         runner = self.config.pluginmanager.getplugin("runner")
         fspath = nodeid.split("::")[0]
-        msg = "Worker %r crashed while running %r" % (slave.gateway.id, nodeid)
+        msg = "Worker %r crashed while running %r" % (worker.gateway.id, nodeid)
         rep = runner.TestReport(nodeid, (fspath, None, fspath),
                                 (), "failed", msg, "???")
-        rep.node = slave
+        rep.node = worker
         self.config.hook.pytest_runtest_logreport(report=rep)
 
 
@@ -364,7 +368,7 @@ class TerminalDistReporter:
 
     def pytest_testnodeready(self, node):
         if self.config.option.verbose > 0:
-            d = node.slaveinfo
+            d = node.workerinfo
             infoline = "[%s] Python %s" % (
                 d['id'],
                 d['version'].replace('\n', ' -- '),)

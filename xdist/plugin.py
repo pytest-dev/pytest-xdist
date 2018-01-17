@@ -26,9 +26,11 @@ def pytest_addoption(parser):
         help="shortcut for '--dist=load --tx=NUM*popen', "
              "you can use 'auto' here for auto detection CPUs number on "
              "host system")
-    group.addoption('--max-worker-restart', action="store", default=None,
+    group.addoption('--max-worker-restart', '--max-slave-restart', action="store", default=None,
+                    dest="maxworkerrestart",
                     help="maximum number of workers that can be restarted "
-                         "when crashed (set to zero to disable this feature)")
+                         "when crashed (set to zero to disable this feature)\n"
+                         "'--max-slave-restart' option is deprecated and will be removed in a future release")
     group.addoption(
         '--dist', metavar="distmode",
         action="store", choices=['each', 'load', 'loadscope', 'loadfile', 'no'],
@@ -129,7 +131,7 @@ def worker_id(request):
     """Return the id of the current worker ('gw0', 'gw1', etc) or 'master'
     if running on the master node.
     """
-    if hasattr(request.config, 'slaveinput'):
-        return request.config.slaveinput['slaveid']
+    if hasattr(request.config, 'workerinput'):
+        return request.config.workerinput['workerid']
     else:
         return 'master'

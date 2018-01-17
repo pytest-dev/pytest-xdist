@@ -1,6 +1,6 @@
 import py
 import pytest
-from xdist.slavemanage import SlaveController, unserialize_report
+from xdist.workermanage import workerController, unserialize_report
 from xdist.remote import serialize_report
 import execnet
 import marshal
@@ -26,7 +26,7 @@ class EventCall:
         return "<EventCall %s(**%s)>" % (self.name, self.kwargs)
 
 
-class SlaveSetup:
+class workerSetup:
     use_callback = False
 
     def __init__(self, request, testdir):
@@ -44,7 +44,7 @@ class SlaveSetup:
         class DummyMananger:
             specs = [0, 1]
 
-        self.slp = SlaveController(DummyMananger, self.gateway, config,
+        self.slp = workerController(DummyMananger, self.gateway, config,
                                    putevent)
         self.request.addfinalizer(self.slp.ensure_teardown)
         self.slp.setup()
@@ -65,8 +65,8 @@ class SlaveSetup:
 
 
 @pytest.fixture
-def slave(request, testdir):
-    return SlaveSetup(request, testdir)
+def worker(request, testdir):
+    return workerSetup(request, testdir)
 
 
 @pytest.mark.xfail(reason='#59')
@@ -243,107 +243,107 @@ class TestReportSerialization:
                 assert newrep.longrepr == str(rep.longrepr)
 
 
-class TestSlaveInteractor:
-    def test_basic_collect_and_runtests(self, slave):
-        slave.testdir.makepyfile("""
+class TestworkerInteractor:
+    def test_basic_collect_and_runtests(self, worker):
+        worker.testdir.makepyfile("""
             def test_func():
                 pass
         """)
-        slave.setup()
-        ev = slave.popevent()
-        assert ev.name == "slaveready"
-        ev = slave.popevent()
+        worker.setup()
+        ev = worker.popevent()
+        assert ev.name == "workerready"
+        ev = worker.popevent()
         assert ev.name == "collectionstart"
         assert not ev.kwargs
-        ev = slave.popevent("collectionfinish")
-        assert ev.kwargs['topdir'] == slave.testdir.tmpdir
+        ev = worker.popevent("collectionfinish")
+        assert ev.kwargs['topdir'] == worker.testdir.tmpdir
         ids = ev.kwargs['ids']
         assert len(ids) == 1
-        slave.sendcommand("runtests", indices=list(range(len(ids))))
-        slave.sendcommand("shutdown")
-        ev = slave.popevent("logstart")
+        worker.sendcommand("runtests", indices=list(range(len(ids))))
+        worker.sendcommand("shutdown")
+        ev = worker.popevent("logstart")
         assert ev.kwargs["nodeid"].endswith("test_func")
         assert len(ev.kwargs["location"]) == 3
-        ev = slave.popevent("testreport")  # setup
-        ev = slave.popevent("testreport")
+        ev = worker.popevent("testreport")  # setup
+        ev = worker.popevent("testreport")
         assert ev.name == "testreport"
         rep = unserialize_report(ev.name, ev.kwargs['data'])
         assert rep.nodeid.endswith("::test_func")
         assert rep.passed
         assert rep.when == "call"
-        ev = slave.popevent("slavefinished")
-        assert 'slaveoutput' in ev.kwargs
+        ev = worker.popevent("workerfinished")
+        assert 'workeroutput' in ev.kwargs
 
     @pytest.mark.skipif(pytest.__version__ >= '3.0',
                         reason='skip at module level illegal in pytest 3.0')
-    def test_remote_collect_skip(self, slave):
-        slave.testdir.makepyfile("""
+    def test_remote_collect_skip(self, worker):
+        worker.testdir.makepyfile("""
             import py
             py.test.skip("hello")
         """)
-        slave.setup()
-        ev = slave.popevent("collectionstart")
+        worker.setup()
+        ev = worker.popevent("collectionstart")
         assert not ev.kwargs
-        ev = slave.popevent()
+        ev = worker.popevent()
         assert ev.name == "collectreport"
-        ev = slave.popevent()
+        ev = worker.popevent()
         assert ev.name == "collectreport"
         rep = unserialize_report(ev.name, ev.kwargs['data'])
         assert rep.skipped
-        ev = slave.popevent("collectionfinish")
+        ev = worker.popevent("collectionfinish")
         assert not ev.kwargs['ids']
 
-    def test_remote_collect_fail(self, slave):
-        slave.testdir.makepyfile("""aasd qwe""")
-        slave.setup()
-        ev = slave.popevent("collectionstart")
+    def test_remote_collect_fail(self, worker):
+        worker.testdir.makepyfile("""aasd qwe""")
+        worker.setup()
+        ev = worker.popevent("collectionstart")
         assert not ev.kwargs
-        ev = slave.popevent()
+        ev = worker.popevent()
         assert ev.name == "collectreport"
-        ev = slave.popevent()
+        ev = worker.popevent()
         assert ev.name == "collectreport"
         rep = unserialize_report(ev.name, ev.kwargs['data'])
         assert rep.failed
-        ev = slave.popevent("collectionfinish")
+        ev = worker.popevent("collectionfinish")
         assert not ev.kwargs['ids']
 
-    def test_runtests_all(self, slave):
-        slave.testdir.makepyfile("""
+    def test_runtests_all(self, worker):
+        worker.testdir.makepyfile("""
             def test_func(): pass
             def test_func2(): pass
         """)
-        slave.setup()
-        ev = slave.popevent()
-        assert ev.name == "slaveready"
-        ev = slave.popevent()
+        worker.setup()
+        ev = worker.popevent()
+        assert ev.name == "workerready"
+        ev = worker.popevent()
         assert ev.name == "collectionstart"
         assert not ev.kwargs
-        ev = slave.popevent("collectionfinish")
+        ev = worker.popevent("collectionfinish")
         ids = ev.kwargs['ids']
         assert len(ids) == 2
-        slave.sendcommand("runtests_all", )
-        slave.sendcommand("shutdown", )
+        worker.sendcommand("runtests_all", )
+        worker.sendcommand("shutdown", )
         for func in "::test_func", "::test_func2":
             for i in range(3):  # setup/call/teardown
-                ev = slave.popevent("testreport")
+                ev = worker.popevent("testreport")
                 assert ev.name == "testreport"
                 rep = unserialize_report(ev.name, ev.kwargs['data'])
                 assert rep.nodeid.endswith(func)
-        ev = slave.popevent("slavefinished")
-        assert 'slaveoutput' in ev.kwargs
+        ev = worker.popevent("workerfinished")
+        assert 'workeroutput' in ev.kwargs
 
-    def test_happy_run_events_converted(self, testdir, slave):
+    def test_happy_run_events_converted(self, testdir, worker):
         py.test.xfail("implement a simple test for event production")
-        assert not slave.use_callback
-        slave.testdir.makepyfile("""
+        assert not worker.use_callback
+        worker.testdir.makepyfile("""
             def test_func():
                 pass
         """)
-        slave.setup()
-        hookrec = testdir.getreportrecorder(slave.config)
-        for data in slave.slp.channel:
-            slave.slp.process_from_remote(data)
-        slave.slp.process_from_remote(slave.slp.ENDMARK)
+        worker.setup()
+        hookrec = testdir.getreportrecorder(worker.config)
+        for data in worker.slp.channel:
+            worker.slp.process_from_remote(data)
+        worker.slp.process_from_remote(worker.slp.ENDMARK)
         py.std.pprint.pprint(hookrec.hookrecorder.calls)
         hookrec.hookrecorder.contains([
             ("pytest_collectstart", "collector.fspath == aaa"),
@@ -354,13 +354,13 @@ class TestSlaveInteractor:
             ("pytest_collectreport", "report.collector.fspath == bbb"),
         ])
 
-    def test_process_from_remote_error_handling(self, slave, capsys):
-        slave.use_callback = True
-        slave.setup()
-        slave.slp.process_from_remote(('<nonono>', ()))
+    def test_process_from_remote_error_handling(self, worker, capsys):
+        worker.use_callback = True
+        worker.setup()
+        worker.slp.process_from_remote(('<nonono>', ()))
         out, err = capsys.readouterr()
         assert 'INTERNALERROR> ValueError: unknown event: <nonono>' in out
-        ev = slave.popevent()
+        ev = worker.popevent()
         assert ev.name == "errordown"
 
 

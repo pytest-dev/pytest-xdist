@@ -196,23 +196,23 @@ class TestDistribution:
         testdir.makeconftest("""
             # This hook only called on master.
             def pytest_configure_node(node):
-                node.slaveinput['a'] = 42
-                node.slaveinput['b'] = 7
+                node.workerinput['a'] = 42
+                node.workerinput['b'] = 7
 
             def pytest_configure(config):
-                # this attribute is only set on slaves
-                if hasattr(config, 'slaveinput'):
-                    a = config.slaveinput['a']
-                    b = config.slaveinput['b']
+                # this attribute is only set on workers
+                if hasattr(config, 'workerinput'):
+                    a = config.workerinput['a']
+                    b = config.workerinput['b']
                     r = a + b
-                    config.slaveoutput['r'] = r
+                    config.workeroutput['r'] = r
 
             # This hook only called on master.
             def pytest_testnodedown(node, error):
-                node.config.calc_result = node.slaveoutput['r']
+                node.config.calc_result = node.workeroutput['r']
 
             def pytest_terminal_summary(terminalreporter):
-                if not hasattr(terminalreporter.config, 'slaveinput'):
+                if not hasattr(terminalreporter.config, 'workerinput'):
                     calc_result = terminalreporter.config.calc_result
                     terminalreporter._tw.sep('-',
                         'calculated result is %s' % calc_result)
@@ -232,12 +232,12 @@ class TestDistribution:
         """)
         testdir.makeconftest("""
             def pytest_sessionfinish(session):
-                # on the slave
-                if hasattr(session.config, 'slaveoutput'):
-                    session.config.slaveoutput['s2'] = 42
+                # on the worker
+                if hasattr(session.config, 'workeroutput'):
+                    session.config.workeroutput['s2'] = 42
             # on the master
             def pytest_testnodedown(node, error):
-                assert node.slaveoutput['s2'] == 42
+                assert node.workeroutput['s2'] == 42
                 print ("s2call-finished")
         """)
         args = ["-n1", "--debug"]
@@ -411,7 +411,7 @@ def test_teardownfails_one_function(testdir):
 def test_terminate_on_hangingnode(testdir):
     p = testdir.makeconftest("""
         def pytest_sessionfinish(session):
-            if session.nodeid == "my": # running on slave
+            if session.nodeid == "my": # running on worker
                 import time
                 time.sleep(3)
     """)
@@ -429,15 +429,15 @@ def test_session_hooks(testdir):
         def pytest_sessionstart(session):
             sys.pytestsessionhooks = session
         def pytest_sessionfinish(session):
-            if hasattr(session.config, 'slaveinput'):
-                name = "slave"
+            if hasattr(session.config, 'workerinput'):
+                name = "worker"
             else:
                 name = "master"
             f = open(name, "w")
             f.write("xy")
             f.close()
-            # let's fail on the slave
-            if name == "slave":
+            # let's fail on the worker
+            if name == "worker":
                 raise ValueError(42)
     """)
     p = testdir.makepyfile("""
@@ -453,14 +453,14 @@ def test_session_hooks(testdir):
     assert not result.ret
     d = result.parseoutcomes()
     assert d['passed'] == 1
-    assert testdir.tmpdir.join("slave").check()
+    assert testdir.tmpdir.join("worker").check()
     assert testdir.tmpdir.join("master").check()
 
 
 def test_session_testscollected(testdir):
     """
     Make sure master node is updating the session object with the number
-    of tests collected from the slaves.
+    of tests collected from the workers.
     """
     testdir.makepyfile(test_foo="""
         import pytest
@@ -714,7 +714,7 @@ class TestNodeFailure:
             "*2 failed*2 passed*",
         ])
 
-    def test_max_slave_restart(self, testdir):
+    def test_max_worker_restart(self, testdir):
         f = testdir.makepyfile("""
             import os
             def test_a(): pass
@@ -731,7 +731,7 @@ class TestNodeFailure:
             "*2 failed*2 passed*",
         ])
 
-    def test_max_slave_restart_die(self, testdir):
+    def test_max_worker_restart_die(self, testdir):
         f = testdir.makepyfile("""
             import os
             os._exit(1)

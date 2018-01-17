@@ -72,7 +72,7 @@ class RemoteControl(object):
         self.trace("setting up worker session")
         self.gateway = self.initgateway()
         self.channel = channel = self.gateway.remote_exec(
-            init_slave_session,
+            init_worker_session,
             args=self.config.args,
             option_dict=vars(self.config.option),
         )
@@ -134,7 +134,7 @@ def repr_pytest_looponfailinfo(failreports, rootdirs):
         tr.line("### Watching:   %s" % (rootdir,), bold=True)
 
 
-def init_slave_session(channel, args, option_dict):
+def init_worker_session(channel, args, option_dict):
     import os
     import sys
     outchannel = channel.gateway.newchannel()
@@ -153,11 +153,11 @@ def init_slave_session(channel, args, option_dict):
     from _pytest.config import Config
     config = Config.fromdictargs(option_dict, list(args))
     config.args = args
-    from xdist.looponfail import SlaveFailSession
-    SlaveFailSession(config, channel).main()
+    from xdist.looponfail import workerFailSession
+    workerFailSession(config, channel).main()
 
 
-class SlaveFailSession:
+class workerFailSession:
     def __init__(self, config, channel):
         self.config = config
         self.channel = channel
@@ -198,7 +198,7 @@ class SlaveFailSession:
         try:
             command = self.channel.receive()
         except KeyboardInterrupt:
-            return  # in the slave we can't do much about this
+            return  # in the worker we can't do much about this
         self.DEBUG("received", command)
         self.current_command = command
         self.config.hook.pytest_cmdline_main(config=self.config)

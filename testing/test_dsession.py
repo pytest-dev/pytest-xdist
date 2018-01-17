@@ -203,7 +203,7 @@ class TestLoadScheduling:
     def test_different_tests_collected(self, testdir):
         """
         Test that LoadScheduling is reporting collection errors when
-        different test ids are collected by slaves.
+        different test ids are collected by workers.
         """
 
         class CollectHook(object):
