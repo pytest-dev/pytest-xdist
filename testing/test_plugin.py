@@ -1,6 +1,6 @@
 import py
 import execnet
-from xdist.slavemanage import NodeManager
+from xdist.workermanage import NodeManager
 
 
 def test_dist_incompatibility_messages(testdir):

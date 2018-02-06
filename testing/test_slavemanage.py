@@ -2,8 +2,8 @@ import py
 import pytest
 import execnet
 from _pytest.pytester import HookRecorder
-from xdist import slavemanage, newhooks
-from xdist.slavemanage import HostRSync, NodeManager
+from xdist import workermanage, newhooks
+from xdist.workermanage import HostRSync, NodeManager
 
 pytest_plugins = "pytester"
 
@@ -32,7 +32,7 @@ def mysetup(tmpdir):
 
 
 @pytest.fixture
-def slavecontroller(monkeypatch):
+def workercontroller(monkeypatch):
     class MockController(object):
         def __init__(self, *args):
             pass
@@ -40,7 +40,7 @@ def slavecontroller(monkeypatch):
         def setup(self):
             pass
 
-    monkeypatch.setattr(slavemanage, 'SlaveController', MockController)
+    monkeypatch.setattr(workermanage, 'WorkerController', MockController)
     return MockController
 
 
@@ -57,7 +57,7 @@ class TestNodeManagerPopen:
             assert spec.chdir == "abc"
 
     def test_popen_makegateway_events(self, config, hookrecorder,
-                                      slavecontroller):
+                                      workercontroller):
         hm = NodeManager(config, ["popen"] * 2)
         hm.setup_nodes(None)
         call = hookrecorder.popcall("pytest_xdist_setupnodes")
@@ -72,7 +72,7 @@ class TestNodeManagerPopen:
         hm.teardown_nodes()
         assert not len(hm.group)
 
-    def test_popens_rsync(self, config, mysetup, slavecontroller):
+    def test_popens_rsync(self, config, mysetup, workercontroller):
         source = mysetup.source
         hm = NodeManager(config, ["popen"] * 2)
         hm.setup_nodes(None)
@@ -97,7 +97,7 @@ class TestNodeManagerPopen:
         assert not len(hm.group)
         assert "sys.path.insert" in gw.remote_exec.args[0]
 
-    def test_rsync_popen_with_path(self, config, mysetup, slavecontroller):
+    def test_rsync_popen_with_path(self, config, mysetup, workercontroller):
         source, dest = mysetup.source, mysetup.dest
         hm = NodeManager(config, ["popen//chdir=%s" % dest] * 1)
         hm.setup_nodes(None)
@@ -114,7 +114,7 @@ class TestNodeManagerPopen:
         assert dest.join("dir1", "dir2", 'hello').check()
 
     def test_rsync_same_popen_twice(self, config, mysetup, hookrecorder,
-                                    slavecontroller):
+                                    workercontroller):
         source, dest = mysetup.source, mysetup.dest
         hm = NodeManager(config, ["popen//chdir=%s" % dest] * 2)
         hm.roots = []
@@ -174,7 +174,7 @@ class TestNodeManager:
         assert p.join("dir1").check()
         assert p.join("dir1", "file1").check()
 
-    def test_popen_rsync_subdir(self, testdir, mysetup, slavecontroller):
+    def test_popen_rsync_subdir(self, testdir, mysetup, workercontroller):
         source, dest = mysetup.source, mysetup.dest
         dir1 = mysetup.source.mkdir("dir1")
         dir2 = dir1.mkdir("dir2")
@@ -192,7 +192,7 @@ class TestNodeManager:
             assert dest.join("dir1", "dir2", 'hello').check()
             nodemanager.teardown_nodes()
 
-    def test_init_rsync_roots(self, testdir, mysetup, slavecontroller):
+    def test_init_rsync_roots(self, testdir, mysetup, workercontroller):
         source, dest = mysetup.source, mysetup.dest
         dir2 = source.ensure("dir1", "dir2", dir=1)
         source.ensure("dir1", "somefile", dir=1)
@@ -209,7 +209,7 @@ class TestNodeManager:
         assert not dest.join("dir1").check()
         assert not dest.join("bogus").check()
 
-    def test_rsyncignore(self, testdir, mysetup, slavecontroller):
+    def test_rsyncignore(self, testdir, mysetup, workercontroller):
         source, dest = mysetup.source, mysetup.dest
         dir2 = source.ensure("dir1", "dir2", dir=1)
         source.ensure("dir5", "dir6", "bogus")
@@ -233,7 +233,7 @@ class TestNodeManager:
         assert not dest.join('foo').check()
         assert not dest.join('bar').check()
 
-    def test_optimise_popen(self, testdir, mysetup, slavecontroller):
+    def test_optimise_popen(self, testdir, mysetup, workercontroller):
         source = mysetup.source
         specs = ["popen"] * 3
         source.join("conftest.py").write("rsyncdirs = ['a']")

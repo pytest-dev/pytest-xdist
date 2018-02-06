@@ -14,11 +14,11 @@ import _pytest.hookspec
 import pytest
 
 
-class SlaveInteractor:
+class WorkerInteractor:
     def __init__(self, config, channel):
         self.config = config
-        self.slaveid = config.slaveinput.get('slaveid', "?")
-        self.log = py.log.Producer("slave-%s" % self.slaveid)
+        self.workerid = config.workerinput.get('workerid', "?")
+        self.log = py.log.Producer("worker-%s" % self.workerid)
         if not config.option.debug:
             py.log.setconsumer(self.log._keywords, None)
         self.channel = channel
@@ -34,14 +34,14 @@ class SlaveInteractor:
 
     def pytest_sessionstart(self, session):
         self.session = session
-        slaveinfo = getinfodict()
-        self.sendevent("slaveready", slaveinfo=slaveinfo)
+        workerinfo = getinfodict()
+        self.sendevent("workerready", workerinfo=workerinfo)
 
     @pytest.hookimpl(hookwrapper=True)
     def pytest_sessionfinish(self, exitstatus):
-        self.config.slaveoutput['exitstatus'] = exitstatus
+        self.config.workeroutput['exitstatus'] = exitstatus
         yield
-        self.sendevent("slavefinished", slaveoutput=self.config.slaveoutput)
+        self.sendevent("workerfinished", workeroutput=self.config.workeroutput)
 
     def pytest_collection(self, session):
         self.sendevent("collectionstart")
@@ -103,7 +103,7 @@ class SlaveInteractor:
     def pytest_runtest_logreport(self, report):
         data = serialize_report(report)
         data["item_index"] = self.item_index
-        data["worker_id"] = self.slaveid
+        data["worker_id"] = self.workerid
         assert self.session.items[self.item_index].nodeid == report.nodeid
         self.sendevent("testreport", data=data)
 
@@ -185,18 +185,21 @@ def remote_initconfig(option_dict, args):
 
 if __name__ == '__channelexec__':
     channel = channel  # noqa
-    slaveinput, args, option_dict = channel.receive()
+    workerinput, args, option_dict = channel.receive()
     importpath = os.getcwd()
     sys.path.insert(0, importpath)  # XXX only for remote situations
     os.environ['PYTHONPATH'] = (
         importpath + os.pathsep +
         os.environ.get('PYTHONPATH', ''))
-    os.environ['PYTEST_XDIST_WORKER'] = slaveinput['slaveid']
-    os.environ['PYTEST_XDIST_WORKER_COUNT'] = str(slaveinput['slavecount'])
+    os.environ['PYTEST_XDIST_WORKER'] = workerinput['workerid']
+    os.environ['PYTEST_XDIST_WORKER_COUNT'] = str(workerinput['workercount'])
     # os.environ['PYTHONPATH'] = importpath
     import py
     config = remote_initconfig(option_dict, args)
-    config.slaveinput = slaveinput
-    config.slaveoutput = {}
-    interactor = SlaveInteractor(config, channel)
+    config.workerinput = workerinput
+    config.workeroutput = {}
+    # TODO: deprecated name, backward compatibility only. Remove it in future
+    config.slaveinput = config.workerinput
+    config.slaveoutput = config.workeroutput
+    interactor = WorkerInteractor(config, channel)
     config.hook.pytest_cmdline_main(config=config)

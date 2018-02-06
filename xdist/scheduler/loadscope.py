@@ -3,7 +3,7 @@ from collections import OrderedDict
 from _pytest.runner import CollectReport
 from py.log import Producer
 from xdist.report import report_collection_diff
-from xdist.slavemanage import parse_spec_config
+from xdist.workermanage import parse_spec_config
 
 
 class LoadScopeScheduling:
@@ -151,7 +151,7 @@ class LoadScopeScheduling:
 
         From now on the node will be assigned work units to be executed.
 
-        Called by the ``DSession.slave_slaveready`` hook when it successfully
+        Called by the ``DSession.worker_workerready`` hook when it successfully
         bootstraps a new node.
         """
         assert node not in self.assigned_work
@@ -166,8 +166,8 @@ class LoadScopeScheduling:
 
         Called by the hooks:
 
-        - ``DSession.slave_slavefinished``.
-        - ``DSession.slave_errordown``.
+        - ``DSession.worker_workerfinished``.
+        - ``DSession.worker_errordown``.
 
         Return the item being executed while the node crashed or None if the
         node has no more pending items.
@@ -206,7 +206,7 @@ class LoadScopeScheduling:
 
         Called by the hook:
 
-        - ``DSession.slave_collectionfinish``.
+        - ``DSession.worker_collectionfinish``.
         """
 
         # Check that add_node() was called on the node before
@@ -239,7 +239,7 @@ class LoadScopeScheduling:
 
         Called by the hook:
 
-        - ``DSession.slave_testreport``.
+        - ``DSession.worker_testreport``.
         """
         nodeid = self.registered_collections[node][item_index]
         scope = self._split_scope(nodeid)
@@ -336,7 +336,7 @@ class LoadScopeScheduling:
 
         If ``.collection_is_completed`` is True, this is called by the hook:
 
-        - ``DSession.slave_collectionfinish``.
+        - ``DSession.worker_collectionfinish``.
         """
         assert self.collection_is_completed
 

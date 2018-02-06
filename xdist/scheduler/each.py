@@ -1,6 +1,6 @@
 from py.log import Producer
 
-from xdist.slavemanage import parse_spec_config
+from xdist.workermanage import parse_spec_config
 from xdist.report import report_collection_diff
 
 

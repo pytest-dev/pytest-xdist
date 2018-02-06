@@ -20,10 +20,10 @@ class TestHooks:
             def pytest_runtest_logreport(report):
                 if hasattr(report, 'node'):
                     if report.when == "call":
-                        slaveid = report.node.slaveinput['slaveid']
-                        if slaveid != report.worker_id:
+                        workerid = report.node.workerinput['workerid']
+                        if workerid != report.worker_id:
                             print("HOOK: Worker id mismatch: %s %s"
-                                   % (slaveid, report.worker_id))
+                                   % (workerid, report.worker_id))
                         else:
                             print("HOOK: %s %s"
                                    % (report.nodeid, report.worker_id))
@@ -41,9 +41,9 @@ class TestHooks:
         """
         testdir.makeconftest("""
             def pytest_xdist_node_collection_finished(node, ids):
-                slaveid = node.slaveinput['slaveid']
+                workerid = node.workerinput['workerid']
                 stripped_ids = [x.split('::')[1] for x in ids]
-                print("HOOK: %s %s" % (slaveid, ', '.join(stripped_ids)))
+                print("HOOK: %s %s" % (workerid, ', '.join(stripped_ids)))
         """)
         res = testdir.runpytest('-n2', '-s')
         res.stdout.fnmatch_lines_random([

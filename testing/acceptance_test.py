@@ -192,27 +192,41 @@ class TestDistribution:
         ])
         assert dest.join(subdir.basename).check(dir=1)
 
+    def test_backward_compatibility_worker_terminology(self, testdir):
+        """Ensure that we still support "config.slaveinput" for backward compatibility (#234).
+
+        Keep in mind that removing this compatibility will break a ton of plugins and user code.
+        """
+        testdir.makepyfile("""
+            def test(pytestconfig):
+                assert hasattr(pytestconfig, 'slaveinput')
+                assert hasattr(pytestconfig, 'workerinput')
+        """)
+        result = testdir.runpytest("-n1")
+        result.stdout.fnmatch_lines("*1 passed*")
+        assert result.ret == 0
+
     def test_data_exchange(self, testdir):
         testdir.makeconftest("""
             # This hook only called on master.
             def pytest_configure_node(node):
-                node.slaveinput['a'] = 42
-                node.slaveinput['b'] = 7
+                node.workerinput['a'] = 42
+                node.workerinput['b'] = 7
 
             def pytest_configure(config):
-                # this attribute is only set on slaves
-                if hasattr(config, 'slaveinput'):
-                    a = config.slaveinput['a']
-                    b = config.slaveinput['b']
+                # this attribute is only set on workers
+                if hasattr(config, 'workerinput'):
+                    a = config.workerinput['a']
+                    b = config.workerinput['b']
                     r = a + b
-                    config.slaveoutput['r'] = r
+                    config.workeroutput['r'] = r
 
             # This hook only called on master.
             def pytest_testnodedown(node, error):
-                node.config.calc_result = node.slaveoutput['r']
+                node.config.calc_result = node.workeroutput['r']
 
             def pytest_terminal_summary(terminalreporter):
-                if not hasattr(terminalreporter.config, 'slaveinput'):
+                if not hasattr(terminalreporter.config, 'workerinput'):
                     calc_result = terminalreporter.config.calc_result
                     terminalreporter._tw.sep('-',
                         'calculated result is %s' % calc_result)
@@ -232,12 +246,12 @@ class TestDistribution:
         """)
         testdir.makeconftest("""
             def pytest_sessionfinish(session):
-                # on the slave
-                if hasattr(session.config, 'slaveoutput'):
-                    session.config.slaveoutput['s2'] = 42
+                # on the worker
+                if hasattr(session.config, 'workeroutput'):
+                    session.config.workeroutput['s2'] = 42
             # on the master
             def pytest_testnodedown(node, error):
-                assert node.slaveoutput['s2'] == 42
+                assert node.workeroutput['s2'] == 42
                 print ("s2call-finished")
         """)
         args = ["-n1", "--debug"]
@@ -411,7 +425,7 @@ def test_teardownfails_one_function(testdir):
 def test_terminate_on_hangingnode(testdir):
     p = testdir.makeconftest("""
         def pytest_sessionfinish(session):
-            if session.nodeid == "my": # running on slave
+            if session.nodeid == "my": # running on worker
                 import time
                 time.sleep(3)
     """)
@@ -429,15 +443,15 @@ def test_session_hooks(testdir):
         def pytest_sessionstart(session):
             sys.pytestsessionhooks = session
         def pytest_sessionfinish(session):
-            if hasattr(session.config, 'slaveinput'):
-                name = "slave"
+            if hasattr(session.config, 'workerinput'):
+                name = "worker"
             else:
                 name = "master"
             f = open(name, "w")
             f.write("xy")
             f.close()
-            # let's fail on the slave
-            if name == "slave":
+            # let's fail on the worker
+            if name == "worker":
                 raise ValueError(42)
     """)
     p = testdir.makepyfile("""
@@ -453,14 +467,14 @@ def test_session_hooks(testdir):
     assert not result.ret
     d = result.parseoutcomes()
     assert d['passed'] == 1
-    assert testdir.tmpdir.join("slave").check()
+    assert testdir.tmpdir.join("worker").check()
     assert testdir.tmpdir.join("master").check()
 
 
 def test_session_testscollected(testdir):
     """
     Make sure master node is updating the session object with the number
-    of tests collected from the slaves.
+    of tests collected from the workers.
     """
     testdir.makepyfile(test_foo="""
         import pytest
@@ -667,8 +681,8 @@ class TestNodeFailure:
         """)
         res = testdir.runpytest(f, '-n1')
         res.stdout.fnmatch_lines([
-            "*Replacing crashed slave*",
-            "*Slave*crashed while running*",
+            "*Replacing crashed worker*",
+            "*Worker*crashed while running*",
             "*1 failed*1 passed*",
         ])
 
@@ -682,8 +696,8 @@ class TestNodeFailure:
         """)
         res = testdir.runpytest(f, '-n2')
         res.stdout.fnmatch_lines([
-            "*Replacing crashed slave*",
-            "*Slave*crashed while running*",
+            "*Replacing crashed worker*",
+            "*Worker*crashed while running*",
             "*1 failed*3 passed*",
         ])
 
@@ -695,8 +709,8 @@ class TestNodeFailure:
         """)
         res = testdir.runpytest(f, '--dist=each', '--tx=popen')
         res.stdout.fnmatch_lines([
-            "*Replacing crashed slave*",
-            "*Slave*crashed while running*",
+            "*Replacing crashed worker*",
+            "*Worker*crashed while running*",
             "*1 failed*1 passed*",
         ])
 
@@ -709,12 +723,12 @@ class TestNodeFailure:
         """)
         res = testdir.runpytest(f, '--dist=each', '--tx=2*popen')
         res.stdout.fnmatch_lines([
-            "*Replacing crashed slave*",
-            "*Slave*crashed while running*",
+            "*Replacing crashed worker*",
+            "*Worker*crashed while running*",
             "*2 failed*2 passed*",
         ])
 
-    def test_max_slave_restart(self, testdir):
+    def test_max_worker_restart(self, testdir):
         f = testdir.makepyfile("""
             import os
             def test_a(): pass
@@ -722,21 +736,21 @@ class TestNodeFailure:
             def test_c(): os._exit(1)
             def test_d(): pass
         """)
-        res = testdir.runpytest(f, '-n4', '--max-slave-restart=1')
+        res = testdir.runpytest(f, '-n4', '--max-worker-restart=1')
         res.stdout.fnmatch_lines([
-            "*Replacing crashed slave*",
-            "*Maximum crashed slaves reached: 1*",
-            "*Slave*crashed while running*",
-            "*Slave*crashed while running*",
+            "*Replacing crashed worker*",
+            "*Maximum crashed workers reached: 1*",
+            "*Worker*crashed while running*",
+            "*Worker*crashed while running*",
             "*2 failed*2 passed*",
         ])
 
-    def test_max_slave_restart_die(self, testdir):
+    def test_max_worker_restart_die(self, testdir):
         f = testdir.makepyfile("""
             import os
             os._exit(1)
         """)
-        res = testdir.runpytest(f, '-n4', '--max-slave-restart=0')
+        res = testdir.runpytest(f, '-n4', '--max-worker-restart=0')
         res.stdout.fnmatch_lines([
             "*Unexpectedly no active workers*",
             "*INTERNALERROR*"
@@ -749,10 +763,10 @@ class TestNodeFailure:
             def test_b(): os._exit(1)
             def test_c(): pass
         """)
-        res = testdir.runpytest(f, '-n4', '--max-slave-restart=0')
+        res = testdir.runpytest(f, '-n4', '--max-worker-restart=0')
         res.stdout.fnmatch_lines([
-            "*Slave restarting disabled*",
-            "*Slave*crashed while running*",
+            "*Worker restarting disabled*",
+            "*Worker*crashed while running*",
             "*1 failed*2 passed*",
         ])
 

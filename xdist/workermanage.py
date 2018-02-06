@@ -68,7 +68,7 @@ class NodeManager(object):
         gw = self.group.makegateway(spec)
         self.config.hook.pytest_xdist_newgateway(gateway=gw)
         self.rsync_roots(gw)
-        node = SlaveController(self, gw, self.config, putevent)
+        node = WorkerController(self, gw, self.config, putevent)
         gw.node = node          # keep the node alive
         node.setup()
         self.trace("started node %r" % node)
@@ -201,7 +201,7 @@ def make_reltoroot(roots, args):
     return result
 
 
-class SlaveController(object):
+class WorkerController(object):
     ENDMARK = -1
 
     def __init__(self, nodemanager, gateway, config, putevent):
@@ -209,11 +209,16 @@ class SlaveController(object):
         self.putevent = putevent
         self.gateway = gateway
         self.config = config
-        self.slaveinput = {'slaveid': gateway.id,
-                           'slavecount': len(nodemanager.specs)}
+        self.workerinput = {'workerid': gateway.id,
+                            'workercount': len(nodemanager.specs),
+                            'slaveid': gateway.id,
+                            'slavecount': len(nodemanager.specs)
+                            }
+        # TODO: deprecated name, backward compatibility only. Remove it in future
+        self.slaveinput = self.workerinput
         self._down = False
         self._shutdown_sent = False
-        self.log = py.log.Producer("slavectl-%s" % gateway.id)
+        self.log = py.log.Producer("workerctl-%s" % gateway.id)
         if not self.config.option.debug:
             py.log.setconsumer(self.log._keywords, None)
 
@@ -225,7 +230,7 @@ class SlaveController(object):
         return self._down or self._shutdown_sent
 
     def setup(self):
-        self.log("setting up slave session")
+        self.log("setting up worker session")
         spec = self.gateway.spec
         args = self.config.args
         if not spec.popen or spec.chdir:
@@ -238,7 +243,7 @@ class SlaveController(object):
                 option_dict['basetemp'] = str(basetemp.join(name))
         self.config.hook.pytest_configure_node(node=self)
         self.channel = self.gateway.remote_exec(xdist.remote)
-        self.channel.send((self.slaveinput, args, option_dict))
+        self.channel.send((self.workerinput, args, option_dict))
         if self.putevent:
             self.channel.setcallback(
                 self.process_from_remote,
@@ -298,12 +303,12 @@ class SlaveController(object):
             eventname, kwargs = eventcall
             if eventname in ("collectionstart",):
                 self.log("ignoring %s(%s)" % (eventname, kwargs))
-            elif eventname == "slaveready":
+            elif eventname == "workerready":
                 self.notify_inproc(eventname, node=self, **kwargs)
-            elif eventname == "slavefinished":
+            elif eventname == "workerfinished":
                 self._down = True
-                self.slaveoutput = kwargs['slaveoutput']
-                self.notify_inproc("slavefinished", node=self)
+                self.workeroutput = kwargs['workeroutput']
+                self.notify_inproc("workerfinished", node=self)
             elif eventname in ("logstart", "logfinish"):
                 self.notify_inproc(eventname, node=self, **kwargs)
             elif eventname in (
