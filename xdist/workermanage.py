@@ -210,7 +210,10 @@ class WorkerController(object):
         self.gateway = gateway
         self.config = config
         self.workerinput = {'workerid': gateway.id,
-                            'workercount': len(nodemanager.specs)}
+                            'workercount': len(nodemanager.specs),
+                            'slaveid': gateway.id,
+                            'slavecount': len(nodemanager.specs)
+                            }
         # TODO: deprecated name, backward compatibility only. Remove it in future
         self.slaveinput = self.workerinput
         self._down = False
