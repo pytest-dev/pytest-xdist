@@ -1,0 +1,1 @@
+Fix issue when using ``loadscope`` or ``loadfile`` where tests would fail to start if the first scope had only one test.

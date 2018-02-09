@@ -380,6 +380,10 @@ class LoadScopeScheduling:
         for node in self.nodes:
             self._assign_work_unit(node)
 
+        # Ensure nodes start with at least two work units if possible
+        for node in self.nodes:
+            self._reschedule(node)
+
         # Initial distribution sent all tests, start node shutdown
         if not self.workqueue:
             for node in self.nodes:

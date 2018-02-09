@@ -888,6 +888,38 @@ class TestLoadScope:
         assert get_workers_and_test_count_by_prefix(
             'test_a.py::TestB', result.outlines) in ({'gw0': 10}, {'gw1': 10})
 
+    def test_module_single_start(self, testdir):
+        test_file1 = """
+            import pytest
+            def test():
+                pass
+        """
+        test_file2 = """
+            import pytest
+            def test_1():
+                pass
+            def test_2():
+                pass
+        """
+        testdir.makepyfile(
+            test_a=test_file1,
+            test_b=test_file1,
+            test_c=test_file2
+        )
+        result = testdir.runpytest('-n2', '--dist=loadscope', '-v')
+        a = get_workers_and_test_count_by_prefix('test_a.py::test',
+                                                 result.outlines)
+        b = get_workers_and_test_count_by_prefix('test_b.py::test',
+                                                 result.outlines)
+        c1 = get_workers_and_test_count_by_prefix('test_c.py::test_1',
+                                                  result.outlines)
+        c2 = get_workers_and_test_count_by_prefix('test_c.py::test_2',
+                                                  result.outlines)
+        assert a in ({'gw0': 1}, {'gw1': 1})
+        assert b in ({'gw0': 1}, {'gw1': 1})
+        assert a.items() != b.items()
+        assert c1 == c2
+
 
 class TestFileScope:
 
@@ -942,6 +974,38 @@ class TestFileScope:
             test_a_workers_and_test_count in ({'gw0': 0}, {'gw1': 10})
         assert test_b_workers_and_test_count in ({'gw0': 10}, {'gw1': 0}) or \
             test_b_workers_and_test_count in ({'gw0': 0}, {'gw1': 10})
+
+    def test_module_single_start(self, testdir):
+        test_file1 = """
+            import pytest
+            def test():
+                pass
+        """
+        test_file2 = """
+            import pytest
+            def test_1():
+                pass
+            def test_2():
+                pass
+        """
+        testdir.makepyfile(
+            test_a=test_file1,
+            test_b=test_file1,
+            test_c=test_file2
+        )
+        result = testdir.runpytest('-n2', '--dist=loadfile', '-v')
+        a = get_workers_and_test_count_by_prefix('test_a.py::test',
+                                                 result.outlines)
+        b = get_workers_and_test_count_by_prefix('test_b.py::test',
+                                                 result.outlines)
+        c1 = get_workers_and_test_count_by_prefix('test_c.py::test_1',
+                                                  result.outlines)
+        c2 = get_workers_and_test_count_by_prefix('test_c.py::test_2',
+                                                  result.outlines)
+        assert a in ({'gw0': 1}, {'gw1': 1})
+        assert b in ({'gw0': 1}, {'gw1': 1})
+        assert a.items() != b.items()
+        assert c1 == c2
 
 
 def parse_tests_and_workers_from_output(lines):
