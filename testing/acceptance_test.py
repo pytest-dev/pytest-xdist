@@ -889,6 +889,7 @@ class TestLoadScope:
             'test_a.py::TestB', result.outlines) in ({'gw0': 10}, {'gw1': 10})
 
     def test_module_single_start(self, testdir):
+        """Fix test suite never finishing in case all workers start with a single test (#277)."""
         test_file1 = """
             import pytest
             def test():
@@ -976,6 +977,7 @@ class TestFileScope:
             test_b_workers_and_test_count in ({'gw0': 0}, {'gw1': 10})
 
     def test_module_single_start(self, testdir):
+        """Fix test suite never finishing in case all workers start with a single test (#277)."""
         test_file1 = """
             import pytest
             def test():

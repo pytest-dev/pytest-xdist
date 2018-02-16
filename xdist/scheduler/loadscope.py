@@ -380,7 +380,7 @@ class LoadScopeScheduling:
         for node in self.nodes:
             self._assign_work_unit(node)
 
-        # Ensure nodes start with at least two work units if possible
+        # Ensure nodes start with at least two work units if possible (#277)
         for node in self.nodes:
             self._reschedule(node)
 
