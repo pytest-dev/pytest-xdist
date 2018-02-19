@@ -26,13 +26,11 @@ To publish a new release ``X.Y.Z``, the steps are as follows:
 
 #. Install ``pytest-xdist`` and dev requirements in a virtualenv::
 
-    $ pip install -e . -r dev-requirements.txt
+    $ pip install -e . -U -r dev-requirements.txt
 
 #. Update ``CHANGELOG.rst`` file by running::
 
-    $ towncrier --version X.Y.Z
-
-   It might ask for confirmation to remove news fragments; answer yes.
+    $ towncrier --version X.Y.Z --yes
 
 #. Commit and push the branch for review.
 
