@@ -1,3 +1,22 @@
+pytest-xdist 1.22.1 (2018-02-19)
+================================
+
+Bug Fixes
+---------
+
+- Fix issue when using ``loadscope`` or ``loadfile`` where tests would fail to
+  start if the first scope had only one test. (`#257
+  <https://github.com/pytest-dev/pytest-xdist/issues/257>`_)
+
+
+Trivial Changes
+---------------
+
+- Change terminology used by ``pytest-xdist`` to *master* and *worker* in
+  arguments and messages (for example ``--max-worker-reset``). (`#234
+  <https://github.com/pytest-dev/pytest-xdist/issues/234>`_)
+
+
 pytest-xdist 1.22.0 (2018-01-11)
 ================================
 
