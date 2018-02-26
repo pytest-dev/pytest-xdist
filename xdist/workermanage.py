@@ -307,7 +307,7 @@ class WorkerController(object):
                 self.notify_inproc(eventname, node=self, **kwargs)
             elif eventname == "workerfinished":
                 self._down = True
-                self.workeroutput = kwargs['workeroutput']
+                self.workeroutput = self.slaveoutput = kwargs['workeroutput']
                 self.notify_inproc("workerfinished", node=self)
             elif eventname in ("logstart", "logfinish"):
                 self.notify_inproc(eventname, node=self, **kwargs)
