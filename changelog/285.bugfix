@@ -1,1 +1,0 @@
-Add backward compatibility for ``slaveoutput`` attribute to ``WorkerController`` instances.
