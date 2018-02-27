@@ -1,3 +1,14 @@
+pytest-xdist 1.22.2 (2018-02-26)
+================================
+
+Bug Fixes
+---------
+
+- Add backward compatibility for ``slaveoutput`` attribute to
+  ``WorkerController`` instances. (`#285
+  <https://github.com/pytest-dev/pytest-xdist/issues/285>`_)
+
+
 pytest-xdist 1.22.1 (2018-02-19)
 ================================
 
