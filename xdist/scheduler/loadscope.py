@@ -6,7 +6,7 @@ from xdist.report import report_collection_diff
 from xdist.workermanage import parse_spec_config
 
 
-class LoadScopeScheduling:
+class LoadScopeScheduling(object):
     """Implement load scheduling across nodes, but grouping test by scope.
 
     This distributes the tests collected across all nodes so each test is run
