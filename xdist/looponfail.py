@@ -157,7 +157,7 @@ def init_worker_session(channel, args, option_dict):
     WorkerFailSession(config, channel).main()
 
 
-class WorkerFailSession:
+class WorkerFailSession(object):
     def __init__(self, config, channel):
         self.config = config
         self.channel = channel
@@ -211,7 +211,7 @@ class WorkerFailSession:
         self.channel.send((trails, failreports, self.collection_failed))
 
 
-class StatRecorder:
+class StatRecorder(object):
     def __init__(self, rootdirlist):
         self.rootdirlist = rootdirlist
         self.statcache = {}

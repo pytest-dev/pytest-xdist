@@ -7,7 +7,7 @@ from xdist.workermanage import parse_spec_config
 from xdist.report import report_collection_diff
 
 
-class LoadScheduling:
+class LoadScheduling(object):
     """Implement load scheduling across nodes.
 
     This distributes the tests collected across all nodes so each test
