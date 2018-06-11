@@ -30,5 +30,6 @@ issue/
 pytestdebug.log
 .tox/
 .cache/
+.pytest_cache/
 .eggs/
 .idea/

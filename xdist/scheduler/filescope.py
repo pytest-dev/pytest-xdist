@@ -20,7 +20,7 @@ class LoadFileScheduling(LoadScopeScheduling):
     This class behaves very much like LoadScopeScheduling, but with a file-level scope.
     """
 
-    def __init(self, config, log=None):
+    def __init__(self, config, log=None):
         super(LoadFileScheduling, self).__init__(config, log)
         if log is None:
             self.log = Producer('loadfilesched')

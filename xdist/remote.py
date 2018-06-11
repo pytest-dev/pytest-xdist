@@ -14,7 +14,7 @@ import _pytest.hookspec
 import pytest
 
 
-class WorkerInteractor:
+class WorkerInteractor(object):
     def __init__(self, config, channel):
         self.config = config
         self.workerid = config.workerinput.get('workerid', "?")

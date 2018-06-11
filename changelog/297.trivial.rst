@@ -1,0 +1,1 @@
+Make all classes subclass from ``object`` and fix ``super()`` call in ``LoadFileScheduling``;
