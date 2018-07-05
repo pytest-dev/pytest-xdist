@@ -1,4 +1,5 @@
 import py
+import pprint
 import pytest
 from xdist.workermanage import WorkerController, unserialize_report
 from xdist.remote import serialize_report
@@ -14,7 +15,7 @@ def check_marshallable(d):
     try:
         marshal.dumps(d)
     except ValueError:
-        py.std.pprint.pprint(d)
+        pprint.pprint(d)
         raise ValueError("not marshallable")
 
 
@@ -344,7 +345,7 @@ class TestWorkerInteractor:
         for data in worker.slp.channel:
             worker.slp.process_from_remote(data)
         worker.slp.process_from_remote(worker.slp.ENDMARK)
-        py.std.pprint.pprint(hookrec.hookrecorder.calls)
+        pprint.pprint(hookrec.hookrecorder.calls)
         hookrec.hookrecorder.contains([
             ("pytest_collectstart", "collector.fspath == aaa"),
             ("pytest_pycollect_makeitem", "name == 'test_func'"),

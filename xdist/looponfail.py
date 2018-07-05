@@ -10,6 +10,7 @@
 import py
 import pytest
 import sys
+import time
 import execnet
 
 
@@ -228,7 +229,7 @@ class StatRecorder(object):
             changed = self.check()
             if changed:
                 return
-            py.std.time.sleep(checkinterval)
+            time.sleep(checkinterval)
 
     def check(self, removepycfiles=True):  # noqa, too complex
         changed = False

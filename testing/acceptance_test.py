@@ -1,4 +1,6 @@
+import os
 import re
+import textwrap
 
 import py
 import pytest
@@ -54,8 +56,8 @@ class TestDistribution:
     def test_n1_skip(self, testdir):
         p1 = testdir.makepyfile("""
             def test_skip():
-                import py
-                py.test.skip("myreason")
+                import pytest
+                pytest.skip("myreason")
         """)
         result = testdir.runpytest(p1, "-n1")
         assert result.ret == 0
@@ -78,7 +80,7 @@ class TestDistribution:
     def test_manytests_to_one_popen(self, testdir):
         p1 = testdir.makepyfile(
             """
-                import py
+                import pytest
                 def test_fail0():
                     assert 0
                 def test_fail1():
@@ -86,7 +88,7 @@ class TestDistribution:
                 def test_ok():
                     pass
                 def test_skip():
-                    py.test.skip("hello")
+                    pytest.skip("hello")
             """, )
         result = testdir.runpytest(p1, "-v", '-d', '--tx=popen', '--tx=popen')
         result.stdout.fnmatch_lines([
@@ -124,7 +126,7 @@ class TestDistribution:
     def test_dist_ini_specified(self, testdir):
         p1 = testdir.makepyfile(
             """
-                import py
+                import pytest
                 def test_fail0():
                     assert 0
                 def test_fail1():
@@ -132,7 +134,7 @@ class TestDistribution:
                 def test_ok():
                     pass
                 def test_skip():
-                    py.test.skip("hello")
+                    pytest.skip("hello")
             """, )
         testdir.makeini("""
             [pytest]
@@ -145,13 +147,13 @@ class TestDistribution:
         ])
         assert result.ret == 1
 
-    @py.test.mark.xfail("sys.platform.startswith('java')", run=False)
+    @pytest.mark.xfail("sys.platform.startswith('java')", run=False)
     def test_dist_tests_with_crash(self, testdir):
-        if not hasattr(py.std.os, 'kill'):
-            py.test.skip("no os.kill")
+        if not hasattr(os, 'kill'):
+            pytest.skip("no os.kill")
 
         p1 = testdir.makepyfile("""
-                import py
+                import pytest
                 def test_fail0():
                     assert 0
                 def test_fail1():
@@ -159,7 +161,7 @@ class TestDistribution:
                 def test_ok():
                     pass
                 def test_skip():
-                    py.test.skip("hello")
+                    pytest.skip("hello")
                 def test_crash():
                     import time
                     import os
@@ -299,7 +301,7 @@ class TestDistEach:
         assert not result.ret
         result.stdout.fnmatch_lines(["*2 pass*"])
 
-    @py.test.mark.xfail(
+    @pytest.mark.xfail(
         run=False,
         reason="other python versions might not have py.test installed")
     def test_simple_diffoutput(self, testdir):
@@ -307,7 +309,7 @@ class TestDistEach:
         for name in ("python2.5", "python2.6"):
             interp = py.path.local.sysfind(name)
             if interp is None:
-                py.test.skip("%s not found" % name)
+                pytest.skip("%s not found" % name)
             interpreters.append(interp)
 
         testdir.makepyfile(
@@ -330,11 +332,11 @@ class TestDistEach:
 class TestTerminalReporting:
     def test_pass_skip_fail(self, testdir):
         testdir.makepyfile("""
-            import py
+            import pytest
             def test_ok():
                 pass
             def test_skip():
-                py.test.skip("xx")
+                pytest.skip("xx")
             def test_func():
                 assert 0
         """)
@@ -421,7 +423,7 @@ def test_teardownfails_one_function(testdir):
         ["*def teardown_function(function):*", "*1 passed*1 error*"])
 
 
-@py.test.mark.xfail
+@pytest.mark.xfail
 def test_terminate_on_hangingnode(testdir):
     p = testdir.makeconftest("""
         def pytest_sessionfinish(session):
@@ -585,7 +587,7 @@ def test_skipping(testdir):
 
 def test_issue34_pluginloading_in_subprocess(testdir):
     testdir.tmpdir.join("plugin123.py").write(
-        py.code.Source("""
+        textwrap.dedent("""
         def pytest_namespace():
             return {'sample_variable': 'testing'}
     """))
