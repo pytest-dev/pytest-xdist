@@ -1,5 +1,5 @@
 """
-    Implement -f aka looponfailing for py.test.
+    Implement -f aka looponfailing for pytest.
 
     NOTE that we try to avoid loading and depending on application modules
     within the controlling process (the one that starts repeatedly test
