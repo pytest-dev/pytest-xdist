@@ -1,5 +1,6 @@
 import py
 import pytest
+import textwrap
 import execnet
 from _pytest.pytester import HookRecorder
 from xdist import workermanage, newhooks
@@ -198,7 +199,7 @@ class TestNodeManager:
         source.ensure("dir1", "somefile", dir=1)
         dir2.ensure("hello")
         source.ensure("bogusdir", "file")
-        source.join("tox.ini").write(py.std.textwrap.dedent("""
+        source.join("tox.ini").write(textwrap.dedent("""
             [pytest]
             rsyncdirs=dir1/dir2
         """))
@@ -217,7 +218,7 @@ class TestNodeManager:
         dir2.ensure("hello")
         source.ensure("foo", "bar")
         source.ensure("bar", "foo")
-        source.join("tox.ini").write(py.std.textwrap.dedent("""
+        source.join("tox.ini").write(textwrap.dedent("""
             [pytest]
             rsyncdirs = dir1 dir5
             rsyncignore = dir1/dir2 dir5/dir6 foo*
