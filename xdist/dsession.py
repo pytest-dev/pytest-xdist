@@ -18,7 +18,7 @@ class Interrupted(KeyboardInterrupt):
 
 
 class DSession(object):
-    """A py.test plugin which runs a distributed test session
+    """A pytest plugin which runs a distributed test session
 
     At the beginning of the test session this creates a NodeManager
     instance which creates and starts all nodes.  Nodes then emit
@@ -26,7 +26,7 @@ class DSession(object):
     methods.
 
     Once a node is started it will automatically start running the
-    py.test mainloop with some custom hooks.  This means a node
+    pytest mainloop with some custom hooks.  This means a node
     automatically starts collecting tests.  Once tests are collected
     it will wait for instructions.
     """

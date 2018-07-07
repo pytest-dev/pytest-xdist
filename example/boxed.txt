@@ -25,7 +25,7 @@ to run each test in a controlled subprocess.  Here is a basic example::
 
 If you run this with::
 
-    $ py.test -n1
+    $ pytest -n1
     =========================== test session starts ============================
     platform linux2 -- Python 2.7.3 -- pytest-2.3.0.dev8
     plugins: xdist, bugzilla, cache, oejskit, cli, pep8, cov
@@ -46,7 +46,7 @@ You'll see that a couple of tests are reported as crashing, indicated
 by lower-case ``f`` and the respective failure summary. You can also use
 the xdist-provided parallelization feature to speed up your testing::
 
-    $ py.test -n3
+    $ pytest -n3
     =========================== test session starts ============================
     platform linux2 -- Python 2.7.3 -- pytest-2.3.0.dev8
     plugins: xdist, bugzilla, cache, oejskit, cli, pep8, cov

@@ -23,7 +23,7 @@
 xdist: pytest distributed testing plugin
 ========================================
 
-The `pytest-xdist`_ plugin extends py.test with some unique
+The `pytest-xdist`_ plugin extends pytest with some unique
 test execution modes:
 
 * test run parallelization_: if you have multiple CPUs or hosts you can use
@@ -32,14 +32,14 @@ test execution modes:
 
 
 * ``--looponfail``: run your tests repeatedly in a subprocess.  After each run
-  py.test waits until a file in your project changes and then re-runs
+  pytest waits until a file in your project changes and then re-runs
   the previously failing tests.  This is repeated until all tests pass
   after which again a full run is performed.
 
 * `Multi-Platform`_ coverage: you can specify different Python interpreters
   or different platforms and run tests in parallel on all of them.
 
-Before running tests remotely, ``py.test`` efficiently "rsyncs" your
+Before running tests remotely, ``pytest`` efficiently "rsyncs" your
 program source code to the remote place.  All test results
 are reported back and displayed to your local terminal.
 You may specify different Python versions and interpreters.
@@ -67,7 +67,7 @@ Speed up test runs by sending tests to multiple CPUs
 
 To send tests to multiple CPUs, type::
 
-    py.test -n NUM
+    pytest -n NUM
 
 Especially for longer running tests or tests requiring
 a lot of I/O this can lead to considerable speed ups. This option can
@@ -98,7 +98,7 @@ Running tests in a Python subprocess
 
 To instantiate a python3.5 subprocess and send tests to it, you may type::
 
-    py.test -d --tx popen//python=python3.5
+    pytest -d --tx popen//python=python3.5
 
 This will start a subprocess which is run with the ``python3.5``
 Python interpreter, found in your system binary lookup path.
@@ -129,7 +129,7 @@ tests that you can successfully run locally. And you
 have a ssh-reachable machine ``myhost``.  Then
 you can ad-hoc distribute your tests by typing::
 
-    py.test -d --tx ssh=myhostpopen --rsyncdir mypkg mypkg
+    pytest -d --tx ssh=myhostpopen --rsyncdir mypkg mypkg
 
 This will synchronize your :code:`mypkg` package directory
 to a remote ssh account and then locally collect tests
@@ -140,11 +140,11 @@ to be sent to the remote side.
 
 .. note::
 
-  For py.test to collect and send tests correctly
+  For pytest to collect and send tests correctly
   you not only need to make sure all code and tests
   directories are rsynced, but that any test (sub) directory
   also has an :code:`__init__.py` file because internally
-  py.test references tests as a fully qualified python
+  pytest references tests as a fully qualified python
   module path.  **You will otherwise get strange errors**
   during setup of the remote side.
 
@@ -168,7 +168,7 @@ It will tell you that it starts listening on the default
 port.  You can now on your home machine specify this
 new socket host with something like this::
 
-    py.test -d --tx socket=192.168.1.102:8888 --rsyncdir mypkg mypkg
+    pytest -d --tx socket=192.168.1.102:8888 --rsyncdir mypkg mypkg
 
 
 .. _`atonce`:
@@ -180,7 +180,7 @@ Running tests on many platforms at once
 
 The basic command to run tests on multiple platforms is::
 
-    py.test --dist=each --tx=spec1 --tx=spec2
+    pytest --dist=each --tx=spec1 --tx=spec2
 
 If you specify a windows host, an OSX host and a Linux
 environment this command will send each tests to all
@@ -242,7 +242,7 @@ You can also add default environments like this:
 
 and then just type::
 
-    py.test --dist=each
+    pytest --dist=each
 
 to run tests in each of the environments.
 

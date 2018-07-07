@@ -184,7 +184,7 @@ class HostRSync(execnet.RSync):
 
 
 def make_reltoroot(roots, args):
-    # XXX introduce/use public API for splitting py.test args
+    # XXX introduce/use public API for splitting pytest args
     splitcode = "::"
     result = []
     for arg in args:
