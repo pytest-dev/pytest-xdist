@@ -5,9 +5,15 @@ import pytest
 def parse_numprocesses(s):
     if s == 'auto':
         try:
-            from os import cpu_count
+            from os import sched_getaffinity
+            def cpu_count():
+                return len(sched_getaffinity(0))
         except ImportError:
-            from multiprocessing import cpu_count
+            try:
+                from os import cpu_count
+            except ImportError:
+                from multiprocessing import cpu_count
+
         try:
             n = cpu_count()
         except NotImplementedError:
