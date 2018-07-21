@@ -25,6 +25,11 @@ env:
 install: pip install tox setuptools_scm
 script: tox
 
+stages:
+- test
+- name: deploy
+  if: repo = pytest-dev/pytest-xdist AND tag IS present
+
 jobs:
   include:
     - stage: test
@@ -50,7 +55,7 @@ jobs:
       deploy:
         provider: pypi
         user: ronny
-        distributions: sdist bdist_wheel  
+        distributions: sdist bdist_wheel
         skip_upload_docs: true
         password:
           secure: cxmSDho5d+PYKEM4ZCg8ms1P4lzhYkrw6fEOm2HtTcsuCyY6aZMSgImWAnEYbJHSkdzgcxlXK9UKJ9B0YenXmBCkAr7UjdnpNXNmkySr0sYzlH/sfqt/dDATCHFaRKxnkOSOVywaDYhT9n8YudbXI77pXwD12i/CeSSJDbHhsu0JYUfAcb+D6YjRYoA2SEGCnzSzg+gDDfwXZx4ZiODCGLVwieNp1klCg88YROUE1BaYYNuUOONvfXX8+TWowbCF6ChH1WL/bZ49OStEYQNuYxZQZr4yClIqu9VJbchrU8j860K9ott2kkGTgfB/dDrQB/XncBubyIX9ikzCQAmmBXWAI3eyvWLPDk2Jz7kW2l2RT7syct80tCq3JhvQ1qdwr5ap7siocTLgnBW0tF4tkHSTFN3510fkc43npnp6FThebESQpnI24vqpwJ9hI/kW5mYi014Og2E/cpCXnz2XO8iZPDbqAMQpDsqEQoyhfGNgPTGp4K30TxRtwZBI5hHhDKnnR16fXtRgt1gYPvz/peUQvvpOm4JzIzGXPzluuutpnCBy75v5+oiwT3YRrLL/Meims9FtDDXL3qQubAE/ezIOOpm0N5XXV8DxIom8EN71yq5ab1tqhM+tBX7owRjy4FR4If2Q8feBdmTuh26DIQt/y+qSG8VkB9Sw/JCjc7c=
