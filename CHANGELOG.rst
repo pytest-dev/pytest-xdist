@@ -1,3 +1,18 @@
+pytest-xdist 1.22.3 (2018-07-23)
+================================
+
+Bug Fixes
+---------
+
+- Fix issue of virtualized or containerized environments not reporting the number of CPUs correctly. (`#9 <https://github.com/pytest-dev/pytest-xdist/issues/9>`_)
+
+
+Trivial Changes
+---------------
+
+- Make all classes subclass from ``object`` and fix ``super()`` call in ``LoadFileScheduling``; (`#297 <https://github.com/pytest-dev/pytest-xdist/issues/297>`_)
+
+
 pytest-xdist 1.22.2 (2018-02-26)
 ================================
 

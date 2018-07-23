@@ -1,1 +1,0 @@
-Fix issue of virtualized or containerized environments not reporting the number of CPUs correctly.
