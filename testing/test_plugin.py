@@ -31,7 +31,9 @@ def test_dist_options(testdir):
 
 def test_auto_detect_cpus(testdir, monkeypatch):
     import os
-    if hasattr(os, 'cpu_count'):
+    if hasattr(os, 'sched_getaffinity'):
+        monkeypatch.setattr(os, 'sched_getaffinity', lambda _pid: set(range(99)))
+    elif hasattr(os, 'cpu_count'):
         monkeypatch.setattr(os, 'cpu_count', lambda: 99)
     else:
         import multiprocessing
