@@ -4,13 +4,12 @@
     :alt: PyPI version
     :target: https://pypi.python.org/pypi/pytest-xdist
 
+.. image:: https://img.shields.io/conda/vn/conda-forge/pytest-xdist.svg
+    :target: https://anaconda.org/conda-forge/pytest-xdist
+
 .. image:: https://img.shields.io/pypi/pyversions/pytest-xdist.svg
     :alt: Python versions
     :target: https://pypi.python.org/pypi/pytest-xdist
-
-.. image:: https://anaconda.org/conda-forge/pytest-xdist/badges/version.svg
-    :alt: Anaconda version
-    :target: https://anaconda.org/conda-forge/pytest-xdist
 
 .. image:: https://travis-ci.org/pytest-dev/pytest-xdist.svg?branch=master
     :alt: Travis CI build status
@@ -44,7 +43,7 @@ program source code to the remote place.  All test results
 are reported back and displayed to your local terminal.
 You may specify different Python versions and interpreters.
 
-If you would like to know how pytest-xdist works under the covers, checkout 
+If you would like to know how pytest-xdist works under the covers, checkout
 `OVERVIEW <https://github.com/pytest-dev/pytest-xdist/blob/master/OVERVIEW.md>`_.
 
 
