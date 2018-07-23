@@ -1,0 +1,3 @@
+Remove last references to obsolete ``py.code``.
+
+Remove some unnecessary references to ``py.builtin``.

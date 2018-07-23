@@ -6,7 +6,7 @@ from xdist.remote import serialize_report
 import execnet
 import marshal
 
-queue = py.builtin._tryimport("queue", "Queue")
+from six.moves.queue import Queue
 
 WAIT_TIMEOUT = 10.0
 
@@ -33,7 +33,7 @@ class WorkerSetup:
     def __init__(self, request, testdir):
         self.request = request
         self.testdir = testdir
-        self.events = queue.Queue()
+        self.events = Queue()
 
     def setup(self, ):
         self.testdir.chdir()

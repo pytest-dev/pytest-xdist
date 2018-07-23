@@ -6,7 +6,7 @@
     processes) otherwise changes to source code can crash
     the controlling process which should best never happen.
 """
-
+from __future__ import print_function
 import py
 import pytest
 import sys
@@ -60,7 +60,7 @@ class RemoteControl(object):
     def trace(self, *args):
         if self.config.option.debug:
             msg = " ".join([str(x) for x in args])
-            py.builtin.print_("RemoteControl:", msg)
+            print("RemoteControl:", msg)
 
     def initgateway(self):
         return execnet.makegateway("popen")
@@ -248,7 +248,7 @@ class StatRecorder(object):
                         if oldstat.mtime != curstat.mtime or \
                            oldstat.size != curstat.size:
                             changed = True
-                            py.builtin.print_("# MODIFIED", path)
+                            print("# MODIFIED", path)
                             if removepycfiles and path.ext == ".py":
                                 pycfile = path + "c"
                                 if pycfile.check():

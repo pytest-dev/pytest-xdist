@@ -1,3 +1,4 @@
+from __future__ import print_function
 import fnmatch
 import os
 import re
@@ -6,6 +7,7 @@ import threading
 import py
 import pytest
 import execnet
+
 import xdist.remote
 
 from _pytest import runner  # XXX load dynamically
@@ -48,7 +50,7 @@ class NodeManager(object):
             self.specs.append(spec)
         self.roots = self._getrsyncdirs()
         self.rsyncoptions = self._getrsyncoptions()
-        self._rsynced_specs = py.builtin.set()
+        self._rsynced_specs = set()
 
     def rsync_roots(self, gateway):
         """Rsync the set of roots to the node's gateway cwd."""
@@ -180,8 +182,7 @@ class HostRSync(execnet.RSync):
         if self._verbose:
             path = os.path.basename(self._sourcedir) + "/" + modified_rel_path
             remotepath = gateway.spec.chdir
-            py.builtin.print_('%s:%s <= %s' %
-                              (gateway.spec, remotepath, path))
+            print('%s:%s <= %s' % (gateway.spec, remotepath, path))
 
 
 def make_reltoroot(roots, args):
@@ -333,8 +334,9 @@ class WorkerController(object):
             # should not land in receiver-thread
             raise
         except:  # noqa
-            excinfo = py.code.ExceptionInfo()
-            py.builtin.print_("!" * 20, excinfo)
+            from _pytest._code import ExceptionInfo
+            excinfo = ExceptionInfo()
+            print("!" * 20, excinfo)
             self.config.notify_exception(excinfo)
             self.shutdown()
             self.notify_inproc("errordown", node=self, error=excinfo)
