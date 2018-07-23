@@ -24,13 +24,13 @@ To publish a new release ``X.Y.Z``, the steps are as follows:
 
 #. Create a new branch named ``release-X.Y.Z`` from the latest ``master``.
 
-#. Install ``pytest-xdist`` and dev requirements in a virtualenv::
+#. Install ``tox`` in a virtualenv::
 
-    $ pip install -e . -U -r dev-requirements.txt
+    $ pip install tox
 
-#. Update ``CHANGELOG.rst`` file by running::
+#. Update the necessary files with::
 
-    $ towncrier --version X.Y.Z --yes
+    $ tox -e release -- X.Y.Z
 
 #. Commit and push the branch for review.
 
