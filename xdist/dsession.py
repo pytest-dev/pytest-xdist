@@ -10,7 +10,7 @@ from xdist.scheduler import (
 )
 
 
-queue = py.builtin._tryimport('queue', 'Queue')
+from six.moves.queue import Empty, Queue
 
 
 class Interrupted(KeyboardInterrupt):
@@ -41,7 +41,7 @@ class DSession(object):
         self.shuttingdown = False
         self.countfailures = 0
         self.maxfail = config.getvalue("maxfail")
-        self.queue = queue.Queue()
+        self.queue = Queue()
         self._session = None
         self._failed_collection_errors = {}
         self._active_nodes = set()
@@ -129,7 +129,7 @@ class DSession(object):
             try:
                 eventcall = self.queue.get(timeout=2.0)
                 break
-            except queue.Empty:
+            except Empty:
                 continue
         callname, kwargs = eventcall
         assert callname, kwargs

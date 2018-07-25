@@ -1,3 +1,4 @@
+from __future__ import print_function
 import py
 import pytest
 import textwrap
@@ -170,7 +171,7 @@ class TestNodeManager:
         p, = nodemanager.gwmanager.multi_exec(
             "import os ; channel.send(os.getcwd())").receive_each()
         p = py.path.local(p)
-        py.builtin.print_("remote curdir", p)
+        print("remote curdir", p)
         assert p == mysetup.dest.join(config.topdir.basename)
         assert p.join("dir1").check()
         assert p.join("dir1", "file1").check()
