@@ -1,3 +1,5 @@
+import os
+
 import py
 import pytest
 
@@ -7,6 +9,9 @@ def parse_numprocesses(s):
         try:
             from os import sched_getaffinity
         except ImportError:
+            if os.environ.get('TRAVIS') == 'true':
+                # workaround https://bitbucket.org/pypy/pypy/issues/2375
+                return 2
             try:
                 from os import cpu_count
             except ImportError:
