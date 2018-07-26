@@ -4,27 +4,31 @@ import py
 import pytest
 
 
+def auto_detect_cpus():
+    try:
+        from os import sched_getaffinity
+    except ImportError:
+        if os.environ.get('TRAVIS') == 'true':
+            # workaround https://bitbucket.org/pypy/pypy/issues/2375
+            return 2
+        try:
+            from os import cpu_count
+        except ImportError:
+            from multiprocessing import cpu_count
+    else:
+        def cpu_count():
+            return len(sched_getaffinity(0))
+
+    try:
+        n = cpu_count()
+    except NotImplementedError:
+        return 1
+    return n if n else 1
+
+
 def parse_numprocesses(s):
     if s == 'auto':
-        try:
-            from os import sched_getaffinity
-        except ImportError:
-            if os.environ.get('TRAVIS') == 'true':
-                # workaround https://bitbucket.org/pypy/pypy/issues/2375
-                return 2
-            try:
-                from os import cpu_count
-            except ImportError:
-                from multiprocessing import cpu_count
-        else:
-            def cpu_count():
-                return len(sched_getaffinity(0))
-
-        try:
-            n = cpu_count()
-        except NotImplementedError:
-            return 1
-        return n if n else 1
+        return auto_detect_cpus()
     else:
         return int(s)
 
