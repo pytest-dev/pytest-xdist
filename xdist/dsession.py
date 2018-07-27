@@ -84,7 +84,7 @@ class DSession(object):
 
     def pytest_sessionfinish(self, session):
         """Shutdown all nodes."""
-        nm = getattr(self, 'nodemanager', None)  # if not fully initialized
+        nm = getattr(self, "nodemanager", None)  # if not fully initialized
         if nm is not None:
             nm.teardown_nodes()
         self._session = None
@@ -95,19 +95,18 @@ class DSession(object):
 
     @pytest.mark.trylast
     def pytest_xdist_make_scheduler(self, config, log):
-        dist = config.getvalue('dist')
+        dist = config.getvalue("dist")
         schedulers = {
-            'each': EachScheduling,
-            'load': LoadScheduling,
-            'loadscope': LoadScopeScheduling,
-            'loadfile': LoadFileScheduling,
+            "each": EachScheduling,
+            "load": LoadScheduling,
+            "loadscope": LoadScopeScheduling,
+            "loadfile": LoadFileScheduling,
         }
         return schedulers[dist](config, log)
 
     def pytest_runtestloop(self):
         self.sched = self.config.hook.pytest_xdist_make_scheduler(
-            config=self.config,
-            log=self.log
+            config=self.config, log=self.log
         )
         assert self.sched is not None
 
@@ -151,8 +150,8 @@ class DSession(object):
         collection without any further input.
         """
         node.workerinfo = workerinfo
-        node.workerinfo['id'] = node.gateway.id
-        node.workerinfo['spec'] = node.gateway.spec
+        node.workerinfo["id"] = node.gateway.id
+        node.workerinfo["spec"] = node.gateway.spec
 
         # TODO: (#234 task) needs this for pytest. Remove when refactor in pytest repo
         node.slaveinfo = node.workerinfo
@@ -172,7 +171,7 @@ class DSession(object):
         workerready before shutdown was triggered.
         """
         self.config.hook.pytest_testnodedown(node=node, error=None)
-        if node.workeroutput['exitstatus'] == 2:  # keyboard-interrupt
+        if node.workeroutput["exitstatus"] == 2:  # keyboard-interrupt
             self.shouldstop = "%s received keyboard-interrupt" % (node,)
             self.worker_errordown(node, "keyboard-interrupt")
             return
@@ -193,14 +192,15 @@ class DSession(object):
                 self.handle_crashitem(crashitem, node)
 
         self._failed_nodes_count += 1
-        maximum_reached = (self._max_worker_restart is not None and
-                           self._failed_nodes_count > self._max_worker_restart)
+        maximum_reached = (
+            self._max_worker_restart is not None
+            and self._failed_nodes_count > self._max_worker_restart
+        )
         if maximum_reached:
             if self._max_worker_restart == 0:
-                msg = 'Worker restarting disabled'
+                msg = "Worker restarting disabled"
             else:
-                msg = "Maximum crashed workers reached: %d" % \
-                      self._max_worker_restart
+                msg = "Maximum crashed workers reached: %d" % self._max_worker_restart
             self.report_line(msg)
         else:
             self.report_line("Replacing crashed worker %s" % node.gateway.id)
@@ -218,8 +218,7 @@ class DSession(object):
         """
         if self.shuttingdown:
             return
-        self.config.hook.pytest_xdist_node_collection_finished(node=node,
-                                                               ids=ids)
+        self.config.hook.pytest_xdist_node_collection_finished(node=node, ids=ids)
         # tell session which items were effectively collected otherwise
         # the master node will finish the session with EXIT_NOTESTSCOLLECTED
         self._session.testscollected = len(ids)
@@ -230,19 +229,18 @@ class DSession(object):
             if self.terminal and not self.sched.has_pending:
                 self.trdist.ensure_show_status()
                 self.terminal.write_line("")
-                self.terminal.write_line("scheduling tests via %s" % (
-                    self.sched.__class__.__name__))
+                self.terminal.write_line(
+                    "scheduling tests via %s" % (self.sched.__class__.__name__)
+                )
             self.sched.schedule()
 
     def worker_logstart(self, node, nodeid, location):
         """Emitted when a node calls the pytest_runtest_logstart hook."""
-        self.config.hook.pytest_runtest_logstart(
-            nodeid=nodeid, location=location)
+        self.config.hook.pytest_runtest_logstart(nodeid=nodeid, location=location)
 
     def worker_logfinish(self, node, nodeid, location):
         """Emitted when a node calls the pytest_runtest_logfinish hook."""
-        self.config.hook.pytest_runtest_logfinish(
-            nodeid=nodeid, location=location)
+        self.config.hook.pytest_runtest_logfinish(nodeid=nodeid, location=location)
 
     def worker_testreport(self, node, rep):
         """Emitted when a node calls the pytest_runtest_logreport hook."""
@@ -295,8 +293,7 @@ class DSession(object):
         if rep.failed:
             self.countfailures += 1
             if self.maxfail and self.countfailures >= self.maxfail:
-                self.shouldstop = "stopping after %d failures" % (
-                    self.countfailures)
+                self.shouldstop = "stopping after %d failures" % (self.countfailures)
 
     def triggershutdown(self):
         self.log("triggering shutdown")
@@ -310,8 +307,9 @@ class DSession(object):
         runner = self.config.pluginmanager.getplugin("runner")
         fspath = nodeid.split("::")[0]
         msg = "Worker %r crashed while running %r" % (worker.gateway.id, nodeid)
-        rep = runner.TestReport(nodeid, (fspath, None, fspath),
-                                (), "failed", msg, "???")
+        rep = runner.TestReport(
+            nodeid, (fspath, None, fspath), (), "failed", msg, "???"
+        )
         rep.node = worker
         self.config.hook.pytest_runtest_logreport(report=rep)
 
@@ -322,7 +320,7 @@ class TerminalDistReporter(object):
         self.tr = config.pluginmanager.getplugin("terminalreporter")
         self._status = {}
         self._lastlen = 0
-        self._isatty = getattr(self.tr, 'isatty', self.tr.hasmarkup)
+        self._isatty = getattr(self.tr, "isatty", self.tr.hasmarkup)
 
     def write_line(self, msg):
         self.tr.write_line(msg)
@@ -337,8 +335,7 @@ class TerminalDistReporter(object):
             self.rewrite(self.getstatus())
 
     def getstatus(self):
-        parts = ["%s %s" % (spec.id, self._status[spec.id])
-                 for spec in self._specs]
+        parts = ["%s %s" % (spec.id, self._status[spec.id]) for spec in self._specs]
         return " / ".join(parts)
 
     def rewrite(self, line, newline=False):
@@ -361,17 +358,17 @@ class TerminalDistReporter(object):
         if self.config.option.verbose > 0:
             rinfo = gateway._rinfo()
             version = "%s.%s.%s" % rinfo.version_info[:3]
-            self.rewrite("[%s] %s Python %s cwd: %s" % (
-                gateway.id, rinfo.platform, version, rinfo.cwd),
-                newline=True)
+            self.rewrite(
+                "[%s] %s Python %s cwd: %s"
+                % (gateway.id, rinfo.platform, version, rinfo.cwd),
+                newline=True,
+            )
         self.setstatus(gateway.spec, "C")
 
     def pytest_testnodeready(self, node):
         if self.config.option.verbose > 0:
             d = node.workerinfo
-            infoline = "[%s] Python %s" % (
-                d['id'],
-                d['version'].replace('\n', ' -- '),)
+            infoline = "[%s] Python %s" % (d["id"], d["version"].replace("\n", " -- "))
             self.rewrite(infoline, newline=True)
         self.setstatus(node.gateway.spec, "ok")
 

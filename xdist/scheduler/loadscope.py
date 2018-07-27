@@ -93,7 +93,7 @@ class LoadScopeScheduling(object):
         self.registered_collections = OrderedDict()
 
         if log is None:
-            self.log = Producer('loadscopesched')
+            self.log = Producer("loadscopesched")
         else:
             self.log = log.loadscopesched
 
@@ -187,8 +187,7 @@ class LoadScopeScheduling(object):
             break
         else:
             raise RuntimeError(
-                'Unable to identify crashitem on a workload with '
-                'pending items'
+                "Unable to identify crashitem on a workload with " "pending items"
             )
 
         # Made uncompleted work unit available again
@@ -224,10 +223,7 @@ class LoadScopeScheduling(object):
                 other_node = next(iter(self.registered_collections.keys()))
 
                 msg = report_collection_diff(
-                    self.collection,
-                    collection,
-                    other_node.gateway.id,
-                    node.gateway.id
+                    self.collection, collection, other_node.gateway.id, node.gateway.id
                 )
                 self.log(msg)
                 return
@@ -255,9 +251,7 @@ class LoadScopeScheduling(object):
         scope, work_unit = self.workqueue.popitem(last=False)
 
         # Keep track of the assigned work
-        assigned_to_node = self.assigned_work.setdefault(
-            node, default=OrderedDict()
-        )
+        assigned_to_node = self.assigned_work.setdefault(node, default=OrderedDict())
         assigned_to_node[scope] = work_unit
 
         # Ask the node to execute the workload
@@ -292,14 +286,11 @@ class LoadScopeScheduling(object):
             example/loadsuite/test/test_delta.py::Delta1
             example/loadsuite/epsilon/__init__.py
         """
-        return nodeid.rsplit('::', 1)[0]
+        return nodeid.rsplit("::", 1)[0]
 
     def _pending_of(self, workload):
         """Return the number of pending tests in a workload."""
-        pending = sum(
-            list(scope.values()).count(False)
-            for scope in workload.values()
-        )
+        pending = sum(list(scope.values()).count(False) for scope in workload.values())
         return pending
 
     def _reschedule(self, node):
@@ -317,7 +308,7 @@ class LoadScopeScheduling(object):
         if not self.workqueue:
             return
 
-        self.log('Number of units waiting for node:', len(self.workqueue))
+        self.log("Number of units waiting for node:", len(self.workqueue))
 
         # Check that the node is almost depleted of work
         # 2: Heuristic of minimum tests to enqueue more work
@@ -348,13 +339,11 @@ class LoadScopeScheduling(object):
 
         # Check that all nodes collected the same tests
         if not self._check_nodes_have_same_collection():
-            self.log('**Different tests collected, aborting run**')
+            self.log("**Different tests collected, aborting run**")
             return
 
         # Collections are identical, create the final list of items
-        self.collection = list(
-            next(iter(self.registered_collections.values()))
-        )
+        self.collection = list(next(iter(self.registered_collections.values())))
         if not self.collection:
             return
 
@@ -368,12 +357,12 @@ class LoadScopeScheduling(object):
         extra_nodes = len(self.nodes) - len(self.workqueue)
 
         if extra_nodes > 0:
-            self.log('Shuting down {0} nodes'.format(extra_nodes))
+            self.log("Shuting down {0} nodes".format(extra_nodes))
 
             for _ in range(extra_nodes):
                 unused_node, assigned = self.assigned_work.popitem(last=True)
 
-                self.log('Shuting down unused node {0}'.format(unused_node))
+                self.log("Shuting down unused node {0}".format(unused_node))
                 unused_node.shutdown()
 
         # Assign initial workload
@@ -402,10 +391,7 @@ class LoadScopeScheduling(object):
 
         for node, collection in node_collection_items[1:]:
             msg = report_collection_diff(
-                col,
-                collection,
-                first_node.gateway.id,
-                node.gateway.id,
+                col, collection, first_node.gateway.id, node.gateway.id
             )
             if not msg:
                 continue
@@ -416,12 +402,7 @@ class LoadScopeScheduling(object):
             if self.config is None:
                 continue
 
-            rep = CollectReport(
-                node.gateway.id,
-                'failed',
-                longrepr=msg,
-                result=[]
-            )
+            rep = CollectReport(node.gateway.id, "failed", longrepr=msg, result=[])
             self.config.hook.pytest_collectreport(report=rep)
 
         return same_collection

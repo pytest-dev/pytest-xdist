@@ -20,6 +20,7 @@ pytest_plugins = "pytester"
 @pytest.fixture(autouse=True)
 def _divert_atexit(request, monkeypatch):
     import atexit
+
     finalizers = []
 
     def finish():
@@ -31,10 +32,12 @@ def _divert_atexit(request, monkeypatch):
 
 
 def pytest_addoption(parser):
-    parser.addoption('--gx',
-                     action="append",
-                     dest="gspecs",
-                     help="add a global test environment, XSpec-syntax. ")
+    parser.addoption(
+        "--gx",
+        action="append",
+        dest="gspecs",
+        help="add a global test environment, XSpec-syntax. ",
+    )
 
 
 @pytest.fixture

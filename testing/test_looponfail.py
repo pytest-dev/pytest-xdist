@@ -60,7 +60,7 @@ class TestStatRecorder:
         p.remove()
         # make check()'s visit() call return our just removed
         # path as if we were in a race condition
-        monkeypatch.setattr(tmp, 'visit', lambda *args: [p])
+        monkeypatch.setattr(tmp, "visit", lambda *args: [p])
 
         changed = sd.check()
         assert changed
@@ -84,7 +84,7 @@ class TestStatRecorder:
         sd = StatRecorder([tmp])
 
         ret_values = [True, False]
-        monkeypatch.setattr(StatRecorder, 'check', lambda self: ret_values.pop())
+        monkeypatch.setattr(StatRecorder, "check", lambda self: ret_values.pop())
         sd.waitonchange(checkinterval=0.2)
         assert not ret_values
 
@@ -110,19 +110,25 @@ class TestRemoteControl:
         assert not failures
 
     def test_failure_change(self, testdir):
-        modcol = testdir.getitem("""
+        modcol = testdir.getitem(
+            """
             def test_func():
                 assert 0
-        """)
+        """
+        )
         control = RemoteControl(modcol.config)
         control.loop_once()
         assert control.failures
-        modcol.fspath.write(py.code.Source("""
+        modcol.fspath.write(
+            py.code.Source(
+                """
             def test_func():
                 assert 1
             def test_new():
                 assert 0
-        """))
+        """
+            )
+        )
         removepyc(modcol.fspath)
         control.loop_once()
         assert not control.failures
@@ -131,14 +137,17 @@ class TestRemoteControl:
         assert str(control.failures).find("test_new") != -1
 
     def test_failure_subdir_no_init(self, testdir):
-        modcol = testdir.getitem("""
+        modcol = testdir.getitem(
+            """
             def test_func():
                 assert 0
-        """)
+        """
+        )
         parent = modcol.fspath.dirpath().dirpath()
         parent.chdir()
-        modcol.config.args = [py.path.local(x).relto(parent)
-                              for x in modcol.config.args]
+        modcol.config.args = [
+            py.path.local(x).relto(parent) for x in modcol.config.args
+        ]
         control = RemoteControl(modcol.config)
         control.loop_once()
         assert control.failures
@@ -148,70 +157,87 @@ class TestRemoteControl:
 
 class TestLooponFailing:
     def test_looponfail_from_fail_to_ok(self, testdir):
-        modcol = testdir.getmodulecol("""
+        modcol = testdir.getmodulecol(
+            """
             def test_one():
                 x = 0
                 assert x == 1
             def test_two():
                 assert 1
-        """)
+        """
+        )
         remotecontrol = RemoteControl(modcol.config)
         remotecontrol.loop_once()
         assert len(remotecontrol.failures) == 1
 
-        modcol.fspath.write(py.code.Source("""
+        modcol.fspath.write(
+            py.code.Source(
+                """
             def test_one():
                 assert 1
             def test_two():
                 assert 1
-        """))
+        """
+            )
+        )
         removepyc(modcol.fspath)
         remotecontrol.loop_once()
         assert not remotecontrol.failures
 
     def test_looponfail_from_one_to_two_tests(self, testdir):
-        modcol = testdir.getmodulecol("""
+        modcol = testdir.getmodulecol(
+            """
             def test_one():
                 assert 0
-        """)
+        """
+        )
         remotecontrol = RemoteControl(modcol.config)
         remotecontrol.loop_once()
         assert len(remotecontrol.failures) == 1
-        assert 'test_one' in remotecontrol.failures[0]
+        assert "test_one" in remotecontrol.failures[0]
 
-        modcol.fspath.write(py.code.Source("""
+        modcol.fspath.write(
+            py.code.Source(
+                """
             def test_one():
                 assert 1 # passes now
             def test_two():
                 assert 0 # new and fails
-        """))
+        """
+            )
+        )
         removepyc(modcol.fspath)
         remotecontrol.loop_once()
         assert len(remotecontrol.failures) == 0
         remotecontrol.loop_once()
         assert len(remotecontrol.failures) == 1
-        assert 'test_one' not in remotecontrol.failures[0]
-        assert 'test_two' in remotecontrol.failures[0]
+        assert "test_one" not in remotecontrol.failures[0]
+        assert "test_two" in remotecontrol.failures[0]
 
-    @py.test.mark.xfail(py.test.__version__ >= "3.1",
-                        reason="broken by pytest 3.1+")
+    @py.test.mark.xfail(py.test.__version__ >= "3.1", reason="broken by pytest 3.1+")
     def test_looponfail_removed_test(self, testdir):
-        modcol = testdir.getmodulecol("""
+        modcol = testdir.getmodulecol(
+            """
             def test_one():
                 assert 0
             def test_two():
                 assert 0
-        """)
+        """
+        )
         remotecontrol = RemoteControl(modcol.config)
         remotecontrol.loop_once()
         assert len(remotecontrol.failures) == 2
 
-        modcol.fspath.write(py.code.Source("""
+        modcol.fspath.write(
+            py.code.Source(
+                """
             def test_xxx(): # renamed test
                 assert 0
             def test_two():
                 assert 1 # pass now
-        """))
+        """
+            )
+        )
         removepyc(modcol.fspath)
         remotecontrol.loop_once()
         assert len(remotecontrol.failures) == 0
@@ -220,10 +246,12 @@ class TestLooponFailing:
         assert len(remotecontrol.failures) == 1
 
     def test_looponfail_multiple_errors(self, testdir, monkeypatch):
-        modcol = testdir.getmodulecol("""
+        modcol = testdir.getmodulecol(
+            """
             def test_one():
                 assert 0
-        """)
+        """
+        )
         remotecontrol = RemoteControl(modcol.config)
         orig_runsession = remotecontrol.runsession
 
@@ -233,18 +261,20 @@ class TestLooponFailing:
             print(failures)
             return failures * 2, reports, collection_failed
 
-        monkeypatch.setattr(remotecontrol, 'runsession', runsession_dups)
+        monkeypatch.setattr(remotecontrol, "runsession", runsession_dups)
         remotecontrol.loop_once()
         assert len(remotecontrol.failures) == 1
 
 
 class TestFunctional:
     def test_fail_to_ok(self, testdir):
-        p = testdir.makepyfile("""
+        p = testdir.makepyfile(
+            """
             def test_one():
                 x = 0
                 assert x == 1
-        """)
+        """
+        )
         # p = testdir.mkdir("sub").join(p1.basename)
         # p1.move(p)
         child = testdir.spawn_pytest("-f %s --traceconfig" % p)
@@ -253,21 +283,27 @@ class TestFunctional:
         child.expect("1 failed")
         child.expect("### LOOPONFAILING ####")
         child.expect("waiting for changes")
-        p.write(py.code.Source("""
+        p.write(
+            py.code.Source(
+                """
             def test_one():
                 x = 1
                 assert x == 1
-        """))
+        """
+            )
+        )
         child.expect(".*1 passed.*")
         child.kill(15)
 
     def test_xfail_passes(self, testdir):
-        p = testdir.makepyfile("""
+        p = testdir.makepyfile(
+            """
             import py
             @py.test.mark.xfail
             def test_one():
                 pass
-        """)
+        """
+        )
         child = testdir.spawn_pytest("-f %s" % p)
         child.expect("1 xpass")
         # child.expect("### LOOPONFAILING ####")
