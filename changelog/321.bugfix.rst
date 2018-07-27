@@ -1,0 +1,5 @@
+Revert change that dropped support for ``pytest<3.4``.
+
+This change caused problems in some installations, and was a mistaken
+in the first place as we should not change version requirements
+in bug-fix releases unless they fix an actual bug.
