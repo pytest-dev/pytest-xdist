@@ -1,3 +1,16 @@
+pytest-xdist 1.22.5 (2018-07-27)
+================================
+
+Bug Fixes
+---------
+
+- `#321 <https://github.com/pytest-dev/pytest-xdist/issues/321>`_: Revert change that dropped support for ``pytest<3.4``.
+
+  This change caused problems in some installations, and was a mistaken
+  in the first place as we should not change version requirements
+  in bug-fix releases unless they fix an actual bug.
+
+
 pytest-xdist 1.22.4 (2018-07-27)
 ================================
 
