@@ -46,10 +46,6 @@ jobs:
       env: TOXENV=py36-pytestmaster
     - python: "3.6"
       env: TOXENV=py36-pytestfeatures
-    - python: "3.6"
-      env: TOXENV=flakes
-    - python: "3.6"
-      env: TOXENV=readme
 
     - stage: deploy
       python: '3.6'

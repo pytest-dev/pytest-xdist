@@ -6,8 +6,6 @@ environment:
   - TOXENV: "py36-pytest36"
   - TOXENV: "py27-pytest36-pexpect"
   - TOXENV: "py36-pytest36-pexpect"
-  - TOXENV: "flakes"
-  - TOXENV: "readme"
 
 install:
   - C:\Python36\python -m pip install -U tox setuptools_scm pip
