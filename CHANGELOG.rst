@@ -1,3 +1,16 @@
+pytest-xdist 1.22.4 (2018-07-27)
+================================
+
+Bug Fixes
+---------
+
+- `#305 <https://github.com/pytest-dev/pytest-xdist/issues/305>`_: Remove last references to obsolete ``py.code``.
+
+  Remove some unnecessary references to ``py.builtin``.
+
+- `#316 <https://github.com/pytest-dev/pytest-xdist/issues/316>`_: Workaround cpu detection on Travis CI.
+
+
 pytest-xdist 1.22.3 (2018-07-23)
 ================================
 
