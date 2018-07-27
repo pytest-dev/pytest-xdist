@@ -74,5 +74,3 @@ serialize collected items to send them through the wire, as workers live in anot
 The problem is that test items are not easily (impossible?) to serialize, as they contain references to
 the test functions, fixture managers, config objects, etc. Even if one manages to serialize it,
 it seems it would be very hard to get it right and easy to break by any small change in pytest.
-
-
