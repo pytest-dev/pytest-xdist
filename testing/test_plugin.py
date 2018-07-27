@@ -45,10 +45,10 @@ def test_auto_detect_cpus(testdir, monkeypatch):
     config = testdir.parseconfigure("-nauto")
     assert config.getoption('numprocesses') == 99
 
-    if not hasattr(os, 'sched_getaffinity'):
-        monkeypatch.setenv('TRAVIS', 'true')
-        config = testdir.parseconfigure("-nauto")
-        assert config.getoption('numprocesses') == 2
+    monkeypatch.delattr(os, 'sched_getaffinity', raising=False)
+    monkeypatch.setenv('TRAVIS', 'true')
+    config = testdir.parseconfigure("-nauto")
+    assert config.getoption('numprocesses') == 2
 
 
 def test_boxed_with_collect_only(testdir):
