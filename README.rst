@@ -19,6 +19,9 @@
     :alt: AppVeyor build status
     :target: https://ci.appveyor.com/project/pytestbot/pytest-xdist
 
+.. image:: https://img.shields.io/badge/code%20style-black-000000.svg
+    :target: https://github.com/ambv/black
+
 xdist: pytest distributed testing plugin
 ========================================
 

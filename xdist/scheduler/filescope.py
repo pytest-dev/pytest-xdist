@@ -23,7 +23,7 @@ class LoadFileScheduling(LoadScopeScheduling):
     def __init__(self, config, log=None):
         super(LoadFileScheduling, self).__init__(config, log)
         if log is None:
-            self.log = Producer('loadfilesched')
+            self.log = Producer("loadfilesched")
         else:
             self.log = log.loadfilesched
 
@@ -49,4 +49,4 @@ class LoadFileScheduling(LoadScopeScheduling):
             example/loadsuite/test/test_delta.py
             example/loadsuite/epsilon/__init__.py
         """
-        return nodeid.split('::', 1)[0]
+        return nodeid.split("::", 1)[0]

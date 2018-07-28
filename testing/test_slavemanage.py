@@ -42,7 +42,7 @@ def workercontroller(monkeypatch):
         def setup(self):
             pass
 
-    monkeypatch.setattr(workermanage, 'WorkerController', MockController)
+    monkeypatch.setattr(workermanage, "WorkerController", MockController)
     return MockController
 
 
@@ -58,8 +58,7 @@ class TestNodeManagerPopen:
         for spec in NodeManager(config, specs, defaultchdir="abc").specs:
             assert spec.chdir == "abc"
 
-    def test_popen_makegateway_events(self, config, hookrecorder,
-                                      workercontroller):
+    def test_popen_makegateway_events(self, config, hookrecorder, workercontroller):
         hm = NodeManager(config, ["popen"] * 2)
         hm.setup_nodes(None)
         call = hookrecorder.popcall("pytest_xdist_setupnodes")
@@ -108,15 +107,16 @@ class TestNodeManagerPopen:
         for gw in hm.group:
             hm.rsync(gw, source, notify=lambda *args: notifications.append(args))
         assert len(notifications) == 1
-        assert notifications[0] == ("rsyncrootready", hm.group['gw0'].spec, source)
+        assert notifications[0] == ("rsyncrootready", hm.group["gw0"].spec, source)
         hm.teardown_nodes()
         dest = dest.join(source.basename)
         assert dest.join("dir1").check()
         assert dest.join("dir1", "dir2").check()
-        assert dest.join("dir1", "dir2", 'hello').check()
+        assert dest.join("dir1", "dir2", "hello").check()
 
-    def test_rsync_same_popen_twice(self, config, mysetup, hookrecorder,
-                                    workercontroller):
+    def test_rsync_same_popen_twice(
+        self, config, mysetup, hookrecorder, workercontroller
+    ):
         source, dest = mysetup.source, mysetup.dest
         hm = NodeManager(config, ["popen//chdir=%s" % dest] * 2)
         hm.roots = []
@@ -142,9 +142,9 @@ class TestHRSync:
         files = list(source.visit(rec=syncer.filter, fil=syncer.filter))
         assert len(files) == 3
         basenames = [x.basename for x in files]
-        assert 'dir' in basenames
-        assert 'file.txt' in basenames
-        assert 'somedir' in basenames
+        assert "dir" in basenames
+        assert "file.txt" in basenames
+        assert "somedir" in basenames
 
     def test_hrsync_one_host(self, mysetup):
         source, dest = mysetup.source, mysetup.dest
@@ -169,7 +169,8 @@ class TestNodeManager:
         nodemanager.makegateways()
         nodemanager.rsync_roots()
         p, = nodemanager.gwmanager.multi_exec(
-            "import os ; channel.send(os.getcwd())").receive_each()
+            "import os ; channel.send(os.getcwd())"
+        ).receive_each()
         p = py.path.local(p)
         print("remote curdir", p)
         assert p == mysetup.dest.join(config.topdir.basename)
@@ -183,15 +184,17 @@ class TestNodeManager:
         dir2.ensure("hello")
         for rsyncroot in (dir1, source):
             dest.remove()
-            nodemanager = NodeManager(testdir.parseconfig(
-                "--tx", "popen//chdir=%s" % dest, "--rsyncdir", rsyncroot,
-                source, ))
+            nodemanager = NodeManager(
+                testdir.parseconfig(
+                    "--tx", "popen//chdir=%s" % dest, "--rsyncdir", rsyncroot, source
+                )
+            )
             nodemanager.setup_nodes(None)  # calls .rsync_roots()
             if rsyncroot == source:
                 dest = dest.join("source")
             assert dest.join("dir1").check()
             assert dest.join("dir1", "dir2").check()
-            assert dest.join("dir1", "dir2", 'hello').check()
+            assert dest.join("dir1", "dir2", "hello").check()
             nodemanager.teardown_nodes()
 
     def test_init_rsync_roots(self, testdir, mysetup, workercontroller):
@@ -200,10 +203,14 @@ class TestNodeManager:
         source.ensure("dir1", "somefile", dir=1)
         dir2.ensure("hello")
         source.ensure("bogusdir", "file")
-        source.join("tox.ini").write(textwrap.dedent("""
+        source.join("tox.ini").write(
+            textwrap.dedent(
+                """
             [pytest]
             rsyncdirs=dir1/dir2
-        """))
+        """
+            )
+        )
         config = testdir.parseconfig(source)
         nodemanager = NodeManager(config, ["popen//chdir=%s" % dest])
         nodemanager.setup_nodes(None)  # calls .rsync_roots()
@@ -219,27 +226,31 @@ class TestNodeManager:
         dir2.ensure("hello")
         source.ensure("foo", "bar")
         source.ensure("bar", "foo")
-        source.join("tox.ini").write(textwrap.dedent("""
+        source.join("tox.ini").write(
+            textwrap.dedent(
+                """
             [pytest]
             rsyncdirs = dir1 dir5
             rsyncignore = dir1/dir2 dir5/dir6 foo*
-        """))
+        """
+            )
+        )
         config = testdir.parseconfig(source)
-        config.option.rsyncignore = ['bar']
+        config.option.rsyncignore = ["bar"]
         nodemanager = NodeManager(config, ["popen//chdir=%s" % dest])
         nodemanager.setup_nodes(None)  # calls .rsync_roots()
         assert dest.join("dir1").check()
         assert not dest.join("dir1", "dir2").check()
         assert dest.join("dir5", "file").check()
         assert not dest.join("dir6").check()
-        assert not dest.join('foo').check()
-        assert not dest.join('bar').check()
+        assert not dest.join("foo").check()
+        assert not dest.join("bar").check()
 
     def test_optimise_popen(self, testdir, mysetup, workercontroller):
         source = mysetup.source
         specs = ["popen"] * 3
         source.join("conftest.py").write("rsyncdirs = ['a']")
-        source.ensure('a', dir=1)
+        source.ensure("a", dir=1)
         config = testdir.parseconfig(source)
         nodemanager = NodeManager(config, specs)
         nodemanager.setup_nodes(None)  # calls .rysnc_roots()
@@ -248,12 +259,15 @@ class TestNodeManager:
             assert not gwspec.chdir
 
     def test_ssh_setup_nodes(self, specssh, testdir):
-        testdir.makepyfile(__init__="",
-                           test_x="""
+        testdir.makepyfile(
+            __init__="",
+            test_x="""
             def test_one():
                 pass
-        """)
-        reprec = testdir.inline_run("-d", "--rsyncdir=%s" % testdir.tmpdir,
-                                    "--tx", specssh, testdir.tmpdir)
+        """,
+        )
+        reprec = testdir.inline_run(
+            "-d", "--rsyncdir=%s" % testdir.tmpdir, "--tx", specssh, testdir.tmpdir
+        )
         rep, = reprec.getreports("pytest_runtest_logreport")
         assert rep.passed

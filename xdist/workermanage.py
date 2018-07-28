@@ -22,16 +22,17 @@ def parse_spec_config(config):
         except ValueError:
             xspeclist.append(xspec)
         else:
-            xspeclist.extend([xspec[i + 1:]] * num)
+            xspeclist.extend([xspec[i + 1 :]] * num)
     if not xspeclist:
         raise pytest.UsageError(
-            "MISSING test execution (tx) nodes: please specify --tx")
+            "MISSING test execution (tx) nodes: please specify --tx"
+        )
     return xspeclist
 
 
 class NodeManager(object):
     EXIT_TIMEOUT = 10
-    DEFAULT_IGNORES = ['.*', '*.pyc', '*.pyo', '*~']
+    DEFAULT_IGNORES = [".*", "*.pyc", "*.pyo", "*~"]
 
     def __init__(self, config, specs=None, defaultchdir="pyexecnetcache"):
         self.config = config
@@ -59,8 +60,7 @@ class NodeManager(object):
                 self.rsync(gateway, root, **self.rsyncoptions)
 
     def setup_nodes(self, putevent):
-        self.config.hook.pytest_xdist_setupnodes(config=self.config,
-                                                 specs=self.specs)
+        self.config.hook.pytest_xdist_setupnodes(config=self.config, specs=self.specs)
         self.trace("setting up nodes")
         nodes = []
         for spec in self.specs:
@@ -72,7 +72,7 @@ class NodeManager(object):
         self.config.hook.pytest_xdist_newgateway(gateway=gw)
         self.rsync_roots(gw)
         node = WorkerController(self, gw, self.config, putevent)
-        gw.node = node          # keep the node alive
+        gw.node = node  # keep the node alive
         node.setup()
         self.trace("started node %r" % node)
         return node
@@ -91,6 +91,7 @@ class NodeManager(object):
             return []
         import pytest
         import _pytest
+
         pytestpath = pytest.__file__.rstrip("co")
         pytestdir = py.path.local(_pytest.__file__).dirpath()
         config = self.config
@@ -114,10 +115,7 @@ class NodeManager(object):
         ignores += self.config.option.rsyncignore
         ignores += self.config.getini("rsyncignore")
 
-        return {
-            'ignores': ignores,
-            'verbose': self.config.option.verbose,
-        }
+        return {"ignores": ignores, "verbose": self.config.option.verbose}
 
     def rsync(self, gateway, source, notify=None, verbose=False, ignores=None):
         """Perform rsync to remote hosts for node."""
@@ -129,9 +127,12 @@ class NodeManager(object):
         if spec.popen and not spec.chdir:
             # XXX This assumes that sources are python-packages
             #     and that adding the basedir does not hurt.
-            gateway.remote_exec("""
+            gateway.remote_exec(
+                """
                 import sys ; sys.path.insert(0, %r)
-            """ % os.path.dirname(str(source))).waitclose()
+            """
+                % os.path.dirname(str(source))
+            ).waitclose()
             return
         if (spec, source) in self._rsynced_specs:
             return
@@ -139,28 +140,24 @@ class NodeManager(object):
         def finished():
             if notify:
                 notify("rsyncrootready", spec, source)
+
         rsync.add_target_host(gateway, finished=finished)
         self._rsynced_specs.add((spec, source))
-        self.config.hook.pytest_xdist_rsyncstart(
-            source=source,
-            gateways=[gateway],
-        )
+        self.config.hook.pytest_xdist_rsyncstart(source=source, gateways=[gateway])
         rsync.send()
-        self.config.hook.pytest_xdist_rsyncfinish(
-            source=source,
-            gateways=[gateway],
-        )
+        self.config.hook.pytest_xdist_rsyncfinish(source=source, gateways=[gateway])
 
 
 class HostRSync(execnet.RSync):
     """ RSyncer that filters out common files
     """
+
     def __init__(self, sourcedir, *args, **kwargs):
         self._synced = {}
         self._ignores = []
-        ignores = kwargs.pop('ignores', None) or []
+        ignores = kwargs.pop("ignores", None) or []
         for x in ignores:
-            x = getattr(x, 'strpath', x)
+            x = getattr(x, "strpath", x)
             self._ignores.append(re.compile(fnmatch.translate(x)))
         super(HostRSync, self).__init__(sourcedir=sourcedir, **kwargs)
 
@@ -174,15 +171,15 @@ class HostRSync(execnet.RSync):
 
     def add_target_host(self, gateway, finished=None):
         remotepath = os.path.basename(self._sourcedir)
-        super(HostRSync, self).add_target(gateway, remotepath,
-                                          finishedcallback=finished,
-                                          delete=True,)
+        super(HostRSync, self).add_target(
+            gateway, remotepath, finishedcallback=finished, delete=True
+        )
 
     def _report_send_file(self, gateway, modified_rel_path):
         if self._verbose:
             path = os.path.basename(self._sourcedir) + "/" + modified_rel_path
             remotepath = gateway.spec.chdir
-            print('%s:%s <= %s' % (gateway.spec, remotepath, path))
+            print("%s:%s <= %s" % (gateway.spec, remotepath, path))
 
 
 def make_reltoroot(roots, args):
@@ -211,11 +208,12 @@ class WorkerController(object):
         self.putevent = putevent
         self.gateway = gateway
         self.config = config
-        self.workerinput = {'workerid': gateway.id,
-                            'workercount': len(nodemanager.specs),
-                            'slaveid': gateway.id,
-                            'slavecount': len(nodemanager.specs)
-                            }
+        self.workerinput = {
+            "workerid": gateway.id,
+            "workercount": len(nodemanager.specs),
+            "slaveid": gateway.id,
+            "slavecount": len(nodemanager.specs),
+        }
         # TODO: deprecated name, backward compatibility only. Remove it in future
         self.slaveinput = self.workerinput
         self._down = False
@@ -225,7 +223,7 @@ class WorkerController(object):
             py.log.setconsumer(self.log._keywords, None)
 
     def __repr__(self):
-        return "<%s %s>" % (self.__class__.__name__, self.gateway.id,)
+        return "<%s %s>" % (self.__class__.__name__, self.gateway.id)
 
     @property
     def shutting_down(self):
@@ -240,24 +238,22 @@ class WorkerController(object):
         option_dict = vars(self.config.option)
         if spec.popen:
             name = "popen-%s" % self.gateway.id
-            if hasattr(self.config, '_tmpdirhandler'):
+            if hasattr(self.config, "_tmpdirhandler"):
                 basetemp = self.config._tmpdirhandler.getbasetemp()
-                option_dict['basetemp'] = str(basetemp.join(name))
+                option_dict["basetemp"] = str(basetemp.join(name))
         self.config.hook.pytest_configure_node(node=self)
         self.channel = self.gateway.remote_exec(xdist.remote)
         self.channel.send((self.workerinput, args, option_dict))
         if self.putevent:
-            self.channel.setcallback(
-                self.process_from_remote,
-                endmarker=self.ENDMARK)
+            self.channel.setcallback(self.process_from_remote, endmarker=self.ENDMARK)
 
     def ensure_teardown(self):
-        if hasattr(self, 'channel'):
+        if hasattr(self, "channel"):
             if not self.channel.isclosed():
                 self.log("closing", self.channel)
                 self.channel.close()
             # del self.channel
-        if hasattr(self, 'gateway'):
+        if hasattr(self, "gateway"):
             self.log("exiting", self.gateway)
             self.gateway.exit()
             # del self.gateway
@@ -266,7 +262,7 @@ class WorkerController(object):
         self.sendcommand("runtests", indices=indices)
 
     def send_runtest_all(self):
-        self.sendcommand("runtests_all",)
+        self.sendcommand("runtests_all")
 
     def shutdown(self):
         if not self._down:
@@ -309,25 +305,28 @@ class WorkerController(object):
                 self.notify_inproc(eventname, node=self, **kwargs)
             elif eventname == "workerfinished":
                 self._down = True
-                self.workeroutput = self.slaveoutput = kwargs['workeroutput']
+                self.workeroutput = self.slaveoutput = kwargs["workeroutput"]
                 self.notify_inproc("workerfinished", node=self)
             elif eventname in ("logstart", "logfinish"):
                 self.notify_inproc(eventname, node=self, **kwargs)
-            elif eventname in (
-                    "testreport", "collectreport", "teardownreport"):
+            elif eventname in ("testreport", "collectreport", "teardownreport"):
                 item_index = kwargs.pop("item_index", None)
-                rep = unserialize_report(eventname, kwargs['data'])
+                rep = unserialize_report(eventname, kwargs["data"])
                 if item_index is not None:
                     rep.item_index = item_index
                 self.notify_inproc(eventname, node=self, rep=rep)
             elif eventname == "collectionfinish":
-                self.notify_inproc(eventname, node=self, ids=kwargs['ids'])
+                self.notify_inproc(eventname, node=self, ids=kwargs["ids"])
             elif eventname == "runtest_protocol_complete":
                 self.notify_inproc(eventname, node=self, **kwargs)
             elif eventname == "logwarning":
-                self.notify_inproc(eventname, message=kwargs['message'],
-                                   code=kwargs['code'], nodeid=kwargs['nodeid'],
-                                   fslocation=kwargs['nodeid'])
+                self.notify_inproc(
+                    eventname,
+                    message=kwargs["message"],
+                    code=kwargs["code"],
+                    nodeid=kwargs["nodeid"],
+                    fslocation=kwargs["nodeid"],
+                )
             else:
                 raise ValueError("unknown event: %s" % (eventname,))
         except KeyboardInterrupt:
@@ -335,6 +334,7 @@ class WorkerController(object):
             raise
         except:  # noqa
             from _pytest._code import ExceptionInfo
+
             excinfo = ExceptionInfo()
             print("!" * 20, excinfo)
             self.config.notify_exception(excinfo)
@@ -351,56 +351,56 @@ def unserialize_report(name, reportdict):
             ReprFileLocation,
             ReprFuncArgs,
             ReprLocals,
-            ReprTraceback
+            ReprTraceback,
         )
-        if reportdict['longrepr']:
-            if 'reprcrash' in reportdict['longrepr'] and 'reprtraceback' in reportdict['longrepr']:
 
-                reprtraceback = reportdict['longrepr']['reprtraceback']
-                reprcrash = reportdict['longrepr']['reprcrash']
+        if reportdict["longrepr"]:
+            if (
+                "reprcrash" in reportdict["longrepr"]
+                and "reprtraceback" in reportdict["longrepr"]
+            ):
+
+                reprtraceback = reportdict["longrepr"]["reprtraceback"]
+                reprcrash = reportdict["longrepr"]["reprcrash"]
 
                 unserialized_entries = []
                 reprentry = None
-                for entry_data in reprtraceback['reprentries']:
-                    data = entry_data['data']
-                    entry_type = entry_data['type']
-                    if entry_type == 'ReprEntry':
+                for entry_data in reprtraceback["reprentries"]:
+                    data = entry_data["data"]
+                    entry_type = entry_data["type"]
+                    if entry_type == "ReprEntry":
                         reprfuncargs = None
                         reprfileloc = None
                         reprlocals = None
-                        if data['reprfuncargs']:
-                            reprfuncargs = ReprFuncArgs(
-                                **data['reprfuncargs'])
-                        if data['reprfileloc']:
-                            reprfileloc = ReprFileLocation(
-                                **data['reprfileloc'])
-                        if data['reprlocals']:
-                            reprlocals = ReprLocals(
-                                data['reprlocals']['lines'])
+                        if data["reprfuncargs"]:
+                            reprfuncargs = ReprFuncArgs(**data["reprfuncargs"])
+                        if data["reprfileloc"]:
+                            reprfileloc = ReprFileLocation(**data["reprfileloc"])
+                        if data["reprlocals"]:
+                            reprlocals = ReprLocals(data["reprlocals"]["lines"])
 
                         reprentry = ReprEntry(
-                            lines=data['lines'],
+                            lines=data["lines"],
                             reprfuncargs=reprfuncargs,
                             reprlocals=reprlocals,
                             filelocrepr=reprfileloc,
-                            style=data['style']
+                            style=data["style"],
                         )
-                    elif entry_type == 'ReprEntryNative':
-                        reprentry = ReprEntryNative(data['lines'])
+                    elif entry_type == "ReprEntryNative":
+                        reprentry = ReprEntryNative(data["lines"])
                     else:
-                        report_unserialization_failure(
-                            entry_type, name, reportdict)
+                        report_unserialization_failure(entry_type, name, reportdict)
                     unserialized_entries.append(reprentry)
-                reprtraceback['reprentries'] = unserialized_entries
+                reprtraceback["reprentries"] = unserialized_entries
 
                 exception_info = ReprExceptionInfo(
                     reprtraceback=ReprTraceback(**reprtraceback),
                     reprcrash=ReprFileLocation(**reprcrash),
                 )
 
-                for section in reportdict['longrepr']['sections']:
+                for section in reportdict["longrepr"]["sections"]:
                     exception_info.addsection(*section)
-                reportdict['longrepr'] = exception_info
+                reportdict["longrepr"] = exception_info
         return reportdict
 
     if name == "testreport":
@@ -411,13 +411,13 @@ def unserialize_report(name, reportdict):
 
 def report_unserialization_failure(type_name, report_name, reportdict):
     from pprint import pprint
-    url = 'https://github.com/pytest-dev/pytest-xdist/issues'
+
+    url = "https://github.com/pytest-dev/pytest-xdist/issues"
     stream = py.io.TextIO()
-    pprint('-' * 100, stream=stream)
-    pprint('INTERNALERROR: Unknown entry type returned: %s' % type_name,
-           stream=stream)
-    pprint('report_name: %s' % report_name, stream=stream)
+    pprint("-" * 100, stream=stream)
+    pprint("INTERNALERROR: Unknown entry type returned: %s" % type_name, stream=stream)
+    pprint("report_name: %s" % report_name, stream=stream)
     pprint(reportdict, stream=stream)
-    pprint('Please report this bug at %s' % url, stream=stream)
-    pprint('-' * 100, stream=stream)
+    pprint("Please report this bug at %s" % url, stream=stream)
+    pprint("-" * 100, stream=stream)
     assert 0, stream.getvalue()

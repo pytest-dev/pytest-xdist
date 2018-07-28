@@ -3,7 +3,6 @@ from unittest import TestCase
 
 
 class Delta1(TestCase):
-
     def test_delta0(self):
         sleep(5)
         assert True
@@ -46,7 +45,6 @@ class Delta1(TestCase):
 
 
 class Delta2(TestCase):
-
     def test_delta0(self):
         sleep(5)
         assert True
