@@ -25,12 +25,17 @@ install: pip install tox setuptools_scm
 script: tox
 
 stages:
+- linting
 - test
 - name: deploy
   if: repo = pytest-dev/pytest-xdist AND tag IS present
 
 jobs:
   include:
+    - stage: linting
+      python: '3.6'
+      script:
+      - tox -e linting
     - stage: test
     # python x env above are already included into this stage
     - python: "2.7"
@@ -41,10 +46,6 @@ jobs:
       env: TOXENV=py36-pytestmaster
     - python: "3.6"
       env: TOXENV=py36-pytestfeatures
-    - python: "3.6"
-      env: TOXENV=flakes
-    - python: "3.6"
-      env: TOXENV=readme
 
     - stage: deploy
       python: '3.6'

@@ -13,5 +13,3 @@ Here's a quick checklist that should be present in PRs:
     ```
     Fix issue with non-ascii contents in doctest text files.
     ```
-
-
