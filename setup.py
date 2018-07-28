@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-install_requires = ["execnet>=1.1", "pytest>=3.4", "pytest-forked"]
+install_requires = ["execnet>=1.1", "pytest>=3.0.0", "pytest-forked", "six"]
 
 
 setup(

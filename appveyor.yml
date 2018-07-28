@@ -1,11 +1,13 @@
 environment:
   matrix:
-  - TOXENV: "py27-pytest36"
-  - TOXENV: "py34-pytest36"
-  - TOXENV: "py35-pytest36"
+  # note: please use "tox --listenvs" to populate the build matrix
+  - TOXENV: "py27-pytest33"
+  - TOXENV: "py34-pytest33"
+  - TOXENV: "py35-pytest33"
+  - TOXENV: "py36-pytest33"
   - TOXENV: "py36-pytest36"
-  - TOXENV: "py27-pytest36-pexpect"
-  - TOXENV: "py36-pytest36-pexpect"
+  - TOXENV: "py27-pytest33-pexpect"
+  - TOXENV: "py36-pytest33-pexpect"
 
 install:
   - C:\Python36\python -m pip install -U tox setuptools_scm pip
