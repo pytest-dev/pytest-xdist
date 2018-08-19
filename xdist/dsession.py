@@ -257,9 +257,13 @@ class DSession(object):
         self.sched.mark_test_complete(node, item_index, duration)
 
     def worker_collectreport(self, node, rep):
-        """Emitted when a node calls the pytest_collectreport hook."""
-        if rep.failed:
-            self._failed_worker_collectreport(node, rep)
+        """Emitted when a node calls the pytest_collectreport hook.
+
+        Because we only need the report when there's a failure, as optimization
+        we only expect to receive failed reports from workers (#330).
+        """
+        assert rep.failed
+        self._failed_worker_collectreport(node, rep)
 
     def worker_logwarning(self, message, code, nodeid, fslocation):
         """Emitted when a node calls the pytest_logwarning hook."""

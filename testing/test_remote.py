@@ -321,8 +321,6 @@ class TestWorkerInteractor:
         assert not ev.kwargs
         ev = worker.popevent()
         assert ev.name == "collectreport"
-        ev = worker.popevent()
-        assert ev.name == "collectreport"
         rep = unserialize_report(ev.name, ev.kwargs["data"])
         assert rep.failed
         ev = worker.popevent("collectionfinish")
