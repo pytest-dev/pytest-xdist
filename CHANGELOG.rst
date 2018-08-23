@@ -1,3 +1,12 @@
+pytest-xdist 1.23.0 (2018-08-23)
+================================
+
+Features
+--------
+
+- `#330 <https://github.com/pytest-dev/pytest-xdist/issues/330>`_: Improve collection performance by reducing the number of events sent to ``master`` node.
+
+
 pytest-xdist 1.22.5 (2018-07-27)
 ================================
 
