@@ -109,8 +109,10 @@ class WorkerInteractor(object):
         self.sendevent("testreport", data=data)
 
     def pytest_collectreport(self, report):
-        data = serialize_report(report)
-        self.sendevent("collectreport", data=data)
+        # master only needs reports that failed, as optimization send only them instead (#330)
+        if report.failed:
+            data = serialize_report(report)
+            self.sendevent("collectreport", data=data)
 
     def pytest_logwarning(self, message, code, nodeid, fslocation):
         self.sendevent(
