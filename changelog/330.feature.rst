@@ -1,1 +1,0 @@
-Improve collection performance by reducing the number of events sent to ``master`` node.
