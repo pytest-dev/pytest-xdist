@@ -123,6 +123,18 @@ class WorkerInteractor(object):
             fslocation=str(fslocation),
         )
 
+    # the pytest_warning_captured hook was introduced in pytest 3.8
+    if hasattr(_pytest.hookspec, "pytest_warning_captured"):
+
+        def pytest_warning_captured(self, warning_message, when, item):
+            self.sendevent(
+                "warning_captured",
+                warning_message_data=serialize_warning_message(warning_message),
+                when=when,
+                # item cannot be serialized and will always be None when used with xdist
+                item=None,
+            )
+
 
 def serialize_report(rep):
     def disassembled_report(rep):
@@ -163,6 +175,40 @@ def serialize_report(rep):
         elif name == "result":
             d[name] = None  # for now
     return d
+
+
+def serialize_warning_message(warning_message):
+    if isinstance(warning_message.message, Warning):
+        message_module = type(warning_message.message).__module__
+        message_class_name = type(warning_message.message).__name__
+        message_args = warning_message.message.args
+        message_str = None
+    else:
+        message_str = warning_message.message
+        message_module = None
+        message_class_name = None
+        message_args = None
+    if warning_message.category:
+        category_module = warning_message.category.__module__
+        category_class_name = warning_message.category.__name__
+    else:
+        category_module = None
+        category_class_name = None
+
+    result = {
+        "message_str": message_str,
+        "message_module": message_module,
+        "message_class_name": message_class_name,
+        "message_args": message_args,
+        "category_module": category_module,
+        "category_class_name": category_class_name,
+    }
+    # access private _WARNING_DETAILS because the attributes vary between Python versions
+    for attr_name in warning_message._WARNING_DETAILS:
+        if attr_name in ("message", "category"):
+            continue
+        result[attr_name] = getattr(warning_message, attr_name)
+    return result
 
 
 def getinfodict():

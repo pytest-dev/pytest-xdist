@@ -327,6 +327,16 @@ class WorkerController(object):
                     nodeid=kwargs["nodeid"],
                     fslocation=kwargs["nodeid"],
                 )
+            elif eventname == "warning_captured":
+                warning_message = unserialize_warning_message(
+                    kwargs["warning_message_data"]
+                )
+                self.notify_inproc(
+                    eventname,
+                    warning_message=warning_message,
+                    when=kwargs["when"],
+                    item=kwargs["item"],
+                )
             else:
                 raise ValueError("unknown event: %s" % (eventname,))
         except KeyboardInterrupt:
@@ -407,6 +417,33 @@ def unserialize_report(name, reportdict):
         return runner.TestReport(**assembled_report(reportdict))
     elif name == "collectreport":
         return runner.CollectReport(**assembled_report(reportdict))
+
+
+def unserialize_warning_message(data):
+    import warnings
+    import importlib
+
+    if data["message_module"]:
+        mod = importlib.import_module(data["message_module"])
+        cls = getattr(mod, data["message_class_name"])
+        message = cls(*data["message_args"])
+    else:
+        message = data["message_str"]
+
+    if data["category_module"]:
+        mod = importlib.import_module(data["category_module"])
+        category = getattr(mod, data["category_class_name"])
+    else:
+        category = None
+
+    kwargs = {"message": message, "category": category}
+    # access private _WARNING_DETAILS because the attributes vary between Python versions
+    for attr_name in warnings.WarningMessage._WARNING_DETAILS:
+        if attr_name in ("message", "category"):
+            continue
+        kwargs[attr_name] = data[attr_name]
+
+    return warnings.WarningMessage(**kwargs)
 
 
 def report_unserialization_failure(type_name, report_name, reportdict):

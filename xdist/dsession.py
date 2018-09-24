@@ -270,6 +270,11 @@ class DSession(object):
         kwargs = dict(message=message, code=code, nodeid=nodeid, fslocation=fslocation)
         self.config.hook.pytest_logwarning.call_historic(kwargs=kwargs)
 
+    def worker_warning_captured(self, warning_message, when, item):
+        """Emitted when a node calls the pytest_logwarning hook."""
+        kwargs = dict(warning_message=warning_message, when=when, item=item)
+        self.config.hook.pytest_warning_captured.call_historic(kwargs=kwargs)
+
     def _clone_node(self, node):
         """Return new node based on an existing one.
 
