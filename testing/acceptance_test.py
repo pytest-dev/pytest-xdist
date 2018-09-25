@@ -402,7 +402,7 @@ class TestTerminalReporting:
 
     @pytest.mark.parametrize("n", ["-n0", "-n1"])
     @pytest.mark.parametrize("warn_type", ["pytest", "builtin"])
-    def test_logwarning(self, testdir, n, warn_type):
+    def test_warnings(self, testdir, n, warn_type):
         from pkg_resources import parse_version
 
         if parse_version(pytest.__version__) < parse_version("3.1"):
@@ -417,7 +417,9 @@ class TestTerminalReporting:
             assert False
         testdir.makepyfile(
             """
-            import warnings, py
+            import warnings, py, pytest
+
+            @pytest.mark.filterwarnings('ignore:config.warn has been deprecated')
             def test_func(request):
                 {warn_code}
         """.format(
