@@ -1,3 +1,12 @@
+pytest-xdist 1.23.1 (2018-09-25)
+================================
+
+Bug Fixes
+---------
+
+- `#341 <https://github.com/pytest-dev/pytest-xdist/issues/341>`_: Fix warnings transfer between workers and master node with pytest >= 3.8.
+
+
 pytest-xdist 1.23.0 (2018-08-23)
 ================================
 
