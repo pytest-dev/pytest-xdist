@@ -1,1 +1,0 @@
-Fix warnings transfer between workers and master node with pytest >= 3.8.
