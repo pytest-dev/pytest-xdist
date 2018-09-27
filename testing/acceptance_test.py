@@ -401,10 +401,11 @@ class TestTerminalReporting:
         )
 
     @pytest.mark.parametrize("n", ["-n0", "-n1"])
-    @pytest.mark.parametrize("warn_type", ["pytest", "builtin"])
+    @pytest.mark.parametrize("warn_type", ["pytest", "builtin", "invalid"])
     def test_warnings(self, testdir, n, warn_type):
         from pkg_resources import parse_version
 
+        print(n, warn_type)
         if parse_version(pytest.__version__) < parse_version("3.1"):
             pytest.skip("pytest warnings requires >= 3.1")
 
@@ -413,11 +414,20 @@ class TestTerminalReporting:
         elif warn_type == "pytest":
             warn_code = """request.config.warn('', 'this is a warning',
                            fslocation=py.path.local())"""
+        elif warn_type == "invalid":
+            warn_code = "msg = UserWarning('this is a warning'); msg.args = (); warnings.warn(msg)"
         else:
             assert False
         testdir.makepyfile(
             """
             import warnings, py, pytest
+
+            class BadWarning(Warning):
+                def __init__(self, param):
+                    self.param = param
+                    super(BadWarning, self).__init__()
+                def __str__(self):
+                    return self.param
 
             @pytest.mark.filterwarnings('ignore:config.warn has been deprecated')
             def test_func(request):
