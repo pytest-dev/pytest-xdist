@@ -405,7 +405,6 @@ class TestTerminalReporting:
     def test_warnings(self, testdir, n, warn_type):
         from pkg_resources import parse_version
 
-        print(n, warn_type)
         if parse_version(pytest.__version__) < parse_version("3.1"):
             pytest.skip("pytest warnings requires >= 3.1")
 
@@ -421,13 +420,6 @@ class TestTerminalReporting:
         testdir.makepyfile(
             """
             import warnings, py, pytest
-
-            class BadWarning(Warning):
-                def __init__(self, param):
-                    self.param = param
-                    super(BadWarning, self).__init__()
-                def __str__(self):
-                    return self.param
 
             @pytest.mark.filterwarnings('ignore:config.warn has been deprecated')
             def test_func(request):
