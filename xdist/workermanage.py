@@ -426,7 +426,10 @@ def unserialize_warning_message(data):
     if data["message_module"]:
         mod = importlib.import_module(data["message_module"])
         cls = getattr(mod, data["message_class_name"])
-        message = cls(*data["message_args"])
+        try:
+            message = cls(*data["message_args"])
+        except TypeError:
+            message = Warning(data["message_str"])
     else:
         message = data["message_str"]
 
