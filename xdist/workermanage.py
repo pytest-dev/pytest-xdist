@@ -3,6 +3,7 @@ import fnmatch
 import os
 import re
 import threading
+from multiprocessing.pool import ThreadPool
 
 import py
 import pytest
@@ -62,9 +63,16 @@ class NodeManager(object):
     def setup_nodes(self, putevent):
         self.config.hook.pytest_xdist_setupnodes(config=self.config, specs=self.specs)
         self.trace("setting up nodes")
-        nodes = []
-        for spec in self.specs:
-            nodes.append(self.setup_node(spec, putevent))
+
+        numthreads = min([
+            self.config.option.numthreads,
+            len(self.specs)
+        ])
+        nodes = ThreadPool(numthreads).map(
+            lambda spec: self.setup_node(spec, putevent),
+            [spec for spec in self.specs]
+        )
+
         return nodes
 
     def setup_node(self, spec, putevent):

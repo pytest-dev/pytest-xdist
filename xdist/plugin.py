@@ -34,6 +34,13 @@ def parse_numprocesses(s):
         return int(s)
 
 
+def parse_numthreads(s):
+    if s == "auto":
+        return auto_detect_cpus()
+    else:
+        return int(s)
+
+
 def pytest_addoption(parser):
     group = parser.getgroup("xdist", "distributed and subprocess testing")
     group._addoption(
@@ -131,6 +138,17 @@ def pytest_addoption(parser):
         type="pathlist",
         help="directories to check for changes",
         default=[py.path.local()],
+    )
+    group._addoption(
+        "--numthreads",
+        dest="numthreads",
+        metavar="numthreads",
+        action="store",
+        type=parse_numthreads,
+        default="auto",
+        help="the number of threads to use when instantiating new workers, "
+        "you can use 'auto' here for auto detection CPUs number on "
+        "host system",
     )
 
 
