@@ -182,7 +182,7 @@ def serialize_warning_message(warning_message):
         message_module = type(warning_message.message).__module__
         message_class_name = type(warning_message.message).__name__
         message_args = warning_message.message.args
-        message_str = None
+        message_str = str(warning_message.message)
     else:
         message_str = warning_message.message
         message_module = None
