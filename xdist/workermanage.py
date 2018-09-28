@@ -429,7 +429,7 @@ def unserialize_warning_message(data):
         try:
             message = cls(*data["message_args"])
         except TypeError:
-            message_text = "{mod}.{class}: {msg}".format(
+            message_text = "{mod}.{cls}: {msg}".format(
                 mod=data["message_module"],
                 cls=data["message_class_name"],
                 msg=data["message_str"],

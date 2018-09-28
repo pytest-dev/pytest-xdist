@@ -401,7 +401,7 @@ class TestTerminalReporting:
         )
 
     @pytest.mark.parametrize("n", ["-n0", "-n1"])
-    @pytest.mark.parametrize("warn_type", ["pytest", "builtin", "invalid"])
+    @pytest.mark.parametrize("warn_type", ["pytest", "builtin"])
     def test_warnings(self, testdir, n, warn_type):
         from pkg_resources import parse_version
 
@@ -413,8 +413,6 @@ class TestTerminalReporting:
         elif warn_type == "pytest":
             warn_code = """request.config.warn('', 'this is a warning',
                            fslocation=py.path.local())"""
-        elif warn_type == "invalid":
-            warn_code = "msg = UserWarning('this is a warning'); msg.args = (); warnings.warn(msg)"
         else:
             assert False
         testdir.makepyfile(
@@ -430,6 +428,35 @@ class TestTerminalReporting:
         )
         result = testdir.runpytest(n)
         result.stdout.fnmatch_lines(["*this is a warning*", "*1 passed, 1 warnings*"])
+
+    @pytest.mark.parametrize("n", ["-n0", "-n1"])
+    def test_custom_subclass(self, testdir, n):
+        """Check that warning subclasses that don't honor the args attribute don't break
+        pytest-xdist (#344)
+        """
+        from pkg_resources import parse_version
+
+        if parse_version(pytest.__version__) < parse_version("3.1"):
+            pytest.skip("pytest warnings requires >= 3.1")
+
+        testdir.makepyfile(
+            """
+            import warnings, py, pytest
+
+            class MyWarning(UserWarning):
+
+                def __init__(self, p1, p2):
+                    self.p1 = p1
+                    self.p2 = p2
+                    self.args = ()
+
+            def test_func(request):
+                warnings.warn(MyWarning("foo", 1))
+        """
+        )
+        testdir.syspathinsert()
+        result = testdir.runpytest(n)
+        result.stdout.fnmatch_lines(["*MyWarning*", "*1 passed, 1 warnings*"])
 
     def test_logfinish_hook(self, testdir):
         """Ensure the pytest_runtest_logfinish hook is being properly handled"""
