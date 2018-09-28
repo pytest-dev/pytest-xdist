@@ -64,13 +64,9 @@ class NodeManager(object):
         self.config.hook.pytest_xdist_setupnodes(config=self.config, specs=self.specs)
         self.trace("setting up nodes")
 
-        numthreads = min([
-            self.config.option.numthreads,
-            len(self.specs)
-        ])
+        numthreads = min([self.config.option.numthreads, len(self.specs)])
         nodes = ThreadPool(numthreads).map(
-            lambda spec: self.setup_node(spec, putevent),
-            [spec for spec in self.specs]
+            lambda spec: self.setup_node(spec, putevent), [spec for spec in self.specs]
         )
 
         return nodes
