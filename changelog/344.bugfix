@@ -1,1 +1,0 @@
-Fix issue where Warnings could cause pytest to fail if they do not set the args attribute correctly.

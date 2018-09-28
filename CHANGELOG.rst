@@ -1,3 +1,12 @@
+pytest-xdist 1.23.2 (2018-09-28)
+================================
+
+Bug Fixes
+---------
+
+- `#344 <https://github.com/pytest-dev/pytest-xdist/issues/344>`_: Fix issue where Warnings could cause pytest to fail if they do not set the args attribute correctly.
+
+
 pytest-xdist 1.23.1 (2018-09-25)
 ================================
 
