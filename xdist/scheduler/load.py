@@ -178,6 +178,9 @@ class LoadScheduling(object):
                     return
                 num_send = items_per_node_max - len(node_pending)
                 self._send_tests(node, num_send)
+        else:
+            node.shutdown()
+
         self.log("num items waiting for node:", len(self.pending))
 
     def remove_node(self, node):
