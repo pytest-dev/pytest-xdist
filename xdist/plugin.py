@@ -47,7 +47,7 @@ def pytest_addoption(parser):
         "you can use 'auto' here for auto detection CPUs number on "
         "host system",
     )
-    group._addoption(
+    group.addoption(
         "--maxprocesses",
         dest="maxprocesses",
         metavar="maxprocesses",
