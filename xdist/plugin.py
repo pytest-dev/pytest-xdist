@@ -47,6 +47,14 @@ def pytest_addoption(parser):
         "you can use 'auto' here for auto detection CPUs number on "
         "host system",
     )
+    group._addoption(
+        "--maxprocesses",
+        dest="maxprocesses",
+        metavar="maxprocesses",
+        action="store",
+        type=int,
+        help="limit the maximum number of workers to process the tests when using --numprocesses=auto",
+    )
     group.addoption(
         "--max-worker-restart",
         "--max-slave-restart",
@@ -172,7 +180,10 @@ def pytest_cmdline_main(config):
     if config.option.numprocesses:
         if config.option.dist == "no":
             config.option.dist = "load"
-        config.option.tx = ["popen"] * config.option.numprocesses
+        numprocesses = config.option.numprocesses
+        if config.option.maxprocesses:
+            numprocesses = min(numprocesses, config.option.maxprocesses)
+        config.option.tx = ["popen"] * numprocesses
     if config.option.distload:
         config.option.dist = "load"
     val = config.getvalue

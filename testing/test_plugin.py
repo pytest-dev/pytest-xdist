@@ -25,6 +25,10 @@ def test_dist_options(testdir):
     check_options(config)
     assert config.option.dist == "load"
     assert config.option.tx == ["popen"] * 2
+    config = testdir.parseconfigure("--numprocesses", "3", "--maxprocesses", "2")
+    check_options(config)
+    assert config.option.dist == "load"
+    assert config.option.tx == ["popen"] * 2
     config = testdir.parseconfigure("-d")
     check_options(config)
     assert config.option.dist == "load"
