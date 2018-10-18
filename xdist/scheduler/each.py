@@ -126,6 +126,7 @@ class EachScheduling(object):
             if not pending:
                 pending[:] = range(len(self.node2collection[node]))
                 node.send_runtest_all()
+                node.shutdown()
             else:
                 node.send_runtest_some(pending)
             self._started.append(node)

@@ -1132,6 +1132,56 @@ class TestFileScope:
         assert c1 == c2
 
 
+class TestLocking:
+    _test_content = """
+    class TestClassName%s(object):
+
+        @classmethod
+        def setup_class(cls):
+            FILE_LOCK.acquire()
+
+        @classmethod
+        def teardown_class(cls):
+            FILE_LOCK.release()
+
+        def test_a(self):
+            pass
+
+        def test_b(self):
+            pass
+
+        def test_c(self):
+            pass
+
+    """
+
+    test_file1 = """
+    import filelock
+
+    FILE_LOCK = filelock.FileLock("test.lock")
+
+    """ + (
+        (_test_content * 4) % ("A", "B", "C", "D")
+    )
+
+    @pytest.mark.parametrize("scope", ["each", "load", "loadscope", "loadfile", "no"])
+    def test_single_file(self, testdir, scope):
+        testdir.makepyfile(test_a=self.test_file1)
+        result = testdir.runpytest("-n2", "--dist=%s" % scope, "-v")
+        result.assert_outcomes(passed=(12 if scope != "each" else 12 * 2))
+
+    @pytest.mark.parametrize("scope", ["each", "load", "loadscope", "loadfile", "no"])
+    def test_multi_file(self, testdir, scope):
+        testdir.makepyfile(
+            test_a=self.test_file1,
+            test_b=self.test_file1,
+            test_c=self.test_file1,
+            test_d=self.test_file1,
+        )
+        result = testdir.runpytest("-n2", "--dist=%s" % scope, "-v")
+        result.assert_outcomes(passed=(48 if scope != "each" else 48 * 2))
+
+
 def parse_tests_and_workers_from_output(lines):
     result = []
     for line in lines:

@@ -306,6 +306,7 @@ class LoadScopeScheduling(object):
 
         # Check that more work is available
         if not self.workqueue:
+            node.shutdown()
             return
 
         self.log("Number of units waiting for node:", len(self.workqueue))
