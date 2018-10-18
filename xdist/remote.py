@@ -234,6 +234,7 @@ def remote_initconfig(option_dict, args):
     config.option.dist = "no"
     config.option.distload = False
     config.option.numprocesses = None
+    config.option.maxprocesses = None
     config.args = args
     return config
 
