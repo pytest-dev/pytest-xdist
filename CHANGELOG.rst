@@ -1,3 +1,18 @@
+pytest-xdist 1.24.0 (2018-10-18)
+================================
+
+Features
+--------
+
+- `#337 <https://github.com/pytest-dev/pytest-xdist/issues/337>`_: New ``--maxprocesses`` command-line option that limits the maximum number of workers when using ``--numprocesses=auto``.
+
+
+Bug Fixes
+---------
+
+- `#351 <https://github.com/pytest-dev/pytest-xdist/issues/351>`_: Fix scheduling deadlock in case of inter-test locking.
+
+
 pytest-xdist 1.23.2 (2018-09-28)
 ================================
 
