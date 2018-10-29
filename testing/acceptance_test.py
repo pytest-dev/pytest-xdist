@@ -766,6 +766,23 @@ class TestWarnings:
         result = testdir.runpytest(n)
         result.stdout.fnmatch_lines(["*MyWarning*", "*1 passed, 1 warnings*"])
 
+    @pytest.mark.parametrize("n", ["-n0", "-n1"])
+    def test_unserializable_arguments(self, testdir, n):
+        """Check that warnings with unserializable arguments are handled correctly (#349)."""
+        testdir.makepyfile(
+            """
+            import warnings, pytest
+
+            def test_func(tmpdir):
+                fn = (tmpdir / 'foo.txt').ensure(file=1)
+                with fn.open('r') as f:
+                    warnings.warn(UserWarning("foo", f))
+        """
+        )
+        testdir.syspathinsert()
+        result = testdir.runpytest(n)
+        result.stdout.fnmatch_lines(["*UserWarning*foo.txt*", "*1 passed, 1 warnings*"])
+
 
 class TestNodeFailure:
     def test_load_single(self, testdir):
