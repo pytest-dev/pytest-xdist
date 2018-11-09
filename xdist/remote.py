@@ -12,6 +12,7 @@ import time
 
 import _pytest.hookspec
 import pytest
+from execnet.gateway_base import dumps, DumpError
 
 
 class WorkerInteractor(object):
@@ -181,8 +182,15 @@ def serialize_warning_message(warning_message):
     if isinstance(warning_message.message, Warning):
         message_module = type(warning_message.message).__module__
         message_class_name = type(warning_message.message).__name__
-        message_args = warning_message.message.args
         message_str = str(warning_message.message)
+        # check now if we can serialize the warning arguments (#349)
+        # if not, we will just use the exception message on the master node
+        try:
+            dumps(warning_message.message.args)
+        except DumpError:
+            message_args = None
+        else:
+            message_args = warning_message.message.args
     else:
         message_str = warning_message.message
         message_module = None

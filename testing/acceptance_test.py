@@ -400,64 +400,6 @@ class TestTerminalReporting:
             ]
         )
 
-    @pytest.mark.parametrize("n", ["-n0", "-n1"])
-    @pytest.mark.parametrize("warn_type", ["pytest", "builtin"])
-    def test_warnings(self, testdir, n, warn_type):
-        from pkg_resources import parse_version
-
-        if parse_version(pytest.__version__) < parse_version("3.1"):
-            pytest.skip("pytest warnings requires >= 3.1")
-
-        if warn_type == "builtin":
-            warn_code = """warnings.warn(UserWarning('this is a warning'))"""
-        elif warn_type == "pytest":
-            warn_code = """request.config.warn('', 'this is a warning',
-                           fslocation=py.path.local())"""
-        else:
-            assert False
-        testdir.makepyfile(
-            """
-            import warnings, py, pytest
-
-            @pytest.mark.filterwarnings('ignore:config.warn has been deprecated')
-            def test_func(request):
-                {warn_code}
-        """.format(
-                warn_code=warn_code
-            )
-        )
-        result = testdir.runpytest(n)
-        result.stdout.fnmatch_lines(["*this is a warning*", "*1 passed, 1 warnings*"])
-
-    @pytest.mark.parametrize("n", ["-n0", "-n1"])
-    def test_custom_subclass(self, testdir, n):
-        """Check that warning subclasses that don't honor the args attribute don't break
-        pytest-xdist (#344)
-        """
-        from pkg_resources import parse_version
-
-        if parse_version(pytest.__version__) < parse_version("3.1"):
-            pytest.skip("pytest warnings requires >= 3.1")
-
-        testdir.makepyfile(
-            """
-            import warnings, py, pytest
-
-            class MyWarning(UserWarning):
-
-                def __init__(self, p1, p2):
-                    self.p1 = p1
-                    self.p2 = p2
-                    self.args = ()
-
-            def test_func(request):
-                warnings.warn(MyWarning("foo", 1))
-        """
-        )
-        testdir.syspathinsert()
-        result = testdir.runpytest(n)
-        result.stdout.fnmatch_lines(["*MyWarning*", "*1 passed, 1 warnings*"])
-
     def test_logfinish_hook(self, testdir):
         """Ensure the pytest_runtest_logfinish hook is being properly handled"""
         from _pytest import hookspec
@@ -763,6 +705,83 @@ def test_sub_plugins_disabled(testdir, plugin):
     result = testdir.runpytest(p1, "-n1", "-p", "no:%s" % plugin)
     assert result.ret == 0
     result.stdout.fnmatch_lines("*1 passed*")
+
+
+class TestWarnings:
+    @pytest.fixture(autouse=True)
+    def skip_if_unsupported_pytest_version(self):
+        """Skip tests of this class if we are running in a pytest version which does not
+        support warnings yet.
+        """
+        from pkg_resources import parse_version
+
+        if parse_version(pytest.__version__) < parse_version("3.1"):
+            pytest.skip("pytest warnings requires >= 3.1")
+
+    @pytest.mark.parametrize("n", ["-n0", "-n1"])
+    @pytest.mark.parametrize("warn_type", ["pytest", "builtin"])
+    def test_warnings(self, testdir, n, warn_type):
+        if warn_type == "builtin":
+            warn_code = """warnings.warn(UserWarning('this is a warning'))"""
+        elif warn_type == "pytest":
+            warn_code = """request.config.warn('', 'this is a warning',
+                           fslocation=py.path.local())"""
+        else:
+            assert False
+        testdir.makepyfile(
+            """
+            import warnings, py, pytest
+
+            @pytest.mark.filterwarnings('ignore:config.warn has been deprecated')
+            def test_func(request):
+                {warn_code}
+        """.format(
+                warn_code=warn_code
+            )
+        )
+        result = testdir.runpytest(n)
+        result.stdout.fnmatch_lines(["*this is a warning*", "*1 passed, 1 warnings*"])
+
+    @pytest.mark.parametrize("n", ["-n0", "-n1"])
+    def test_custom_subclass(self, testdir, n):
+        """Check that warning subclasses that don't honor the args attribute don't break
+        pytest-xdist (#344)
+        """
+        testdir.makepyfile(
+            """
+            import warnings, py, pytest
+
+            class MyWarning(UserWarning):
+
+                def __init__(self, p1, p2):
+                    self.p1 = p1
+                    self.p2 = p2
+                    self.args = ()
+
+            def test_func(request):
+                warnings.warn(MyWarning("foo", 1))
+        """
+        )
+        testdir.syspathinsert()
+        result = testdir.runpytest(n)
+        result.stdout.fnmatch_lines(["*MyWarning*", "*1 passed, 1 warnings*"])
+
+    @pytest.mark.parametrize("n", ["-n0", "-n1"])
+    def test_unserializable_arguments(self, testdir, n):
+        """Check that warnings with unserializable arguments are handled correctly (#349)."""
+        testdir.makepyfile(
+            """
+            import warnings, pytest
+
+            def test_func(tmpdir):
+                fn = (tmpdir / 'foo.txt').ensure(file=1)
+                with fn.open('r') as f:
+                    warnings.warn(UserWarning("foo", f))
+        """
+        )
+        testdir.syspathinsert()
+        result = testdir.runpytest(n)
+        result.stdout.fnmatch_lines(["*UserWarning*foo.txt*", "*1 passed, 1 warnings*"])
 
 
 class TestNodeFailure:

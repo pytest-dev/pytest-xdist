@@ -426,9 +426,16 @@ def unserialize_warning_message(data):
     if data["message_module"]:
         mod = importlib.import_module(data["message_module"])
         cls = getattr(mod, data["message_class_name"])
-        try:
-            message = cls(*data["message_args"])
-        except TypeError:
+        message = None
+        if data["message_args"] is not None:
+            try:
+                message = cls(*data["message_args"])
+            except TypeError:
+                pass
+        if message is None:
+            # could not recreate the original warning instance;
+            # create a generic Warning instance with the original
+            # message at least
             message_text = "{mod}.{cls}: {msg}".format(
                 mod=data["message_module"],
                 cls=data["message_class_name"],

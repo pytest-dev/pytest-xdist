@@ -1,0 +1,1 @@
+Correctly handle warnings created with arguments that can't be serialized during the transfer from workers to master node.
