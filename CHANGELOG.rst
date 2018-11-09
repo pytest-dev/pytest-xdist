@@ -1,3 +1,12 @@
+pytest-xdist 1.24.1 (2018-11-09)
+================================
+
+Bug Fixes
+---------
+
+- `#349 <https://github.com/pytest-dev/pytest-xdist/issues/349>`_: Correctly handle warnings created with arguments that can't be serialized during the transfer from workers to master node.
+
+
 pytest-xdist 1.24.0 (2018-10-18)
 ================================
 
