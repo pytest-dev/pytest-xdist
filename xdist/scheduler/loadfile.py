@@ -1,4 +1,4 @@
-from . import LoadScopeScheduling
+from .loadscope import LoadScopeScheduling
 from py.log import Producer
 
 
