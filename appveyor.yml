@@ -1,21 +1,23 @@
 environment:
   matrix:
-  # note: please use "tox --listenvs" to populate the build matrix
-  - TOXENV: "py27-pytest33"
-  - TOXENV: "py34-pytest33"
-  - TOXENV: "py35-pytest33"
-  - TOXENV: "py36-pytest33"
+  - TOXENV: "py27-pytestlatest"
+  - TOXENV: "py34-pytestlatest"
+  - TOXENV: "py35-pytestlatest"
   - TOXENV: "py36-pytestlatest"
-  - TOXENV: "py27-pytest33-pexpect"
-  - TOXENV: "py36-pytest33-pexpect"
+  - TOXENV: "py37-pytestlatest"
+  - TOXENV: "py27-pytestmaster"
+  - TOXENV: "py36-pytestmaster"
+  - TOXENV: "py27-pytestfeatures"
+  - TOXENV: "py36-pytestfeatures"
 
 install:
-  - C:\Python36\python -m pip install -U tox setuptools_scm pip
+  - C:\Python37\python -m pip install -U pip
+  - C:\Python37\python -m pip install -U tox setuptools_scm
 
 build: false  # Not a C# project, build stuff at the test step instead.
 
 test_script:
-  - C:\Python36\python -m tox
+  - C:\Python37\python -m tox
 
 # We don't deploy anything on tags with AppVeyor, we use Travis instead, so we
 # might as well save resources

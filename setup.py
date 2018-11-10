@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-install_requires = ["execnet>=1.1", "pytest>=3.0.0", "pytest-forked", "six"]
+install_requires = ["execnet>=1.1", "pytest>=3.6.0", "pytest-forked", "six"]
 
 
 setup(
@@ -40,5 +40,6 @@ setup(
         "Programming Language :: Python :: 3.4",
         "Programming Language :: Python :: 3.5",
         "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
     ],
 )

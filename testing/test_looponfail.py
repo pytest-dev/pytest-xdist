@@ -1,4 +1,7 @@
 import py
+import pytest
+from pkg_resources import parse_version
+
 from xdist.looponfail import RemoteControl
 from xdist.looponfail import StatRecorder
 
@@ -214,7 +217,11 @@ class TestLooponFailing:
         assert "test_one" not in remotecontrol.failures[0]
         assert "test_two" in remotecontrol.failures[0]
 
-    @py.test.mark.xfail(py.test.__version__ >= "3.1", reason="broken by pytest 3.1+")
+    @pytest.mark.xfail(
+        parse_version(pytest.__version__) >= parse_version("3.1"),
+        reason="broken by pytest 3.1+",
+        strict=True,
+    )
     def test_looponfail_removed_test(self, testdir):
         modcol = testdir.getmodulecol(
             """

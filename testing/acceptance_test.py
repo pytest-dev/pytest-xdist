@@ -708,16 +708,6 @@ def test_sub_plugins_disabled(testdir, plugin):
 
 
 class TestWarnings:
-    @pytest.fixture(autouse=True)
-    def skip_if_unsupported_pytest_version(self):
-        """Skip tests of this class if we are running in a pytest version which does not
-        support warnings yet.
-        """
-        from pkg_resources import parse_version
-
-        if parse_version(pytest.__version__) < parse_version("3.1"):
-            pytest.skip("pytest warnings requires >= 3.1")
-
     @pytest.mark.parametrize("n", ["-n0", "-n1"])
     @pytest.mark.parametrize("warn_type", ["pytest", "builtin"])
     def test_warnings(self, testdir, n, warn_type):
