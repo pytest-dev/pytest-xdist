@@ -1,6 +1,8 @@
 import py
 import pprint
 import pytest
+from pkg_resources import parse_version
+
 from xdist.workermanage import WorkerController, unserialize_report
 from xdist.remote import serialize_report
 import execnet
@@ -293,13 +295,14 @@ class TestWorkerInteractor:
         assert "workeroutput" in ev.kwargs
 
     @pytest.mark.skipif(
-        pytest.__version__ >= "3.0", reason="skip at module level illegal in pytest 3.0"
+        parse_version(pytest.__version__) < parse_version("3.3"),
+        reason="skip at module level illegal in this pytest version",
     )
     def test_remote_collect_skip(self, worker):
         worker.testdir.makepyfile(
             """
-            import py
-            py.test.skip("hello")
+            import pytest
+            pytest.skip("hello", allow_module_level=True)
         """
         )
         worker.setup()
@@ -307,10 +310,9 @@ class TestWorkerInteractor:
         assert not ev.kwargs
         ev = worker.popevent()
         assert ev.name == "collectreport"
-        ev = worker.popevent()
-        assert ev.name == "collectreport"
         rep = unserialize_report(ev.name, ev.kwargs["data"])
         assert rep.skipped
+        assert rep.longrepr[2] == "Skipped: hello"
         ev = worker.popevent("collectionfinish")
         assert not ev.kwargs["ids"]
 

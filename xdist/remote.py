@@ -110,8 +110,8 @@ class WorkerInteractor(object):
         self.sendevent("testreport", data=data)
 
     def pytest_collectreport(self, report):
-        # master only needs reports that failed, as optimization send only them instead (#330)
-        if report.failed:
+        # send only reports that have not passed to master as optimization (#330)
+        if not report.passed:
             data = serialize_report(report)
             self.sendevent("collectreport", data=data)
 
