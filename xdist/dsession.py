@@ -259,10 +259,10 @@ class DSession(object):
     def worker_collectreport(self, node, rep):
         """Emitted when a node calls the pytest_collectreport hook.
 
-        Because we only need the report when there's a failure, as optimization
-        we only expect to receive failed reports from workers (#330).
+        Because we only need the report when there's a failure/skip, as optimization
+        we only expect to receive failed/skipped reports from workers (#330).
         """
-        assert rep.failed
+        assert not rep.passed
         self._failed_worker_collectreport(node, rep)
 
     def worker_logwarning(self, message, code, nodeid, fslocation):
