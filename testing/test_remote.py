@@ -1,7 +1,6 @@
 import py
 import pprint
 import pytest
-from pkg_resources import parse_version
 
 from xdist.workermanage import WorkerController, unserialize_report
 from xdist.remote import serialize_report
@@ -294,10 +293,6 @@ class TestWorkerInteractor:
         ev = worker.popevent("workerfinished")
         assert "workeroutput" in ev.kwargs
 
-    @pytest.mark.skipif(
-        parse_version(pytest.__version__) < parse_version("3.3"),
-        reason="skip at module level illegal in this pytest version",
-    )
     def test_remote_collect_skip(self, worker):
         worker.testdir.makepyfile(
             """

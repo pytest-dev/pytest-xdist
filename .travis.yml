@@ -11,18 +11,9 @@ notifications:
   email:
   - pytest-commit@python.org
 
-python:
-- '2.7'
-- '3.4'
-- '3.5'
-- '3.6'
-env:
-- TOXENV=py-pytest30
-- TOXENV=py-pytest31
-- TOXENV=py-pytest32
-- TOXENV=py-pytest33
-
-install: pip install tox setuptools_scm
+install:
+  - pip install -U pip
+  - pip install tox setuptools_scm
 script: tox
 
 stages:
@@ -42,7 +33,14 @@ jobs:
       env: TOXENV=py27-pytestlatest
 
     - stage: test
-    # python x env above are already included into this stage
+      python: "3.4"
+      env: TOXENV=py34-pytestlatest
+    - python: "3.5"
+      env: TOXENV=py35-pytestlatest
+    - python: "3.7"
+      env: TOXENV=py37-pytestlatest
+      sudo: required
+      dist: xenial
     - python: "2.7"
       env: TOXENV=py27-pytestmaster
     - python: "2.7"
