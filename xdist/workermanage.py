@@ -203,7 +203,13 @@ def make_reltoroot(roots, args):
 class WorkerController(object):
     ENDMARK = -1
 
+    class RemoteHook:
+        @pytest.mark.trylast
+        def pytest_xdist_getremotemodule(self):
+            return xdist.remote
+
     def __init__(self, nodemanager, gateway, config, putevent):
+        config.pluginmanager.register(self.RemoteHook())
         self.nodemanager = nodemanager
         self.putevent = putevent
         self.gateway = gateway
@@ -242,7 +248,8 @@ class WorkerController(object):
                 basetemp = self.config._tmpdirhandler.getbasetemp()
                 option_dict["basetemp"] = str(basetemp.join(name))
         self.config.hook.pytest_configure_node(node=self)
-        self.channel = self.gateway.remote_exec(xdist.remote)
+        remote_module = self.config.hook.pytest_xdist_getremotemodule()
+        self.channel = self.gateway.remote_exec(remote_module)
         self.channel.send((self.workerinput, args, option_dict))
         if self.putevent:
             self.channel.setcallback(self.process_from_remote, endmarker=self.ENDMARK)
