@@ -344,8 +344,11 @@ class TerminalDistReporter(object):
             self.rewrite(self.getstatus())
 
     def getstatus(self):
-        parts = ["%s %s" % (spec.id, self._status[spec.id]) for spec in self._specs]
-        return " / ".join(parts)
+        if self.config.option.verbose >= 0:
+            parts = ["%s %s" % (spec.id, self._status[spec.id]) for spec in self._specs]
+            return " / ".join(parts)
+        else:
+            return "bringing up nodes..."
 
     def rewrite(self, line, newline=False):
         pline = line + " " * max(self._lastlen - len(line), 0)
