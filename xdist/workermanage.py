@@ -3,6 +3,7 @@ import fnmatch
 import os
 import re
 import threading
+import types
 
 import py
 import pytest
@@ -205,8 +206,8 @@ class WorkerController(object):
 
     class RemoteHook:
         @pytest.mark.trylast
-        def pytest_xdist_getremotemodule(self):
-            return xdist.remote
+        def pytest_xdist_getremotetarget(self):
+            return RemoteTarget(xdist.remote)
 
     def __init__(self, nodemanager, gateway, config, putevent):
         config.pluginmanager.register(self.RemoteHook())
@@ -248,8 +249,8 @@ class WorkerController(object):
                 basetemp = self.config._tmpdirhandler.getbasetemp()
                 option_dict["basetemp"] = str(basetemp.join(name))
         self.config.hook.pytest_configure_node(node=self)
-        remote_module = self.config.hook.pytest_xdist_getremotemodule()
-        self.channel = self.gateway.remote_exec(remote_module)
+        target, _, target_kwargs = self.config.hook.pytest_xdist_getremotetarget().pack()
+        self.channel = self.gateway.remote_exec(target, **target_kwargs)
         self.channel.send((self.workerinput, args, option_dict))
         if self.putevent:
             self.channel.setcallback(self.process_from_remote, endmarker=self.ENDMARK)
@@ -357,6 +358,23 @@ class WorkerController(object):
             self.config.notify_exception(excinfo)
             self.shutdown()
             self.notify_inproc("errordown", node=self, error=excinfo)
+
+
+class RemoteTarget:
+    def __init__(self, target, *args, **kwargs):
+        self._target = target
+        self._args = args
+        self._kwargs = kwargs
+        self.validate()
+
+    def validate(self):
+        # this is based on execnet criteria
+        assert not self._args, "Positional arguments are not yet supported"
+        if isinstance(self._target, types.ModuleType):
+            assert not (self._args or self._kwargs), "Arguments are not used with module targets"
+
+    def pack(self):
+        return self._target, self._args, self._kwargs
 
 
 def unserialize_report(name, reportdict):
