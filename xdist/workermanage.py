@@ -268,7 +268,7 @@ class WorkerController(object):
         if not self._down:
             try:
                 self.sendcommand("shutdown")
-            except IOError:
+            except (IOError, OSError):
                 pass
             self._shutdown_sent = True
 
