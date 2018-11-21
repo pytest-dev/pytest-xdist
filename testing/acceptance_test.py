@@ -803,6 +803,37 @@ class TestWarnings:
         result = testdir.runpytest(n)
         result.stdout.fnmatch_lines(["*UserWarning*foo.txt*", "*1 passed, 1 warnings*"])
 
+    @pytest.mark.parametrize("n", ["-n0", "-n1"])
+    def test_unserializable_warning_details(self, testdir, n):
+        """Check that warnings with unserializable _WARNING_DETAILS are
+        handled correctly (#379).
+        """
+        testdir.makepyfile(
+            """
+            import warnings, pytest
+            import socket
+            import gc
+            def abuse_socket():
+                s = socket.socket()
+                del s
+
+            # Deliberately provoke a ResourceWarning for an unclosed socket.
+            # The socket itself will end up attached as a value in
+            # _WARNING_DETAIL. We need to test that it is not serialized
+            # (it can't be, so the test will fail if we try to).
+            def test_func(tmpdir):
+                warnings.resetwarnings()
+                warnings.simplefilter('always', ResourceWarning)
+                abuse_socket()
+                gc.collect()
+        """
+        )
+        testdir.syspathinsert()
+        result = testdir.runpytest(n)
+        result.stdout.fnmatch_lines(
+            ["*ResourceWarning*unclosed*", "*1 passed, 1 warnings*"]
+        )
+
 
 class TestNodeFailure:
     def test_load_single(self, testdir):
