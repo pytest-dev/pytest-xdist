@@ -611,6 +611,11 @@ def test_skipping(testdir):
 
 
 def test_issue34_pluginloading_in_subprocess(testdir):
+    import _pytest.hookspec
+
+    if not hasattr(_pytest.hookspec, "pytest_namespace"):
+        pytest.skip("this pytest version no longer supports pytest_namespace()")
+
     testdir.tmpdir.join("plugin123.py").write(
         textwrap.dedent(
             """
