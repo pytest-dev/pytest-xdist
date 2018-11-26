@@ -249,9 +249,7 @@ class WorkerController(object):
                 basetemp = self.config._tmpdirhandler.getbasetemp()
                 option_dict["basetemp"] = str(basetemp.join(name))
         self.config.hook.pytest_configure_node(node=self)
-        target, _, target_kwargs = (
-            self.config.hook.pytest_xdist_getremotetarget().pack()
-        )
+        target, _, target_kwargs = self.config.hook.pytest_xdist_getremotetarget().pack()
         self.channel = self.gateway.remote_exec(target, **target_kwargs)
         self.channel.send((self.workerinput, args, option_dict))
         if self.putevent:
@@ -373,9 +371,7 @@ class RemoteTarget:
         # this is based on execnet criteria
         assert not self._args, "Positional arguments are not yet supported"
         if isinstance(self._target, types.ModuleType):
-            assert not (
-                self._args or self._kwargs
-            ), "Arguments are not used with module targets"
+            assert not (self._args or self._kwargs), "Arguments are not used with module targets"
 
     def pack(self):
         return self._target, self._args, self._kwargs
