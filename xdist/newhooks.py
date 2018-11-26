@@ -31,11 +31,8 @@ def pytest_xdist_rsyncfinish(source, gateways):
 
 
 @pytest.mark.firstresult
-def pytest_xdist_getremotetarget():
-    """
-    called to get the remote target.
-    :return: a workermanager.RemoteTarget
-    """
+def pytest_xdist_getremotemodule():
+    """ called when creating remote node"""
 
 
 def pytest_configure_node(node):
