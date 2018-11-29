@@ -358,6 +358,18 @@ class TestDistEach:
 
 
 class TestTerminalReporting:
+    def test_quiet_no_output(self, testdir):
+        testdir.makepyfile(
+            """
+            def test_ok():
+                pass
+        """
+        )
+        result = testdir.runpytest("-q")
+        result.stdout.fnmatch_lines(
+            [".*[100%]*", "*1*passed*"]
+        )
+
     def test_pass_skip_fail(self, testdir):
         testdir.makepyfile(
             """

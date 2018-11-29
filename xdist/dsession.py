@@ -229,9 +229,10 @@ class DSession(object):
             if self.terminal and not self.sched.has_pending:
                 self.trdist.ensure_show_status()
                 self.terminal.write_line("")
-                self.terminal.write_line(
-                    "scheduling tests via %s" % (self.sched.__class__.__name__)
-                )
+                if self.config.option.verbose > 0:
+                    self.terminal.write_line(
+                        "scheduling tests via %s" % (self.sched.__class__.__name__)
+                    )
             self.sched.schedule()
 
     def worker_logstart(self, node, nodeid, location):
