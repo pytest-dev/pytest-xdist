@@ -32,7 +32,7 @@ def pytest_cmdline_main(config):
     if config.getoption("looponfail"):
         usepdb = config.getoption("usepdb")  # a core option
         if usepdb:
-            raise pytest.UsageError("--pdb incompatible with --looponfail.")
+            raise pytest.UsageError("--pdb is incompatible with --looponfail.")
         looponfail_main(config)
         return 2  # looponfail only can get stop with ctrl-C anyway
 

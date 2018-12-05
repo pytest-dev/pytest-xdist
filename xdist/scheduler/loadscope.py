@@ -187,7 +187,7 @@ class LoadScopeScheduling(object):
             break
         else:
             raise RuntimeError(
-                "Unable to identify crashitem on a workload with " "pending items"
+                "Unable to identify crashitem on a workload with pending items"
             )
 
         # Made uncompleted work unit available again
