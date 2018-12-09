@@ -1,6 +1,8 @@
+import os
 import py
 import pprint
 import pytest
+import sys
 
 from xdist.workermanage import WorkerController, unserialize_report
 from xdist.remote import serialize_report
@@ -397,3 +399,68 @@ def test_remote_env_vars(testdir):
     )
     result = testdir.runpytest("-n2", "--max-worker-restart=0")
     assert result.ret == 0
+
+
+def test_remote_inner_argv(testdir):
+    """Test/document the behavior due to execnet using `python -c`."""
+    testdir.makepyfile(
+        """
+        import sys
+
+        def test_argv():
+            assert sys.argv == ["-c"]
+        """
+    )
+    result = testdir.runpytest("-n1")
+    assert result.ret == 0
+
+
+def test_remote_mainargv(testdir):
+    outer_argv = sys.argv
+
+    testdir.makepyfile(
+        """
+        def test_mainargv(request):
+            assert request.config.workerinput["mainargv"] == {!r}
+        """.format(
+            outer_argv
+        )
+    )
+    result = testdir.runpytest("-n1")
+    assert result.ret == 0
+
+
+def test_remote_usage_prog(testdir, request):
+    if not hasattr(request.config._parser, "prog"):
+        pytest.skip("prog not available in config parser")
+    prog = os.path.basename(sys.argv[0])
+
+    testdir.makeconftest(
+        """
+        import pytest
+
+        config_parser = None
+
+        @pytest.fixture
+        def get_config_parser():
+            return config_parser
+
+        def pytest_configure(config):
+            global config_parser
+            config_parser = config._parser
+    """
+    )
+    testdir.makepyfile(
+        """
+        import sys
+
+        def test(get_config_parser, request):
+            get_config_parser._getparser().error("my_usage_error")
+    """
+    )
+
+    result = testdir.runpytest_subprocess("-n1")
+    assert result.ret == 1
+    result.stdout.fnmatch_lines(
+        ["usage: %s *" % prog, "%s: error: my_usage_error" % prog]
+    )
