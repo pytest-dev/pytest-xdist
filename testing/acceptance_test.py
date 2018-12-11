@@ -358,15 +358,29 @@ class TestDistEach:
 
 
 class TestTerminalReporting:
-    def test_quiet_no_output(self, testdir):
+    @pytest.mark.parametrize("verbosity", ["", "-q", "-v"])
+    def test_output_verbosity(self, testdir, verbosity):
         testdir.makepyfile(
             """
             def test_ok():
                 pass
         """
         )
-        result = testdir.runpytest("-q")
-        result.stdout.fnmatch_lines([".*[100%]*", "*1*passed*"])
+        args = ["-n1"]
+        if verbosity:
+            args.append(verbosity)
+        result = testdir.runpytest(*args)
+        out = result.stdout.str()
+        if verbosity == "-v":
+            assert "scheduling tests" in out
+            assert "gw" in out
+        elif verbosity == "-q":
+            assert "scheduling tests" not in out
+            assert "gw" not in out
+            assert "bringing up nodes..." in out
+        else:
+            assert "scheduling tests" not in out
+            assert "gw" in out
 
     def test_pass_skip_fail(self, testdir):
         testdir.makepyfile(
