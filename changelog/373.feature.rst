@@ -1,0 +1,1 @@
+Node setup information is hidden when pytest is run in quiet mode to reduce noise on many-core machines.
