@@ -541,16 +541,15 @@ def test_session_testscollected(testdir):
     assert collected_file.read() == "collected = 3"
 
 
-def test_funcarg_teardown_failure(testdir):
+def test_fixture_teardown_failure(testdir):
     p = testdir.makepyfile(
         """
         import pytest
-        @pytest.fixture
+        @pytest.fixture(scope="module")
         def myarg(request):
-            def teardown(val):
-                raise ValueError(val)
-            return request.cached_setup(setup=lambda: 42, teardown=teardown,
-                scope="module")
+            yield 42
+            raise ValueError(42)
+
         def test_hello(myarg):
             pass
     """
@@ -636,6 +635,11 @@ def test_skipping(testdir):
 
 
 def test_issue34_pluginloading_in_subprocess(testdir):
+    import _pytest.hookspec
+
+    if not hasattr(_pytest.hookspec, "pytest_namespace"):
+        pytest.skip("this pytest version no longer supports pytest_namespace()")
+
     testdir.tmpdir.join("plugin123.py").write(
         textwrap.dedent(
             """

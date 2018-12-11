@@ -268,7 +268,7 @@ class WorkerController(object):
         if not self._down:
             try:
                 self.sendcommand("shutdown")
-            except IOError:
+            except (IOError, OSError):
                 pass
             self._shutdown_sent = True
 
@@ -345,7 +345,11 @@ class WorkerController(object):
         except:  # noqa
             from _pytest._code import ExceptionInfo
 
-            excinfo = ExceptionInfo()
+            # ExceptionInfo API changed in pytest 4.1
+            if hasattr(ExceptionInfo, "from_current"):
+                excinfo = ExceptionInfo.from_current()
+            else:
+                excinfo = ExceptionInfo()
             print("!" * 20, excinfo)
             self.config.notify_exception(excinfo)
             self.shutdown()
