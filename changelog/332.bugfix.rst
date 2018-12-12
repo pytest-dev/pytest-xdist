@@ -1,1 +1,0 @@
-Fix report of module-level skips (``pytest.skip(reason, allow_module_level=True)``).

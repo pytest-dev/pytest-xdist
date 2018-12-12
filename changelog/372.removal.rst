@@ -1,1 +1,0 @@
-Pytest versions older than 3.6 are no longer supported.

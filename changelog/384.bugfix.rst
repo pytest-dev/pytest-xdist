@@ -1,1 +1,0 @@
-pytest 4.1 support: ``ExceptionInfo`` API changes.
