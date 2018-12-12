@@ -264,6 +264,7 @@ if __name__ == "__channelexec__":
     import py
 
     config = remote_initconfig(option_dict, args)
+    config._parser.prog = os.path.basename(workerinput["mainargv"][0])
     config.workerinput = workerinput
     config.workeroutput = {}
     # TODO: deprecated name, backward compatibility only. Remove it in future

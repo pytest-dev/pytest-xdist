@@ -2,6 +2,7 @@ from __future__ import print_function
 import fnmatch
 import os
 import re
+import sys
 import threading
 
 import py
@@ -213,6 +214,7 @@ class WorkerController(object):
             "workercount": len(nodemanager.specs),
             "slaveid": gateway.id,
             "slavecount": len(nodemanager.specs),
+            "mainargv": sys.argv,
         }
         # TODO: deprecated name, backward compatibility only. Remove it in future
         self.slaveinput = self.workerinput

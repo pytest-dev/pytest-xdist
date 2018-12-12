@@ -1,0 +1,3 @@
+``mainargv`` is made available in ``workerinput`` from the host's ``sys.argv``.
+
+This can be used via ``request.config.workerinput["mainargv"]``.
