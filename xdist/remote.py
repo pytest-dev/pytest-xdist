@@ -115,14 +115,17 @@ class WorkerInteractor(object):
             data = serialize_report(report)
             self.sendevent("collectreport", data=data)
 
-    def pytest_logwarning(self, message, code, nodeid, fslocation):
-        self.sendevent(
-            "logwarning",
-            message=message,
-            code=code,
-            nodeid=nodeid,
-            fslocation=str(fslocation),
-        )
+    # the pytest_logwarning hook was removed in pytest 4.1
+    if hasattr(_pytest.hookspec, "pytest_logwarning"):
+
+        def pytest_logwarning(self, message, code, nodeid, fslocation):
+            self.sendevent(
+                "logwarning",
+                message=message,
+                code=code,
+                nodeid=nodeid,
+                fslocation=str(fslocation),
+            )
 
     # the pytest_warning_captured hook was introduced in pytest 3.8
     if hasattr(_pytest.hookspec, "pytest_warning_captured"):
