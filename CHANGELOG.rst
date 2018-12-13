@@ -1,3 +1,34 @@
+pytest-xdist 1.25.0 (2018-12-12)
+================================
+
+Deprecations and Removals
+-------------------------
+
+- `#372 <https://github.com/pytest-dev/pytest-xdist/issues/372>`_: Pytest versions older than 3.6 are no longer supported.
+
+
+Features
+--------
+
+- `#373 <https://github.com/pytest-dev/pytest-xdist/issues/373>`_: Node setup information is hidden when pytest is run in quiet mode to reduce noise on many-core machines.
+
+- `#388 <https://github.com/pytest-dev/pytest-xdist/issues/388>`_: ``mainargv`` is made available in ``workerinput`` from the host's ``sys.argv``.
+
+  This can be used via ``request.config.workerinput["mainargv"]``.
+
+
+Bug Fixes
+---------
+
+- `#332 <https://github.com/pytest-dev/pytest-xdist/issues/332>`_: Fix report of module-level skips (``pytest.skip(reason, allow_module_level=True)``).
+
+- `#378 <https://github.com/pytest-dev/pytest-xdist/issues/378>`_: Fix support for gevent monkeypatching
+
+- `#384 <https://github.com/pytest-dev/pytest-xdist/issues/384>`_: pytest 4.1 support: ``ExceptionInfo`` API changes.
+
+- `#390 <https://github.com/pytest-dev/pytest-xdist/issues/390>`_: pytest 4.1 support: ``pytest_logwarning`` hook removed.
+
+
 pytest-xdist 1.24.1 (2018-11-09)
 ================================
 
