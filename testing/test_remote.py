@@ -1,4 +1,3 @@
-import os
 import py
 import pprint
 import pytest
@@ -433,8 +432,6 @@ def test_remote_mainargv(testdir):
 def test_remote_usage_prog(testdir, request):
     if not hasattr(request.config._parser, "prog"):
         pytest.skip("prog not available in config parser")
-    prog = os.path.basename(sys.argv[0])
-
     testdir.makeconftest(
         """
         import pytest
@@ -462,5 +459,5 @@ def test_remote_usage_prog(testdir, request):
     result = testdir.runpytest_subprocess("-n1")
     assert result.ret == 1
     result.stdout.fnmatch_lines(
-        ["usage: %s *" % prog, "%s: error: my_usage_error" % prog]
+        ["usage: pytest.py *", "pytest.py: error: my_usage_error"]
     )
