@@ -251,17 +251,20 @@ def remote_initconfig(option_dict, args):
 
 
 if __name__ == "__channelexec__":
+    import py
+
     channel = channel  # noqa
-    workerinput, args, option_dict = channel.receive()
-    importpath = os.getcwd()
-    sys.path.insert(0, importpath)  # XXX only for remote situations
-    os.environ["PYTHONPATH"] = (
-        importpath + os.pathsep + os.environ.get("PYTHONPATH", "")
-    )
+    workerinput, args, option_dict, change_sys_path = channel.receive()
+
+    if change_sys_path:
+        importpath = os.getcwd()
+        sys.path.insert(0, importpath)
+        os.environ["PYTHONPATH"] = (
+            importpath + os.pathsep + os.environ.get("PYTHONPATH", "")
+        )
+
     os.environ["PYTEST_XDIST_WORKER"] = workerinput["workerid"]
     os.environ["PYTEST_XDIST_WORKER_COUNT"] = str(workerinput["workercount"])
-    # os.environ['PYTHONPATH'] = importpath
-    import py
 
     config = remote_initconfig(option_dict, args)
     config._parser.prog = os.path.basename(workerinput["mainargv"][0])
