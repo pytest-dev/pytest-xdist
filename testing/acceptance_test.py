@@ -738,10 +738,12 @@ def test_sub_plugins_disabled(testdir, plugin):
 class TestWarnings:
     @pytest.mark.parametrize("n", ["-n0", "-n1"])
     @pytest.mark.parametrize("warn_type", ["pytest", "builtin"])
-    def test_warnings(self, testdir, n, warn_type):
+    def test_warnings(self, testdir, n, request, warn_type):
         if warn_type == "builtin":
             warn_code = """warnings.warn(UserWarning('this is a warning'))"""
         elif warn_type == "pytest":
+            if not hasattr(request.config, "warn"):
+                pytest.skip("config.warn has been removed in pytest 4.1")
             warn_code = """request.config.warn('', 'this is a warning',
                            fslocation=py.path.local())"""
         else:
