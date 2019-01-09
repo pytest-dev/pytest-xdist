@@ -245,7 +245,9 @@ class WorkerController(object):
                 option_dict["basetemp"] = str(basetemp.join(name))
         self.config.hook.pytest_configure_node(node=self)
         self.channel = self.gateway.remote_exec(xdist.remote)
-        self.channel.send((self.workerinput, args, option_dict))
+        # change sys.path only for remote workers
+        change_sys_path = not self.gateway.spec.popen
+        self.channel.send((self.workerinput, args, option_dict, change_sys_path))
         if self.putevent:
             self.channel.setcallback(self.process_from_remote, endmarker=self.ENDMARK)
 
