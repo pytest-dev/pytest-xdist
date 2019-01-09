@@ -10,6 +10,7 @@ import sys
 import os
 import time
 
+import py
 import _pytest.hookspec
 import pytest
 from execnet.gateway_base import dumps, DumpError
@@ -258,7 +259,6 @@ if __name__ == "__channelexec__":
     os.environ["PYTEST_XDIST_WORKER"] = workerinput["workerid"]
     os.environ["PYTEST_XDIST_WORKER_COUNT"] = str(workerinput["workercount"])
     # os.environ['PYTHONPATH'] = importpath
-    import py
 
     config = remote_initconfig(option_dict, args)
     config.workerinput = workerinput
