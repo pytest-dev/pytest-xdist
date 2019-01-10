@@ -1,2 +1,2 @@
-Attributes of _WARNING_DETAILS are checked to make sure they can be dumped
-prior to serializing the warning for submission to the master node.
+Warning attributes are checked to make sure they can be dumped prior to
+serializing the warning for submission to the master node.

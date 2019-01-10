@@ -224,7 +224,7 @@ def serialize_warning_message(warning_message):
         try:
             dumps(attr)
         except DumpError:
-            result[attr_name] = None
+            result[attr_name] = repr(attr)
         else:
             result[attr_name] = attr
     return result

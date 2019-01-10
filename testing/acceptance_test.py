@@ -825,9 +825,8 @@ class TestWarnings:
             # The socket itself will end up attached as a value in
             # _WARNING_DETAIL. We need to test that it is not serialized
             # (it can't be, so the test will fail if we try to).
+            @pytest.mark.filterwarnings('always')  
             def test_func(tmpdir):
-                warnings.resetwarnings()
-                warnings.simplefilter('always', ResourceWarning)
                 abuse_socket()
                 gc.collect()
         """
