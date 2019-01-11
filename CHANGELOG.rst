@@ -1,3 +1,21 @@
+pytest-xdist 1.26.0 (2019-01-11)
+================================
+
+Features
+--------
+
+- `#376 <https://github.com/pytest-dev/pytest-xdist/issues/376>`_: The current directory is no longer added ``sys.path`` for local workers, only for remote connections.
+
+  This behavior is surprising because it makes xdist runs and non-xdist runs to potentially behave differently.
+
+
+Bug Fixes
+---------
+
+- `#379 <https://github.com/pytest-dev/pytest-xdist/issues/379>`_: Warning attributes are checked to make sure they can be dumped prior to
+  serializing the warning for submission to the master node.
+
+
 pytest-xdist 1.25.0 (2018-12-12)
 ================================
 

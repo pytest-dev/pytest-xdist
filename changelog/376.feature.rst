@@ -1,3 +1,0 @@
-The current directory is no longer added ``sys.path`` for local workers, only for remote connections.
-
-This behavior is surprising because it makes xdist runs and non-xdist runs to potentially behave differently.
