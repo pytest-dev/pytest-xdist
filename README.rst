@@ -223,6 +223,12 @@ defined:
 The information about the worker_id in a test is stored in the ``TestReport`` as
 well, under the ``worker_id`` attribute.
 
+Acessing ``sys.argv`` from the master node in workers
+-----------------------------------------------------
+
+To access the ``sys.argv`` passed to the command-line of the master node, use
+``request.config.workerinput["mainargv"]``.
+
 
 Specifying test exec environments in an ini file
 ------------------------------------------------
