@@ -1,0 +1,2 @@
+Warning attributes are checked to make sure they can be dumped prior to
+serializing the warning for submission to the master node.

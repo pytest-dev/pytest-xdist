@@ -218,7 +218,15 @@ def serialize_warning_message(warning_message):
     for attr_name in warning_message._WARNING_DETAILS:
         if attr_name in ("message", "category"):
             continue
-        result[attr_name] = getattr(warning_message, attr_name)
+        attr = getattr(warning_message, attr_name)
+        # Check if we can serialize the warning detail, marking `None` otherwise
+        # Note that we need to define the attr (even as `None`) to allow deserializing
+        try:
+            dumps(attr)
+        except DumpError:
+            result[attr_name] = repr(attr)
+        else:
+            result[attr_name] = attr
     return result
 
 
