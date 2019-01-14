@@ -490,9 +490,8 @@ def test_session_hooks(testdir):
                 name = "worker"
             else:
                 name = "master"
-            f = open(name, "w")
-            f.write("xy")
-            f.close()
+            with open(name, "w") as f:
+                f.write("xy")
             # let's fail on the worker
             if name == "worker":
                 raise ValueError(42)

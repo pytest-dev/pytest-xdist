@@ -3,12 +3,15 @@ from setuptools import setup, find_packages
 install_requires = ["execnet>=1.1", "pytest>=3.6.0", "pytest-forked", "six"]
 
 
+with open("README.rst") as f:
+    long_description = f.read()
+
 setup(
     name="pytest-xdist",
     use_scm_version={"write_to": "xdist/_version.py"},
     description="pytest xdist plugin for distributed testing"
     " and loop-on-failing modes",
-    long_description=open("README.rst").read(),
+    long_description=long_description,
     license="MIT",
     author="holger krekel and contributors",
     author_email="pytest-dev@python.org,holger@merlinux.eu",
