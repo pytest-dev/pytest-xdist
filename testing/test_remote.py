@@ -153,7 +153,6 @@ class TestReportSerialization:
         for i in range(len(a_entries)):
             assert isinstance(rep_entries[i], ReprEntry)
             assert rep_entries[i].lines == a_entries[i].lines
-            assert rep_entries[i].localssep == a_entries[i].localssep
             assert rep_entries[i].reprfileloc.lineno == a_entries[i].reprfileloc.lineno
             assert (
                 rep_entries[i].reprfileloc.message == a_entries[i].reprfileloc.message
