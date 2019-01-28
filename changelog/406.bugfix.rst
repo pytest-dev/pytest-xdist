@@ -1,0 +1,1 @@
+Do not implement deprecated ``pytest_logwarning`` hook in pytest versions where it is deprecated.
