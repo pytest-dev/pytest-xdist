@@ -115,8 +115,10 @@ class WorkerInteractor(object):
             data = serialize_report(report)
             self.sendevent("collectreport", data=data)
 
-    # the pytest_logwarning hook was removed in pytest 4.1
-    if hasattr(_pytest.hookspec, "pytest_logwarning"):
+    # the pytest_logwarning hook was deprecated since pytest 4.0
+    if hasattr(
+        _pytest.hookspec, "pytest_logwarning"
+    ) and not _pytest.hookspec.pytest_logwarning.pytest_spec.get("warn_on_impl"):
 
         def pytest_logwarning(self, message, code, nodeid, fslocation):
             self.sendevent(

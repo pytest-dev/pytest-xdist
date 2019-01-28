@@ -1,3 +1,12 @@
+pytest-xdist 1.26.1 (2019-01-28)
+================================
+
+Bug Fixes
+---------
+
+- `#406 <https://github.com/pytest-dev/pytest-xdist/issues/406>`_: Do not implement deprecated ``pytest_logwarning`` hook in pytest versions where it is deprecated.
+
+
 pytest-xdist 1.26.0 (2019-01-11)
 ================================
 
