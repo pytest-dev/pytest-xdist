@@ -1,1 +1,1 @@
-The new pytest_xdist_getremotemodule hook allows overriding the module run on remote nodes.
+The new ``pytest_xdist_getremotemodule`` hook allows overriding the module run on remote nodes.

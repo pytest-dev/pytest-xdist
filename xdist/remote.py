@@ -262,8 +262,6 @@ def remote_initconfig(option_dict, args):
 
 
 if __name__ == "__channelexec__":
-    import py
-
     channel = channel  # noqa
     workerinput, args, option_dict, change_sys_path = channel.receive()
 
