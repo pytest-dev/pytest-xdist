@@ -30,6 +30,11 @@ def pytest_xdist_rsyncfinish(source, gateways):
     """ called after rsyncing a directory to remote gateways takes place. """
 
 
+@pytest.mark.firstresult
+def pytest_xdist_getremotemodule():
+    """ called when creating remote node"""
+
+
 def pytest_configure_node(node):
     """ configure node information before it gets instantiated. """
 
