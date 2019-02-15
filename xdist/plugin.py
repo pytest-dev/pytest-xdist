@@ -27,10 +27,14 @@ def auto_detect_cpus():
     return n if n else 1
 
 
+class AutoInt(int):
+    """Mark value as auto-detected."""
+
+
 def parse_numprocesses(s):
     if s == "auto":
-        return auto_detect_cpus()
-    else:
+        return AutoInt(auto_detect_cpus())
+    elif s is not None:
         return int(s)
 
 
@@ -45,7 +49,7 @@ def pytest_addoption(parser):
         type=parse_numprocesses,
         help="shortcut for '--dist=load --tx=NUM*popen', "
         "you can use 'auto' here for auto detection CPUs number on "
-        "host system",
+        "host system and it will be 0 when used with --pdb",
     )
     group.addoption(
         "--maxprocesses",
@@ -126,12 +130,12 @@ def pytest_addoption(parser):
     )
     parser.addini(
         "rsyncdirs",
-        "list of (relative) paths to be rsynced for" " remote distributed testing.",
+        "list of (relative) paths to be rsynced for remote distributed testing.",
         type="pathlist",
     )
     parser.addini(
         "rsyncignore",
-        "list of (relative) glob-style paths to be ignored " "for rsyncing.",
+        "list of (relative) glob-style paths to be ignored for rsyncing.",
         type="pathlist",
     )
     parser.addini(
@@ -177,6 +181,10 @@ def pytest_configure(config):
 
 @pytest.mark.tryfirst
 def pytest_cmdline_main(config):
+    usepdb = config.getoption("usepdb")  # a core option
+    if isinstance(config.option.numprocesses, AutoInt):
+        config.option.numprocesses = 0 if usepdb else int(config.option.numprocesses)
+
     if config.option.numprocesses:
         if config.option.dist == "no":
             config.option.dist = "load"
@@ -188,11 +196,10 @@ def pytest_cmdline_main(config):
         config.option.dist = "load"
     val = config.getvalue
     if not val("collectonly"):
-        usepdb = config.getoption("usepdb")  # a core option
         if val("dist") != "no":
             if usepdb:
                 raise pytest.UsageError(
-                    "--pdb is incompatible with distributing tests; try using -n0."
+                    "--pdb is incompatible with distributing tests; try using -n0 or -nauto."
                 )  # noqa: E501
 
 

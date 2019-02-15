@@ -116,14 +116,19 @@ class WorkerInteractor(object):
             data = serialize_report(report)
             self.sendevent("collectreport", data=data)
 
-    def pytest_logwarning(self, message, code, nodeid, fslocation):
-        self.sendevent(
-            "logwarning",
-            message=message,
-            code=code,
-            nodeid=nodeid,
-            fslocation=str(fslocation),
-        )
+    # the pytest_logwarning hook was deprecated since pytest 4.0
+    if hasattr(
+        _pytest.hookspec, "pytest_logwarning"
+    ) and not _pytest.hookspec.pytest_logwarning.pytest_spec.get("warn_on_impl"):
+
+        def pytest_logwarning(self, message, code, nodeid, fslocation):
+            self.sendevent(
+                "logwarning",
+                message=message,
+                code=code,
+                nodeid=nodeid,
+                fslocation=str(fslocation),
+            )
 
     # the pytest_warning_captured hook was introduced in pytest 3.8
     if hasattr(_pytest.hookspec, "pytest_warning_captured"):
@@ -216,7 +221,15 @@ def serialize_warning_message(warning_message):
     for attr_name in warning_message._WARNING_DETAILS:
         if attr_name in ("message", "category"):
             continue
-        result[attr_name] = getattr(warning_message, attr_name)
+        attr = getattr(warning_message, attr_name)
+        # Check if we can serialize the warning detail, marking `None` otherwise
+        # Note that we need to define the attr (even as `None`) to allow deserializing
+        try:
+            dumps(attr)
+        except DumpError:
+            result[attr_name] = repr(attr)
+        else:
+            result[attr_name] = attr
     return result
 
 
@@ -249,18 +262,23 @@ def remote_initconfig(option_dict, args):
 
 
 if __name__ == "__channelexec__":
+    import py
+
     channel = channel  # noqa
-    workerinput, args, option_dict = channel.receive()
-    importpath = os.getcwd()
-    sys.path.insert(0, importpath)  # XXX only for remote situations
-    os.environ["PYTHONPATH"] = (
-        importpath + os.pathsep + os.environ.get("PYTHONPATH", "")
-    )
+    workerinput, args, option_dict, change_sys_path = channel.receive()
+
+    if change_sys_path:
+        importpath = os.getcwd()
+        sys.path.insert(0, importpath)
+        os.environ["PYTHONPATH"] = (
+            importpath + os.pathsep + os.environ.get("PYTHONPATH", "")
+        )
+
     os.environ["PYTEST_XDIST_WORKER"] = workerinput["workerid"]
     os.environ["PYTEST_XDIST_WORKER_COUNT"] = str(workerinput["workercount"])
-    # os.environ['PYTHONPATH'] = importpath
 
     config = remote_initconfig(option_dict, args)
+    config._parser.prog = os.path.basename(workerinput["mainargv"][0])
     config.workerinput = workerinput
     config.workeroutput = {}
     # TODO: deprecated name, backward compatibility only. Remove it in future

@@ -1,3 +1,61 @@
+pytest-xdist 1.26.1 (2019-01-28)
+================================
+
+Bug Fixes
+---------
+
+- `#406 <https://github.com/pytest-dev/pytest-xdist/issues/406>`_: Do not implement deprecated ``pytest_logwarning`` hook in pytest versions where it is deprecated.
+
+
+pytest-xdist 1.26.0 (2019-01-11)
+================================
+
+Features
+--------
+
+- `#376 <https://github.com/pytest-dev/pytest-xdist/issues/376>`_: The current directory is no longer added ``sys.path`` for local workers, only for remote connections.
+
+  This behavior is surprising because it makes xdist runs and non-xdist runs to potentially behave differently.
+
+
+Bug Fixes
+---------
+
+- `#379 <https://github.com/pytest-dev/pytest-xdist/issues/379>`_: Warning attributes are checked to make sure they can be dumped prior to
+  serializing the warning for submission to the master node.
+
+
+pytest-xdist 1.25.0 (2018-12-12)
+================================
+
+Deprecations and Removals
+-------------------------
+
+- `#372 <https://github.com/pytest-dev/pytest-xdist/issues/372>`_: Pytest versions older than 3.6 are no longer supported.
+
+
+Features
+--------
+
+- `#373 <https://github.com/pytest-dev/pytest-xdist/issues/373>`_: Node setup information is hidden when pytest is run in quiet mode to reduce noise on many-core machines.
+
+- `#388 <https://github.com/pytest-dev/pytest-xdist/issues/388>`_: ``mainargv`` is made available in ``workerinput`` from the host's ``sys.argv``.
+
+  This can be used via ``request.config.workerinput["mainargv"]``.
+
+
+Bug Fixes
+---------
+
+- `#332 <https://github.com/pytest-dev/pytest-xdist/issues/332>`_: Fix report of module-level skips (``pytest.skip(reason, allow_module_level=True)``).
+
+- `#378 <https://github.com/pytest-dev/pytest-xdist/issues/378>`_: Fix support for gevent monkeypatching
+
+- `#384 <https://github.com/pytest-dev/pytest-xdist/issues/384>`_: pytest 4.1 support: ``ExceptionInfo`` API changes.
+
+- `#390 <https://github.com/pytest-dev/pytest-xdist/issues/390>`_: pytest 4.1 support: ``pytest_logwarning`` hook removed.
+
+
 pytest-xdist 1.24.1 (2018-11-09)
 ================================
 

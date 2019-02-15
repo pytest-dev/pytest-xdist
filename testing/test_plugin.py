@@ -36,6 +36,7 @@ def test_dist_options(testdir):
 
 def test_auto_detect_cpus(testdir, monkeypatch):
     import os
+    from xdist.plugin import pytest_cmdline_main as check_options
 
     if hasattr(os, "sched_getaffinity"):
         monkeypatch.setattr(os, "sched_getaffinity", lambda _pid: set(range(99)))
@@ -51,6 +52,11 @@ def test_auto_detect_cpus(testdir, monkeypatch):
 
     config = testdir.parseconfigure("-nauto")
     assert config.getoption("numprocesses") == 99
+
+    config = testdir.parseconfigure("-nauto", "--pdb")
+    check_options(config)
+    assert config.getoption("usepdb")
+    assert config.getoption("numprocesses") == 0
 
     monkeypatch.delattr(os, "sched_getaffinity", raising=False)
     monkeypatch.setenv("TRAVIS", "true")

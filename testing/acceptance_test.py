@@ -1,5 +1,6 @@
 import os
 import re
+import sys
 import textwrap
 
 import py
@@ -358,6 +359,30 @@ class TestDistEach:
 
 
 class TestTerminalReporting:
+    @pytest.mark.parametrize("verbosity", ["", "-q", "-v"])
+    def test_output_verbosity(self, testdir, verbosity):
+        testdir.makepyfile(
+            """
+            def test_ok():
+                pass
+        """
+        )
+        args = ["-n1"]
+        if verbosity:
+            args.append(verbosity)
+        result = testdir.runpytest(*args)
+        out = result.stdout.str()
+        if verbosity == "-v":
+            assert "scheduling tests" in out
+            assert "gw" in out
+        elif verbosity == "-q":
+            assert "scheduling tests" not in out
+            assert "gw" not in out
+            assert "bringing up nodes..." in out
+        else:
+            assert "scheduling tests" not in out
+            assert "gw" in out
+
     def test_pass_skip_fail(self, testdir):
         testdir.makepyfile(
             """
@@ -465,9 +490,8 @@ def test_session_hooks(testdir):
                 name = "worker"
             else:
                 name = "master"
-            f = open(name, "w")
-            f.write("xy")
-            f.close()
+            with open(name, "w") as f:
+                f.write("xy")
             # let's fail on the worker
             if name == "worker":
                 raise ValueError(42)
@@ -517,16 +541,15 @@ def test_session_testscollected(testdir):
     assert collected_file.read() == "collected = 3"
 
 
-def test_funcarg_teardown_failure(testdir):
+def test_fixture_teardown_failure(testdir):
     p = testdir.makepyfile(
         """
         import pytest
-        @pytest.fixture
+        @pytest.fixture(scope="module")
         def myarg(request):
-            def teardown(val):
-                raise ValueError(val)
-            return request.cached_setup(setup=lambda: 42, teardown=teardown,
-                scope="module")
+            yield 42
+            raise ValueError(42)
+
         def test_hello(myarg):
             pass
     """
@@ -612,6 +635,11 @@ def test_skipping(testdir):
 
 
 def test_issue34_pluginloading_in_subprocess(testdir):
+    import _pytest.hookspec
+
+    if not hasattr(_pytest.hookspec, "pytest_namespace"):
+        pytest.skip("this pytest version no longer supports pytest_namespace()")
+
     testdir.tmpdir.join("plugin123.py").write(
         textwrap.dedent(
             """
@@ -710,10 +738,12 @@ def test_sub_plugins_disabled(testdir, plugin):
 class TestWarnings:
     @pytest.mark.parametrize("n", ["-n0", "-n1"])
     @pytest.mark.parametrize("warn_type", ["pytest", "builtin"])
-    def test_warnings(self, testdir, n, warn_type):
+    def test_warnings(self, testdir, n, request, warn_type):
         if warn_type == "builtin":
             warn_code = """warnings.warn(UserWarning('this is a warning'))"""
         elif warn_type == "pytest":
+            if not hasattr(request.config, "warn"):
+                pytest.skip("config.warn has been removed in pytest 4.1")
             warn_code = """request.config.warn('', 'this is a warning',
                            fslocation=py.path.local())"""
         else:
@@ -772,6 +802,39 @@ class TestWarnings:
         testdir.syspathinsert()
         result = testdir.runpytest(n)
         result.stdout.fnmatch_lines(["*UserWarning*foo.txt*", "*1 passed, 1 warnings*"])
+
+    @pytest.mark.parametrize("n", ["-n0", "-n1"])
+    def test_unserializable_warning_details(self, testdir, n):
+        """Check that warnings with unserializable _WARNING_DETAILS are
+        handled correctly (#379).
+        """
+        if sys.version_info[0] < 3:
+            # The issue is only present in Python 3 warnings
+            return
+        testdir.makepyfile(
+            """
+            import warnings, pytest
+            import socket
+            import gc
+            def abuse_socket():
+                s = socket.socket()
+                del s
+
+            # Deliberately provoke a ResourceWarning for an unclosed socket.
+            # The socket itself will end up attached as a value in
+            # _WARNING_DETAIL. We need to test that it is not serialized
+            # (it can't be, so the test will fail if we try to).
+            @pytest.mark.filterwarnings('always')
+            def test_func(tmpdir):
+                abuse_socket()
+                gc.collect()
+        """
+        )
+        testdir.syspathinsert()
+        result = testdir.runpytest(n)
+        result.stdout.fnmatch_lines(
+            ["*ResourceWarning*unclosed*", "*1 passed, 1 warnings*"]
+        )
 
 
 class TestNodeFailure:
