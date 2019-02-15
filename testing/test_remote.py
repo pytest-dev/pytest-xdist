@@ -457,6 +457,4 @@ def test_remote_usage_prog(testdir, request):
 
     result = testdir.runpytest_subprocess("-n1")
     assert result.ret == 1
-    result.stdout.fnmatch_lines(
-        ["*usage: *", "*error: my_usage_error"]
-    )
+    result.stdout.fnmatch_lines(["*usage: *", "*error: my_usage_error"])
