@@ -64,6 +64,17 @@ def test_auto_detect_cpus(testdir, monkeypatch):
     assert config.getoption("numprocesses") == 2
 
 
+def test_parse_numprocesses(monkeypatch):
+    import xdist.plugin
+    from xdist.plugin import parse_numprocesses
+
+    auto_proc = 2
+    monkeypatch.setattr(xdist.plugin, "auto_detect_cpus", lambda: auto_proc)
+    assert parse_numprocesses("auto") == auto_proc  # requests auto value
+    assert parse_numprocesses("5") == auto_proc  # exceeds auto value
+    assert parse_numprocesses("1") == 1  # under auto value
+
+
 def test_boxed_with_collect_only(testdir):
     from xdist.plugin import pytest_cmdline_main as check_options
 

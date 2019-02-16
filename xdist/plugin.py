@@ -32,10 +32,13 @@ class AutoInt(int):
 
 
 def parse_numprocesses(s):
+    auto_cpus = AutoInt(auto_detect_cpus())
+
     if s == "auto":
-        return AutoInt(auto_detect_cpus())
+        return auto_cpus
     elif s is not None:
-        return int(s)
+        # prevents failure with cpu selection exceeds host hardware
+        return int(s) if int(s) <= auto_cpus else auto_cpus
 
 
 def pytest_addoption(parser):
