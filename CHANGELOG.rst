@@ -1,3 +1,14 @@
+pytest-xdist 1.27.0 (2019-02-15)
+================================
+
+Features
+--------
+
+- `#374 <https://github.com/pytest-dev/pytest-xdist/issues/374>`_: The new ``pytest_xdist_getremotemodule`` hook allows overriding the module run on remote nodes.
+
+- `#415 <https://github.com/pytest-dev/pytest-xdist/issues/415>`_: Improve behavior of ``--numprocesses=auto`` to work well with ``--pdb`` option.
+
+
 pytest-xdist 1.26.1 (2019-01-28)
 ================================
 
