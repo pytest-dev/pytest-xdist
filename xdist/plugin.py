@@ -181,7 +181,7 @@ def pytest_configure(config):
 
 @pytest.mark.tryfirst
 def pytest_cmdline_main(config):
-    usepdb = config.getoption("usepdb")  # a core option
+    usepdb = config.getoption("usepdb", False)  # a core option
     if isinstance(config.option.numprocesses, AutoInt):
         config.option.numprocesses = 0 if usepdb else int(config.option.numprocesses)
 

@@ -30,7 +30,7 @@ def pytest_addoption(parser):
 def pytest_cmdline_main(config):
 
     if config.getoption("looponfail"):
-        usepdb = config.getoption("usepdb")  # a core option
+        usepdb = config.getoption("usepdb", False)  # a core option
         if usepdb:
             raise pytest.UsageError("--pdb is incompatible with --looponfail.")
         looponfail_main(config)
