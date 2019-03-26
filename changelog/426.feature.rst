@@ -1,0 +1,5 @@
+``pytest-xdist`` now uses the new ``pytest_report_to_serializable``  and ``pytest_report_from_serializable``
+from ``pytest 4.4`` (still experimental). This will make report serialization more reliable and
+extensible.
+
+This also means that ``pytest-xdist`` now also requires ``pytest>=4.4``.
