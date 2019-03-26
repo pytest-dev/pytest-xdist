@@ -3,7 +3,6 @@ import fnmatch
 import os
 import re
 import sys
-import threading
 
 import py
 import pytest
@@ -37,7 +36,6 @@ class NodeManager(object):
 
     def __init__(self, config, specs=None, defaultchdir="pyexecnetcache"):
         self.config = config
-        self._nodesready = threading.Event()
         self.trace = self.config.trace.get("nodemanager")
         self.group = execnet.Group()
         if specs is None:
