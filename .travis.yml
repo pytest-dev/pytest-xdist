@@ -1,10 +1,10 @@
-sudo: false
+dist: xenial
 language: python
 
 notifications:
   irc:
     channels:
-    - 'chat.freenode.net#pytest'
+      - 'chat.freenode.net#pytest'
     on_success: change
     on_failure: change
     skip_join: true
@@ -17,10 +17,10 @@ install:
 script: tox
 
 stages:
-- baseline
-- test
-- name: deploy
-  if: repo = pytest-dev/pytest-xdist AND tag IS present
+  - baseline
+  - test
+  - name: deploy
+    if: repo = pytest-dev/pytest-xdist AND tag IS present
 
 jobs:
   include:
@@ -42,8 +42,6 @@ jobs:
       env: TOXENV=py35-pytestlatest
     - python: "3.7"
       env: TOXENV=py37-pytestlatest
-      sudo: required
-      dist: xenial
     - python: "2.7"
       env: TOXENV=py27-pytestmaster
     - python: "2.7"
