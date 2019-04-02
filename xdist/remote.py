@@ -104,7 +104,9 @@ class WorkerInteractor(object):
             self.sendevent("logfinish", nodeid=nodeid, location=location)
 
     def pytest_runtest_logreport(self, report):
-        data = serialize_report(report)
+        data = self.config.hook.pytest_report_to_serializable(
+            config=self.config, report=report
+        )
         data["item_index"] = self.item_index
         data["worker_id"] = self.workerid
         assert self.session.items[self.item_index].nodeid == report.nodeid
@@ -113,7 +115,9 @@ class WorkerInteractor(object):
     def pytest_collectreport(self, report):
         # send only reports that have not passed to master as optimization (#330)
         if not report.passed:
-            data = serialize_report(report)
+            data = self.config.hook.pytest_report_to_serializable(
+                config=self.config, report=report
+            )
             self.sendevent("collectreport", data=data)
 
     # the pytest_logwarning hook was deprecated since pytest 4.0
@@ -141,47 +145,6 @@ class WorkerInteractor(object):
                 # item cannot be serialized and will always be None when used with xdist
                 item=None,
             )
-
-
-def serialize_report(rep):
-    def disassembled_report(rep):
-        reprtraceback = rep.longrepr.reprtraceback.__dict__.copy()
-        reprcrash = rep.longrepr.reprcrash.__dict__.copy()
-
-        new_entries = []
-        for entry in reprtraceback["reprentries"]:
-            entry_data = {"type": type(entry).__name__, "data": entry.__dict__.copy()}
-            for key, value in entry_data["data"].items():
-                if hasattr(value, "__dict__"):
-                    entry_data["data"][key] = value.__dict__.copy()
-            new_entries.append(entry_data)
-
-        reprtraceback["reprentries"] = new_entries
-
-        return {
-            "reprcrash": reprcrash,
-            "reprtraceback": reprtraceback,
-            "sections": rep.longrepr.sections,
-        }
-
-    import py
-
-    d = rep.__dict__.copy()
-    if hasattr(rep.longrepr, "toterminal"):
-        if hasattr(rep.longrepr, "reprtraceback") and hasattr(
-            rep.longrepr, "reprcrash"
-        ):
-            d["longrepr"] = disassembled_report(rep)
-        else:
-            d["longrepr"] = str(rep.longrepr)
-    else:
-        d["longrepr"] = rep.longrepr
-    for name in d:
-        if isinstance(d[name], py.path.local):
-            d[name] = str(d[name])
-        elif name == "result":
-            d[name] = None  # for now
-    return d
 
 
 def serialize_warning_message(warning_message):
