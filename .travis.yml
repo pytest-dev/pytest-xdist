@@ -27,6 +27,9 @@ jobs:
     - stage: baseline
       python: '3.6'
       env: TOXENV=linting
+      cache:
+        directories:
+          - $HOME/.cache/pre-commit
     - python: '3.6'
       env: TOXENV=py36-pytestlatest
     - python: '2.7'
