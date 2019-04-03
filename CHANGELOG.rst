@@ -1,3 +1,16 @@
+pytest-xdist 1.28.0 (2019-04-02)
+================================
+
+Features
+--------
+
+- `#426 <https://github.com/pytest-dev/pytest-xdist/issues/426>`_: ``pytest-xdist`` now uses the new ``pytest_report_to_serializable`` and ``pytest_report_from_serializable``
+  hooks from ``pytest 4.4`` (still experimental). This will make report serialization more reliable and
+  extensible.
+
+  This also means that ``pytest-xdist`` now requires ``pytest>=4.4``.
+
+
 pytest-xdist 1.27.0 (2019-02-15)
 ================================
 
