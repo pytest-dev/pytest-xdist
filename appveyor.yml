@@ -5,13 +5,11 @@ environment:
   - TOXENV: "py35-pytestlatest"
   - TOXENV: "py36-pytestlatest"
   - TOXENV: "py37-pytestlatest"
-  - TOXENV: "py27-pytestmaster"
-  - TOXENV: "py36-pytestmaster"
-  - TOXENV: "py27-pytestfeatures"
-  - TOXENV: "py36-pytestfeatures"
+  - TOXENV: "py37-pytestmaster"
+  - TOXENV: "py37-pytestfeatures"
 
 install:
-  - C:\Python37\python -m pip install -U pip
+  - C:\Python37\python -m pip install -U pip setuptools
   - C:\Python37\python -m pip install -U tox setuptools_scm
 
 build: false  # Not a C# project, build stuff at the test step instead.
