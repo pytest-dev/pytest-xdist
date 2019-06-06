@@ -23,7 +23,7 @@ include/
 lib/
 bin/
 env/
-xdist/_version.py*
+src/xdist/_version.py*
 pytest_xdist.egg-info
 issue/
 3rdparty/
