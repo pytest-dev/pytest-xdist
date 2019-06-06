@@ -1,4 +1,4 @@
-from xdist.dsession import DSession
+from xdist.dsession import DSession, get_default_max_worker_restart
 from xdist.report import report_collection_diff
 from xdist.scheduler import EachScheduling, LoadScheduling
 
@@ -266,6 +266,24 @@ def test_report_collection_diff_equal():
     """Test reporting of equal collections."""
     from_collection = to_collection = ["aaa", "bbb", "ccc"]
     assert report_collection_diff(from_collection, to_collection, 1, 2) is None
+
+
+def test_default_max_worker_restart():
+    class config:
+        class option:
+            maxworkerrestart = None
+            numprocesses = 0
+
+    assert get_default_max_worker_restart(config) is None
+
+    config.option.numprocesses = 2
+    assert get_default_max_worker_restart(config) == 8
+
+    config.option.maxworkerrestart = "1"
+    assert get_default_max_worker_restart(config) == 1
+
+    config.option.maxworkerrestart = "0"
+    assert get_default_max_worker_restart(config) == 0
 
 
 def test_report_collection_diff_different():

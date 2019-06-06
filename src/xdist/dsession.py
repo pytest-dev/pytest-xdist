@@ -46,9 +46,8 @@ class DSession(object):
         self._failed_collection_errors = {}
         self._active_nodes = set()
         self._failed_nodes_count = 0
-        self._max_worker_restart = self.config.option.maxworkerrestart
-        if self._max_worker_restart is not None:
-            self._max_worker_restart = int(self._max_worker_restart)
+        self._max_worker_restart = get_default_max_worker_restart(self.config)
+
         try:
             self.terminal = config.pluginmanager.getplugin("terminalreporter")
         except KeyError:
@@ -390,10 +389,16 @@ class TerminalDistReporter(object):
             return
         self.write_line("[%s] node down: %s" % (node.gateway.id, error))
 
-    # def pytest_xdist_rsyncstart(self, source, gateways):
-    #    targets = ",".join([gw.id for gw in gateways])
-    #    msg = "[%s] rsyncing: %s" %(targets, source)
-    #    self.write_line(msg)
-    # def pytest_xdist_rsyncfinish(self, source, gateways):
-    #    targets = ", ".join(["[%s]" % gw.id for gw in gateways])
-    #    self.write_line("rsyncfinish: %s -> %s" %(source, targets))
+
+def get_default_max_worker_restart(config):
+    """gets the default value of --max-worker-restart option if it is not provided.
+
+    Use a reasonable default to avoid workers from restarting endlessly due to crashing collections (#226).
+    """
+    result = config.option.maxworkerrestart
+    if result is not None:
+        result = int(result)
+    elif config.option.numprocesses:
+        # if --max-worker-restart was not provided, use a reasonable default (#226)
+        result = config.option.numprocesses * 4
+    return result
