@@ -8,7 +8,7 @@ with open("README.rst") as f:
 
 setup(
     name="pytest-xdist",
-    use_scm_version={"write_to": "xdist/_version.py"},
+    use_scm_version={"write_to": "src/xdist/_version.py"},
     description="pytest xdist plugin for distributed testing"
     " and loop-on-failing modes",
     long_description=long_description,
@@ -17,7 +17,9 @@ setup(
     author_email="pytest-dev@python.org,holger@merlinux.eu",
     url="https://github.com/pytest-dev/pytest-xdist",
     platforms=["linux", "osx", "win32"],
-    packages=find_packages(exclude=["testing", "example"]),
+    packages=find_packages(where="src"),
+    package_dir={"": "src"},
+    extras_require={"testing": ["filelock"]},
     entry_points={
         "pytest11": ["xdist = xdist.plugin", "xdist.looponfail = xdist.looponfail"]
     },
