@@ -1,0 +1,2 @@
+When the test session is interrupted due to running out of workers, the reason is shown in the test summary
+for easier viewing.

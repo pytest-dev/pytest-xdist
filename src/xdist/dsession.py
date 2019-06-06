@@ -47,7 +47,8 @@ class DSession(object):
         self._active_nodes = set()
         self._failed_nodes_count = 0
         self._max_worker_restart = get_default_max_worker_restart(self.config)
-
+        # summary message to print at the end of the session
+        self._summary_report = None
         try:
             self.terminal = config.pluginmanager.getplugin("terminalreporter")
         except KeyError:
@@ -197,14 +198,22 @@ class DSession(object):
         )
         if maximum_reached:
             if self._max_worker_restart == 0:
-                msg = "Worker restarting disabled"
+                msg = "worker {} crashed and worker restarting disabled".format(
+                    node.gateway.id
+                )
             else:
-                msg = "Maximum crashed workers reached: %d" % self._max_worker_restart
-            self.report_line(msg)
+                msg = "maximum crashed workers reached: %d" % self._max_worker_restart
+            self._summary_report = msg
+            self.report_line("\n" + msg)
+            self.triggershutdown()
         else:
-            self.report_line("Replacing crashed worker %s" % node.gateway.id)
+            self.report_line("\nreplacing crashed worker %s" % node.gateway.id)
             self._clone_node(node)
         self._active_nodes.remove(node)
+
+    def pytest_terminal_summary(self, terminalreporter):
+        if self.config.option.verbose >= 0 and self._summary_report:
+            terminalreporter.write_sep("=", "xdist: {}".format(self._summary_report))
 
     def worker_collectionfinish(self, node, ids):
         """worker has finished test collection.
@@ -315,7 +324,7 @@ class DSession(object):
         # XXX count no of failures and retry N times
         runner = self.config.pluginmanager.getplugin("runner")
         fspath = nodeid.split("::")[0]
-        msg = "Worker %r crashed while running %r" % (worker.gateway.id, nodeid)
+        msg = "worker %r crashed while running %r" % (worker.gateway.id, nodeid)
         rep = runner.TestReport(
             nodeid, (fspath, None, fspath), (), "failed", msg, "???"
         )
