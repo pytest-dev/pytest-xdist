@@ -12,7 +12,7 @@ notifications:
   - pytest-commit@python.org
 
 install:
-  - pip install -U pip
+  - pip install -U pip setuptools
   - pip install tox setuptools_scm
 script: tox
 
@@ -25,13 +25,13 @@ stages:
 jobs:
   include:
     - stage: baseline
-      python: '3.6'
+      python: '3.7'
       env: TOXENV=linting
       cache:
         directories:
           - $HOME/.cache/pre-commit
-    - python: '3.6'
-      env: TOXENV=py36-pytestlatest
+    - python: '3.7'
+      env: TOXENV=py37-pytestlatest
     - python: '2.7'
       env: TOXENV=py27-pytestlatest
 
@@ -40,19 +40,15 @@ jobs:
       env: TOXENV=py34-pytestlatest
     - python: "3.5"
       env: TOXENV=py35-pytestlatest
+    - python: "3.6"
+      env: TOXENV=py36-pytestlatest
     - python: "3.7"
-      env: TOXENV=py37-pytestlatest
-    - python: "2.7"
-      env: TOXENV=py27-pytestmaster
-    - python: "2.7"
-      env: TOXENV=py27-pytestfeatures
-    - python: "3.6"
-      env: TOXENV=py36-pytestmaster
-    - python: "3.6"
-      env: TOXENV=py36-pytestfeatures
+      env: TOXENV=py37-pytestmaster
+    - python: "3.7"
+      env: TOXENV=py37-pytestfeatures
 
     - stage: deploy
-      python: '3.6'
+      python: '3.7'
       env:
       install: pip install -U setuptools setuptools_scm
       script: skip
