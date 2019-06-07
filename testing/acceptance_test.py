@@ -849,8 +849,8 @@ class TestNodeFailure:
         res = testdir.runpytest(f, "-n1")
         res.stdout.fnmatch_lines(
             [
-                "*Replacing crashed worker*",
-                "*Worker*crashed while running*",
+                "replacing crashed worker gw*",
+                "worker*crashed while running*",
                 "*1 failed*1 passed*",
             ]
         )
@@ -868,8 +868,8 @@ class TestNodeFailure:
         res = testdir.runpytest(f, "-n2")
         res.stdout.fnmatch_lines(
             [
-                "*Replacing crashed worker*",
-                "*Worker*crashed while running*",
+                "replacing crashed worker gw*",
+                "worker*crashed while running*",
                 "*1 failed*3 passed*",
             ]
         )
@@ -885,8 +885,8 @@ class TestNodeFailure:
         res = testdir.runpytest(f, "--dist=each", "--tx=popen")
         res.stdout.fnmatch_lines(
             [
-                "*Replacing crashed worker*",
-                "*Worker*crashed while running*",
+                "replacing crashed worker gw*",
+                "worker*crashed while running*",
                 "*1 failed*1 passed*",
             ]
         )
@@ -922,13 +922,34 @@ class TestNodeFailure:
         res = testdir.runpytest(f, "-n4", "--max-worker-restart=1")
         res.stdout.fnmatch_lines(
             [
-                "*Replacing crashed worker*",
-                "*Maximum crashed workers reached: 1*",
-                "*Worker*crashed while running*",
-                "*Worker*crashed while running*",
+                "replacing crashed worker*",
+                "maximum crashed workers reached: 1*",
+                "worker*crashed while running*",
+                "worker*crashed while running*",
                 "*2 failed*2 passed*",
             ]
         )
+
+    def test_max_worker_restart_tests_queued(self, testdir):
+        f = testdir.makepyfile(
+            """
+            import os, pytest
+            @pytest.mark.parametrize('i', range(10))
+            def test(i): os._exit(1)
+        """
+        )
+        res = testdir.runpytest(f, "-n2", "--max-worker-restart=3")
+        res.stdout.fnmatch_lines(
+            [
+                "replacing crashed worker*",
+                "maximum crashed workers reached: 3*",
+                "worker*crashed while running*",
+                "worker*crashed while running*",
+                "* xdist: maximum crashed workers reached: 3 *",
+                "* 4 failed in *",
+            ]
+        )
+        assert "INTERNALERROR" not in res.stdout.str()
 
     def test_max_worker_restart_die(self, testdir):
         f = testdir.makepyfile(
@@ -939,7 +960,10 @@ class TestNodeFailure:
         )
         res = testdir.runpytest(f, "-n4", "--max-worker-restart=0")
         res.stdout.fnmatch_lines(
-            ["*Unexpectedly no active workers*", "*INTERNALERROR*"]
+            [
+                "* xdist: worker gw* crashed and worker restarting disabled *",
+                "* no tests ran in *",
+            ]
         )
 
     def test_disable_restart(self, testdir):
@@ -954,9 +978,10 @@ class TestNodeFailure:
         res = testdir.runpytest(f, "-n4", "--max-worker-restart=0")
         res.stdout.fnmatch_lines(
             [
-                "*Worker restarting disabled*",
-                "*Worker*crashed while running*",
-                "*1 failed*2 passed*",
+                "worker gw* crashed and worker restarting disabled",
+                "*worker*crashed while running*",
+                "* xdist: worker gw* crashed and worker restarting disabled *",
+                "* 1 failed, 2 passed in *",
             ]
         )
 
