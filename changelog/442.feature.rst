@@ -1,1 +1,0 @@
-Compatibility fix for upcoming pytest 5.0: ``session.exitstatus`` is now an ``IntEnum`` object.

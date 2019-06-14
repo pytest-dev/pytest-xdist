@@ -1,3 +1,24 @@
+pytest-xdist 1.29.0 (2019-06-14)
+================================
+
+Features
+--------
+
+- `#226 <https://github.com/pytest-dev/pytest-xdist/issues/226>`_: ``--max-worker-restart`` now assumes a more reasonable value (4 times the number of
+  nodes) when not given explicitly. This prevents test suites from running forever when the suite crashes during collection.
+
+- `#435 <https://github.com/pytest-dev/pytest-xdist/issues/435>`_: When the test session is interrupted due to running out of workers, the reason is shown in the test summary
+  for easier viewing.
+
+- `#442 <https://github.com/pytest-dev/pytest-xdist/issues/442>`_: Compatibility fix for upcoming pytest 5.0: ``session.exitstatus`` is now an ``IntEnum`` object.
+
+
+Bug Fixes
+---------
+
+- `#435 <https://github.com/pytest-dev/pytest-xdist/issues/435>`_: No longer show an internal error when we run out of workers due to crashes.
+
+
 pytest-xdist 1.28.0 (2019-04-02)
 ================================
 
