@@ -41,7 +41,8 @@ class WorkerInteractor(object):
 
     @pytest.hookimpl(hookwrapper=True)
     def pytest_sessionfinish(self, exitstatus):
-        self.config.workeroutput["exitstatus"] = exitstatus
+        # in pytest 5.0+, exitstatus is an IntEnum object
+        self.config.workeroutput["exitstatus"] = int(exitstatus)
         yield
         self.sendevent("workerfinished", workeroutput=self.config.workeroutput)
 
