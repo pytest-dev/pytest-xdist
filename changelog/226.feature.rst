@@ -1,2 +1,0 @@
-``--max-worker-restart`` now assumes a more reasonable value (4 times the number of
-nodes) when not given explicitly. This prevents test suites from running forever when the suite crashes during collection.
