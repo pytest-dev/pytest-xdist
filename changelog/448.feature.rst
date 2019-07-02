@@ -1,0 +1,9 @@
+Initialization between workers and master nodes is now more consistent, which fixes a number of
+long-standing issues related to startup with the ``-c`` option.
+
+Issues:
+
+* `#6 <https://github.com/pytest-dev/pytest-xdist/issues/6>`__: Poor interaction between ``-n#`` and ``-c X.cfg``
+* `#445 <https://github.com/pytest-dev/pytest-xdist/issues/445>`__: pytest-xdist is not reporting the same nodeid as pytest does
+
+This however only works with **pytest 5.1 or later**, as it required changes in pytest itself.

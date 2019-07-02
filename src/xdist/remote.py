@@ -15,6 +15,8 @@ import _pytest.hookspec
 import pytest
 from execnet.gateway_base import dumps, DumpError
 
+from _pytest.config import _prepareconfig, Config
+
 
 class WorkerInteractor(object):
     def __init__(self, config, channel):
@@ -211,18 +213,18 @@ def getinfodict():
 
 
 def remote_initconfig(option_dict, args):
-    from _pytest.config import Config
-
     option_dict["plugins"].append("no:terminal")
-    config = Config.fromdictargs(option_dict, args)
+    return Config.fromdictargs(option_dict, args)
+
+
+def setup_config(config, basetemp):
     config.option.looponfail = False
     config.option.usepdb = False
     config.option.dist = "no"
     config.option.distload = False
     config.option.numprocesses = None
     config.option.maxprocesses = None
-    config.args = args
-    return config
+    config.option.basetemp = basetemp
 
 
 if __name__ == "__channelexec__":
@@ -239,7 +241,13 @@ if __name__ == "__channelexec__":
     os.environ["PYTEST_XDIST_WORKER"] = workerinput["workerid"]
     os.environ["PYTEST_XDIST_WORKER_COUNT"] = str(workerinput["workercount"])
 
-    config = remote_initconfig(option_dict, args)
+    if hasattr(Config, "InvocationParams"):
+        config = _prepareconfig(args, None)
+    else:
+        config = remote_initconfig(option_dict, args)
+        config.args = args
+
+    setup_config(config, option_dict.get("basetemp"))
     config._parser.prog = os.path.basename(workerinput["mainargv"][0])
     config.workerinput = workerinput
     config.workeroutput = {}

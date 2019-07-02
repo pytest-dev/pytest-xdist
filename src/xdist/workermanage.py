@@ -186,6 +186,8 @@ def make_reltoroot(roots, args):
     for arg in args:
         parts = arg.split(splitcode)
         fspath = py.path.local(parts[0])
+        if not fspath.exists():
+            continue
         for root in roots:
             x = fspath.relto(root)
             if x or fspath == root:
@@ -236,10 +238,14 @@ class WorkerController(object):
     def setup(self):
         self.log("setting up worker session")
         spec = self.gateway.spec
-        args = self.config.args
+        if hasattr(self.config, "invocation_params"):
+            args = [str(x) for x in self.config.invocation_params.args or ()]
+            option_dict = {}
+        else:
+            args = self.config.args
+            option_dict = vars(self.config.option)
         if not spec.popen or spec.chdir:
             args = make_reltoroot(self.nodemanager.roots, args)
-        option_dict = vars(self.config.option)
         if spec.popen:
             name = "popen-%s" % self.gateway.id
             if hasattr(self.config, "_tmpdirhandler"):
