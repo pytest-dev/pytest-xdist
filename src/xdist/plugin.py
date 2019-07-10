@@ -154,11 +154,7 @@ def pytest_addoption(parser):
 def pytest_addhooks(pluginmanager):
     from xdist import newhooks
 
-    # avoid warnings with pytest-2.8
-    method = getattr(pluginmanager, "add_hookspecs", None)
-    if method is None:
-        method = pluginmanager.addhooks
-    method(newhooks)
+    pluginmanager.add_hookspecs(newhooks)
 
 
 # -------------------------------------------------------------------------
