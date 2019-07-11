@@ -559,6 +559,30 @@ def test_fixture_teardown_failure(testdir):
     assert result.ret
 
 
+def test_config_initialization(testdir, pytestconfig):
+    """Ensure workers and master are initialized consistently. Integration test for #445"""
+    if not hasattr(pytestconfig, "invocation_params"):
+        pytest.skip(
+            "requires pytest >=5.1 (config has no attribute 'invocation_params')"
+        )
+    testdir.makepyfile(
+        **{
+            "dir_a/test_foo.py": """
+                def test_1(): pass
+        """
+        }
+    )
+    testdir.makefile(
+        ".ini",
+        myconfig="""
+        [pytest]
+        testpaths=dir_a
+    """,
+    )
+    result = testdir.runpytest("-n2", "-c", "myconfig.ini", "-v")
+    result.stdout.fnmatch_lines(["dir_a/test_foo.py::test_1*"])
+
+
 @pytest.mark.parametrize("when", ["setup", "call", "teardown"])
 def test_crashing_item(testdir, when):
     """Ensure crashing item is correctly reported during all testing stages"""
