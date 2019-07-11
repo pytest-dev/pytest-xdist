@@ -1,20 +1,19 @@
+import six
 import py
 import pytest
 import execnet
 
-
-@pytest.fixture(scope="session", autouse=True)
-def _ensure_imports():
-    # we import some modules because pytest-2.8's testdir fixture
-    # will unload all modules after each test and this cause
-    # (unknown) problems with execnet.Group()
-    execnet.Group
-    execnet.makegateway
-
-
 pytest_plugins = "pytester"
 
-# rsyncdirs = ['.', '../xdist', py.path.local(execnet.__file__).dirpath()]
+if six.PY2:
+
+    @pytest.fixture(scope="session", autouse=True)
+    def _ensure_imports():
+        # we import some modules because pytest-2.8's testdir fixture
+        # will unload all modules after each test and this cause
+        # (unknown) problems with execnet.Group()
+        execnet.Group
+        execnet.makegateway
 
 
 @pytest.fixture(autouse=True)
@@ -43,14 +42,6 @@ def pytest_addoption(parser):
 @pytest.fixture
 def specssh(request):
     return getspecssh(request.config)
-
-
-@pytest.fixture
-def testdir(testdir):
-    # pytest before 2.8 did not have a runpytest_subprocess
-    if not hasattr(testdir, "runpytest_subprocess"):
-        testdir.runpytest_subprocess = testdir.runpytest
-    return testdir
 
 
 # configuration information for tests
