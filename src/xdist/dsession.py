@@ -254,12 +254,19 @@ class DSession(object):
         self.config.hook.pytest_runtest_logreport(report=rep)
         self._handlefailures(rep)
 
-    def worker_runtest_protocol_complete(self, node, item_index, duration):
+    def worker_runtest_protocol_complete(
+        self, node, item_index, duration, shouldfail, shouldstop
+    ):
         """
         Emitted when a node fires the 'runtest_protocol_complete' event,
         signalling that a test has completed the runtestprotocol and should be
         removed from the pending list in the scheduler.
         """
+        if shouldfail:
+            self.shouldfail = shouldfail
+        if shouldstop:
+            self.shouldstop = shouldstop
+
         self.sched.mark_test_complete(node, item_index, duration)
 
     def worker_collectreport(self, node, rep):

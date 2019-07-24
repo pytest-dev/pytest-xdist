@@ -75,7 +75,8 @@ class WorkerInteractor(object):
         return True
 
     def run_one_test(self, torun):
-        items = self.session.items
+        session = self.session
+        items = session.items
         self.item_index = torun.pop(0)
         item = items[self.item_index]
         if torun:
@@ -87,7 +88,11 @@ class WorkerInteractor(object):
         self.config.hook.pytest_runtest_protocol(item=item, nextitem=nextitem)
         duration = time.time() - start
         self.sendevent(
-            "runtest_protocol_complete", item_index=self.item_index, duration=duration
+            "runtest_protocol_complete",
+            item_index=self.item_index,
+            duration=duration,
+            shouldfail=session.shouldfail,
+            shouldstop=session.shouldstop,
         )
 
     def pytest_collection_finish(self, session):
