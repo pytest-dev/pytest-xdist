@@ -1074,6 +1074,21 @@ def test_color_yes_collection_on_non_atty(testdir, request):
     assert "gw0 C / gw1 C" not in result.stdout.str()
 
 
+def test_without_terminal_plugin(testdir, request):
+    """
+    No output when terminal plugin is disabled
+    """
+    testdir.makepyfile(
+        """
+        def test_1():
+            pass
+    """
+    )
+    result = testdir.runpytest("-p", "no:terminal", "-n2")
+    assert result.stdout.str() == ""
+    assert result.stderr.str() == ""
+
+
 def test_internal_error_with_maxfail(testdir):
     """
     Internal error when using --maxfail option (#62, #65).
