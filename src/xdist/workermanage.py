@@ -112,7 +112,10 @@ class NodeManager(object):
         ignores += self.config.option.rsyncignore
         ignores += self.config.getini("rsyncignore")
 
-        return {"ignores": ignores, "verbose": self.config.option.verbose}
+        return {
+            "ignores": ignores,
+            "verbose": getattr(self.config.option, "verbose", False),
+        }
 
     def rsync(self, gateway, source, notify=None, verbose=False, ignores=None):
         """Perform rsync to remote hosts for node."""

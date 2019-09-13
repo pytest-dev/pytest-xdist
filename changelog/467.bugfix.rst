@@ -1,0 +1,1 @@
+Fix crash issues related to running xdist with the terminal plugin disabled.

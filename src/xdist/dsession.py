@@ -49,11 +49,8 @@ class DSession(object):
         self._max_worker_restart = get_default_max_worker_restart(self.config)
         # summary message to print at the end of the session
         self._summary_report = None
-        try:
-            self.terminal = config.pluginmanager.getplugin("terminalreporter")
-        except KeyError:
-            self.terminal = None
-        else:
+        self.terminal = config.pluginmanager.getplugin("terminalreporter")
+        if self.terminal:
             self.trdist = TerminalDistReporter(config)
             config.pluginmanager.register(self.trdist, "terminaldistreporter")
 
