@@ -1087,6 +1087,7 @@ def test_without_terminal_plugin(testdir, request):
     result = testdir.runpytest("-p", "no:terminal", "-n2")
     assert result.stdout.str() == ""
     assert result.stderr.str() == ""
+    assert result.ret == 0
 
 
 def test_internal_error_with_maxfail(testdir):
