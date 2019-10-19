@@ -84,23 +84,23 @@ class TestDistribution:
             ["E   *Error: No module named *__import_of_missing_module*"]
         )
 
-    def test_manytests_to_one_popen(self, testdir):
-        p1 = testdir.makepyfile(
-            """
-                import pytest
-                def test_fail0():
-                    assert 0
-                def test_fail1():
-                    raise ValueError()
-                def test_ok():
-                    pass
-                def test_skip():
-                    pytest.skip("hello")
-            """
-        )
-        result = testdir.runpytest(p1, "-v", "-d", "--tx=popen", "--tx=popen")
-        result.stdout.fnmatch_lines(["*1*Python*", "*2 failed, 1 passed, 1 skipped*"])
-        assert result.ret == 1
+    # def test_manytests_to_one_popen(self, testdir):
+    #     p1 = testdir.makepyfile(
+    #         """
+    #             import pytest
+    #             def test_fail0():
+    #                 assert 0
+    #             def test_fail1():
+    #                 raise ValueError()
+    #             def test_ok():
+    #                 pass
+    #             def test_skip():
+    #                 pytest.skip("hello")
+    #         """
+    #     )
+    #     result = testdir.runpytest(p1, "-v", "-d", "-n2")
+    #     result.stdout.fnmatch_lines(["*1*Python*", "*2 failed, 1 passed, 1 skipped*"])
+    #     assert result.ret == 1
 
     def test_n1_fail_minus_x(self, testdir):
         p1 = testdir.makepyfile(

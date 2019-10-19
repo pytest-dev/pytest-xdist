@@ -1,3 +1,7 @@
+import multiprocessing
+import queue
+import threading
+
 import py
 import pytest
 
@@ -41,7 +45,7 @@ class DSession(object):
         self.shuttingdown = False
         self.countfailures = 0
         self.maxfail = config.getvalue("maxfail")
-        self.queue = Queue()
+        self.master_queue = queue.Queue()
         self._session = None
         self._failed_collection_errors = {}
         self._active_nodes = set()
@@ -75,7 +79,7 @@ class DSession(object):
         soon as nodes start they will emit the worker_workerready event.
         """
         self.nodemanager = NodeManager(self.config)
-        nodes = self.nodemanager.setup_nodes(putevent=self.queue.put)
+        nodes = self.nodemanager.setup_nodes(self.master_queue)
         self._active_nodes.update(nodes)
         self._session = session
 
@@ -107,6 +111,9 @@ class DSession(object):
         )
         assert self.sched is not None
 
+        #for node in self._active_nodes:
+        #    node.process.start()
+
         self.shouldstop = False
         while not self.session_finished:
             self.loop_once()
@@ -123,7 +130,7 @@ class DSession(object):
                 self.triggershutdown()
                 raise RuntimeError("Unexpectedly no active workers available")
             try:
-                eventcall = self.queue.get(timeout=2.0)
+                eventcall = self.master_queue.get(timeout=2.0)
                 break
             except Empty:
                 continue
@@ -292,7 +299,7 @@ class DSession(object):
         spec = node.gateway.spec
         spec.id = None
         self.nodemanager.group.allocate_id(spec)
-        node = self.nodemanager.setup_node(spec, self.queue.put)
+        node = self.nodemanager.setup_node(spec, self.master_queue)
         self._active_nodes.add(node)
         return node
 

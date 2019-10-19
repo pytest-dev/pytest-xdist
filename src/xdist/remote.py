@@ -19,18 +19,19 @@ from _pytest.config import _prepareconfig, Config
 
 
 class WorkerInteractor(object):
-    def __init__(self, config, channel):
+    def __init__(self, config, worker_input_queue, worker_output_queue):
         self.config = config
         self.workerid = config.workerinput.get("workerid", "?")
         self.log = py.log.Producer("worker-%s" % self.workerid)
         if not config.option.debug:
             py.log.setconsumer(self.log._keywords, None)
-        self.channel = channel
+        self.worker_input_queue = worker_input_queue
+        self.worker_output_queue = worker_output_queue
         config.pluginmanager.register(self)
 
     def sendevent(self, name, **kwargs):
         self.log("sending", name, kwargs)
-        self.channel.send((name, kwargs))
+        self.worker_output_queue.put((name, kwargs))
 
     def pytest_internalerror(self, excrepr):
         for line in str(excrepr).split("\n"):
@@ -56,7 +57,7 @@ class WorkerInteractor(object):
         torun = []
         while 1:
             try:
-                name, kwargs = self.channel.receive()
+                name, kwargs = self.worker_input_queue.get()
             except EOFError:
                 return True
             self.log("received command", name, kwargs)
@@ -68,7 +69,7 @@ class WorkerInteractor(object):
             # only run if we have an item and a next item
             while len(torun) >= 2:
                 self.run_one_test(torun)
-            if name == "shutdown":
+            if name == "shutdown" or name == -1:
                 if torun:
                     self.run_one_test(torun)
                 break
@@ -227,9 +228,8 @@ def setup_config(config, basetemp):
     config.option.basetemp = basetemp
 
 
-if __name__ == "__channelexec__":
-    channel = channel  # noqa
-    workerinput, args, option_dict, change_sys_path = channel.receive()
+def main(workerinput, args, option_dict, change_sys_path, worker_input_queue, worker_output_queue):
+
 
     if change_sys_path:
         importpath = os.getcwd()
@@ -242,6 +242,7 @@ if __name__ == "__channelexec__":
     os.environ["PYTEST_XDIST_WORKER_COUNT"] = str(workerinput["workercount"])
 
     if hasattr(Config, "InvocationParams"):
+        args = list(args) + ["-pno:terminal"]
         config = _prepareconfig(args, None)
     else:
         config = remote_initconfig(option_dict, args)
@@ -254,5 +255,5 @@ if __name__ == "__channelexec__":
     # TODO: deprecated name, backward compatibility only. Remove it in future
     config.slaveinput = config.workerinput
     config.slaveoutput = config.workeroutput
-    interactor = WorkerInteractor(config, channel)
+    interactor = WorkerInteractor(config, worker_input_queue, worker_output_queue)
     config.hook.pytest_cmdline_main(config=config)

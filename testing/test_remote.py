@@ -62,7 +62,7 @@ class WorkerSetup:
             print("skipping %s" % (ev,))
 
     def sendcommand(self, name, **kwargs):
-        self.slp.sendcommand(name, **kwargs)
+        self.slp.send_remote_command(name, **kwargs)
 
 
 @pytest.fixture

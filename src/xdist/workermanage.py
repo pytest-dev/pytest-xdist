@@ -1,8 +1,14 @@
 from __future__ import print_function
+
+import contextlib
 import fnmatch
+import multiprocessing
 import os
+import queue
 import re
 import sys
+import threading
+
 
 import py
 import pytest
@@ -56,19 +62,19 @@ class NodeManager(object):
             for root in self.roots:
                 self.rsync(gateway, root, **self.rsyncoptions)
 
-    def setup_nodes(self, putevent):
+    def setup_nodes(self, master_queue):
         self.config.hook.pytest_xdist_setupnodes(config=self.config, specs=self.specs)
         self.trace("setting up nodes")
         nodes = []
         for spec in self.specs:
-            nodes.append(self.setup_node(spec, putevent))
+            nodes.append(self.setup_node(spec, master_queue))
         return nodes
 
-    def setup_node(self, spec, putevent):
+    def setup_node(self, spec, master_queue):
         gw = self.group.makegateway(spec)
         self.config.hook.pytest_xdist_newgateway(gateway=gw)
         self.rsync_roots(gw)
-        node = WorkerController(self, gw, self.config, putevent)
+        node = WorkerController(self, gw, self.config, master_queue)
         gw.node = node  # keep the node alive
         node.setup()
         self.trace("started node %r" % node)
@@ -202,6 +208,25 @@ def make_reltoroot(roots, args):
     return result
 
 
+class ReceiverThread(threading.Thread):
+
+    def __init__(self, worker_id, queue, callback):
+        super().__init__(name=worker_id)
+        self.worker_queue = queue
+        self.callback = callback
+        self.stop = threading.Event()
+
+    def run(self) -> None:
+        while not self.stop.is_set():
+            with contextlib.suppress(queue.Empty):
+                item = self.worker_queue.get(block=True, timeout=0.1)
+                if item == WorkerController.ENDMARK:
+                    break
+                else:
+                    self.callback(item)
+                
+
+
 class WorkerController(object):
     ENDMARK = -1
 
@@ -210,10 +235,10 @@ class WorkerController(object):
         def pytest_xdist_getremotemodule(self):
             return xdist.remote
 
-    def __init__(self, nodemanager, gateway, config, putevent):
+    def __init__(self, nodemanager, gateway, config, master_queue):
         config.pluginmanager.register(self.RemoteHook())
         self.nodemanager = nodemanager
-        self.putevent = putevent
+        self.master_queue = master_queue
         self.gateway = gateway
         self.config = config
         self.workerinput = {
@@ -257,15 +282,28 @@ class WorkerController(object):
         self.config.hook.pytest_configure_node(node=self)
 
         remote_module = self.config.hook.pytest_xdist_getremotemodule()
-        self.channel = self.gateway.remote_exec(remote_module)
         # change sys.path only for remote workers
         change_sys_path = not self.gateway.spec.popen
-        self.channel.send((self.workerinput, args, option_dict, change_sys_path))
+        self.worker_input_queue = multiprocessing.Queue()
+        self.worker_output_queue  = multiprocessing.Queue()
+        worker_args = (self.workerinput, args, option_dict, change_sys_path, self.worker_input_queue, self.worker_output_queue)
+        self.process = multiprocessing.Process(target=remote_module.main, args=worker_args)
+        self.process.start()
 
-        if self.putevent:
-            self.channel.setcallback(self.process_from_remote, endmarker=self.ENDMARK)
+        self.receiver_thread = ReceiverThread(self.gateway.id, self.worker_output_queue, self.process_from_remote)
+        self.receiver_thread.start()
+        #self.channel.send((self.workerinput, args, option_dict, change_sys_path))
+
+        # if self.putevent:
+        #     self.channel.setcallback(self.process_from_remote, endmarker=self.ENDMARK)
+
+    def _cleanup_thread(self):
+        if self.receiver_thread:
+            self.receiver_thread.stop.set()
+            self.receiver_thread = None
 
     def ensure_teardown(self):
+        self._cleanup_thread()
         if hasattr(self, "channel"):
             if not self.channel.isclosed():
                 self.log("closing", self.channel)
@@ -277,27 +315,27 @@ class WorkerController(object):
             # del self.gateway
 
     def send_runtest_some(self, indices):
-        self.sendcommand("runtests", indices=indices)
+        self.send_remote_command("runtests", indices=indices)
 
     def send_runtest_all(self):
-        self.sendcommand("runtests_all")
+        self.send_remote_command("runtests_all")
 
     def shutdown(self):
         if not self._down:
             try:
-                self.sendcommand("shutdown")
+                self.send_remote_command("shutdown")
             except (IOError, OSError):
                 pass
             self._shutdown_sent = True
 
-    def sendcommand(self, name, **kwargs):
+    def send_remote_command(self, name, **kwargs):
         """ send a named parametrized command to the other side. """
         self.log("sending command %s(**%s)" % (name, kwargs))
-        self.channel.send((name, kwargs))
+        self.worker_input_queue.put((name, kwargs))
 
-    def notify_inproc(self, eventname, **kwargs):
+    def send_master_command(self, eventname, **kwargs):
         self.log("queuing %s(**%s)" % (eventname, kwargs))
-        self.putevent((eventname, kwargs))
+        self.master_queue.put((eventname, kwargs))
 
     def process_from_remote(self, eventcall):  # noqa too complex
         """ this gets called for each object we receive from
@@ -309,24 +347,26 @@ class WorkerController(object):
         """
         try:
             if eventcall == self.ENDMARK:
-                err = self.channel._getremoteerror()
+                #err = self.channel._getremoteerror()
                 if not self._down:
-                    if not err or isinstance(err, EOFError):
-                        err = "Not properly terminated"  # lost connection?
-                    self.notify_inproc("errordown", node=self, error=err)
+                    #if not err or isinstance(err, EOFError):
+                    #    err = "Not properly terminated"  # lost connection?
+                    self.send_master_command("errordown", node=self, error=IOError)
                     self._down = True
+                    self._cleanup_thread()
                 return
             eventname, kwargs = eventcall
             if eventname in ("collectionstart",):
                 self.log("ignoring %s(%s)" % (eventname, kwargs))
             elif eventname == "workerready":
-                self.notify_inproc(eventname, node=self, **kwargs)
+                self.send_master_command(eventname, node=self, **kwargs)
             elif eventname == "workerfinished":
                 self._down = True
                 self.workeroutput = self.slaveoutput = kwargs["workeroutput"]
-                self.notify_inproc("workerfinished", node=self)
+                self.send_master_command("workerfinished", node=self)
+                self._cleanup_thread()
             elif eventname in ("logstart", "logfinish"):
-                self.notify_inproc(eventname, node=self, **kwargs)
+                self.send_master_command(eventname, node=self, **kwargs)
             elif eventname in ("testreport", "collectreport", "teardownreport"):
                 item_index = kwargs.pop("item_index", None)
                 rep = self.config.hook.pytest_report_from_serializable(
@@ -334,13 +374,13 @@ class WorkerController(object):
                 )
                 if item_index is not None:
                     rep.item_index = item_index
-                self.notify_inproc(eventname, node=self, rep=rep)
+                self.send_master_command(eventname, node=self, rep=rep)
             elif eventname == "collectionfinish":
-                self.notify_inproc(eventname, node=self, ids=kwargs["ids"])
+                self.send_master_command(eventname, node=self, ids=kwargs["ids"])
             elif eventname == "runtest_protocol_complete":
-                self.notify_inproc(eventname, node=self, **kwargs)
+                self.send_master_command(eventname, node=self, **kwargs)
             elif eventname == "logwarning":
-                self.notify_inproc(
+                self.send_master_command(
                     eventname,
                     message=kwargs["message"],
                     code=kwargs["code"],
@@ -351,7 +391,7 @@ class WorkerController(object):
                 warning_message = unserialize_warning_message(
                     kwargs["warning_message_data"]
                 )
-                self.notify_inproc(
+                self.send_master_command(
                     eventname,
                     warning_message=warning_message,
                     when=kwargs["when"],
@@ -373,7 +413,8 @@ class WorkerController(object):
             print("!" * 20, excinfo)
             self.config.notify_exception(excinfo)
             self.shutdown()
-            self.notify_inproc("errordown", node=self, error=excinfo)
+            self.send_master_command("errordown", node=self, error=excinfo)
+
 
 
 def unserialize_warning_message(data):
