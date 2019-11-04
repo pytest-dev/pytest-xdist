@@ -129,7 +129,7 @@ Here is the code:
             # pytest's fixture caching do its job
             return produce_expensive_data()
 
-        # get the temp directory shared for by all workers
+        # get the temp directory shared by all workers
         root_tmp_dir = tmp_path_factory.getbasetemp().parent
 
         fn = root_tmp_dir / "data.json"
