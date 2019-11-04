@@ -95,6 +95,59 @@ any guaranteed order, but you can control this with these options:
   in version ``1.21``.
 
 
+Making session-scoped fixtures execute only once
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``pytest-xdist`` is designed so that each worker process will perform its own collection and execute
+a subset of all tests. This means that tests in different processes requesting a high-level
+scoped fixture (for example ``session``) will execute the fixture code more than once, which
+breaks expectations and might be undesired in certain situations.
+
+While ``pytest-xdist`` does not have a builtin support for ensuring a session-scoped fixture is
+executed exactly once, this can be achieved by using a lock file for inter-process communication.
+
+The example below needs to execute the fixture ``session_data`` only once (because it is
+resource intensive, or needs to execute only once to define configuration options, etc), so it makes
+use of a `FileLock <https://pypi.org/project/filelock/>`_ to produce the fixture data only once
+when the first process requests the fixture, while the other processes will then read
+the data from a file.
+
+Here is the code:
+
+.. code-block:: python
+
+    import json
+
+    import pytest
+    from filelock import FileLock
+
+
+    @pytest.fixture(scope="session")
+    def session_data(tmp_path_factory, worker_id):
+        if not worker_id:
+            # not executing in with multiple workers, just produce the data and let
+            # pytest's fixture caching do its job
+            return produce_expensive_data()
+
+        # get the temp directory shared for by all workers
+        root_tmp_dir = tmp_path_factory.getbasetemp().parent
+
+        fn = root_tmp_dir / "data.json"
+        with FileLock(str(fn) + ".lock"):
+            if fn.is_file():
+                data = json.loads(fn.read_text())
+            else:
+                data = produce_expensive_data()
+                fn.write_text(json.dumps(data))
+        return data
+
+
+The example above can also be use in cases a fixture needs to execute exactly once per test session, like
+initializing a database service and populating initial tables.
+
+This technique might not work for every case, but should be a starting point for many situations
+where executing a high-scope fixture exactly once is important.
+
 Running tests in a Python subprocess
 ------------------------------------
 

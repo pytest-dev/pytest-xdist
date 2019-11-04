@@ -784,7 +784,7 @@ class TestWarnings:
             )
         )
         result = testdir.runpytest(n)
-        result.stdout.fnmatch_lines(["*this is a warning*", "*1 passed, 1 warnings*"])
+        result.stdout.fnmatch_lines(["*this is a warning*", "*1 passed, 1 warning*"])
 
     @pytest.mark.parametrize("n", ["-n0", "-n1"])
     def test_custom_subclass(self, testdir, n):
@@ -808,7 +808,7 @@ class TestWarnings:
         )
         testdir.syspathinsert()
         result = testdir.runpytest(n)
-        result.stdout.fnmatch_lines(["*MyWarning*", "*1 passed, 1 warnings*"])
+        result.stdout.fnmatch_lines(["*MyWarning*", "*1 passed, 1 warning*"])
 
     @pytest.mark.parametrize("n", ["-n0", "-n1"])
     def test_unserializable_arguments(self, testdir, n):
@@ -825,7 +825,7 @@ class TestWarnings:
         )
         testdir.syspathinsert()
         result = testdir.runpytest(n)
-        result.stdout.fnmatch_lines(["*UserWarning*foo.txt*", "*1 passed, 1 warnings*"])
+        result.stdout.fnmatch_lines(["*UserWarning*foo.txt*", "*1 passed, 1 warning*"])
 
     @pytest.mark.parametrize("n", ["-n0", "-n1"])
     def test_unserializable_warning_details(self, testdir, n):
@@ -857,7 +857,7 @@ class TestWarnings:
         testdir.syspathinsert()
         result = testdir.runpytest(n)
         result.stdout.fnmatch_lines(
-            ["*ResourceWarning*unclosed*", "*1 passed, 1 warnings*"]
+            ["*ResourceWarning*unclosed*", "*1 passed, 1 warning*"]
         )
 
 
