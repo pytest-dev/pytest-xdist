@@ -30,8 +30,8 @@ jobs:
       cache:
         directories:
           - $HOME/.cache/pre-commit
-    - python: '3.7'
-      env: TOXENV=py37-pytestlatest
+    - python: '3.8'
+      env: TOXENV=py38-pytestlatest
     - python: '2.7'
       env: TOXENV=py27-pytestlatest
 
@@ -43,12 +43,14 @@ jobs:
     - python: "3.6"
       env: TOXENV=py36-pytestlatest
     - python: "3.7"
-      env: TOXENV=py37-pytestmaster
-    - python: "3.7"
-      env: TOXENV=py37-pytestfeatures
+      env: TOXENV=py37-pytestlatest
+    - python: "3.8"
+      env: TOXENV=py38-pytestmaster
+    - python: "3.8"
+      env: TOXENV=py38-pytestfeatures
 
     - stage: deploy
-      python: '3.7'
+      python: '3.8'
       env:
       install: pip install -U setuptools setuptools_scm
       script: skip
