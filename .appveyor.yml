@@ -5,17 +5,18 @@ environment:
   - TOXENV: "py35-pytestlatest"
   - TOXENV: "py36-pytestlatest"
   - TOXENV: "py37-pytestlatest"
-  - TOXENV: "py37-pytestmaster"
-  - TOXENV: "py37-pytestfeatures"
+  - TOXENV: "py38-pytestlatest"
+  - TOXENV: "py38-pytestmaster"
+  - TOXENV: "py38-pytestfeatures"
 
 install:
-  - C:\Python37\python -m pip install -U pip setuptools
-  - C:\Python37\python -m pip install -U tox setuptools_scm
+  - C:\Python38\python -m pip install -U pip setuptools
+  - C:\Python38\python -m pip install -U tox setuptools_scm
 
 build: false  # Not a C# project, build stuff at the test step instead.
 
 test_script:
-  - C:\Python37\python -m tox
+  - C:\Python38\python -m tox
 
 # We don't deploy anything on tags with AppVeyor, we use Travis instead, so we
 # might as well save resources
