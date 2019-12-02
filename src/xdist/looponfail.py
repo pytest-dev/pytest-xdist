@@ -136,7 +136,7 @@ def repr_pytest_looponfailinfo(failreports, rootdirs):
                 tr.line(report, red=True)
     tr.sep("#", "waiting for changes", bold=True)
     for rootdir in rootdirs:
-        tr.line("### Watching:   %s" % (rootdir,), bold=True)
+        tr.line("### Watching:   {}".format(rootdir), bold=True)
 
 
 def init_worker_session(channel, args, option_dict):

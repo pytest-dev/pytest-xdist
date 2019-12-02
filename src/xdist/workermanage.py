@@ -101,7 +101,7 @@ class NodeManager(object):
         for root in candidates:
             root = py.path.local(root).realpath()
             if not root.check():
-                raise pytest.UsageError("rsyncdir doesn't exist: %r" % (root,))
+                raise pytest.UsageError("rsyncdir doesn't exist: {!r}".format(root))
             if root not in roots:
                 roots.append(root)
         return roots
@@ -179,7 +179,7 @@ class HostRSync(execnet.RSync):
         if self._verbose:
             path = os.path.basename(self._sourcedir) + "/" + modified_rel_path
             remotepath = gateway.spec.chdir
-            print("%s:%s <= %s" % (gateway.spec, remotepath, path))
+            print("{}:{} <= {}".format(gateway.spec, remotepath, path))
 
 
 def make_reltoroot(roots, args):
@@ -197,7 +197,7 @@ def make_reltoroot(roots, args):
                 parts[0] = root.basename + "/" + x
                 break
         else:
-            raise ValueError("arg %s not relative to an rsync root" % (arg,))
+            raise ValueError("arg {} not relative to an rsync root".format(arg))
         result.append(splitcode.join(parts))
     return result
 
@@ -232,7 +232,7 @@ class WorkerController(object):
             py.log.setconsumer(self.log._keywords, None)
 
     def __repr__(self):
-        return "<%s %s>" % (self.__class__.__name__, self.gateway.id)
+        return "<{} {}>".format(self.__class__.__name__, self.gateway.id)
 
     @property
     def shutting_down(self):
@@ -292,11 +292,11 @@ class WorkerController(object):
 
     def sendcommand(self, name, **kwargs):
         """ send a named parametrized command to the other side. """
-        self.log("sending command %s(**%s)" % (name, kwargs))
+        self.log("sending command {}(**{})".format(name, kwargs))
         self.channel.send((name, kwargs))
 
     def notify_inproc(self, eventname, **kwargs):
-        self.log("queuing %s(**%s)" % (eventname, kwargs))
+        self.log("queuing {}(**{})".format(eventname, kwargs))
         self.putevent((eventname, kwargs))
 
     def process_from_remote(self, eventcall):  # noqa too complex
@@ -318,7 +318,7 @@ class WorkerController(object):
                 return
             eventname, kwargs = eventcall
             if eventname in ("collectionstart",):
-                self.log("ignoring %s(%s)" % (eventname, kwargs))
+                self.log("ignoring {}({})".format(eventname, kwargs))
             elif eventname == "workerready":
                 self.notify_inproc(eventname, node=self, **kwargs)
             elif eventname == "workerfinished":
@@ -358,7 +358,7 @@ class WorkerController(object):
                     item=kwargs["item"],
                 )
             else:
-                raise ValueError("unknown event: %s" % (eventname,))
+                raise ValueError("unknown event: {}".format(eventname))
         except KeyboardInterrupt:
             # should not land in receiver-thread
             raise
