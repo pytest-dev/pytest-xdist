@@ -1,7 +1,6 @@
 environment:
   matrix:
   - TOXENV: "py27-pytestlatest"
-  - TOXENV: "py34-pytestlatest"
   - TOXENV: "py35-pytestlatest"
   - TOXENV: "py36-pytestlatest"
   - TOXENV: "py37-pytestlatest"
