@@ -193,9 +193,12 @@ class TestDistribution:
         subdir.ensure("__init__.py")
         p = subdir.join("test_one.py")
         p.write("def test_5():\n  assert not __file__.startswith(%r)" % str(p))
-        result = testdir.runpytest(
+        result = testdir.runpytest_subprocess(
             "-v",
             "-d",
+            "-s",
+            "--foobar=123",
+            "--dist=load",
             "--rsyncdir=%(subdir)s" % locals(),
             "--tx=popen//chdir=%(dest)s" % locals(),
             p,
@@ -203,10 +206,17 @@ class TestDistribution:
         assert result.ret == 0
         result.stdout.fnmatch_lines(
             [
+                "adding --foobar option. *",
                 "*0* *cwd*",
                 # "RSyncStart: [G1]",
                 # "RSyncFinished: [G1]",
                 "*1 passed*",
+            ]
+        )
+        result.stderr.fnmatch_lines(
+            [
+                "--foobar=123 active! *",
+                "--foobar=123 active! *",
             ]
         )
         assert dest.join(subdir.basename).check(dir=1)
