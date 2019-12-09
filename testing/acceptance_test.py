@@ -213,10 +213,7 @@ class TestDistribution:
             ]
         )
         result.stderr.fnmatch_lines(
-            [
-                "--foobar=123 active! *",
-                "--foobar=123 active! *",
-            ]
+            ["--foobar=123 active! *", "--foobar=123 active! *"]
         )
         assert dest.join(subdir.basename).check(dir=1)
 
