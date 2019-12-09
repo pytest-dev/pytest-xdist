@@ -7,8 +7,7 @@ import pytest
 
 
 def pytest_addoption(parser):
-    print("adding --foobar option. [%s]" % os.getpid())
-    parser.addoption("--foobar", action='store', dest='foobar_opt')
+    parser.addoption("--foobar", action="store", dest="foobar_opt")
 
 
 @pytest.mark.tryfirst

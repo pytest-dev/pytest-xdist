@@ -206,7 +206,6 @@ class TestDistribution:
         assert result.ret == 0
         result.stdout.fnmatch_lines(
             [
-                "adding --foobar option. *",
                 "*0* *cwd*",
                 # "RSyncStart: [G1]",
                 # "RSyncFinished: [G1]",
