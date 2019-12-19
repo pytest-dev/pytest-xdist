@@ -1,0 +1,1 @@
+Fix regression that caused custom plugin command-line arguments to be discarded when using ``--tx`` mode.
