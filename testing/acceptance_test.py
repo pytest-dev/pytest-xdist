@@ -239,9 +239,7 @@ class TestDistribution:
                 "*1 passed*",
             ]
         )
-        result.stderr.fnmatch_lines(
-            ["--foobar=123 active! *", "--foobar=123 active! *"]
-        )
+        result.stderr.fnmatch_lines(["--foobar=123 active! *"])
         assert dest.join(subdir.basename).check(dir=1)
 
     def test_backward_compatibility_worker_terminology(self, testdir):
