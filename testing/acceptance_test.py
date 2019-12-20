@@ -186,16 +186,46 @@ class TestDistribution:
         )
         assert result.ret == 1
 
-    def test_distribution_rsyncdirs_example(self, testdir):
+    def test_distribution_rsyncdirs_example(self, testdir, monkeypatch):
+        # use a custom plugin that has a custom command-line option to ensure
+        # this is propagated to workers (see #491)
+        testdir.makepyfile(
+            **{
+                "myplugin/src/foobarplugin.py": """
+            from __future__ import print_function
+
+            import os
+            import sys
+            import pytest
+
+            def pytest_addoption(parser):
+                parser.addoption("--foobar", action="store", dest="foobar_opt")
+
+            @pytest.mark.tryfirst
+            def pytest_load_initial_conftests(early_config):
+                opt = early_config.known_args_namespace.foobar_opt
+                print("--foobar=%s active! [%s]" % (opt, os.getpid()), file=sys.stderr)
+            """
+            }
+        )
+        assert (testdir.tmpdir / "myplugin/src/foobarplugin.py").check(file=1)
+        monkeypatch.setenv(
+            "PYTHONPATH", str(testdir.tmpdir / "myplugin/src"), prepend=os.pathsep
+        )
+
         source = testdir.mkdir("source")
         dest = testdir.mkdir("dest")
         subdir = source.mkdir("example_pkg")
         subdir.ensure("__init__.py")
         p = subdir.join("test_one.py")
         p.write("def test_5():\n  assert not __file__.startswith(%r)" % str(p))
-        result = testdir.runpytest(
+        result = testdir.runpytest_subprocess(
             "-v",
             "-d",
+            "-s",
+            "-pfoobarplugin",
+            "--foobar=123",
+            "--dist=load",
             "--rsyncdir=%(subdir)s" % locals(),
             "--tx=popen//chdir=%(dest)s" % locals(),
             p,
@@ -209,6 +239,7 @@ class TestDistribution:
                 "*1 passed*",
             ]
         )
+        result.stderr.fnmatch_lines(["--foobar=123 active! *"])
         assert dest.join(subdir.basename).check(dir=1)
 
     def test_backward_compatibility_worker_terminology(self, testdir):
