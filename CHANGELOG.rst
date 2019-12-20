@@ -1,3 +1,36 @@
+..
+    You should *NOT* be adding new change log entries to this file, this
+    file is managed by towncrier. You *may* edit previous change logs to
+    fix problems like typo corrections or such.
+    To add a new change log entry, please see
+    https://pip.pypa.io/en/latest/development/#adding-a-news-entry
+    We named the news folder ``changelog``
+
+.. towncrier release notes start
+
+pytest-xdist 1.30.0 (2019-10-01)
+================================
+
+Features
+--------
+
+- `#448 <https://github.com/pytest-dev/pytest-xdist/issues/448>`_: Initialization between workers and master nodes is now more consistent, which fixes a number of
+  long-standing issues related to startup with the ``-c`` option.
+
+  Issues:
+
+  * `#6 <https://github.com/pytest-dev/pytest-xdist/issues/6>`__: Poor interaction between ``-n#`` and ``-c X.cfg``
+  * `#445 <https://github.com/pytest-dev/pytest-xdist/issues/445>`__: pytest-xdist is not reporting the same nodeid as pytest does
+
+  This however only works with **pytest 5.1 or later**, as it required changes in pytest itself.
+
+
+Bug Fixes
+---------
+
+- `#467 <https://github.com/pytest-dev/pytest-xdist/issues/467>`_: Fix crash issues related to running xdist with the terminal plugin disabled.
+
+
 pytest-xdist 1.29.0 (2019-06-14)
 ================================
 
@@ -399,39 +432,6 @@ Improved Documentation
 - Introduced ``towncrier`` for ``CHANGELOG`` management. (#154)
 
 - Added ``HOWTORELEASE`` documentation. (#155)
-
-
-..
-    You should *NOT* be adding new change log entries to this file, this
-    file is managed by towncrier. You *may* edit previous change logs to
-    fix problems like typo corrections or such.
-    To add a new change log entry, please see
-    https://pip.pypa.io/en/latest/development/#adding-a-news-entry
-    We named the news folder ``changelog``
-
-.. towncrier release notes start
-
-pytest-xdist 1.30.0 (2019-10-01)
-================================
-
-Features
---------
-
-- `#448 <https://github.com/pytest-dev/pytest-xdist/issues/448>`_: Initialization between workers and master nodes is now more consistent, which fixes a number of
-  long-standing issues related to startup with the ``-c`` option.
-
-  Issues:
-
-  * `#6 <https://github.com/pytest-dev/pytest-xdist/issues/6>`__: Poor interaction between ``-n#`` and ``-c X.cfg``
-  * `#445 <https://github.com/pytest-dev/pytest-xdist/issues/445>`__: pytest-xdist is not reporting the same nodeid as pytest does
-
-  This however only works with **pytest 5.1 or later**, as it required changes in pytest itself.
-
-
-Bug Fixes
----------
-
-- `#467 <https://github.com/pytest-dev/pytest-xdist/issues/467>`_: Fix crash issues related to running xdist with the terminal plugin disabled.
 
 
 1.17.0
