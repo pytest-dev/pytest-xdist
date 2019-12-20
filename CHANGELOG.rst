@@ -1,3 +1,18 @@
+pytest-xdist 1.30.0 (2019-12-19)
+================================
+
+Features
+--------
+
+- `#486 <https://github.com/pytest-dev/pytest-xdist/issues/486>`_: Add support for Python 3.8.
+
+
+Bug Fixes
+---------
+
+- `#491 <https://github.com/pytest-dev/pytest-xdist/issues/491>`_: Fix regression that caused custom plugin command-line arguments to be discarded when using ``--tx`` mode.
+
+
 pytest-xdist 1.29.0 (2019-06-14)
 ================================
 
