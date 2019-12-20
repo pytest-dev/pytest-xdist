@@ -1,12 +1,18 @@
-..
-    You should *NOT* be adding new change log entries to this file, this
-    file is managed by towncrier. You *may* edit previous change logs to
-    fix problems like typo corrections or such.
-    To add a new change log entry, please see
-    https://pip.pypa.io/en/latest/development/#adding-a-news-entry
-    We named the news folder ``changelog``
+pytest-xdist 1.31.0 (2019-12-19)
+================================
 
-.. towncrier release notes start
+Features
+--------
+
+- `#486 <https://github.com/pytest-dev/pytest-xdist/issues/486>`_: Add support for Python 3.8.
+
+
+Bug Fixes
+---------
+
+- `#491 <https://github.com/pytest-dev/pytest-xdist/issues/491>`_: Fix regression that caused custom plugin command-line arguments to be discarded when using ``--tx`` mode.
+
+
 
 pytest-xdist 1.30.0 (2019-10-01)
 ================================
