@@ -127,7 +127,7 @@ class TestSetTestGroupWithLoadScheduler:
         # there is only groupA tests in gw0's assigned work
         assert gw0_tests.count("groupA") == 5
         assert gw0_tests.count("groupB") == 0
-        # there is only groupB tests in gw0's assigned work
+        # there is only groupB tests in gw1's assigned work
         assert gw1_tests.count("groupA") == 0
         assert gw1_tests.count("groupB") == 5
         # the third worker node recieved no work groups
@@ -179,7 +179,7 @@ class TestSetTestGroupWithLoadScheduler:
         # there is only groupA tests in gw0's assigned work
         assert gw0_tests.count("groupA") == 5
         assert gw0_tests.count("groupB") == 0
-        # there is only groupB tests in gw0's assigned work
+        # there is only groupB tests in gw1's assigned work
         assert gw1_tests.count("groupA") == 0
         assert gw1_tests.count("groupB") == 5
         # the third worker node recieved all remaining tests
@@ -232,10 +232,10 @@ class TestSetTestGroupWithLoadSchedulerOrderGroups:
             groupings.setdefault(worker_id, []).append((nodeid, status))
         gw0_tests = "".join(group[0] for group in groupings["gw0"])
         gw1_tests = "".join(group[0] for group in groupings["gw1"])
-        # there is only groupA tests in gw0's assigned work
+        # there is only groupB tests in gw0's assigned work
         assert gw0_tests.count("groupB") == 5
         assert gw0_tests.count("groupA") == 0
-        # there is only groupB tests in gw0's assigned work
+        # there is only groupA tests in gw1's assigned work
         assert gw1_tests.count("groupB") == 0
         assert gw1_tests.count("groupA") == 5
         # the third worker node recieved no work groups
