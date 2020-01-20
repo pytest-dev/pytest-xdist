@@ -1,0 +1,1 @@
+Allow defining of custom logic for test distribution among test groups, and changing the order in which test groups are passed out to workers.

@@ -80,20 +80,133 @@ that worker and report the failure as usual. You can use the
 ``--max-worker-restart`` option to limit the number of workers that can
 be restarted, or disable restarting altogether using ``--max-worker-restart=0``.
 
-By default, the ``-n`` option will send pending tests to any worker that is available, without
-any guaranteed order, but you can control this with these options:
+Dividing tests up
+^^^^^^^^^^^^^^^^^
 
-* ``--dist=loadscope``: tests will be grouped by **module** for *test functions* and
-  by **class** for *test methods*, then each group will be sent to an available worker,
-  guaranteeing that all tests in a group run in the same process. This can be useful if you have
-  expensive module-level or class-level fixtures. Currently the groupings can't be customized,
-  with grouping by class takes priority over grouping by module.
-  This feature was added in version ``1.19``.
+In order to divide the tests up amongst the workers, ``pytest-xdist`` first puts sets of
+them into "test groups". The tests within a test group are all run together in one shot,
+so fixtures of larger scopes won't be run once for every single test. Instead, they'll
+be run as many times as they need to for the tests within that test group. But, once
+that test group is finished, it should be assumed that all cached fixture values from
+that test group's execution are destroyed.
 
-* ``--dist=loadfile``: tests will be grouped by file name, and then will be sent to an available
-  worker, guaranteeing that all tests in a group run in the same worker. This feature was added
-  in version ``1.21``.
+By default, there is no grouping logic and every individual test is placed in its own
+test group, so using the ``-n`` option will send pending tests to any worker that is
+available, without any guaranteed order. It should be assumed that when using this
+approach, every single test is run entirely in isolation from the others, meaning the
+tests can't rely on cached fixture values from larger-scoped fixtures.
 
+Provided test grouping options
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+By default, ``pytest-xdist`` doesn't group any tests together, but it provides some
+grouping options, based on simple criteria about a test's nodeid. so you can gunarantee
+that certain tests are run in the same process. When they're run in the same process,
+you gunarantee that larger-scoped fixtures are only executed as many times as would
+normally be expected for the tests in the test group. But, once that test group is
+finished, it should be assumed that all cached fixture values from that test group's
+execution are destroyed.
+
+Here's the options that are built in:
+
+* ``--dist=loadscope``: tests will be grouped by **module** shown in each test's node
+  for *test functions* and by the **class** shown in each test's nodeid for *test
+  methods*. This feature was added in version ``1.19``.
+
+* ``--dist=loadfile``: tests will be grouped by the **module** shown in each test's
+  nodeid. This feature was added in version ``1.21``.
+
+Defining custom load distribution logic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``pytest-xdist`` iterates over the entire list of collected tests and usually determines
+what group to put them in based off of their nodeid. There is no set number of test
+groups, as it creates a new groups as needed. You can tap into this system to define
+your own grouping logic by using the ``pytest_xdist_set_test_group_from_nodeid``.
+
+If you define your own copy of that hook, it will be called once for every test, and the
+nodeid for each test will be passed in. Whatever it returns is the test group for that
+test. If a test group doesn't already exist with that name, then it will be created, so
+anything can be used.
+
+For example, let's say you have the following tests::
+
+    test/test_something.py::test_form_upload[image-chrome]
+    test/test_something.py::test_form_upload[image-firefox]
+    test/test_something.py::test_form_upload[video-chrome]
+    test/test_something.py::test_form_upload[video-firefox]
+    test/test_something_else.py::test_form_upload[image-chrome]
+    test/test_something_else.py::test_form_upload[image-firefox]
+    test/test_something_else.py::test_form_upload[video-chrome]
+    test/test_something_else.py::test_form_upload[video-firefox]
+
+In order to have the ``chrome`` related tests run together and the ``firefox`` tests run
+together, but allow them to be separated by file, this could be done:
+
+.. code-block:: python
+
+    def pytest_xdist_set_test_group_from_nodeid(nodeid):
+        browser_names = ['chrome', 'firefox']
+        nodeid_params = nodeid.split('[', 1)[-1].rstrip(']').split('-')
+        for name in browser_names:
+            if name in nodeid_params:
+                return "{test_file}[{browser_name}]".format(
+                    test_file=nodeid.split("::", 1)[0],
+                    browser_name=name,
+                )
+
+The tests would then be divided into these test groups:
+
+.. code-block:: python
+
+    {
+        "test/test_something.py::test_form_upload[chrome]" : [
+            "test/test_something.py::test_form_upload[image-chrome]",
+            "test/test_something.py::test_form_upload[video-chrome]"
+        ],
+        "test/test_something.py::test_form_upload[firefox]": [
+            "test/test_something.py::test_form_upload[image-firefox]",
+            "test/test_something.py::test_form_upload[video-firefox]"
+        ],
+        "test/test_something_else.py::test_form_upload[firefox]": [
+            "test/test_something_else.py::test_form_upload[image-firefox]",
+            "test/test_something_else.py::test_form_upload[video-firefox]"
+        ],
+        "test/test_something_else.py::test_form_upload[chrome]": [
+            "test/test_something_else.py::test_form_upload[image-chrome]",
+            "test/test_something_else.py::test_form_upload[video-chrome]"
+        ]
+    }
+
+You can also fall back on one of the default load distribution mechanism by passing the
+arguments for them listed above when you call pytest. Because this example returns
+``None`` if the nodeid doesn't meet any of the criteria, it will defer to whichever
+mechanism you chose. So if you passed ``--dist=loadfile``, tests would otherwise be
+divided up by file name.
+
+Keep in mind, this is a means of optimization, not a means for determinism.
+
+Controlling test group execution order
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Sometimes you may want to have certain test groups start before or after others. Once
+the test groups have been determined, the ``OrderedDict`` they are stored in can have
+its order modified through the ``pytest_xdist_order_test_groups`` hook. For example, in
+order to move the test group named ``"groupA"`` to the end of the queue, this can be
+done:
+
+.. code-block:: python
+
+    def pytest_xdist_order_test_groups(workqueue):
+        workqueue.move_to_end("groupA")
+
+Keep in mind, this is a means of optimization, not a means for determinism or filtering.
+Removing test groups from this ``OrderedDict``, or adding new ones in after the fact can
+have unforseen consequences.
+
+If you want to filter out which tests get run, it is recommended to either rely on test
+suite structure (so you can target the tests in specific locations), or by using marks
+(so you can select or filter out based on specific marks with the ``-m`` flag).
 
 Making session-scoped fixtures execute only once
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

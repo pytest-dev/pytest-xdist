@@ -118,70 +118,115 @@ class TestLoadScheduling:
         assert sched.tests_finished
 
     def test_schedule_batch_size(self, testdir):
+        # should have 2 workers
         config = testdir.parseconfig("--tx=2*popen")
+        # create the scheduler
         sched = LoadScheduling(config)
+        # add the 3 worker nodes
         sched.add_node(MockNode())
         sched.add_node(MockNode())
+        # get references to all the worker nodes
         node1, node2 = sched.nodes
-        col = ["xyz"] * 6
+        # generate the test collection with 6 tests
+        col = ["xyz{}".format(i) for i in range(6)]
+        # each worker node has the test collection
         sched.add_node_collection(node1, col)
         sched.add_node_collection(node2, col)
+        # do the initial dividing up of the work
         sched.schedule()
-        # assert not sched.tests_finished
         sent1 = node1.sent
         sent2 = node2.sent
+        # the work was divided up in a round robin fashion, and only two work groups
+        # were provided initially (and there's one test item per work group)
         assert sent1 == [0, 2]
         assert sent2 == [1, 3]
-        assert sched.pending == [4, 5]
-        assert sched.node2pending[node1] == sent1
-        assert sched.node2pending[node2] == sent2
+        # only all but the first 4 work groups are still pending, as only
+        # <number of worker nodes>*2 work groups were initially scheduled
+        assert sched.pending == col[4:]
         assert len(sched.pending) == 2
+        # the worker nodes show the correct pending work groups
+        assert sched.node2pending[node1] == col[:4:2]
+        assert sched.node2pending[node2] == col[1:4:2]
+        # mark the first test of the first worker node as completed
         sched.mark_test_complete(node1, 0)
+        # the first worker node was given the next work group in the queue
         assert node1.sent == [0, 2, 4]
-        assert sched.pending == [5]
+        # the second worker node was not given another work group as none of
+        # its tests were marked as complete.
         assert node2.sent == [1, 3]
+        # only all but the first 4 work groups are still pending, as only
+        # <number of worker nodes>*2 work groups were initially scheduled and
+        # the first worker node was given another
+        assert sched.pending == col[5:]
+        assert len(sched.pending) == 1
+        # mark the second test of the first worker node as completed
         sched.mark_test_complete(node1, 2)
+        # the first worker node was given the next work group in the queue
         assert node1.sent == [0, 2, 4, 5]
+        # the second worker node was not given another work group as none of
+        # its tests were marked as complete.
+        assert node2.sent == [1, 3]
+        # there's no tests left that haven't been scheduled
         assert not sched.pending
 
     def test_schedule_fewer_tests_than_nodes(self, testdir):
-        config = testdir.parseconfig("--tx=2*popen")
+        # should have 3 workers
+        config = testdir.parseconfig("--tx=3*popen")
+        # create the scheduler
         sched = LoadScheduling(config)
+        # add the 3 worker nodes
         sched.add_node(MockNode())
         sched.add_node(MockNode())
         sched.add_node(MockNode())
+        # get references to all the worker nodes
         node1, node2, node3 = sched.nodes
-        col = ["xyz"] * 2
+        # generate the test collection with 2 tests
+        col = ["xyz{}".format(i) for i in range(2)]
+        # each worker node has the test collection
         sched.add_node_collection(node1, col)
         sched.add_node_collection(node2, col)
+        sched.add_node_collection(node3, col)
+        # do the initial dividing up of the work
         sched.schedule()
         # assert not sched.tests_finished
         sent1 = node1.sent
         sent2 = node2.sent
         sent3 = node3.sent
+        # the work was divided up in a round robin fashion
         assert sent1 == [0]
         assert sent2 == [1]
         assert sent3 == []
+        # there's no tests left that haven't been scheduled
         assert not sched.pending
 
     def test_schedule_fewer_than_two_tests_per_node(self, testdir):
-        config = testdir.parseconfig("--tx=2*popen")
+        # should have 3 workers
+        config = testdir.parseconfig("--tx=3*popen")
+        # create the scheduler
         sched = LoadScheduling(config)
+        # add the 3 worker nodes
         sched.add_node(MockNode())
         sched.add_node(MockNode())
         sched.add_node(MockNode())
+        # get references to all the worker nodes
         node1, node2, node3 = sched.nodes
-        col = ["xyz"] * 5
+        # generate the test collection with 5 tests
+        col = ["xyz{}".format(i) for i in range(5)]
+        # each worker node has the test collection
         sched.add_node_collection(node1, col)
         sched.add_node_collection(node2, col)
+        sched.add_node_collection(node3, col)
+        # do the initial dividing up of the work
         sched.schedule()
         # assert not sched.tests_finished
         sent1 = node1.sent
         sent2 = node2.sent
         sent3 = node3.sent
+        # the work was divided up in a round robin fashion
         assert sent1 == [0, 3]
         assert sent2 == [1, 4]
         assert sent3 == [2]
+        # there's no tests left that haven't been scheduled
         assert not sched.pending
 
     def test_add_remove_node(self, testdir):

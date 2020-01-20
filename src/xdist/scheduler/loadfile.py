@@ -1,9 +1,9 @@
-from .loadscope import LoadScopeScheduling
+from .load import LoadScheduling
 from py.log import Producer
 
 
-class LoadFileScheduling(LoadScopeScheduling):
-    """Implement load scheduling across nodes, but grouping test test file.
+class LoadFileScheduling(LoadScheduling):
+    """Implement load scheduling across nodes, but grouping test by file.
 
     This distributes the tests collected across all nodes so each test is run
     just once.  All nodes collect and submit the list of tests and when all
@@ -17,36 +17,14 @@ class LoadFileScheduling(LoadScopeScheduling):
     When created, ``numnodes`` defines how many nodes are expected to submit a
     collection. This is used to know when all nodes have finished collection.
 
-    This class behaves very much like LoadScopeScheduling, but with a file-level scope.
+    This groups tests by default based on their file.
     """
 
-    def __init__(self, config, log=None):
-        super(LoadFileScheduling, self).__init__(config, log)
-        if log is None:
-            self.log = Producer("loadfilesched")
-        else:
-            self.log = log.loadfilesched
+    _producer = "loadfilesched"
 
-    def _split_scope(self, nodeid):
-        """Determine the scope (grouping) of a nodeid.
+    def get_default_test_group(self, nodeid):
+        """Determine the default test grouping of a nodeid, but based on file.
 
-        There are usually 3 cases for a nodeid::
-
-            example/loadsuite/test/test_beta.py::test_beta0
-            example/loadsuite/test/test_delta.py::Delta1::test_delta0
-            example/loadsuite/epsilon/__init__.py::epsilon.epsilon
-
-        #. Function in a test module.
-        #. Method of a class in a test module.
-        #. Doctest in a function in a package.
-
-        This function will group tests with the scope determined by splitting
-        the first ``::`` from the left. That is, test will be grouped in a
-        single work unit when they reside in the same file.
-         In the above example, scopes will be::
-
-            example/loadsuite/test/test_beta.py
-            example/loadsuite/test/test_delta.py
-            example/loadsuite/epsilon/__init__.py
+        Tests belonging to the same file will be put into the same test group.
         """
         return nodeid.split("::", 1)[0]
