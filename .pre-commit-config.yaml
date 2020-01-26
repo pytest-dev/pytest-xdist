@@ -21,3 +21,4 @@ repos:
         files: ^(CHANGELOG.rst|HOWTORELEASE.rst|README.rst|changelog/.*)$
         language: python
         additional_dependencies: [pygments, restructuredtext_lint]
+        language_version: python3.7

@@ -9,7 +9,7 @@ environment:
   - TOXENV: "py38-pytestfeatures"
 
 install:
-  - C:\Python38\python -m pip install -U pip setuptools
+  - C:\Python38\python -m pip install -U pip setuptools virtualenv
   - C:\Python38\python -m pip install -U tox setuptools_scm
 
 build: false  # Not a C# project, build stuff at the test step instead.

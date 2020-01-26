@@ -190,6 +190,7 @@ def make_reltoroot(roots, args):
         parts = arg.split(splitcode)
         fspath = py.path.local(parts[0])
         if not fspath.exists():
+            result.append(arg)
             continue
         for root in roots:
             x = fspath.relto(root)
