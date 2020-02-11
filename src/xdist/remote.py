@@ -123,20 +123,6 @@ class WorkerInteractor(object):
             )
             self.sendevent("collectreport", data=data)
 
-    # the pytest_logwarning hook was deprecated since pytest 4.0
-    if hasattr(
-        _pytest.hookspec, "pytest_logwarning"
-    ) and not _pytest.hookspec.pytest_logwarning.pytest_spec.get("warn_on_impl"):
-
-        def pytest_logwarning(self, message, code, nodeid, fslocation):
-            self.sendevent(
-                "logwarning",
-                message=message,
-                code=code,
-                nodeid=nodeid,
-                fslocation=str(fslocation),
-            )
-
     # the pytest_warning_captured hook was introduced in pytest 3.8
     if hasattr(_pytest.hookspec, "pytest_warning_captured"):
 

@@ -340,14 +340,6 @@ class WorkerController(object):
                 self.notify_inproc(eventname, node=self, ids=kwargs["ids"])
             elif eventname == "runtest_protocol_complete":
                 self.notify_inproc(eventname, node=self, **kwargs)
-            elif eventname == "logwarning":
-                self.notify_inproc(
-                    eventname,
-                    message=kwargs["message"],
-                    code=kwargs["code"],
-                    nodeid=kwargs["nodeid"],
-                    fslocation=kwargs["nodeid"],
-                )
             elif eventname == "warning_captured":
                 warning_message = unserialize_warning_message(
                     kwargs["warning_message_data"]
