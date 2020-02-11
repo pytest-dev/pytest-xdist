@@ -14,6 +14,12 @@ def test_dist_incompatibility_messages(testdir):
     assert "incompatible" in result.stderr.str()
 
 
+def test_pdb_can_be_used_before_configure(testdir):
+    result = testdir.runpytest("--pdb", "-n", "2", "--version")
+    assert result.ret == 0
+    assert "pytest version" in result.stderr.str()
+
+
 def test_dist_options(testdir):
     from xdist.plugin import pytest_cmdline_main as check_options
 
