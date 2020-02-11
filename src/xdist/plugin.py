@@ -164,6 +164,8 @@ def pytest_addhooks(pluginmanager):
 
 @pytest.mark.trylast
 def pytest_configure(config):
+    _check_options(config)
+
     if config.getoption("dist") != "no" and not config.getvalue("collectonly"):
         from xdist.dsession import DSession
 
@@ -176,8 +178,8 @@ def pytest_configure(config):
         config.option.forked = True
 
 
-@pytest.mark.tryfirst
-def pytest_cmdline_main(config):
+def _check_options(config):
+    """Kept separate for tests."""
     usepdb = config.getoption("usepdb", False)  # a core option
     if isinstance(config.option.numprocesses, AutoInt):
         config.option.numprocesses = 0 if usepdb else int(config.option.numprocesses)

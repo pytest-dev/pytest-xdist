@@ -1,5 +1,6 @@
 import py
 import execnet
+from xdist.plugin import _check_options as check_options
 from xdist.workermanage import NodeManager
 
 
@@ -21,8 +22,6 @@ def test_pdb_can_be_used_before_configure(testdir):
 
 
 def test_dist_options(testdir):
-    from xdist.plugin import pytest_cmdline_main as check_options
-
     config = testdir.parseconfigure("-n 2")
     check_options(config)
     assert config.option.dist == "load"
@@ -42,7 +41,6 @@ def test_dist_options(testdir):
 
 def test_auto_detect_cpus(testdir, monkeypatch):
     import os
-    from xdist.plugin import pytest_cmdline_main as check_options
 
     if hasattr(os, "sched_getaffinity"):
         monkeypatch.setattr(os, "sched_getaffinity", lambda _pid: set(range(99)))
@@ -71,8 +69,6 @@ def test_auto_detect_cpus(testdir, monkeypatch):
 
 
 def test_boxed_with_collect_only(testdir):
-    from xdist.plugin import pytest_cmdline_main as check_options
-
     config = testdir.parseconfigure("-n1", "--boxed")
     check_options(config)
     assert config.option.forked
@@ -87,17 +83,10 @@ def test_boxed_with_collect_only(testdir):
 
 
 def test_dsession_with_collect_only(testdir):
-    from xdist.plugin import pytest_cmdline_main as check_options
-    from xdist.plugin import pytest_configure as configure
-
     config = testdir.parseconfigure("-n1")
-    check_options(config)
-    configure(config)
     assert config.pluginmanager.hasplugin("dsession")
 
     config = testdir.parseconfigure("-n1", "--collect-only")
-    check_options(config)
-    configure(config)
     assert not config.pluginmanager.hasplugin("dsession")
 
 
