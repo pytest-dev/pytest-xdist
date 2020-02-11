@@ -1,6 +1,5 @@
 import py
 import execnet
-from xdist.plugin import _check_options as check_options
 from xdist.workermanage import NodeManager
 
 
@@ -23,19 +22,15 @@ def test_pdb_can_be_used_before_configure(testdir):
 
 def test_dist_options(testdir):
     config = testdir.parseconfigure("-n 2")
-    check_options(config)
     assert config.option.dist == "load"
     assert config.option.tx == ["popen"] * 2
     config = testdir.parseconfigure("--numprocesses", "2")
-    check_options(config)
     assert config.option.dist == "load"
     assert config.option.tx == ["popen"] * 2
     config = testdir.parseconfigure("--numprocesses", "3", "--maxprocesses", "2")
-    check_options(config)
     assert config.option.dist == "load"
     assert config.option.tx == ["popen"] * 2
     config = testdir.parseconfigure("-d")
-    check_options(config)
     assert config.option.dist == "load"
 
 
@@ -58,7 +53,6 @@ def test_auto_detect_cpus(testdir, monkeypatch):
     assert config.getoption("numprocesses") == 99
 
     config = testdir.parseconfigure("-nauto", "--pdb")
-    check_options(config)
     assert config.getoption("usepdb")
     assert config.getoption("numprocesses") == 0
 
@@ -70,15 +64,12 @@ def test_auto_detect_cpus(testdir, monkeypatch):
 
 def test_boxed_with_collect_only(testdir):
     config = testdir.parseconfigure("-n1", "--boxed")
-    check_options(config)
     assert config.option.forked
 
     config = testdir.parseconfigure("-n1", "--collect-only")
-    check_options(config)
     assert not config.option.forked
 
     config = testdir.parseconfigure("-n1", "--boxed", "--collect-only")
-    check_options(config)
     assert config.option.forked
 
 

@@ -164,22 +164,6 @@ def pytest_addhooks(pluginmanager):
 
 @pytest.mark.trylast
 def pytest_configure(config):
-    _check_options(config)
-
-    if config.getoption("dist") != "no" and not config.getvalue("collectonly"):
-        from xdist.dsession import DSession
-
-        session = DSession(config)
-        config.pluginmanager.register(session, "dsession")
-        tr = config.pluginmanager.getplugin("terminalreporter")
-        if tr:
-            tr.showfspath = False
-    if config.getoption("boxed"):
-        config.option.forked = True
-
-
-def _check_options(config):
-    """Kept separate for tests."""
     usepdb = config.getoption("usepdb", False)  # a core option
     if isinstance(config.option.numprocesses, AutoInt):
         config.option.numprocesses = 0 if usepdb else int(config.option.numprocesses)
@@ -200,6 +184,17 @@ def _check_options(config):
                 raise pytest.UsageError(
                     "--pdb is incompatible with distributing tests; try using -n0 or -nauto."
                 )  # noqa: E501
+
+    if config.getoption("dist") != "no" and not config.getvalue("collectonly"):
+        from xdist.dsession import DSession
+
+        session = DSession(config)
+        config.pluginmanager.register(session, "dsession")
+        tr = config.pluginmanager.getplugin("terminalreporter")
+        if tr:
+            tr.showfspath = False
+    if config.getoption("boxed"):
+        config.option.forked = True
 
 
 # -------------------------------------------------------------------------
