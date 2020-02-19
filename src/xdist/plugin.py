@@ -204,6 +204,7 @@ def pytest_cmdline_main(config):
 # fixtures and API to easily know the role of current node
 # -------------------------------------------------------------------------
 
+
 def is_xdist_worker(request_or_session):
     """Return `True` if this is an xdist worker, `False` otherwise
 
@@ -222,8 +223,10 @@ def is_xdist_master(request_or_session):
     :param request_or_session: the `pytest` `request` or `session` object
     :return:
     """
-    return (not is_xdist_worker(request_or_session)
-            and request_or_session.config.option.dist != "no")
+    return (
+        not is_xdist_worker(request_or_session)
+        and request_or_session.config.option.dist != "no"
+    )
 
 
 def get_xdist_worker_id(request_or_session):
