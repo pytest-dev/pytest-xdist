@@ -44,8 +44,6 @@ jobs:
       env: TOXENV=py37-pytestlatest
     - python: "3.8"
       env: TOXENV=py38-pytestmaster
-    - python: "3.8"
-      env: TOXENV=py38-pytestfeatures
 
     - stage: deploy
       python: '3.8'

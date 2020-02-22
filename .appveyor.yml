@@ -6,7 +6,6 @@ environment:
   - TOXENV: "py37-pytestlatest"
   - TOXENV: "py38-pytestlatest"
   - TOXENV: "py38-pytestmaster"
-  - TOXENV: "py38-pytestfeatures"
 
 install:
   - C:\Python38\python -m pip install -U pip setuptools virtualenv
