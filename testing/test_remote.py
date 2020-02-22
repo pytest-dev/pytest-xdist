@@ -286,4 +286,10 @@ def test_remote_usage_prog(testdir, request):
 
     result = testdir.runpytest_subprocess("-n1")
     assert result.ret == 1
-    result.stdout.fnmatch_lines(["*usage: *", "*error: my_usage_error"])
+    result.stdout.re_match_lines(
+        [
+            "^>       raise UsageError",
+            "^E       .*UsageError: usage: (pytest.py|__main__.py)",
+            "^E       (pytest.py|__main__.py): error: my_usage_error",
+        ]
+    )
