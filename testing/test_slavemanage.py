@@ -168,7 +168,7 @@ class TestNodeManager:
         # assert nodemanager.config.topdir == source == config.topdir
         nodemanager.makegateways()
         nodemanager.rsync_roots()
-        p, = nodemanager.gwmanager.multi_exec(
+        (p,) = nodemanager.gwmanager.multi_exec(
             "import os ; channel.send(os.getcwd())"
         ).receive_each()
         p = py.path.local(p)
@@ -269,5 +269,5 @@ class TestNodeManager:
         reprec = testdir.inline_run(
             "-d", "--rsyncdir=%s" % testdir.tmpdir, "--tx", specssh, testdir.tmpdir
         )
-        rep, = reprec.getreports("pytest_runtest_logreport")
+        (rep,) = reprec.getreports("pytest_runtest_logreport")
         assert rep.passed
