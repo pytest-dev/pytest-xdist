@@ -118,15 +118,20 @@ class TestDistribution:
     def test_basetemp_in_subprocesses(self, testdir):
         p1 = testdir.makepyfile(
             """
-            def test_send(tmpdir):
-                import py
-                assert tmpdir.relto(py.path.local(%r)), tmpdir
-        """
-            % str(testdir.tmpdir)
+            import py
+
+            def test_send1(tmpdir):
+                assert tmpdir.relto(py.path.local({!r})), tmpdir
+
+            def test_send2(tmpdir):
+                assert tmpdir.relto(py.path.local({!r})), tmpdir
+        """.format(
+                str(testdir.tmpdir), str(testdir.tmpdir),
+            )
         )
-        result = testdir.runpytest_subprocess(p1, "-n1")
+        result = testdir.runpytest_subprocess(p1, "-n2")
         assert result.ret == 0
-        result.stdout.fnmatch_lines(["*1 passed*"])
+        result.stdout.fnmatch_lines(["* 2 passed in *"])
 
     def test_dist_ini_specified(self, testdir):
         p1 = testdir.makepyfile(
@@ -766,15 +771,19 @@ def test_tmpdir_disabled(testdir):
     """
     p1 = testdir.makepyfile(
         """
-        def test_ok(request):
+        def test_ok1(request):
+            assert request.config.option.basetemp == {!r}
+
+        def test_ok2(request):
             assert request.config.option.basetemp == {!r}
     """.format(
-            str(testdir.tmpdir.dirpath() / "basetemp" / "popen-gw0")
+            str(testdir.tmpdir.dirpath() / "basetemp" / "popen-gw0"),
+            str(testdir.tmpdir.dirpath() / "basetemp" / "popen-gw1"),
         )
     )
-    result = testdir.runpytest(p1, "-n1", "-p", "no:tmpdir")
+    result = testdir.runpytest(p1, "-n2", "-p", "no:tmpdir")
     assert result.ret == 0
-    result.stdout.fnmatch_lines("*1 passed*")
+    result.stdout.fnmatch_lines("* 2 passed in *")
 
 
 @pytest.mark.parametrize("plugin", ["xdist.looponfail", "xdist.boxed"])
