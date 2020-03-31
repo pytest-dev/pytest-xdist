@@ -766,9 +766,11 @@ def test_tmpdir_disabled(testdir):
     """
     p1 = testdir.makepyfile(
         """
-        def test_ok():
-            pass
-    """
+        def test_ok(request):
+            assert request.config.option.basetemp == {!r}
+    """.format(
+            str(testdir.tmpdir.dirpath() / "basetemp" / "popen-gw0")
+        )
     )
     result = testdir.runpytest(p1, "-n1", "-p", "no:tmpdir")
     assert result.ret == 0

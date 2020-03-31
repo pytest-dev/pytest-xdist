@@ -1,12 +1,14 @@
 from __future__ import print_function
+
 import fnmatch
 import os
 import re
 import sys
 
+import execnet
 import py
 import pytest
-import execnet
+from _pytest.tmpdir import TempPathFactory
 
 import xdist.remote
 
@@ -252,9 +254,9 @@ class WorkerController(object):
             args = make_reltoroot(self.nodemanager.roots, args)
         if spec.popen:
             name = "popen-%s" % self.gateway.id
-            if hasattr(self.config, "_tmpdirhandler"):
-                basetemp = self.config._tmpdirhandler.getbasetemp()
-                option_dict["basetemp"] = str(basetemp.join(name))
+            basetemp = TempPathFactory.from_config(self.config).getbasetemp()
+            option_dict["basetemp"] = str(basetemp.joinpath(name))
+
         self.config.hook.pytest_configure_node(node=self)
 
         remote_module = self.config.hook.pytest_xdist_getremotemodule()

@@ -1,0 +1,1 @@
+Fix passing `--basetemp` to subprocesses with pytest 5.4.
