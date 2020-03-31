@@ -122,11 +122,22 @@ class TestDistribution:
 
             def test_send1(tmpdir):
                 assert tmpdir.relto(py.path.local({!r})), tmpdir
+                assert str(tmpdir) == {!r}
 
             def test_send2(tmpdir):
                 assert tmpdir.relto(py.path.local({!r})), tmpdir
+                assert str(tmpdir) == {!r}
         """.format(
-                str(testdir.tmpdir), str(testdir.tmpdir),
+                str(testdir.tmpdir),
+                str(
+                    testdir.tmpdir.dirpath()
+                    / "test_basetemp_in_subprocesses0/runpytest-0/popen-gw0/test_send10"
+                ),
+                str(testdir.tmpdir),
+                str(
+                    testdir.tmpdir.dirpath()
+                    / "test_basetemp_in_subprocesses0/runpytest-0/popen-gw1/test_send20"
+                ),
             )
         )
         result = testdir.runpytest_subprocess(p1, "-n2")
