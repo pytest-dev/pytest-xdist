@@ -252,9 +252,9 @@ class WorkerController(object):
             args = make_reltoroot(self.nodemanager.roots, args)
         if spec.popen:
             name = "popen-%s" % self.gateway.id
-            if hasattr(self.config, "_tmpdirhandler"):
-                basetemp = self.config._tmpdirhandler.getbasetemp()
-                option_dict["basetemp"] = str(basetemp.join(name))
+            basetemp = self.config.getoption("basetemp")
+            if basetemp is not None:
+                option_dict["basetemp"] = str(os.path.join(basetemp, name))
         self.config.hook.pytest_configure_node(node=self)
 
         remote_module = self.config.hook.pytest_xdist_getremotemodule()

@@ -1,0 +1,1 @@
+Fix support of the `--basetemp` pytest option for pytest 5.4.0 and up.

@@ -128,6 +128,22 @@ class TestDistribution:
         assert result.ret == 0
         result.stdout.fnmatch_lines(["*1 passed*"])
 
+    def test_basetemp_in_subprocesses_when_specified(self, testdir):
+        basetemp = testdir.tmpdir.join("one-level-down")
+        basetemp.mkdir()
+
+        p1 = testdir.makepyfile(
+            """
+            def test_send(tmpdir):
+                import py
+                assert tmpdir.relto(py.path.local(%r)), tmpdir
+        """
+            % str(basetemp)
+        )
+        result = testdir.runpytest_subprocess(p1, "-n1", "--basetemp", basetemp)
+        assert result.ret == 0
+        result.stdout.fnmatch_lines(["*1 passed*"])
+
     def test_dist_ini_specified(self, testdir):
         p1 = testdir.makepyfile(
             """
