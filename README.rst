@@ -276,6 +276,41 @@ defined:
 The information about the worker_id in a test is stored in the ``TestReport`` as
 well, under the ``worker_id`` attribute.
 
+
+Uniquely identifying the current test run
+-----------------------------------------
+
+*New in version 1.32.*
+
+If you need to globally distinguish one test run from others in your
+workers, you can use the ``testrun_uid`` fixture. For instance, let's say you
+wanted to create a separate database for each test run:
+
+.. code-block:: python
+
+    import pytest
+    from posix_ipc import Semaphore, O_CREAT
+
+    @pytest.fixture(scope="session", autouse=True)
+    def create_unique_database(testrun_uid):
+        """ create a unique database for this particular test run """
+        database_url = f"psql://myapp-{testrun_uid}"
+
+        with Semaphore(f"/{testrun_uid}-lock", flags=O_CREAT, initial_value=1):
+            if not database_exists(database_url):
+                create_database(database_url)
+
+    @pytest.fixture()
+    def db(testrun_uid):
+        """ retrieve unique database """
+        database_url = f"psql://myapp-{testrun_uid}"
+        return database_get_instance(database_url)
+
+
+Additionally, during a test run, the following environment variable is defined:
+
+* ``PYTEST_XDIST_TESTRUNUID`: the unique id of the test run
+
 Acessing ``sys.argv`` from the master node in workers
 -----------------------------------------------------
 

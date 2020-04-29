@@ -1066,6 +1066,29 @@ def test_worker_id_fixture(testdir, n):
         assert worker_ids == {"gw0", "gw1"}
 
 
+@pytest.mark.parametrize("n", [0, 2])
+def test_testrun_uid_fixture(testdir, n):
+    import glob
+
+    f = testdir.makepyfile(
+        """
+        import pytest
+        @pytest.mark.parametrize("run_num", range(2))
+        def test_testrun_uid1(testrun_uid, run_num):
+            with open("testrun_uid%s.txt" % run_num, "w") as f:
+                f.write(testrun_uid)
+    """
+    )
+    result = testdir.runpytest(f, "-n%d" % n)
+    result.stdout.fnmatch_lines("* 2 passed in *")
+    testrun_uids = set()
+    for fname in glob.glob(str(testdir.tmpdir.join("*.txt"))):
+        with open(fname) as f:
+            testrun_uids.add(f.read().strip())
+    assert len(testrun_uids) == 1
+    assert len(testrun_uids.pop()) == 32
+
+
 @pytest.mark.parametrize("tb", ["auto", "long", "short", "no", "line", "native"])
 def test_error_report_styles(testdir, tb):
     testdir.makepyfile(

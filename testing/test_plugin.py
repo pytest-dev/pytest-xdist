@@ -95,6 +95,18 @@ def test_dsession_with_collect_only(testdir):
     assert not config.pluginmanager.hasplugin("dsession")
 
 
+def test_testrunuid_provided(testdir):
+    config = testdir.parseconfigure("--testrunuid", "test123", "--tx=popen")
+    nm = NodeManager(config)
+    assert nm.testrunuid == "test123"
+
+
+def test_testrunuid_generated(testdir):
+    config = testdir.parseconfigure("--tx=popen")
+    nm = NodeManager(config)
+    assert len(nm.testrunuid) == 32
+
+
 class TestDistOptions:
     def test_getxspecs(self, testdir):
         config = testdir.parseconfigure("--tx=popen", "--tx", "ssh=xyz")

@@ -15,7 +15,7 @@ class TestHooks:
 
     def test_runtest_logreport(self, testdir):
         """Test that log reports from pytest_runtest_logreport when running
-        with xdist contain "node", "nodeid" and "worker_id" attributes. (#8)
+        with xdist contain "node", "nodeid", "worker_id", and "testrun_uid" attributes. (#8)
         """
         testdir.makeconftest(
             """
@@ -23,20 +23,24 @@ class TestHooks:
                 if hasattr(report, 'node'):
                     if report.when == "call":
                         workerid = report.node.workerinput['workerid']
+                        testrunuid = report.node.workerinput['testrunuid']
                         if workerid != report.worker_id:
                             print("HOOK: Worker id mismatch: %s %s"
                                    % (workerid, report.worker_id))
+                        elif testrunuid != report.testrun_uid:
+                            print("HOOK: Testrun uid mismatch: %s %s"
+                                   % (testrunuid, report.testrun_uid))
                         else:
-                            print("HOOK: %s %s"
-                                   % (report.nodeid, report.worker_id))
+                            print("HOOK: %s %s %s"
+                                   % (report.nodeid, report.worker_id, report.testrun_uid))
         """
         )
         res = testdir.runpytest("-n1", "-s")
         res.stdout.fnmatch_lines(
             [
-                "*HOOK: test_runtest_logreport.py::test_a gw0*",
-                "*HOOK: test_runtest_logreport.py::test_b gw0*",
-                "*HOOK: test_runtest_logreport.py::test_c gw0*",
+                "*HOOK: test_runtest_logreport.py::test_a gw0 *",
+                "*HOOK: test_runtest_logreport.py::test_b gw0 *",
+                "*HOOK: test_runtest_logreport.py::test_c gw0 *",
                 "*3 passed*",
             ]
         )

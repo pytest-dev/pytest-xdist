@@ -3,6 +3,7 @@ import fnmatch
 import os
 import re
 import sys
+import uuid
 
 import py
 import pytest
@@ -35,6 +36,9 @@ class NodeManager(object):
     def __init__(self, config, specs=None, defaultchdir="pyexecnetcache"):
         self.config = config
         self.trace = self.config.trace.get("nodemanager")
+        self.testrunuid = self.config.getoption("testrunuid")
+        if self.testrunuid is None:
+            self.testrunuid = uuid.uuid4().hex
         self.group = execnet.Group()
         if specs is None:
             specs = self._getxspecs()
@@ -222,6 +226,7 @@ class WorkerController(object):
             "workercount": len(nodemanager.specs),
             "slaveid": gateway.id,
             "slavecount": len(nodemanager.specs),
+            "testrunuid": nodemanager.testrunuid,
             "mainargv": sys.argv,
         }
         # TODO: deprecated name, backward compatibility only. Remove it in future
