@@ -115,6 +115,9 @@ class TestDistribution:
         assert result.ret == 2
         result.stdout.fnmatch_lines(["*Interrupted: stopping*1*", "*1 failed*"])
 
+    @pytest.mark.xfail(
+        reason="#527: Python 3.8 failure in pytest where testdir.tmpdir returns an unexpected value"
+    )
     def test_basetemp_in_subprocesses(self, testdir):
         p1 = testdir.makepyfile(
             """
@@ -186,6 +189,7 @@ class TestDistribution:
         )
         assert result.ret == 1
 
+    @pytest.mark.xfail(reason="#527: Ignore Python 3.8 failure for the time being")
     def test_distribution_rsyncdirs_example(self, testdir, monkeypatch):
         # use a custom plugin that has a custom command-line option to ensure
         # this is propagated to workers (see #491)
