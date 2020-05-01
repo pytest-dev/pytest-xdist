@@ -1,4 +1,5 @@
 import os
+import uuid
 
 import py
 import pytest
@@ -122,12 +123,22 @@ def pytest_addoption(parser):
         metavar="GLOB",
         help="add expression for ignores when rsyncing to remote tx nodes.",
     )
-
     group.addoption(
         "--boxed",
         action="store_true",
         help="backward compatibility alias for pytest-forked --forked",
     )
+    group.addoption(
+        "--testrunuid",
+        action="store",
+        help=(
+            "provide an identifier shared amongst all workers as the value of "
+            "the 'testrun_uid' fixture,\n\n,"
+            "if not provided, 'testrun_uid' is filled with a new unique string "
+            "on every test run."
+        ),
+    )
+
     parser.addini(
         "rsyncdirs",
         "list of (relative) paths to be rsynced for remote distributed testing.",
@@ -214,3 +225,12 @@ def worker_id(request):
         return request.config.workerinput["workerid"]
     else:
         return "master"
+
+
+@pytest.fixture(scope="session")
+def testrun_uid(request):
+    """Return the unique id of the current test."""
+    if hasattr(request.config, "workerinput"):
+        return request.config.workerinput["testrunuid"]
+    else:
+        return uuid.uuid4().hex

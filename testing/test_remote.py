@@ -2,6 +2,7 @@ import py
 import pprint
 import pytest
 import sys
+import uuid
 
 from xdist.workermanage import WorkerController
 import execnet
@@ -44,6 +45,7 @@ class WorkerSetup:
         putevent = self.use_callback and self.events.put or None
 
         class DummyMananger:
+            testrunuid = uuid.uuid4().hex
             specs = [0, 1]
 
         self.slp = WorkerController(DummyMananger, self.gateway, config, putevent)
@@ -220,6 +222,7 @@ def test_remote_env_vars(testdir):
         """
         import os
         def test():
+            assert len(os.environ['PYTEST_XDIST_TESTRUNUID']) == 32
             assert os.environ['PYTEST_XDIST_WORKER'] in ('gw0', 'gw1')
             assert os.environ['PYTEST_XDIST_WORKER_COUNT'] == '2'
     """
