@@ -309,7 +309,7 @@ wanted to create a separate database for each test run:
 
 Additionally, during a test run, the following environment variable is defined:
 
-* ``PYTEST_XDIST_TESTRUNUID`: the unique id of the test run
+* ``PYTEST_XDIST_TESTRUNUID``: the unique id of the test run.
 
 Acessing ``sys.argv`` from the master node in workers
 -----------------------------------------------------
