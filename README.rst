@@ -311,8 +311,8 @@ Additionally, during a test run, the following environment variable is defined:
 
 * ``PYTEST_XDIST_TESTRUNUID``: the unique id of the test run.
 
-Acessing ``sys.argv`` from the master node in workers
------------------------------------------------------
+Accessing ``sys.argv`` from the master node in workers
+------------------------------------------------------
 
 To access the ``sys.argv`` passed to the command-line of the master node, use
 ``request.config.workerinput["mainargv"]``.
