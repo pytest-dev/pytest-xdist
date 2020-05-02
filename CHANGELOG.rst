@@ -1,3 +1,19 @@
+pytest-xdist 1.32.0 (2020-05-03)
+================================
+
+Deprecations and Removals
+-------------------------
+
+- `#475 <https://github.com/pytest-dev/pytest-xdist/issues/475>`_: Drop support for EOL Python 3.4.
+
+
+Features
+--------
+
+- `#524 <https://github.com/pytest-dev/pytest-xdist/issues/524>`_: Add `testrun_uid` fixture. This is a shared value that uniquely identifies a test run among all workers.
+  This also adds a `PYTEST_XDIST_TESTRUNUID` environment variable that is accessible within a test as well as a command line option `--testrunuid` to manually set the value from outside.
+
+
 pytest-xdist 1.31.0 (2019-12-19)
 ================================
 
