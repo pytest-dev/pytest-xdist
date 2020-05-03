@@ -332,7 +332,7 @@ class TestDistribution:
                 time.sleep(10)
         """
         )
-        child = testdir.spawn_pytest("-n1 -v")
+        child = testdir.spawn_pytest("-n1 -v", expect_timeout=30.0)
         child.expect(".*test_sleep.*")
         child.kill(2)  # keyboard interrupt
         child.expect(".*KeyboardInterrupt.*")

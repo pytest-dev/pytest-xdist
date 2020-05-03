@@ -284,7 +284,8 @@ class TestFunctional:
         )
         # p = testdir.mkdir("sub").join(p1.basename)
         # p1.move(p)
-        child = testdir.spawn_pytest("-f %s --traceconfig" % p)
+        child = testdir.spawn_pytest("-f %s --traceconfig" % p,
+                                     expect_timeout=30.0)
         child.expect("def test_one")
         child.expect("x == 1")
         child.expect("1 failed")
@@ -311,7 +312,8 @@ class TestFunctional:
                 pass
         """
         )
-        child = testdir.spawn_pytest("-f %s" % p)
+        child = testdir.spawn_pytest("-f %s" % p,
+                                     expect_timeout=30.0)
         child.expect("1 xpass")
         # child.expect("### LOOPONFAILING ####")
         child.expect("waiting for changes")
