@@ -87,12 +87,17 @@ any guaranteed order, but you can control this with these options:
   by **class** for *test methods*, then each group will be sent to an available worker,
   guaranteeing that all tests in a group run in the same process. This can be useful if you have
   expensive module-level or class-level fixtures. Currently the groupings can't be customized,
-  with grouping by class takes priority over grouping by module.
+  with grouping by class taking priority over grouping by module.  Use loadscopeshuffled for
+  randomizing the groupings execution order.
   This feature was added in version ``1.19``.
 
 * ``--dist=loadfile``: tests will be grouped by file name, and then will be sent to an available
   worker, guaranteeing that all tests in a group run in the same worker. This feature was added
   in version ``1.21``.
+
+* ``--dist=loadscopeshuffled``: tests will be grouped as they are by loadscope, then the groups
+  will be randomly selected to run on a worker.  The tests within the group will be shuffled.  This
+  can be useful if your tests use module or class fixtures but are otherwise expected to be independent.
 
 
 Making session-scoped fixtures execute only once
