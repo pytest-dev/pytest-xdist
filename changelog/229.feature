@@ -1,0 +1,1 @@
+Extend loadscope scheduling to randomize the distribution of test groups and the order of tests within the group.
