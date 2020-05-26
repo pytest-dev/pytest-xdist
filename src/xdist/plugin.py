@@ -75,7 +75,7 @@ def pytest_addoption(parser):
         "--dist",
         metavar="distmode",
         action="store",
-        choices=["each", "load", "loadscope", "loadfile", "no"],
+        choices=["each", "load", "loadscope", "loadfile", "no", "loadscopeshuffled"],
         dest="dist",
         default="no",
         help=(
@@ -87,6 +87,8 @@ def pytest_addoption(parser):
             " the same scope to any available environment.\n\n"
             "loadfile: load balance by sending test grouped by file"
             " to any available environment.\n\n"
+            "loadscopeshuffled: load balance by sending pending groups of tests in"
+            " the same scope to any available environment in a random order.\n\n"
             "(default) no: run tests inprocess, don't distribute."
         ),
     )
