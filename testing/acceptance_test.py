@@ -1359,13 +1359,17 @@ class TestLocking:
         (_test_content * 4) % ("A", "B", "C", "D")
     )
 
-    @pytest.mark.parametrize("scope", ["each", "load", "loadscope", "loadfile", "no"])
+    @pytest.mark.parametrize(
+        "scope", ["each", "load", "loadscope", "loadfile", "no", "loadscopeshuffled"]
+    )
     def test_single_file(self, testdir, scope):
         testdir.makepyfile(test_a=self.test_file1)
         result = testdir.runpytest("-n2", "--dist=%s" % scope, "-v")
         result.assert_outcomes(passed=(12 if scope != "each" else 12 * 2))
 
-    @pytest.mark.parametrize("scope", ["each", "load", "loadscope", "loadfile", "no"])
+    @pytest.mark.parametrize(
+        "scope", ["each", "load", "loadscope", "loadfile", "no", "loadscopeshuffled"]
+    )
     def test_multi_file(self, testdir, scope):
         testdir.makepyfile(
             test_a=self.test_file1,
@@ -1404,3 +1408,69 @@ def get_workers_and_test_count_by_prefix(prefix, lines, expected_status="PASSED"
         if expected_status == status and nodeid.startswith(prefix):
             result[worker] = result.get(worker, 0) + 1
     return result
+
+
+class TestLoadScopeShuffled:
+    def test_by_module(self, testdir):
+        test_file = """
+            import pytest
+            @pytest.mark.parametrize('i', range(10))
+            def test(i):
+                pass
+        """
+        testdir.makepyfile(test_a=test_file, test_b=test_file)
+        result = testdir.runpytest("-n2", "--dist=loadscopeshuffled", "-v")
+        assert get_workers_and_test_count_by_prefix(
+            "test_a.py::test", result.outlines
+        ) in ({"gw0": 10}, {"gw1": 10})
+        assert get_workers_and_test_count_by_prefix(
+            "test_b.py::test", result.outlines
+        ) in ({"gw0": 10}, {"gw1": 10})
+
+    def test_by_class(self, testdir):
+        testdir.makepyfile(
+            test_a="""
+            import pytest
+            class TestA:
+                @pytest.mark.parametrize('i', range(10))
+                def test(self, i):
+                    pass
+
+            class TestB:
+                @pytest.mark.parametrize('i', range(10))
+                def test(self, i):
+                    pass
+        """
+        )
+        result = testdir.runpytest("-n2", "--dist=loadscopeshuffled", "-v")
+        assert get_workers_and_test_count_by_prefix(
+            "test_a.py::TestA", result.outlines
+        ) in ({"gw0": 10}, {"gw1": 10})
+        assert get_workers_and_test_count_by_prefix(
+            "test_a.py::TestB", result.outlines
+        ) in ({"gw0": 10}, {"gw1": 10})
+
+    def test_module_single_start(self, testdir):
+        """Fix test suite never finishing in case all workers start with a single test (#277)."""
+        test_file1 = """
+            import pytest
+            def test():
+                pass
+        """
+        test_file2 = """
+            import pytest
+            def test_1():
+                pass
+            def test_2():
+                pass
+        """
+        testdir.makepyfile(test_a=test_file1, test_b=test_file1, test_c=test_file2)
+        result = testdir.runpytest("-n2", "--dist=loadscopeshuffled", "-v")
+        a = get_workers_and_test_count_by_prefix("test_a.py::test", result.outlines)
+        b = get_workers_and_test_count_by_prefix("test_b.py::test", result.outlines)
+        c1 = get_workers_and_test_count_by_prefix("test_c.py::test_1", result.outlines)
+        c2 = get_workers_and_test_count_by_prefix("test_c.py::test_2", result.outlines)
+        assert a in ({"gw0": 1}, {"gw1": 1})
+        assert b in ({"gw0": 1}, {"gw1": 1})
+        assert a.items() != b.items()
+        assert c1 == c2
