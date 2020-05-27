@@ -1216,7 +1216,18 @@ class TestLoadScopes:
             "test_a.py::TestB", result.outlines
         ) in ({"gw0": 10}, {"gw1": 10})
 
-    @pytest.mark.parametrize("scope", ["loadscope", "loadscopeshuffled"])
+    @pytest.mark.parametrize(
+        "scope",
+        [
+            pytest.param("loadscope"),
+            pytest.param(
+                "loadscopeshuffled",
+                marks=pytest.mark.xfail(
+                    reason="Flaky due to work distribution randomization i.e. test a, b are not always sent first and therefore do not always end up on gw0 and gw1"
+                )
+            )
+        ]
+    )
     def test_module_single_start(self, testdir, scope):
         """Fix test suite never finishing in case all workers start with a single test (#277)."""
         test_file1 = """
