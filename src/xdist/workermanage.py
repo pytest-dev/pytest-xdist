@@ -228,13 +228,9 @@ class WorkerController(object):
         self.workerinput = {
             "workerid": gateway.id,
             "workercount": len(nodemanager.specs),
-            "slaveid": gateway.id,
-            "slavecount": len(nodemanager.specs),
             "testrunuid": nodemanager.testrunuid,
             "mainargv": sys.argv,
         }
-        # TODO: deprecated name, backward compatibility only. Remove it in future
-        self.slaveinput = self.workerinput
         self._down = False
         self._shutdown_sent = False
         self.log = py.log.Producer("workerctl-%s" % gateway.id)
@@ -333,7 +329,7 @@ class WorkerController(object):
                 self.notify_inproc(eventname, node=self, **kwargs)
             elif eventname == "workerfinished":
                 self._down = True
-                self.workeroutput = self.slaveoutput = kwargs["workeroutput"]
+                self.workeroutput = kwargs["workeroutput"]
                 self.notify_inproc("workerfinished", node=self)
             elif eventname in ("logstart", "logfinish"):
                 self.notify_inproc(eventname, node=self, **kwargs)

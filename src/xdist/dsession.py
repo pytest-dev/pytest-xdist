@@ -150,9 +150,6 @@ class DSession(object):
         node.workerinfo["id"] = node.gateway.id
         node.workerinfo["spec"] = node.gateway.spec
 
-        # TODO: (#234 task) needs this for pytest. Remove when refactor in pytest repo
-        node.slaveinfo = node.workerinfo
-
         self.config.hook.pytest_testnodeready(node=node)
         if self.shuttingdown:
             node.shutdown()
