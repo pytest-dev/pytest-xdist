@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-install_requires = ["execnet>=1.1", "pytest>=4.4.0", "pytest-forked", "six"]
+install_requires = ["execnet>=1.1", "pytest>=6.0.0", "pytest-forked", "six"]
 
 
 with open("README.rst") as f:
@@ -24,7 +24,7 @@ setup(
         "pytest11": ["xdist = xdist.plugin", "xdist.looponfail = xdist.looponfail"]
     },
     zip_safe=False,
-    python_requires=">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*",
+    python_requires=">=3.5",
     install_requires=install_requires,
     setup_requires=["setuptools_scm"],
     classifiers=[
@@ -39,9 +39,8 @@ setup(
         "Topic :: Software Development :: Quality Assurance",
         "Topic :: Utilities",
         "Programming Language :: Python",
-        "Programming Language :: Python :: 2",
-        "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3 :: Only",
         "Programming Language :: Python :: 3.5",
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
