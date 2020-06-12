@@ -266,8 +266,5 @@ if __name__ == "__channelexec__":
     config._parser.prog = os.path.basename(workerinput["mainargv"][0])
     config.workerinput = workerinput
     config.workeroutput = {}
-    # TODO: deprecated name, backward compatibility only. Remove it in future
-    config.slaveinput = config.workerinput
-    config.slaveoutput = config.workeroutput
     interactor = WorkerInteractor(config, channel)
     config.hook.pytest_cmdline_main(config=config)
