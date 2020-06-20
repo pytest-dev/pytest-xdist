@@ -63,10 +63,7 @@ class NodeManager(object):
     def setup_nodes(self, putevent):
         self.config.hook.pytest_xdist_setupnodes(config=self.config, specs=self.specs)
         self.trace("setting up nodes")
-        nodes = []
-        for spec in self.specs:
-            nodes.append(self.setup_node(spec, putevent))
-        return nodes
+        return [self.setup_node(spec, putevent) for spec in self.specs]
 
     def setup_node(self, spec, putevent):
         gw = self.group.makegateway(spec)
@@ -158,11 +155,10 @@ class HostRSync(execnet.RSync):
 
     def __init__(self, sourcedir, *args, **kwargs):
         self._synced = {}
-        self._ignores = []
         ignores = kwargs.pop("ignores", None) or []
-        for x in ignores:
-            x = getattr(x, "strpath", x)
-            self._ignores.append(re.compile(fnmatch.translate(x)))
+        self._ignores = [
+            re.compile(fnmatch.translate(getattr(x, "strpath", x))) for x in ignores
+        ]
         super(HostRSync, self).__init__(sourcedir=sourcedir, **kwargs)
 
     def filter(self, path):
