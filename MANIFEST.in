@@ -1,0 +1,5 @@
+exclude .appveyor.yml
+exclude .gitignore
+exclude .pre-commit-config.yaml
+exclude .travis.yml
+prune .github
