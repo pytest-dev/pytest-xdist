@@ -1,0 +1,1 @@
+Make "--pdb" imply "--dist no".
