@@ -151,6 +151,18 @@ class WorkerInteractor(object):
                 item=None,
             )
 
+    # the pytest_warning_recorded hook was introduced in pytest 6.0
+    if hasattr(_pytest.hookspec, "pytest_warning_recorded"):
+
+        def pytest_warning_recorded(self, warning_message, when, nodeid, location):
+            self.sendevent(
+                "warning_recorded",
+                warning_message_data=serialize_warning_message(warning_message),
+                when=when,
+                nodeid=nodeid,
+                location=location,
+            )
+
 
 def serialize_warning_message(warning_message):
     if isinstance(warning_message.message, Warning):
