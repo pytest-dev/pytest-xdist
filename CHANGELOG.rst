@@ -1,3 +1,18 @@
+pytest-xdist 1.33.0 (2020-07-09)
+================================
+
+Features
+--------
+
+- `#554 <https://github.com/pytest-dev/pytest-xdist/issues/554>`_: Fix warnings support for upcoming pytest 6.0.
+
+
+Trivial Changes
+---------------
+
+- `#548 <https://github.com/pytest-dev/pytest-xdist/issues/548>`_: SCM and CI files are no longer included in the source distribution.
+
+
 pytest-xdist 1.32.0 (2020-05-03)
 ================================
 
