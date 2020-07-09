@@ -22,12 +22,16 @@ def _divert_atexit(request, monkeypatch):
 
     finalizers = []
 
-    def finish():
-        while finalizers:
-            finalizers.pop()()
+    def fake_register(func, *args, **kwargs):
+        finalizers.append((func, args, kwargs))
 
-    monkeypatch.setattr(atexit, "register", finalizers.append)
-    request.addfinalizer(finish)
+    monkeypatch.setattr(atexit, "register", fake_register)
+
+    yield
+
+    while finalizers:
+        func, args, kwargs = finalizers.pop()
+        func(*args, **kwargs)
 
 
 def pytest_addoption(parser):

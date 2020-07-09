@@ -277,9 +277,16 @@ class DSession(object):
         self.config.hook.pytest_logwarning.call_historic(kwargs=kwargs)
 
     def worker_warning_captured(self, warning_message, when, item):
-        """Emitted when a node calls the pytest_logwarning hook."""
+        """Emitted when a node calls the pytest_warning_captured hook (deprecated in 6.0)."""
         kwargs = dict(warning_message=warning_message, when=when, item=item)
         self.config.hook.pytest_warning_captured.call_historic(kwargs=kwargs)
+
+    def worker_warning_recorded(self, warning_message, when, nodeid, location):
+        """Emitted when a node calls the pytest_warning_recorded hook."""
+        kwargs = dict(
+            warning_message=warning_message, when=when, nodeid=nodeid, location=location
+        )
+        self.config.hook.pytest_warning_recorded.call_historic(kwargs=kwargs)
 
     def _clone_node(self, node):
         """Return new node based on an existing one.

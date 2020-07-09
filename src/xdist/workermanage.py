@@ -359,6 +359,17 @@ class WorkerController(object):
                     when=kwargs["when"],
                     item=kwargs["item"],
                 )
+            elif eventname == "warning_recorded":
+                warning_message = unserialize_warning_message(
+                    kwargs["warning_message_data"]
+                )
+                self.notify_inproc(
+                    eventname,
+                    warning_message=warning_message,
+                    when=kwargs["when"],
+                    nodeid=kwargs["nodeid"],
+                    location=kwargs["location"],
+                )
             else:
                 raise ValueError("unknown event: {}".format(eventname))
         except KeyboardInterrupt:
