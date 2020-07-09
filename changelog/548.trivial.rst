@@ -1,1 +1,0 @@
-SCM and CI files are no longer included in the source distribution.
