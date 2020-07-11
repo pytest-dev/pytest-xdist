@@ -17,7 +17,7 @@ class Interrupted(KeyboardInterrupt):
     """ signals an immediate interruption. """
 
 
-class DSession(object):
+class DSession:
     """A pytest plugin which runs a distributed test session
 
     At the beginning of the test session this creates a NodeManager
@@ -333,7 +333,7 @@ class DSession(object):
         self.config.hook.pytest_runtest_logreport(report=rep)
 
 
-class TerminalDistReporter(object):
+class TerminalDistReporter:
     def __init__(self, config):
         self.config = config
         self.tr = config.pluginmanager.getplugin("terminalreporter")

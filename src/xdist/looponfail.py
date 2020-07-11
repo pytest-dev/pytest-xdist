@@ -6,7 +6,6 @@
     processes) otherwise changes to source code can crash
     the controlling process which should best never happen.
 """
-from __future__ import print_function
 import py
 import pytest
 import sys
@@ -55,7 +54,7 @@ def looponfail_main(config):
         print()
 
 
-class RemoteControl(object):
+class RemoteControl:
     def __init__(self, config):
         self.config = config
         self.failures = []
@@ -165,7 +164,7 @@ def init_worker_session(channel, args, option_dict):
     WorkerFailSession(config, channel).main()
 
 
-class WorkerFailSession(object):
+class WorkerFailSession:
     def __init__(self, config, channel):
         self.config = config
         self.channel = channel
@@ -220,7 +219,7 @@ class WorkerFailSession(object):
         self.channel.send((trails, failreports, self.collection_failed))
 
 
-class StatRecorder(object):
+class StatRecorder:
     def __init__(self, rootdirlist):
         self.rootdirlist = rootdirlist
         self.statcache = {}

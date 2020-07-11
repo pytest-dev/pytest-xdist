@@ -203,7 +203,7 @@ class TestLoadScheduling:
         different test ids are collected by workers.
         """
 
-        class CollectHook(object):
+        class CollectHook:
             """
             Dummy hook that stores collection reports.
             """

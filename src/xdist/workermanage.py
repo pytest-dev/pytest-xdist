@@ -1,4 +1,3 @@
-from __future__ import print_function
 import fnmatch
 import os
 import re
@@ -29,7 +28,7 @@ def parse_spec_config(config):
     return xspeclist
 
 
-class NodeManager(object):
+class NodeManager:
     EXIT_TIMEOUT = 10
     DEFAULT_IGNORES = [".*", "*.pyc", "*.pyo", "*~"]
 
@@ -159,7 +158,7 @@ class HostRSync(execnet.RSync):
         self._ignores = [
             re.compile(fnmatch.translate(getattr(x, "strpath", x))) for x in ignores
         ]
-        super(HostRSync, self).__init__(sourcedir=sourcedir, **kwargs)
+        super().__init__(sourcedir=sourcedir, **kwargs)
 
     def filter(self, path):
         path = py.path.local(path)
@@ -171,9 +170,7 @@ class HostRSync(execnet.RSync):
 
     def add_target_host(self, gateway, finished=None):
         remotepath = os.path.basename(self._sourcedir)
-        super(HostRSync, self).add_target(
-            gateway, remotepath, finishedcallback=finished, delete=True
-        )
+        super().add_target(gateway, remotepath, finishedcallback=finished, delete=True)
 
     def _report_send_file(self, gateway, modified_rel_path):
         if self._verbose:
@@ -203,7 +200,7 @@ def make_reltoroot(roots, args):
     return result
 
 
-class WorkerController(object):
+class WorkerController:
     ENDMARK = -1
 
     class RemoteHook:
@@ -284,7 +281,7 @@ class WorkerController(object):
         if not self._down:
             try:
                 self.sendcommand("shutdown")
-            except (IOError, OSError):
+            except OSError:
                 pass
             self._shutdown_sent = True
 
