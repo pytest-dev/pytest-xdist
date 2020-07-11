@@ -10,7 +10,7 @@ from xdist.scheduler import (
 )
 
 
-from six.moves.queue import Empty, Queue
+from queue import Empty, Queue
 
 
 class Interrupted(KeyboardInterrupt):
