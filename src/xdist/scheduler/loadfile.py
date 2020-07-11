@@ -21,7 +21,7 @@ class LoadFileScheduling(LoadScopeScheduling):
     """
 
     def __init__(self, config, log=None):
-        super(LoadFileScheduling, self).__init__(config, log)
+        super().__init__(config, log)
         if log is None:
             self.log = Producer("loadfilesched")
         else:

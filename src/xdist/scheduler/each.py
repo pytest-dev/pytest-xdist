@@ -4,7 +4,7 @@ from xdist.workermanage import parse_spec_config
 from xdist.report import report_collection_diff
 
 
-class EachScheduling(object):
+class EachScheduling:
     """Implement scheduling of test items on all nodes
 
     If a node gets added after the test run is started then it is

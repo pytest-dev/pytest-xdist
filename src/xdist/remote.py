@@ -18,7 +18,7 @@ from execnet.gateway_base import dumps, DumpError
 from _pytest.config import _prepareconfig, Config
 
 
-class WorkerInteractor(object):
+class WorkerInteractor:
     def __init__(self, config, channel):
         self.config = config
         self.workerid = config.workerinput.get("workerid", "?")
