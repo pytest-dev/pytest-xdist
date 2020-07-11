@@ -1,6 +1,5 @@
 import os
 import re
-import sys
 import textwrap
 
 import py
@@ -851,9 +850,6 @@ class TestWarnings:
         """Check that warnings with unserializable _WARNING_DETAILS are
         handled correctly (#379).
         """
-        if sys.version_info[0] < 3:
-            # The issue is only present in Python 3 warnings
-            return
         testdir.makepyfile(
             """
             import warnings, pytest
