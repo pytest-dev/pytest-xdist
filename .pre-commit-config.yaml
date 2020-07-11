@@ -3,7 +3,7 @@ repos:
     rev: 19.10b0
     hooks:
     -   id: black
-        args: [--safe, --quiet]
+        args: [--safe, --quiet, --target-version, py35]
         language_version: python3.7
 -   repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v2.4.0
