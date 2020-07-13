@@ -1,3 +1,12 @@
+pytest-xdist 1.33.1 (2020-07-13)
+================================
+
+Bug Fixes
+---------
+
+- `#558 <https://github.com/pytest-dev/pytest-xdist/issues/558>`_: Fix ``rsyncdirs`` usage with pytest 6.0.
+
+
 pytest-xdist 1.33.0 (2020-07-09)
 ================================
 
