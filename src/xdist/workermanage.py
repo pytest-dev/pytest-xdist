@@ -90,8 +90,16 @@ class NodeManager(object):
         import pytest
         import _pytest
 
-        pytestpath = pytest.__file__.rstrip("co")
-        pytestdir = py.path.local(_pytest.__file__).dirpath()
+        def get_dir(p):
+            """Return the directory path if p is a package or the path to the .py file otherwise."""
+            stripped = p.rstrip("co")
+            if os.path.basename(stripped) == "__init__.py":
+                return os.path.dirname(p)
+            else:
+                return stripped
+
+        pytestpath = get_dir(pytest.__file__)
+        pytestdir = get_dir(_pytest.__file__)
         config = self.config
         candidates = [py._pydir, pytestpath, pytestdir]
         candidates += config.option.rsyncdir

@@ -1,0 +1,1 @@
+Fix ``rsyncdirs`` usage with pytest 6.0.

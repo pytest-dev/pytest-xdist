@@ -189,7 +189,6 @@ class TestDistribution:
         )
         assert result.ret == 1
 
-    @pytest.mark.xfail(reason="#527: Ignore Python 3.8 failure for the time being")
     def test_distribution_rsyncdirs_example(self, testdir, monkeypatch):
         # use a custom plugin that has a custom command-line option to ensure
         # this is propagated to workers (see #491)
