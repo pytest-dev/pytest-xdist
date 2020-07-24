@@ -57,6 +57,7 @@ def test_auto_detect_cpus(testdir, monkeypatch):
     check_options(config)
     assert config.getoption("usepdb")
     assert config.getoption("numprocesses") == 0
+    assert config.getoption("dist") == "no"
 
     monkeypatch.delattr(os, "sched_getaffinity", raising=False)
     monkeypatch.setenv("TRAVIS", "true")
