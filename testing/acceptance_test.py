@@ -593,7 +593,11 @@ def test_fixture_teardown_failure(testdir):
     assert result.ret
 
 
-def test_config_initialization(testdir, pytestconfig):
+@pytest.mark.skipif(
+    sys.version_info[:2] == (2, 7),
+    reason="Only available in pytest 5.0+ (Python 3 only)",
+)
+def test_config_initialization(testdir, monkeypatch, pytestconfig):
     """Ensure workers and master are initialized consistently. Integration test for #445"""
     if not hasattr(pytestconfig, "invocation_params"):
         pytest.skip(
@@ -602,7 +606,8 @@ def test_config_initialization(testdir, pytestconfig):
     testdir.makepyfile(
         **{
             "dir_a/test_foo.py": """
-                def test_1(): pass
+                def test_1(request):
+                    assert request.config.option.verbose == 2
         """
         }
     )
@@ -613,8 +618,10 @@ def test_config_initialization(testdir, pytestconfig):
         testpaths=dir_a
     """,
     )
+    monkeypatch.setenv("PYTEST_ADDOPTS", "-v")
     result = testdir.runpytest("-n2", "-c", "myconfig.ini", "-v")
-    result.stdout.fnmatch_lines(["dir_a/test_foo.py::test_1*"])
+    result.stdout.fnmatch_lines(["dir_a/test_foo.py::test_1*", "*= 1 passed in *"])
+    assert result.ret == 0
 
 
 @pytest.mark.parametrize("when", ["setup", "call", "teardown"])
