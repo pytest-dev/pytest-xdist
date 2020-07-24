@@ -84,7 +84,7 @@ By default, using ``--numprocesses`` will send pending tests to any worker that
 is available, without any guaranteed order. You can change the test
 distribution algorithm this with the ``--dist`` option. It takes these values:
 
-* ``-dist no``: The default algorithm, distributing one test at a time.
+* ``--dist no``: The default algorithm, distributing one test at a time.
 
 * ``--dist loadscope``: Tests are grouped by **module** for *test functions*
   and by **class** for *test methods*. Groups are distributed to available
