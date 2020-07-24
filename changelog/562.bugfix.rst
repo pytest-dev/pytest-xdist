@@ -1,0 +1,1 @@
+Do not trigger the deprecated ``pytest_warning_captured`` in pytest 6.0+.

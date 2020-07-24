@@ -139,18 +139,6 @@ class WorkerInteractor(object):
                 fslocation=str(fslocation),
             )
 
-    # the pytest_warning_captured hook was introduced in pytest 3.8
-    if hasattr(_pytest.hookspec, "pytest_warning_captured"):
-
-        def pytest_warning_captured(self, warning_message, when, item):
-            self.sendevent(
-                "warning_captured",
-                warning_message_data=serialize_warning_message(warning_message),
-                when=when,
-                # item cannot be serialized and will always be None when used with xdist
-                item=None,
-            )
-
     # the pytest_warning_recorded hook was introduced in pytest 6.0
     if hasattr(_pytest.hookspec, "pytest_warning_recorded"):
 
@@ -161,6 +149,18 @@ class WorkerInteractor(object):
                 when=when,
                 nodeid=nodeid,
                 location=location,
+            )
+
+    # the pytest_warning_captured hook was introduced in pytest 3.8
+    elif hasattr(_pytest.hookspec, "pytest_warning_captured"):
+
+        def pytest_warning_captured(self, warning_message, when, item):
+            self.sendevent(
+                "warning_captured",
+                warning_message_data=serialize_warning_message(warning_message),
+                when=when,
+                # item cannot be serialized and will always be None when used with xdist
+                item=None,
             )
 
 

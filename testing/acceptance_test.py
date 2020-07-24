@@ -820,6 +820,32 @@ class TestWarnings:
         result = testdir.runpytest(n)
         result.stdout.fnmatch_lines(["*this is a warning*", "*1 passed, 1 warning*"])
 
+    def test_warning_captured_deprecated_in_pytest_6(self, testdir):
+        """
+        Do not trigger the deprecated pytest_warning_captured hook in pytest 6+ (#562)
+        """
+        import _pytest.hookspec
+
+        if not hasattr(_pytest.hookspec, "pytest_warning_recorded"):
+            pytest.skip("test requires pytest 6.0+")
+
+        testdir.makeconftest(
+            """
+            def pytest_warning_captured():
+                assert False, "this hook should not be called in this version"
+        """
+        )
+        testdir.makepyfile(
+            """
+            import warnings
+            def test():
+                warnings.warn("custom warning")
+        """
+        )
+        result = testdir.runpytest("-n1")
+        result.stdout.fnmatch_lines(["* 1 passed in *"])
+        result.stdout.no_fnmatch_line("*this hook should not be called in this version")
+
     @pytest.mark.parametrize("n", ["-n0", "-n1"])
     def test_custom_subclass(self, testdir, n):
         """Check that warning subclasses that don't honor the args attribute don't break
