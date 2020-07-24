@@ -593,6 +593,10 @@ def test_fixture_teardown_failure(testdir):
     assert result.ret
 
 
+@pytest.mark.skipif(
+    sys.version_info[:2] == (2, 7),
+    reason="Only available in pytest 5.0+ (Python 3 only)",
+)
 def test_config_initialization(testdir, monkeypatch, pytestconfig):
     """Ensure workers and master are initialized consistently. Integration test for #445"""
     if not hasattr(pytestconfig, "invocation_params"):
