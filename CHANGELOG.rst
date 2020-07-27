@@ -1,3 +1,22 @@
+pytest-xdist 1.34.0 (2020-07-27)
+================================
+
+Features
+--------
+
+- `#549 <https://github.com/pytest-dev/pytest-xdist/issues/549>`_: Make ``--pdb`` imply ``--dist no``, as the two options cannot really work together at the moment.
+
+
+Bug Fixes
+---------
+
+- `#478 <https://github.com/pytest-dev/pytest-xdist/issues/478>`_: Fix regression with duplicated arguments via $PYTEST_ADDOPTS in 1.30.0.
+
+- `#558 <https://github.com/pytest-dev/pytest-xdist/issues/558>`_: Fix ``rsyncdirs`` usage with pytest 6.0.
+
+- `#562 <https://github.com/pytest-dev/pytest-xdist/issues/562>`_: Do not trigger the deprecated ``pytest_warning_captured`` in pytest 6.0+.
+
+
 pytest-xdist 1.33.0 (2020-07-09)
 ================================
 
