@@ -1,1 +1,0 @@
-Fix regression with duplicated arguments via $PYTEST_ADDOPTS in 1.30.0.

@@ -1,1 +1,0 @@
-Make ``--pdb`` imply ``--dist no``, as the two options cannot really work together at the moment.
