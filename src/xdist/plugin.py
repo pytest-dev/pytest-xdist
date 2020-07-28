@@ -6,11 +6,7 @@ import pytest
 
 
 def auto_detect_cpus():
-    try:
-        n = psutil.cpu_count(logical=False)
-    except NotImplementedError:
-        return 1
-    return n if n else 1
+    return psutil.cpu_count(logical=False) or psutil.cpu_count() or 1
 
 
 class AutoInt(int):

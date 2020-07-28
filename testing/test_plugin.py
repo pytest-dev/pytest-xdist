@@ -51,10 +51,7 @@ def test_auto_detect_cpus(testdir, monkeypatch):
     assert config.getoption("usepdb")
     assert config.getoption("numprocesses") == 0
 
-    def cpu_count_not_implemented(logical=True):
-        raise NotImplementedError
-
-    monkeypatch.setattr(psutil, "cpu_count", cpu_count_not_implemented)
+    monkeypatch.setattr(psutil, "cpu_count", lambda logical=True: None)
     config = testdir.parseconfigure("-nauto")
     assert config.getoption("numprocesses") == 1
 
