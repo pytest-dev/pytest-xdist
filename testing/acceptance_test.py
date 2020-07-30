@@ -188,7 +188,6 @@ class TestDistribution:
         )
         assert result.ret == 1
 
-    @pytest.mark.xfail(reason="#527: Ignore Python 3.8 failure for the time being")
     def test_distribution_rsyncdirs_example(self, testdir, monkeypatch):
         # use a custom plugin that has a custom command-line option to ensure
         # this is propagated to workers (see #491)
@@ -315,7 +314,7 @@ class TestDistribution:
                 time.sleep(10)
         """
         )
-        child = testdir.spawn_pytest("-n1 -v")
+        child = testdir.spawn_pytest("-n1 -v", expect_timeout=30.0)
         child.expect(".*test_sleep.*")
         child.kill(2)  # keyboard interrupt
         child.expect(".*KeyboardInterrupt.*")
@@ -577,7 +576,11 @@ def test_fixture_teardown_failure(testdir):
     assert result.ret
 
 
-def test_config_initialization(testdir, pytestconfig):
+@pytest.mark.skipif(
+    sys.version_info[:2] == (2, 7),
+    reason="Only available in pytest 5.0+ (Python 3 only)",
+)
+def test_config_initialization(testdir, monkeypatch, pytestconfig):
     """Ensure workers and master are initialized consistently. Integration test for #445"""
     if not hasattr(pytestconfig, "invocation_params"):
         pytest.skip(
@@ -586,7 +589,8 @@ def test_config_initialization(testdir, pytestconfig):
     testdir.makepyfile(
         **{
             "dir_a/test_foo.py": """
-                def test_1(): pass
+                def test_1(request):
+                    assert request.config.option.verbose == 2
         """
         }
     )
@@ -597,8 +601,10 @@ def test_config_initialization(testdir, pytestconfig):
         testpaths=dir_a
     """,
     )
+    monkeypatch.setenv("PYTEST_ADDOPTS", "-v")
     result = testdir.runpytest("-n2", "-c", "myconfig.ini", "-v")
-    result.stdout.fnmatch_lines(["dir_a/test_foo.py::test_1*"])
+    result.stdout.fnmatch_lines(["dir_a/test_foo.py::test_1*", "*= 1 passed in *"])
+    assert result.ret == 0
 
 
 @pytest.mark.parametrize("when", ["setup", "call", "teardown"])
@@ -803,6 +809,32 @@ class TestWarnings:
         )
         result = testdir.runpytest(n)
         result.stdout.fnmatch_lines(["*this is a warning*", "*1 passed, 1 warning*"])
+
+    def test_warning_captured_deprecated_in_pytest_6(self, testdir):
+        """
+        Do not trigger the deprecated pytest_warning_captured hook in pytest 6+ (#562)
+        """
+        import _pytest.hookspec
+
+        if not hasattr(_pytest.hookspec, "pytest_warning_recorded"):
+            pytest.skip("test requires pytest 6.0+")
+
+        testdir.makeconftest(
+            """
+            def pytest_warning_captured():
+                assert False, "this hook should not be called in this version"
+        """
+        )
+        testdir.makepyfile(
+            """
+            import warnings
+            def test():
+                warnings.warn("custom warning")
+        """
+        )
+        result = testdir.runpytest("-n1")
+        result.stdout.fnmatch_lines(["* 1 passed in *"])
+        result.stdout.no_fnmatch_line("*this hook should not be called in this version")
 
     @pytest.mark.parametrize("n", ["-n0", "-n1"])
     def test_custom_subclass(self, testdir, n):

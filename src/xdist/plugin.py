@@ -188,7 +188,11 @@ def pytest_configure(config):
 def pytest_cmdline_main(config):
     usepdb = config.getoption("usepdb", False)  # a core option
     if isinstance(config.option.numprocesses, AutoInt):
-        config.option.numprocesses = 0 if usepdb else int(config.option.numprocesses)
+        if usepdb:
+            config.option.numprocesses = 0
+            config.option.dist = "no"
+        else:
+            config.option.numprocesses = int(config.option.numprocesses)
 
     if config.option.numprocesses:
         if config.option.dist == "no":
@@ -200,12 +204,10 @@ def pytest_cmdline_main(config):
     if config.option.distload:
         config.option.dist = "load"
     val = config.getvalue
-    if not val("collectonly"):
-        if val("dist") != "no":
-            if usepdb:
-                raise pytest.UsageError(
-                    "--pdb is incompatible with distributing tests; try using -n0 or -nauto."
-                )  # noqa: E501
+    if not val("collectonly") and val("dist") != "no" and usepdb:
+        raise pytest.UsageError(
+            "--pdb is incompatible with distributing tests; try using -n0 or -nauto."
+        )  # noqa: E501
 
 
 # -------------------------------------------------------------------------
