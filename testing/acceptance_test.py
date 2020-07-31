@@ -2,6 +2,7 @@ import os
 import re
 import sys
 import textwrap
+from pkg_resources import parse_version
 
 import py
 import pytest
@@ -578,15 +579,11 @@ def test_fixture_teardown_failure(testdir):
 
 
 @pytest.mark.skipif(
-    sys.version_info[:2] == (2, 7),
-    reason="Only available in pytest 5.0+ (Python 3 only)",
+    parse_version(pytest.__version__) < parse_version("5"),
+    reason="Only available in pytest 5.0+",
 )
 def test_config_initialization(testdir, monkeypatch, pytestconfig):
     """Ensure workers and master are initialized consistently. Integration test for #445"""
-    if not hasattr(pytestconfig, "invocation_params"):
-        pytest.skip(
-            "requires pytest >=5.1 (config has no attribute 'invocation_params')"
-        )
     testdir.makepyfile(
         **{
             "dir_a/test_foo.py": """
