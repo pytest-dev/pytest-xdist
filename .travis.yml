@@ -45,6 +45,10 @@ jobs:
     - python: "3.9-dev"
       env: TOXENV=py39-pytestlatest
     - python: "3.8"
+      env: TOXENV=py38-pytest4
+    - python: "3.8"
+      env: TOXENV=py38-pytest5
+    - python: "3.8"
       env: TOXENV=py38-pytestmaster
 
     - stage: deploy
