@@ -35,17 +35,10 @@ def test_dist_options(testdir):
 
 
 def test_auto_detect_cpus(testdir, monkeypatch):
-    import os
+    import psutil
     from xdist.plugin import pytest_cmdline_main as check_options
 
-    if hasattr(os, "sched_getaffinity"):
-        monkeypatch.setattr(os, "sched_getaffinity", lambda _pid: set(range(99)))
-    elif hasattr(os, "cpu_count"):
-        monkeypatch.setattr(os, "cpu_count", lambda: 99)
-    else:
-        import multiprocessing
-
-        monkeypatch.setattr(multiprocessing, "cpu_count", lambda: 99)
+    monkeypatch.setattr(psutil, "cpu_count", lambda logical=True: 99)
 
     config = testdir.parseconfigure("-n2")
     assert config.getoption("numprocesses") == 2
@@ -59,10 +52,9 @@ def test_auto_detect_cpus(testdir, monkeypatch):
     assert config.getoption("numprocesses") == 0
     assert config.getoption("dist") == "no"
 
-    monkeypatch.delattr(os, "sched_getaffinity", raising=False)
-    monkeypatch.setenv("TRAVIS", "true")
+    monkeypatch.setattr(psutil, "cpu_count", lambda logical=True: None)
     config = testdir.parseconfigure("-nauto")
-    assert config.getoption("numprocesses") == 2
+    assert config.getoption("numprocesses") == 1
 
 
 def test_boxed_with_collect_only(testdir):
