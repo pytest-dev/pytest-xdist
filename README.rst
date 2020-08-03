@@ -67,33 +67,35 @@ a checkout of the `pytest-xdist repository`_ ::
 Speed up test runs by sending tests to multiple CPUs
 ----------------------------------------------------
 
-To send tests to multiple CPUs, type::
+To send tests to multiple CPUs, use the ``-n`` (or ``-numprocesses``) option::
 
-    pytest -n NUM
+    pytest -n NUMCPUS
 
-Especially for longer running tests or tests requiring
-a lot of I/O this can lead to considerable speed ups. This option can
-also be set to ``auto`` for automatic detection of the number of CPUs.
+Pass ``-n auto`` to use as many processes as your computer has CPU cores. This
+can lead to considerable speed ups, especially if your test suite takes a
+noticeable amount of time.
 
-If a test crashes the interpreter, pytest-xdist will automatically restart
-that worker and report the failure as usual. You can use the
-``--max-worker-restart`` option to limit the number of workers that can
-be restarted, or disable restarting altogether using ``--max-worker-restart=0``.
+If a test crashes a worker, pytest-xdist will automatically restart that worker
+and report the test’s failure. You can use the ``--max-worker-restart`` option
+to limit the number of worker restarts that are allowed, or disable restarting
+altogether using ``--max-worker-restart 0``.
 
-By default, the ``-n`` option will send pending tests to any worker that is available, without
-any guaranteed order, but you can control this with these options:
+By default, using ``--numprocesses`` will send pending tests to any worker that
+is available, without any guaranteed order. You can change the test
+distribution algorithm this with the ``--dist`` option. It takes these values:
 
-* ``--dist=loadscope``: tests will be grouped by **module** for *test functions* and
-  by **class** for *test methods*, then each group will be sent to an available worker,
-  guaranteeing that all tests in a group run in the same process. This can be useful if you have
-  expensive module-level or class-level fixtures. Currently the groupings can't be customized,
-  with grouping by class takes priority over grouping by module.
-  This feature was added in version ``1.19``.
+* ``--dist no``: The default algorithm, distributing one test at a time.
 
-* ``--dist=loadfile``: tests will be grouped by file name, and then will be sent to an available
-  worker, guaranteeing that all tests in a group run in the same worker. This feature was added
-  in version ``1.21``.
+* ``--dist loadscope``: Tests are grouped by **module** for *test functions*
+  and by **class** for *test methods*. Groups are distributed to available
+  workers as whole units. This guarantees that all tests in a group run in the
+  same process. This can be useful if you have expensive module-level or
+  class-level fixtures. Grouping by class takes priority over grouping by
+  module.
 
+* ``--dist loadfile``: Tests are grouped by their containing file. Groups are
+  distributed to available workers as whole units. This guarantees that all
+  tests in a file run in the same worker.
 
 Making session-scoped fixtures execute only once
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -276,8 +278,43 @@ defined:
 The information about the worker_id in a test is stored in the ``TestReport`` as
 well, under the ``worker_id`` attribute.
 
-Acessing ``sys.argv`` from the master node in workers
------------------------------------------------------
+
+Uniquely identifying the current test run
+-----------------------------------------
+
+*New in version 1.32.*
+
+If you need to globally distinguish one test run from others in your
+workers, you can use the ``testrun_uid`` fixture. For instance, let's say you
+wanted to create a separate database for each test run:
+
+.. code-block:: python
+
+    import pytest
+    from posix_ipc import Semaphore, O_CREAT
+
+    @pytest.fixture(scope="session", autouse=True)
+    def create_unique_database(testrun_uid):
+        """ create a unique database for this particular test run """
+        database_url = f"psql://myapp-{testrun_uid}"
+
+        with Semaphore(f"/{testrun_uid}-lock", flags=O_CREAT, initial_value=1):
+            if not database_exists(database_url):
+                create_database(database_url)
+
+    @pytest.fixture()
+    def db(testrun_uid):
+        """ retrieve unique database """
+        database_url = f"psql://myapp-{testrun_uid}"
+        return database_get_instance(database_url)
+
+
+Additionally, during a test run, the following environment variable is defined:
+
+* ``PYTEST_XDIST_TESTRUNUID``: the unique id of the test run.
+
+Accessing ``sys.argv`` from the master node in workers
+------------------------------------------------------
 
 To access the ``sys.argv`` passed to the command-line of the master node, use
 ``request.config.workerinput["mainargv"]``.

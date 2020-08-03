@@ -3,6 +3,7 @@ import fnmatch
 import os
 import re
 import sys
+import uuid
 
 import py
 import pytest
@@ -35,6 +36,9 @@ class NodeManager(object):
     def __init__(self, config, specs=None, defaultchdir="pyexecnetcache"):
         self.config = config
         self.trace = self.config.trace.get("nodemanager")
+        self.testrunuid = self.config.getoption("testrunuid")
+        if self.testrunuid is None:
+            self.testrunuid = uuid.uuid4().hex
         self.group = execnet.Group()
         if specs is None:
             specs = self._getxspecs()
@@ -59,10 +63,7 @@ class NodeManager(object):
     def setup_nodes(self, putevent):
         self.config.hook.pytest_xdist_setupnodes(config=self.config, specs=self.specs)
         self.trace("setting up nodes")
-        nodes = []
-        for spec in self.specs:
-            nodes.append(self.setup_node(spec, putevent))
-        return nodes
+        return [self.setup_node(spec, putevent) for spec in self.specs]
 
     def setup_node(self, spec, putevent):
         gw = self.group.makegateway(spec)
@@ -89,8 +90,16 @@ class NodeManager(object):
         import pytest
         import _pytest
 
-        pytestpath = pytest.__file__.rstrip("co")
-        pytestdir = py.path.local(_pytest.__file__).dirpath()
+        def get_dir(p):
+            """Return the directory path if p is a package or the path to the .py file otherwise."""
+            stripped = p.rstrip("co")
+            if os.path.basename(stripped) == "__init__.py":
+                return os.path.dirname(p)
+            else:
+                return stripped
+
+        pytestpath = get_dir(pytest.__file__)
+        pytestdir = get_dir(_pytest.__file__)
         config = self.config
         candidates = [py._pydir, pytestpath, pytestdir]
         candidates += config.option.rsyncdir
@@ -101,7 +110,7 @@ class NodeManager(object):
         for root in candidates:
             root = py.path.local(root).realpath()
             if not root.check():
-                raise pytest.UsageError("rsyncdir doesn't exist: %r" % (root,))
+                raise pytest.UsageError("rsyncdir doesn't exist: {!r}".format(root))
             if root not in roots:
                 roots.append(root)
         return roots
@@ -154,11 +163,10 @@ class HostRSync(execnet.RSync):
 
     def __init__(self, sourcedir, *args, **kwargs):
         self._synced = {}
-        self._ignores = []
         ignores = kwargs.pop("ignores", None) or []
-        for x in ignores:
-            x = getattr(x, "strpath", x)
-            self._ignores.append(re.compile(fnmatch.translate(x)))
+        self._ignores = [
+            re.compile(fnmatch.translate(getattr(x, "strpath", x))) for x in ignores
+        ]
         super(HostRSync, self).__init__(sourcedir=sourcedir, **kwargs)
 
     def filter(self, path):
@@ -179,7 +187,7 @@ class HostRSync(execnet.RSync):
         if self._verbose:
             path = os.path.basename(self._sourcedir) + "/" + modified_rel_path
             remotepath = gateway.spec.chdir
-            print("%s:%s <= %s" % (gateway.spec, remotepath, path))
+            print("{}:{} <= {}".format(gateway.spec, remotepath, path))
 
 
 def make_reltoroot(roots, args):
@@ -198,7 +206,7 @@ def make_reltoroot(roots, args):
                 parts[0] = root.basename + "/" + x
                 break
         else:
-            raise ValueError("arg %s not relative to an rsync root" % (arg,))
+            raise ValueError("arg {} not relative to an rsync root".format(arg))
         result.append(splitcode.join(parts))
     return result
 
@@ -222,6 +230,7 @@ class WorkerController(object):
             "workercount": len(nodemanager.specs),
             "slaveid": gateway.id,
             "slavecount": len(nodemanager.specs),
+            "testrunuid": nodemanager.testrunuid,
             "mainargv": sys.argv,
         }
         # TODO: deprecated name, backward compatibility only. Remove it in future
@@ -233,7 +242,7 @@ class WorkerController(object):
             py.log.setconsumer(self.log._keywords, None)
 
     def __repr__(self):
-        return "<%s %s>" % (self.__class__.__name__, self.gateway.id)
+        return "<{} {}>".format(self.__class__.__name__, self.gateway.id)
 
     @property
     def shutting_down(self):
@@ -293,11 +302,11 @@ class WorkerController(object):
 
     def sendcommand(self, name, **kwargs):
         """ send a named parametrized command to the other side. """
-        self.log("sending command %s(**%s)" % (name, kwargs))
+        self.log("sending command {}(**{})".format(name, kwargs))
         self.channel.send((name, kwargs))
 
     def notify_inproc(self, eventname, **kwargs):
-        self.log("queuing %s(**%s)" % (eventname, kwargs))
+        self.log("queuing {}(**{})".format(eventname, kwargs))
         self.putevent((eventname, kwargs))
 
     def process_from_remote(self, eventcall):  # noqa too complex
@@ -319,7 +328,7 @@ class WorkerController(object):
                 return
             eventname, kwargs = eventcall
             if eventname in ("collectionstart",):
-                self.log("ignoring %s(%s)" % (eventname, kwargs))
+                self.log("ignoring {}({})".format(eventname, kwargs))
             elif eventname == "workerready":
                 self.notify_inproc(eventname, node=self, **kwargs)
             elif eventname == "workerfinished":
@@ -358,8 +367,19 @@ class WorkerController(object):
                     when=kwargs["when"],
                     item=kwargs["item"],
                 )
+            elif eventname == "warning_recorded":
+                warning_message = unserialize_warning_message(
+                    kwargs["warning_message_data"]
+                )
+                self.notify_inproc(
+                    eventname,
+                    warning_message=warning_message,
+                    when=kwargs["when"],
+                    nodeid=kwargs["nodeid"],
+                    location=kwargs["location"],
+                )
             else:
-                raise ValueError("unknown event: %s" % (eventname,))
+                raise ValueError("unknown event: {}".format(eventname))
         except KeyboardInterrupt:
             # should not land in receiver-thread
             raise

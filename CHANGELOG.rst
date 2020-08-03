@@ -1,3 +1,53 @@
+pytest-xdist 1.34.0 (2020-07-27)
+================================
+
+Features
+--------
+
+- `#549 <https://github.com/pytest-dev/pytest-xdist/issues/549>`_: Make ``--pdb`` imply ``--dist no``, as the two options cannot really work together at the moment.
+
+
+Bug Fixes
+---------
+
+- `#478 <https://github.com/pytest-dev/pytest-xdist/issues/478>`_: Fix regression with duplicated arguments via $PYTEST_ADDOPTS in 1.30.0.
+
+- `#558 <https://github.com/pytest-dev/pytest-xdist/issues/558>`_: Fix ``rsyncdirs`` usage with pytest 6.0.
+
+- `#562 <https://github.com/pytest-dev/pytest-xdist/issues/562>`_: Do not trigger the deprecated ``pytest_warning_captured`` in pytest 6.0+.
+
+
+pytest-xdist 1.33.0 (2020-07-09)
+================================
+
+Features
+--------
+
+- `#554 <https://github.com/pytest-dev/pytest-xdist/issues/554>`_: Fix warnings support for upcoming pytest 6.0.
+
+
+Trivial Changes
+---------------
+
+- `#548 <https://github.com/pytest-dev/pytest-xdist/issues/548>`_: SCM and CI files are no longer included in the source distribution.
+
+
+pytest-xdist 1.32.0 (2020-05-03)
+================================
+
+Deprecations and Removals
+-------------------------
+
+- `#475 <https://github.com/pytest-dev/pytest-xdist/issues/475>`_: Drop support for EOL Python 3.4.
+
+
+Features
+--------
+
+- `#524 <https://github.com/pytest-dev/pytest-xdist/issues/524>`_: Add `testrun_uid` fixture. This is a shared value that uniquely identifies a test run among all workers.
+  This also adds a `PYTEST_XDIST_TESTRUNUID` environment variable that is accessible within a test as well as a command line option `--testrunuid` to manually set the value from outside.
+
+
 pytest-xdist 1.31.0 (2019-12-19)
 ================================
 

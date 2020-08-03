@@ -22,6 +22,7 @@ class WorkerInteractor(object):
     def __init__(self, config, channel):
         self.config = config
         self.workerid = config.workerinput.get("workerid", "?")
+        self.testrunuid = config.workerinput["testrunuid"]
         self.log = py.log.Producer("worker-%s" % self.workerid)
         if not config.option.debug:
             py.log.setconsumer(self.log._keywords, None)
@@ -112,6 +113,7 @@ class WorkerInteractor(object):
         )
         data["item_index"] = self.item_index
         data["worker_id"] = self.workerid
+        data["testrun_uid"] = self.testrunuid
         assert self.session.items[self.item_index].nodeid == report.nodeid
         self.sendevent("testreport", data=data)
 
@@ -137,8 +139,20 @@ class WorkerInteractor(object):
                 fslocation=str(fslocation),
             )
 
+    # the pytest_warning_recorded hook was introduced in pytest 6.0
+    if hasattr(_pytest.hookspec, "pytest_warning_recorded"):
+
+        def pytest_warning_recorded(self, warning_message, when, nodeid, location):
+            self.sendevent(
+                "warning_recorded",
+                warning_message_data=serialize_warning_message(warning_message),
+                when=when,
+                nodeid=nodeid,
+                location=location,
+            )
+
     # the pytest_warning_captured hook was introduced in pytest 3.8
-    if hasattr(_pytest.hookspec, "pytest_warning_captured"):
+    elif hasattr(_pytest.hookspec, "pytest_warning_captured"):
 
         def pytest_warning_captured(self, warning_message, when, item):
             self.sendevent(
@@ -238,6 +252,7 @@ if __name__ == "__channelexec__":
             importpath + os.pathsep + os.environ.get("PYTHONPATH", "")
         )
 
+    os.environ["PYTEST_XDIST_TESTRUNUID"] = workerinput["testrunuid"]
     os.environ["PYTEST_XDIST_WORKER"] = workerinput["workerid"]
     os.environ["PYTEST_XDIST_WORKER_COUNT"] = str(workerinput["workercount"])
 

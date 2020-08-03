@@ -169,7 +169,7 @@ class DSession(object):
         """
         self.config.hook.pytest_testnodedown(node=node, error=None)
         if node.workeroutput["exitstatus"] == 2:  # keyboard-interrupt
-            self.shouldstop = "%s received keyboard-interrupt" % (node,)
+            self.shouldstop = "{} received keyboard-interrupt".format(node)
             self.worker_errordown(node, "keyboard-interrupt")
             return
         if node in self.sched.nodes:
@@ -277,9 +277,16 @@ class DSession(object):
         self.config.hook.pytest_logwarning.call_historic(kwargs=kwargs)
 
     def worker_warning_captured(self, warning_message, when, item):
-        """Emitted when a node calls the pytest_logwarning hook."""
+        """Emitted when a node calls the pytest_warning_captured hook (deprecated in 6.0)."""
         kwargs = dict(warning_message=warning_message, when=when, item=item)
         self.config.hook.pytest_warning_captured.call_historic(kwargs=kwargs)
+
+    def worker_warning_recorded(self, warning_message, when, nodeid, location):
+        """Emitted when a node calls the pytest_warning_recorded hook."""
+        kwargs = dict(
+            warning_message=warning_message, when=when, nodeid=nodeid, location=location
+        )
+        self.config.hook.pytest_warning_recorded.call_historic(kwargs=kwargs)
 
     def _clone_node(self, node):
         """Return new node based on an existing one.
@@ -321,7 +328,7 @@ class DSession(object):
         # XXX count no of failures and retry N times
         runner = self.config.pluginmanager.getplugin("runner")
         fspath = nodeid.split("::")[0]
-        msg = "worker %r crashed while running %r" % (worker.gateway.id, nodeid)
+        msg = "worker {!r} crashed while running {!r}".format(worker.gateway.id, nodeid)
         rep = runner.TestReport(
             nodeid, (fspath, None, fspath), (), "failed", msg, "???"
         )
@@ -351,7 +358,9 @@ class TerminalDistReporter(object):
 
     def getstatus(self):
         if self.config.option.verbose >= 0:
-            parts = ["%s %s" % (spec.id, self._status[spec.id]) for spec in self._specs]
+            parts = [
+                "{} {}".format(spec.id, self._status[spec.id]) for spec in self._specs
+            ]
             return " / ".join(parts)
         else:
             return "bringing up nodes..."
@@ -386,14 +395,16 @@ class TerminalDistReporter(object):
     def pytest_testnodeready(self, node):
         if self.config.option.verbose > 0:
             d = node.workerinfo
-            infoline = "[%s] Python %s" % (d["id"], d["version"].replace("\n", " -- "))
+            infoline = "[{}] Python {}".format(
+                d["id"], d["version"].replace("\n", " -- ")
+            )
             self.rewrite(infoline, newline=True)
         self.setstatus(node.gateway.spec, "ok")
 
     def pytest_testnodedown(self, node, error):
         if not error:
             return
-        self.write_line("[%s] node down: %s" % (node.gateway.id, error))
+        self.write_line("[{}] node down: {}".format(node.gateway.id, error))
 
 
 def get_default_max_worker_restart(config):
