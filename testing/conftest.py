@@ -1,19 +1,8 @@
-import six
 import py
 import pytest
 import execnet
 
 pytest_plugins = "pytester"
-
-if six.PY2:
-
-    @pytest.fixture(scope="session", autouse=True)
-    def _ensure_imports():
-        # we import some modules because pytest-2.8's testdir fixture
-        # will unload all modules after each test and this cause
-        # (unknown) problems with execnet.Group()
-        execnet.Group
-        execnet.makegateway
 
 
 @pytest.fixture(autouse=True)

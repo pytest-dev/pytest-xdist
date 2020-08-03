@@ -8,7 +8,7 @@ from xdist.workermanage import WorkerController
 import execnet
 import marshal
 
-from six.moves.queue import Queue
+from queue import Queue
 
 WAIT_TIMEOUT = 10.0
 

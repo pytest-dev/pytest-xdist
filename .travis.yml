@@ -32,8 +32,6 @@ jobs:
           - $HOME/.cache/pre-commit
     - python: '3.8'
       env: TOXENV=py38-pytestlatest
-    - python: '2.7'
-      env: TOXENV=py27-pytestlatest
 
     - stage: test
       python: "3.5"
