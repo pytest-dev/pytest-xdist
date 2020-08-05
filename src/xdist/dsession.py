@@ -10,14 +10,14 @@ from xdist.scheduler import (
 )
 
 
-from six.moves.queue import Empty, Queue
+from queue import Empty, Queue
 
 
 class Interrupted(KeyboardInterrupt):
     """ signals an immediate interruption. """
 
 
-class DSession(object):
+class DSession:
     """A pytest plugin which runs a distributed test session
 
     At the beginning of the test session this creates a NodeManager
@@ -149,9 +149,6 @@ class DSession(object):
         node.workerinfo = workerinfo
         node.workerinfo["id"] = node.gateway.id
         node.workerinfo["spec"] = node.gateway.spec
-
-        # TODO: (#234 task) needs this for pytest. Remove when refactor in pytest repo
-        node.slaveinfo = node.workerinfo
 
         self.config.hook.pytest_testnodeready(node=node)
         if self.shuttingdown:
@@ -336,7 +333,7 @@ class DSession(object):
         self.config.hook.pytest_runtest_logreport(report=rep)
 
 
-class TerminalDistReporter(object):
+class TerminalDistReporter:
     def __init__(self, config):
         self.config = config
         self.tr = config.pluginmanager.getplugin("terminalreporter")

@@ -1,4 +1,3 @@
-from __future__ import print_function
 import fnmatch
 import os
 import re
@@ -29,7 +28,7 @@ def parse_spec_config(config):
     return xspeclist
 
 
-class NodeManager(object):
+class NodeManager:
     EXIT_TIMEOUT = 10
     DEFAULT_IGNORES = [".*", "*.pyc", "*.pyo", "*~"]
 
@@ -167,7 +166,7 @@ class HostRSync(execnet.RSync):
         self._ignores = [
             re.compile(fnmatch.translate(getattr(x, "strpath", x))) for x in ignores
         ]
-        super(HostRSync, self).__init__(sourcedir=sourcedir, **kwargs)
+        super().__init__(sourcedir=sourcedir, **kwargs)
 
     def filter(self, path):
         path = py.path.local(path)
@@ -179,9 +178,7 @@ class HostRSync(execnet.RSync):
 
     def add_target_host(self, gateway, finished=None):
         remotepath = os.path.basename(self._sourcedir)
-        super(HostRSync, self).add_target(
-            gateway, remotepath, finishedcallback=finished, delete=True
-        )
+        super().add_target(gateway, remotepath, finishedcallback=finished, delete=True)
 
     def _report_send_file(self, gateway, modified_rel_path):
         if self._verbose:
@@ -211,7 +208,7 @@ def make_reltoroot(roots, args):
     return result
 
 
-class WorkerController(object):
+class WorkerController:
     ENDMARK = -1
 
     class RemoteHook:
@@ -228,13 +225,9 @@ class WorkerController(object):
         self.workerinput = {
             "workerid": gateway.id,
             "workercount": len(nodemanager.specs),
-            "slaveid": gateway.id,
-            "slavecount": len(nodemanager.specs),
             "testrunuid": nodemanager.testrunuid,
             "mainargv": sys.argv,
         }
-        # TODO: deprecated name, backward compatibility only. Remove it in future
-        self.slaveinput = self.workerinput
         self._down = False
         self._shutdown_sent = False
         self.log = py.log.Producer("workerctl-%s" % gateway.id)
@@ -296,7 +289,7 @@ class WorkerController(object):
         if not self._down:
             try:
                 self.sendcommand("shutdown")
-            except (IOError, OSError):
+            except OSError:
                 pass
             self._shutdown_sent = True
 
@@ -333,7 +326,7 @@ class WorkerController(object):
                 self.notify_inproc(eventname, node=self, **kwargs)
             elif eventname == "workerfinished":
                 self._down = True
-                self.workeroutput = self.slaveoutput = kwargs["workeroutput"]
+                self.workeroutput = kwargs["workeroutput"]
                 self.notify_inproc("workerfinished", node=self)
             elif eventname in ("logstart", "logfinish"):
                 self.notify_inproc(eventname, node=self, **kwargs)

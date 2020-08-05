@@ -245,22 +245,6 @@ class TestDistribution:
         result.stderr.fnmatch_lines(["--foobar=123 active! *"])
         assert dest.join(subdir.basename).check(dir=1)
 
-    def test_backward_compatibility_worker_terminology(self, testdir):
-        """Ensure that we still support "config.slaveinput" for backward compatibility (#234).
-
-        Keep in mind that removing this compatibility will break a ton of plugins and user code.
-        """
-        testdir.makepyfile(
-            """
-            def test(pytestconfig):
-                assert hasattr(pytestconfig, 'slaveinput')
-                assert hasattr(pytestconfig, 'workerinput')
-        """
-        )
-        result = testdir.runpytest("-n1")
-        result.stdout.fnmatch_lines("*1 passed*")
-        assert result.ret == 0
-
     def test_data_exchange(self, testdir):
         testdir.makeconftest(
             """
@@ -899,9 +883,6 @@ class TestWarnings:
         """Check that warnings with unserializable _WARNING_DETAILS are
         handled correctly (#379).
         """
-        if sys.version_info[0] < 3:
-            # The issue is only present in Python 3 warnings
-            return
         testdir.makepyfile(
             """
             import warnings, pytest

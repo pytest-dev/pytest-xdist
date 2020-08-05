@@ -1,4 +1,3 @@
-from __future__ import print_function
 import py
 import pytest
 import textwrap
@@ -35,7 +34,7 @@ def mysetup(tmpdir):
 
 @pytest.fixture
 def workercontroller(monkeypatch):
-    class MockController(object):
+    class MockController:
         def __init__(self, *args):
             pass
 

@@ -18,7 +18,7 @@ from execnet.gateway_base import dumps, DumpError
 from _pytest.config import _prepareconfig, Config
 
 
-class WorkerInteractor(object):
+class WorkerInteractor:
     def __init__(self, config, channel):
         self.config = config
         self.workerid = config.workerinput.get("workerid", "?")
@@ -266,8 +266,5 @@ if __name__ == "__channelexec__":
     config._parser.prog = os.path.basename(workerinput["mainargv"][0])
     config.workerinput = workerinput
     config.workeroutput = {}
-    # TODO: deprecated name, backward compatibility only. Remove it in future
-    config.slaveinput = config.workerinput
-    config.slaveoutput = config.workeroutput
     interactor = WorkerInteractor(config, channel)
     config.hook.pytest_cmdline_main(config=config)
