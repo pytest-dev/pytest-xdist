@@ -1,8 +1,6 @@
 import os
 import re
-import sys
 import textwrap
-from pkg_resources import parse_version
 
 import py
 import pytest
@@ -578,10 +576,6 @@ def test_fixture_teardown_failure(testdir):
     assert result.ret
 
 
-@pytest.mark.skipif(
-    parse_version(pytest.__version__) < parse_version("5"),
-    reason="Only available in pytest 5.0+",
-)
 def test_config_initialization(testdir, monkeypatch, pytestconfig):
     """Ensure workers and master are initialized consistently. Integration test for #445"""
     testdir.makepyfile(

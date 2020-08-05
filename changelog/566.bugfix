@@ -1,1 +1,0 @@
-Fix test_config_initialization not being skipped correctly on pytest-4
