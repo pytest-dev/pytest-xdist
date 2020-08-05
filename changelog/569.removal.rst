@@ -1,0 +1,1 @@
+``pytest-xdist`` no longer supports Python 2.7.
