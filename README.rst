@@ -268,7 +268,7 @@ a test or fixture, you may use the ``worker_id`` fixture to do so:
 When ``xdist`` is disabled (running with ``-n0`` for example), then
 ``worker_id`` will return ``"master"``.
 
-Additionally, worker processes have the following environment variables
+Worker processes also have the following environment variables
 defined:
 
 * ``PYTEST_XDIST_WORKER``: the name of the worker, e.g., ``"gw2"``.
@@ -277,6 +277,34 @@ defined:
 
 The information about the worker_id in a test is stored in the ``TestReport`` as
 well, under the ``worker_id`` attribute.
+
+Since version 2.0, the following functions are also available in the ``xdist`` module:
+
+.. code-block:: python
+
+    def is_xdist_worker(request_or_session) -> bool:
+        """Return `True` if this is an xdist worker, `False` otherwise
+
+        :param request_or_session: the `pytest` `request` or `session` object
+        """
+
+    def is_xdist_master(request_or_session) -> bool:
+        """Return `True` if this is the xdist master, `False` otherwise
+
+        Note: this method also returns `False` when distribution has not been
+        activated at all.
+
+        :param request_or_session: the `pytest` `request` or `session` object
+        """
+
+    def get_xdist_worker_id(request_or_session) -> str:
+        """Return the id of the current worker ('gw0', 'gw1', etc) or 'master'
+        if running on the 'master' node.
+
+        If not distributing tests (for example passing `-n0` or not passing `-n` at all) also return 'master'.
+
+        :param request_or_session: the `pytest` `request` or `session` object
+        """
 
 
 Uniquely identifying the current test run

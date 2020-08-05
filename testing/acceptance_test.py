@@ -3,6 +3,7 @@ import re
 
 import py
 import pytest
+import xdist
 
 
 class TestDistribution:
@@ -1366,3 +1367,39 @@ def get_workers_and_test_count_by_prefix(prefix, lines, expected_status="PASSED"
         if expected_status == status and nodeid.startswith(prefix):
             result[worker] = result.get(worker, 0) + 1
     return result
+
+
+class TestAPI:
+    @pytest.fixture
+    def fake_request(self):
+        class FakeOption:
+            def __init__(self):
+                self.dist = "load"
+
+        class FakeConfig:
+            def __init__(self):
+                self.workerinput = {"workerid": "gw5"}
+                self.option = FakeOption()
+
+        class FakeRequest:
+            def __init__(self):
+                self.config = FakeConfig()
+
+        return FakeRequest()
+
+    def test_is_xdist_worker(self, fake_request):
+        assert xdist.is_xdist_worker(fake_request)
+        del fake_request.config.workerinput
+        assert not xdist.is_xdist_worker(fake_request)
+
+    def test_is_xdist_master(self, fake_request):
+        assert not xdist.is_xdist_master(fake_request)
+        del fake_request.config.workerinput
+        assert xdist.is_xdist_master(fake_request)
+        fake_request.config.option.dist = "no"
+        assert not xdist.is_xdist_master(fake_request)
+
+    def test_get_xdist_worker_id(self, fake_request):
+        assert xdist.get_xdist_worker_id(fake_request) == "gw5"
+        del fake_request.config.workerinput
+        assert xdist.get_xdist_worker_id(fake_request) == "master"
