@@ -1,6 +1,5 @@
 import os
 import re
-import textwrap
 
 import py
 import pytest
@@ -114,9 +113,6 @@ class TestDistribution:
         assert result.ret == 2
         result.stdout.fnmatch_lines(["*Interrupted: stopping*1*", "*1 failed*"])
 
-    @pytest.mark.xfail(
-        reason="#527: Python 3.8 failure in pytest where testdir.tmpdir returns an unexpected value"
-    )
     def test_basetemp_in_subprocesses(self, testdir):
         p1 = testdir.makepyfile(
             """
@@ -674,32 +670,6 @@ def test_skipping(testdir):
     result.stdout.fnmatch_lines(["*hello*", "*1 skipped*"])
 
 
-def test_issue34_pluginloading_in_subprocess(testdir):
-    import _pytest.hookspec
-
-    if not hasattr(_pytest.hookspec, "pytest_namespace"):
-        pytest.skip("this pytest version no longer supports pytest_namespace()")
-
-    testdir.tmpdir.join("plugin123.py").write(
-        textwrap.dedent(
-            """
-        def pytest_namespace():
-            return {'sample_variable': 'testing'}
-    """
-        )
-    )
-    testdir.makepyfile(
-        """
-        import pytest
-        def test_hello():
-            assert pytest.sample_variable == "testing"
-    """
-    )
-    result = testdir.runpytest_subprocess("-n1", "-p", "plugin123")
-    assert result.ret == 0
-    result.stdout.fnmatch_lines(["*1 passed*"])
-
-
 def test_fixture_scope_caching_issue503(testdir):
     p1 = testdir.makepyfile(
         """
@@ -777,27 +747,15 @@ def test_sub_plugins_disabled(testdir, plugin):
 
 class TestWarnings:
     @pytest.mark.parametrize("n", ["-n0", "-n1"])
-    @pytest.mark.parametrize("warn_type", ["pytest", "builtin"])
-    def test_warnings(self, testdir, n, request, warn_type):
-        if warn_type == "builtin":
-            warn_code = """warnings.warn(UserWarning('this is a warning'))"""
-        elif warn_type == "pytest":
-            if not hasattr(request.config, "warn"):
-                pytest.skip("config.warn has been removed in pytest 4.1")
-            warn_code = """request.config.warn('', 'this is a warning',
-                           fslocation=py.path.local())"""
-        else:
-            assert False
+    def test_warnings(self, testdir, n):
         testdir.makepyfile(
             """
             import warnings, py, pytest
 
             @pytest.mark.filterwarnings('ignore:config.warn has been deprecated')
             def test_func(request):
-                {warn_code}
-        """.format(
-                warn_code=warn_code
-            )
+                warnings.warn(UserWarning('this is a warning'))
+            """
         )
         result = testdir.runpytest(n)
         result.stdout.fnmatch_lines(["*this is a warning*", "*1 passed, 1 warning*"])
