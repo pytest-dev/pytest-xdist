@@ -40,6 +40,8 @@ jobs:
       env: TOXENV=py36-pytestlatest
     - python: "3.7"
       env: TOXENV=py37-pytestlatest
+    - python: "3.9-dev"
+      env: TOXENV=py39-pytestlatest
     - python: "3.8"
       env: TOXENV=py38-pytestmaster
 
