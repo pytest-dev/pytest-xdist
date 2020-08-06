@@ -1348,7 +1348,7 @@ def parse_tests_and_workers_from_output(lines):
             r"""
             \[(gw\d)\]  # worker
             \s*
-            (?:\[\s*\d+%\])? # progress indicator (pytest >=3.3)
+            (?:\[\s*\d+%\])? # progress indicator
             \s(.*?)     # status string ("PASSED")
             \s(.*::.*)  # nodeid
         """,
