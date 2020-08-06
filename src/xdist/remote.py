@@ -11,7 +11,6 @@ import os
 import time
 
 import py
-import _pytest.hookspec
 import pytest
 from execnet.gateway_base import dumps, DumpError
 
@@ -101,11 +100,8 @@ class WorkerInteractor:
     def pytest_runtest_logstart(self, nodeid, location):
         self.sendevent("logstart", nodeid=nodeid, location=location)
 
-    # the pytest_runtest_logfinish hook was introduced in pytest 3.4
-    if hasattr(_pytest.hookspec, "pytest_runtest_logfinish"):
-
-        def pytest_runtest_logfinish(self, nodeid, location):
-            self.sendevent("logfinish", nodeid=nodeid, location=location)
+    def pytest_runtest_logfinish(self, nodeid, location):
+        self.sendevent("logfinish", nodeid=nodeid, location=location)
 
     def pytest_runtest_logreport(self, report):
         data = self.config.hook.pytest_report_to_serializable(
@@ -125,29 +121,14 @@ class WorkerInteractor:
             )
             self.sendevent("collectreport", data=data)
 
-    # the pytest_warning_recorded hook was introduced in pytest 6.0
-    if hasattr(_pytest.hookspec, "pytest_warning_recorded"):
-
-        def pytest_warning_recorded(self, warning_message, when, nodeid, location):
-            self.sendevent(
-                "warning_recorded",
-                warning_message_data=serialize_warning_message(warning_message),
-                when=when,
-                nodeid=nodeid,
-                location=location,
-            )
-
-    # the pytest_warning_captured hook was introduced in pytest 3.8
-    elif hasattr(_pytest.hookspec, "pytest_warning_captured"):
-
-        def pytest_warning_captured(self, warning_message, when, item):
-            self.sendevent(
-                "warning_captured",
-                warning_message_data=serialize_warning_message(warning_message),
-                when=when,
-                # item cannot be serialized and will always be None when used with xdist
-                item=None,
-            )
+    def pytest_warning_recorded(self, warning_message, when, nodeid, location):
+        self.sendevent(
+            "warning_recorded",
+            warning_message_data=serialize_warning_message(warning_message),
+            when=when,
+            nodeid=nodeid,
+            location=location,
+        )
 
 
 def serialize_warning_message(warning_message):
