@@ -122,7 +122,7 @@ class NodeManager:
 
         return {
             "ignores": ignores,
-            "verbose": getattr(self.config.option, "verbose", False),
+            "verbose": getattr(self.config.option, "verbose", 0),
         }
 
     def rsync(self, gateway, source, notify=None, verbose=False, ignores=None):
@@ -181,7 +181,7 @@ class HostRSync(execnet.RSync):
         super().add_target(gateway, remotepath, finishedcallback=finished, delete=True)
 
     def _report_send_file(self, gateway, modified_rel_path):
-        if self._verbose:
+        if self._verbose > 0:
             path = os.path.basename(self._sourcedir) + "/" + modified_rel_path
             remotepath = gateway.spec.chdir
             print("{}:{} <= {}".format(gateway.spec, remotepath, path))
