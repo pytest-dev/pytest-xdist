@@ -1,1 +1,0 @@
-When using ``-n auto``, count the number of physical CPU cores instead of logical ones.

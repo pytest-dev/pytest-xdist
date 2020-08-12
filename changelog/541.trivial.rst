@@ -1,1 +1,0 @@
-``pytest-xdist`` now requires ``pytest>=6.0``.

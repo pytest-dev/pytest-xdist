@@ -1,1 +1,0 @@
-Drop backward-compatibility "slave" aliases related to worker nodes.  We deliberately moved away from this terminology years ago, and it seems like the right time to finish the deprecation and removal process.
