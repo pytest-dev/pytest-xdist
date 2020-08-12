@@ -122,7 +122,7 @@ class NodeManager:
 
         return {
             "ignores": ignores,
-            "verbose": getattr(self.config.option, "verbose", False),
+            "verbose": getattr(self.config.option, "verbose", 0),
         }
 
     def rsync(self, gateway, source, notify=None, verbose=False, ignores=None):

@@ -196,6 +196,25 @@ class TestNodeManager:
             assert dest.join("dir1", "dir2", "hello").check()
             nodemanager.teardown_nodes()
 
+    @pytest.mark.parametrize(
+        "flag, expects_report", [("-q", False), ("", False), ("-v", True)]
+    )
+    def test_rsync_report(
+        self, testdir, mysetup, workercontroller, capsys, flag, expects_report
+    ):
+        source, dest = mysetup.source, mysetup.dest
+        dir1 = mysetup.source.mkdir("dir1")
+        args = "--tx", "popen//chdir=%s" % dest, "--rsyncdir", dir1, source
+        if flag:
+            args += (flag,)
+        nodemanager = NodeManager(testdir.parseconfig(*args))
+        nodemanager.setup_nodes(None)  # calls .rsync_roots()
+        out, _ = capsys.readouterr()
+        if expects_report:
+            assert "<= pytest/__init__.py" in out
+        else:
+            assert "<= pytest/__init__.py" not in out
+
     def test_init_rsync_roots(self, testdir, mysetup, workercontroller):
         source, dest = mysetup.source, mysetup.dest
         dir2 = source.ensure("dir1", "dir2", dir=1)
