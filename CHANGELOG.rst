@@ -1,3 +1,34 @@
+pytest-xdist 2.0.0 (2020-08-12)
+===============================
+
+Deprecations and Removals
+-------------------------
+
+- `#541 <https://github.com/pytest-dev/pytest-xdist/issues/541>`_: Drop backward-compatibility "slave" aliases related to worker nodes.  We deliberately moved away from this terminology years ago, and it seems like the right time to finish the deprecation and removal process.
+
+- `#569 <https://github.com/pytest-dev/pytest-xdist/issues/569>`_: ``pytest-xdist`` no longer supports Python 2.7.
+
+
+Features
+--------
+
+- `#504 <https://github.com/pytest-dev/pytest-xdist/issues/504>`_: New functions ``xdist.is_xdist_worker``, ``xdist.is_xdist_master``, ``xdist.get_xdist_worker_id``, to easily identify the current node.
+
+
+Bug Fixes
+---------
+
+- `#471 <https://github.com/pytest-dev/pytest-xdist/issues/471>`_: Fix issue with Rsync reporting in quiet mode.
+
+- `#553 <https://github.com/pytest-dev/pytest-xdist/issues/553>`_: When using ``-n auto``, count the number of physical CPU cores instead of logical ones.
+
+
+Trivial Changes
+---------------
+
+- `#541 <https://github.com/pytest-dev/pytest-xdist/issues/541>`_: ``pytest-xdist`` now requires ``pytest>=6.0``.
+
+
 pytest-xdist 1.34.0 (2020-07-27)
 ================================
 
