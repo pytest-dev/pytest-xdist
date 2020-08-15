@@ -126,7 +126,7 @@ Here is the code:
 
     @pytest.fixture(scope="session")
     def session_data(tmp_path_factory, worker_id):
-        if not worker_id:
+        if worker_id == "master":
             # not executing in with multiple workers, just produce the data and let
             # pytest's fixture caching do its job
             return produce_expensive_data()
