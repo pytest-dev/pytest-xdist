@@ -67,7 +67,7 @@ a checkout of the `pytest-xdist repository`_ ::
 Speed up test runs by sending tests to multiple CPUs
 ----------------------------------------------------
 
-To send tests to multiple CPUs, use the ``-n`` (or ``-numprocesses``) option::
+To send tests to multiple CPUs, use the ``-n`` (or ``--numprocesses``) option::
 
     pytest -n NUMCPUS
 
