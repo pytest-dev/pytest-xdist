@@ -5,9 +5,21 @@ import py
 import pytest
 
 
-def auto_detect_cpus():
+def pytest_xdist_auto_num_workers():
+    try:
+        import psutil
+    except ImportError:
+        pass
+    else:
+        count = psutil.cpu_count(logical=False) or psutil.cpu_count()
+        if count:
+            return count
     try:
         from os import sched_getaffinity
+
+        def cpu_count():
+            return len(sched_getaffinity(0))
+
     except ImportError:
         if os.environ.get("TRAVIS") == "true":
             # workaround https://bitbucket.org/pypy/pypy/issues/2375
@@ -16,11 +28,6 @@ def auto_detect_cpus():
             from os import cpu_count
         except ImportError:
             from multiprocessing import cpu_count
-    else:
-
-        def cpu_count():
-            return len(sched_getaffinity(0))
-
     try:
         n = cpu_count()
     except NotImplementedError:
@@ -28,13 +35,9 @@ def auto_detect_cpus():
     return n if n else 1
 
 
-class AutoInt(int):
-    """Mark value as auto-detected."""
-
-
 def parse_numprocesses(s):
     if s == "auto":
-        return AutoInt(auto_detect_cpus())
+        return "auto"
     elif s is not None:
         return int(s)
 
@@ -187,12 +190,13 @@ def pytest_configure(config):
 @pytest.mark.tryfirst
 def pytest_cmdline_main(config):
     usepdb = config.getoption("usepdb", False)  # a core option
-    if isinstance(config.option.numprocesses, AutoInt):
+    if config.option.numprocesses == "auto":
         if usepdb:
             config.option.numprocesses = 0
             config.option.dist = "no"
         else:
-            config.option.numprocesses = int(config.option.numprocesses)
+            auto_num_cpus = config.hook.pytest_xdist_auto_num_workers(config=config)
+            config.option.numprocesses = auto_num_cpus
 
     if config.option.numprocesses:
         if config.option.dist == "no":

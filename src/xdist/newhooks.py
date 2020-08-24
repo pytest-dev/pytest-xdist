@@ -55,3 +55,13 @@ def pytest_xdist_node_collection_finished(node, ids):
 @pytest.mark.firstresult
 def pytest_xdist_make_scheduler(config, log):
     """ return a node scheduler implementation """
+
+
+@pytest.mark.firstresult
+def pytest_xdist_auto_num_workers(config):
+    """
+    Return the number of workers to spawn when ``--numprocesses=auto`` is given in the
+    command-line.
+
+    .. versionadded:: 2.1
+    """

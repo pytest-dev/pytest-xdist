@@ -57,10 +57,11 @@ Install the plugin with::
 
     pip install pytest-xdist
 
-or use the package in develop/in-place mode with
-a checkout of the `pytest-xdist repository`_ ::
 
-    pip install --editable .
+To use ``psutil`` for detection of the number of CPUs available, install the ``psutil`` extra::
+
+    pip install pytest-xdist[psutil]
+
 
 .. _parallelization:
 

@@ -1,6 +1,10 @@
+from contextlib import suppress
+
 import py
 import execnet
 from xdist.workermanage import NodeManager
+
+import pytest
 
 
 def test_dist_incompatibility_messages(testdir):
@@ -38,6 +42,11 @@ def test_auto_detect_cpus(testdir, monkeypatch):
     import os
     from xdist.plugin import pytest_cmdline_main as check_options
 
+    with suppress(ImportError):
+        import psutil
+
+        monkeypatch.setattr(psutil, "cpu_count", lambda logical=True: None)
+
     if hasattr(os, "sched_getaffinity"):
         monkeypatch.setattr(os, "sched_getaffinity", lambda _pid: set(range(99)))
     elif hasattr(os, "cpu_count"):
@@ -51,6 +60,7 @@ def test_auto_detect_cpus(testdir, monkeypatch):
     assert config.getoption("numprocesses") == 2
 
     config = testdir.parseconfigure("-nauto")
+    check_options(config)
     assert config.getoption("numprocesses") == 99
 
     config = testdir.parseconfigure("-nauto", "--pdb")
@@ -62,7 +72,34 @@ def test_auto_detect_cpus(testdir, monkeypatch):
     monkeypatch.delattr(os, "sched_getaffinity", raising=False)
     monkeypatch.setenv("TRAVIS", "true")
     config = testdir.parseconfigure("-nauto")
+    check_options(config)
     assert config.getoption("numprocesses") == 2
+
+
+def test_auto_detect_cpus_psutil(testdir, monkeypatch):
+    from xdist.plugin import pytest_cmdline_main as check_options
+
+    psutil = pytest.importorskip("psutil")
+
+    monkeypatch.setattr(psutil, "cpu_count", lambda logical=True: 42)
+
+    config = testdir.parseconfigure("-nauto")
+    check_options(config)
+    assert config.getoption("numprocesses") == 42
+
+
+def test_hook_auto_num_workers(testdir, monkeypatch):
+    from xdist.plugin import pytest_cmdline_main as check_options
+
+    testdir.makeconftest(
+        """
+        def pytest_xdist_auto_num_workers():
+            return 42
+    """
+    )
+    config = testdir.parseconfigure("-nauto")
+    check_options(config)
+    assert config.getoption("numprocesses") == 42
 
 
 def test_boxed_with_collect_only(testdir):
