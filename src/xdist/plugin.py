@@ -1,12 +1,31 @@
+import os
 import uuid
 
-import psutil
 import py
 import pytest
 
 
 def auto_detect_cpus():
-    return psutil.cpu_count(logical=False) or psutil.cpu_count() or 1
+    try:
+        from os import sched_getaffinity
+    except ImportError:
+        if os.environ.get("TRAVIS") == "true":
+            # workaround https://bitbucket.org/pypy/pypy/issues/2375
+            return 2
+        try:
+            from os import cpu_count
+        except ImportError:
+            from multiprocessing import cpu_count
+    else:
+
+        def cpu_count():
+            return len(sched_getaffinity(0))
+
+    try:
+        n = cpu_count()
+    except NotImplementedError:
+        return 1
+    return n if n else 1
 
 
 class AutoInt(int):

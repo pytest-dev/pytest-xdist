@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-install_requires = ["execnet>=1.1", "psutil>=3.0.0", "pytest>=6.0.0", "pytest-forked"]
+install_requires = ["execnet>=1.1", "pytest>=6.0.0", "pytest-forked"]
 
 
 with open("README.rst") as f:
