@@ -1,3 +1,20 @@
+pytest-xdist 2.1.0 (2020-08-25)
+===============================
+
+Features
+--------
+
+- `#585 <https://github.com/pytest-dev/pytest-xdist/issues/585>`_: New ``pytest_xdist_auto_num_workers`` hook can be implemented by plugins or ``conftest.py`` files to control the number of workers when ``--numprocesses=auto`` is given in the command-line.
+
+
+Trivial Changes
+---------------
+
+- `#585 <https://github.com/pytest-dev/pytest-xdist/issues/585>`_: ``psutil`` has proven to make ``pytest-xdist`` installation in certain platforms and containers problematic, so to use it for automatic number of CPUs detection users need to install the ``psutil`` extra::
+
+      pip install pytest-xdist[psutil]
+
+
 pytest-xdist 2.0.0 (2020-08-12)
 ===============================
 
