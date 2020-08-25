@@ -1,1 +1,0 @@
-New ``pytest_xdist_auto_num_workers`` hook can be implemented by plugins or ``conftest.py`` files to control the number of workers when ``--numprocesses=auto`` is given in the command-line.
