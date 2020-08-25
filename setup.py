@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-install_requires = ["execnet>=1.1", "psutil>=3.0.0", "pytest>=6.0.0", "pytest-forked"]
+install_requires = ["execnet>=1.1", "pytest>=6.0.0", "pytest-forked"]
 
 
 with open("README.rst") as f:
@@ -18,7 +18,7 @@ setup(
     platforms=["linux", "osx", "win32"],
     packages=find_packages(where="src"),
     package_dir={"": "src"},
-    extras_require={"testing": ["filelock"]},
+    extras_require={"testing": ["filelock"], "psutil": ["psutil>=3.0"]},
     entry_points={
         "pytest11": ["xdist = xdist.plugin", "xdist.looponfail = xdist.looponfail"]
     },

@@ -1,0 +1,3 @@
+``psutil`` has proven to make ``pytest-xdist`` installation in certain platforms and containers problematic, so to use it for automatic number of CPUs detection users need to install the ``psutil`` extra::
+
+    pip install pytest-xdist[psutil]
