@@ -247,7 +247,7 @@ at once. The specifications strings use the `xspec syntax`_.
 
 .. _`xspec syntax`: http://codespeak.net/execnet/basics.html#xspec
 
-.. _`socketserver.py`: http://bitbucket.org/hpk42/execnet/raw/2af991418160/execnet/script/socketserver.py
+.. _`socketserver.py`: https://raw.githubusercontent.com/pytest-dev/execnet/master/execnet/script/socketserver.py
 
 .. _`execnet`: http://codespeak.net/execnet
 
