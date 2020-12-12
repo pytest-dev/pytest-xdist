@@ -11,13 +11,8 @@
     :alt: Python versions
     :target: https://pypi.python.org/pypi/pytest-xdist
 
-.. image:: https://travis-ci.org/pytest-dev/pytest-xdist.svg?branch=master
-    :alt: Travis CI build status
-    :target: https://travis-ci.org/pytest-dev/pytest-xdist
-
-.. image:: https://ci.appveyor.com/api/projects/status/56eq1a1avd4sdd7e/branch/master?svg=true
-    :alt: AppVeyor build status
-    :target: https://ci.appveyor.com/project/pytestbot/pytest-xdist
+.. image:: https://github.com/pytest-dev/pytest-xdist/workflows/build/badge.svg
+    :target: https://github.com/pytest-dev/pytest-xdist/actions
 
 .. image:: https://img.shields.io/badge/code%20style-black-000000.svg
     :target: https://github.com/ambv/black
