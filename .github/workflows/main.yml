@@ -37,7 +37,7 @@ jobs:
           - tox_env: "py38-psutil"
             python: "3.8"
           - tox_env: "linting"
-            python: "3.8"
+            python: "3.7"
 
     steps:
     - uses: actions/checkout@v1
