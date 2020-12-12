@@ -33,8 +33,10 @@ class WorkerInteractor:
         self.channel.send((name, kwargs))
 
     def pytest_internalerror(self, excrepr):
-        for line in str(excrepr).split("\n"):
+        formatted_error = str(excrepr)
+        for line in formatted_error.split("\n"):
             self.log("IERROR>", line)
+        interactor.sendevent("internal_error", formatted_error=formatted_error)
 
     def pytest_sessionstart(self, session):
         self.session = session

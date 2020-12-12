@@ -174,6 +174,24 @@ class DSession:
             assert not crashitem, (crashitem, node)
         self._active_nodes.remove(node)
 
+    def worker_internal_error(self, node, formatted_error):
+        """
+        pytest_internalerror() was called on the worker.
+
+        pytest_internalerror() arguments are an excinfo and an excrepr, which can't
+        be serialized, so we go with a poor man's solution of raising an exception
+        here ourselves using the formatted message.
+        """
+        self._active_nodes.remove(node)
+        try:
+            assert False, formatted_error
+        except AssertionError:
+            from _pytest._code import ExceptionInfo
+
+            excinfo = ExceptionInfo.from_current()
+            excrepr = excinfo.getrepr()
+            self.config.hook.pytest_internalerror(excrepr=excrepr, excinfo=excinfo)
+
     def worker_errordown(self, node, error):
         """Emitted by the WorkerController when a node dies."""
         self.config.hook.pytest_testnodedown(node=node, error=error)
