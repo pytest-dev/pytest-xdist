@@ -772,19 +772,23 @@ class TestWarnings:
 
         testdir.makeconftest(
             """
-            def pytest_warning_captured():
-                assert False, "this hook should not be called in this version"
+            def pytest_warning_captured(warning_message):
+                if warning_message == "my custom worker warning":
+                    assert False, (
+                        "this hook should not be called from workers "
+                        "in this version: {}"
+                    ).format(warning_message)
         """
         )
         testdir.makepyfile(
             """
             import warnings
             def test():
-                warnings.warn("custom warning")
+                warnings.warn("my custom worker warning")
         """
         )
         result = testdir.runpytest("-n1")
-        result.stdout.fnmatch_lines(["* 1 passed in *"])
+        result.stdout.fnmatch_lines(["*1 passed*"])
         result.stdout.no_fnmatch_line("*this hook should not be called in this version")
 
     @pytest.mark.parametrize("n", ["-n0", "-n1"])
