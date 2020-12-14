@@ -1138,6 +1138,18 @@ def test_internal_error_with_maxfail(testdir):
     assert "INTERNALERROR" not in result.stderr.str()
 
 
+def test_internal_errors_propagate_to_master(testdir):
+    testdir.makeconftest(
+        """
+        def pytest_collection_modifyitems():
+            raise RuntimeError("Some runtime error")
+        """
+    )
+    testdir.makepyfile("def test(): pass")
+    result = testdir.runpytest("-n1")
+    result.stdout.fnmatch_lines(["*RuntimeError: Some runtime error*"])
+
+
 class TestLoadScope:
     def test_by_module(self, testdir):
         test_file = """

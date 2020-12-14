@@ -1,0 +1,1 @@
+Internal errors in workers are now propagated to the master node.
