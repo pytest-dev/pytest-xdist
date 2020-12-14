@@ -1,3 +1,12 @@
+pytest-xdist 2.2.0 (2020-12-14)
+===============================
+
+Features
+--------
+
+- `#608 <https://github.com/pytest-dev/pytest-xdist/issues/608>`_: Internal errors in workers are now propagated to the master node.
+
+
 pytest-xdist 2.1.0 (2020-08-25)
 ===============================
 
