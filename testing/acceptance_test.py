@@ -1025,7 +1025,7 @@ def test_worker_id_fixture(testdir, n):
                 f.write(worker_id)
     """
     )
-    result = testdir.runpytest(f, "-n%d" % n, "-p", "no:pytest-services")
+    result = testdir.runpytest(f, "-n%d" % n)
     result.stdout.fnmatch_lines("* 2 passed in *")
     worker_ids = set()
     for fname in glob.glob(str(testdir.tmpdir.join("*.txt"))):
