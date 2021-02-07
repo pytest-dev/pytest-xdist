@@ -227,8 +227,8 @@ def is_xdist_worker(request_or_session) -> bool:
     return hasattr(request_or_session.config, "workerinput")
 
 
-def is_xdist_master(request_or_session) -> bool:
-    """Return `True` if this is the xdist master, `False` otherwise
+def is_xdist_controller(request_or_session) -> bool:
+    """Return `True` if this is the xdist controller, `False` otherwise
 
     Note: this method also returns `False` when distribution has not been
     activated at all.
@@ -241,9 +241,13 @@ def is_xdist_master(request_or_session) -> bool:
     )
 
 
+# ALIAS: todo, deprecate
+is_xdist_master = is_xdist_controller
+
+
 def get_xdist_worker_id(request_or_session) -> str:
     """Return the id of the current worker ('gw0', 'gw1', etc) or 'master'
-    if running on the 'master' node.
+    if running on the controller node.
 
     If not distributing tests (for example passing `-n0` or not passing `-n` at all)
     also return 'master'.
@@ -253,6 +257,7 @@ def get_xdist_worker_id(request_or_session) -> str:
     if hasattr(request_or_session.config, "workerinput"):
         return request_or_session.config.workerinput["workerid"]
     else:
+        # TODO: remove "master", ideally for a None
         return "master"
 
 
@@ -261,6 +266,7 @@ def worker_id(request):
     """Return the id of the current worker ('gw0', 'gw1', etc) or 'master'
     if running on the master node.
     """
+    # TODO: remove "master", ideally for a None
     return get_xdist_worker_id(request)
 
 
