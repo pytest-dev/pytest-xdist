@@ -93,9 +93,14 @@ class WorkerInteractor:
         )
 
     def pytest_collection_finish(self, session):
+        try:
+            topdir = str(self.config.rootpath)
+        except AttributeError:  # pytest <= 6.1.0
+            topdir = str(self.config.rootdir)
+
         self.sendevent(
             "collectionfinish",
-            topdir=str(session.fspath),
+            topdir=topdir,
             ids=[item.nodeid for item in session.items],
         )
 

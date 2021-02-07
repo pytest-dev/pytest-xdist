@@ -1,0 +1,1 @@
+Gracefully handle the pending deprecation of Node.fspath by using config.rootpath for topdir.
