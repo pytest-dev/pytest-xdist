@@ -1,3 +1,12 @@
+pytest-xdist 2.2.1 (2021-02-09)
+===============================
+
+Bug Fixes
+---------
+
+- `#623 <https://github.com/pytest-dev/pytest-xdist/issues/623>`_: Gracefully handle the pending deprecation of Node.fspath by using config.rootpath for topdir.
+
+
 pytest-xdist 2.2.0 (2020-12-14)
 ===============================
 
