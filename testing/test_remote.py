@@ -46,7 +46,9 @@ class WorkerSetup:
 
         class DummyMananger:
             testrunuid = uuid.uuid4().hex
-            specs = [0, 1]
+
+            class _execnet:
+                specs = [0, 1]
 
         self.slp = WorkerController(DummyMananger, self.gateway, config, putevent)
         self.request.addfinalizer(self.slp.ensure_teardown)
