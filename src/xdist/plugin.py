@@ -241,7 +241,7 @@ def is_xdist_controller(request_or_session) -> bool:
     )
 
 
-# ALIAS: todo, deprecate
+# ALIAS: TODO, deprecate (#592)
 is_xdist_master = is_xdist_controller
 
 
