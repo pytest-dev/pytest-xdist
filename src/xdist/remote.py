@@ -121,7 +121,7 @@ class WorkerInteractor:
         self.sendevent("testreport", data=data)
 
     def pytest_collectreport(self, report):
-        # send only reports that have not passed to master as optimization (#330)
+        # send only reports that have not passed to controller as optimization (#330)
         if not report.passed:
             data = self.config.hook.pytest_report_to_serializable(
                 config=self.config, report=report
@@ -144,7 +144,7 @@ def serialize_warning_message(warning_message):
         message_class_name = type(warning_message.message).__name__
         message_str = str(warning_message.message)
         # check now if we can serialize the warning arguments (#349)
-        # if not, we will just use the exception message on the master node
+        # if not, we will just use the exception message on the controller node
         try:
             dumps(warning_message.message.args)
         except DumpError:

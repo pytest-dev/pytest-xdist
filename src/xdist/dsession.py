@@ -87,7 +87,7 @@ class DSession:
         self._session = None
 
     def pytest_collection(self):
-        # prohibit collection of test items in master process
+        # prohibit collection of test items in controller process
         return True
 
     @pytest.mark.trylast
@@ -240,7 +240,7 @@ class DSession:
             return
         self.config.hook.pytest_xdist_node_collection_finished(node=node, ids=ids)
         # tell session which items were effectively collected otherwise
-        # the master node will finish the session with EXIT_NOTESTSCOLLECTED
+        # the controller node will finish the session with EXIT_NOTESTSCOLLECTED
         self._session.testscollected = len(ids)
         self.sched.add_node_collection(node, ids)
         if self.terminal:

@@ -244,7 +244,7 @@ class TestDistribution:
     def test_data_exchange(self, testdir):
         testdir.makeconftest(
             """
-            # This hook only called on master.
+            # This hook only called on the controlling process.
             def pytest_configure_node(node):
                 node.workerinput['a'] = 42
                 node.workerinput['b'] = 7
@@ -257,7 +257,7 @@ class TestDistribution:
                     r = a + b
                     config.workeroutput['r'] = r
 
-            # This hook only called on master.
+            # This hook only called on the controlling process.
             def pytest_testnodedown(node, error):
                 node.config.calc_result = node.workeroutput['r']
 
@@ -289,7 +289,7 @@ class TestDistribution:
                 # on the worker
                 if hasattr(session.config, 'workeroutput'):
                     session.config.workeroutput['s2'] = 42
-            # on the master
+            # on the controller
             def pytest_testnodedown(node, error):
                 assert node.workeroutput['s2'] == 42
                 print ("s2call-finished")
@@ -503,7 +503,7 @@ def test_session_hooks(testdir):
             if hasattr(session.config, 'workerinput'):
                 name = "worker"
             else:
-                name = "master"
+                name = "controller"
             with open(name, "w") as f:
                 f.write("xy")
             # let's fail on the worker
@@ -524,12 +524,12 @@ def test_session_hooks(testdir):
     d = result.parseoutcomes()
     assert d["passed"] == 1
     assert testdir.tmpdir.join("worker").check()
-    assert testdir.tmpdir.join("master").check()
+    assert testdir.tmpdir.join("controller").check()
 
 
 def test_session_testscollected(testdir):
     """
-    Make sure master node is updating the session object with the number
+    Make sure controller node is updating the session object with the number
     of tests collected from the workers.
     """
     testdir.makepyfile(
@@ -574,7 +574,7 @@ def test_fixture_teardown_failure(testdir):
 
 
 def test_config_initialization(testdir, monkeypatch, pytestconfig):
-    """Ensure workers and master are initialized consistently. Integration test for #445"""
+    """Ensure workers and controller are initialized consistently. Integration test for #445"""
     testdir.makepyfile(
         **{
             "dir_a/test_foo.py": """
@@ -1138,7 +1138,7 @@ def test_internal_error_with_maxfail(testdir):
     assert "INTERNALERROR" not in result.stderr.str()
 
 
-def test_internal_errors_propagate_to_master(testdir):
+def test_internal_errors_propagate_to_controller(testdir):
     testdir.makeconftest(
         """
         def pytest_collection_modifyitems():
@@ -1408,12 +1408,18 @@ class TestAPI:
         del fake_request.config.workerinput
         assert not xdist.is_xdist_worker(fake_request)
 
-    def test_is_xdist_master(self, fake_request):
+    def test_is_xdist_controller(self, fake_request):
+
         assert not xdist.is_xdist_master(fake_request)
+        assert not xdist.is_xdist_controller(fake_request)
+
         del fake_request.config.workerinput
         assert xdist.is_xdist_master(fake_request)
+        assert xdist.is_xdist_controller(fake_request)
+
         fake_request.config.option.dist = "no"
         assert not xdist.is_xdist_master(fake_request)
+        assert not xdist.is_xdist_controller(fake_request)
 
     def test_get_xdist_worker_id(self, fake_request):
         assert xdist.get_xdist_worker_id(fake_request) == "gw5"

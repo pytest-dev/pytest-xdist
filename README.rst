@@ -285,7 +285,18 @@ Since version 2.0, the following functions are also available in the ``xdist`` m
         """
 
     def is_xdist_master(request_or_session) -> bool:
-        """Return `True` if this is the xdist master, `False` otherwise
+        """Return `True` if this is the xdist controller, `False` otherwise
+
+        Note: this method also returns `False` when distribution has not been
+        activated at all.
+
+        deprecated alias for is_xdist_controller
+
+        :param request_or_session: the `pytest` `request` or `session` object
+        """
+
+     def is_xdist_controller(request_or_session) -> bool:
+        """Return `True` if this is the xdist controller, `False` otherwise
 
         Note: this method also returns `False` when distribution has not been
         activated at all.
@@ -295,7 +306,7 @@ Since version 2.0, the following functions are also available in the ``xdist`` m
 
     def get_xdist_worker_id(request_or_session) -> str:
         """Return the id of the current worker ('gw0', 'gw1', etc) or 'master'
-        if running on the 'master' node.
+        if running on the controller node.
 
         If not distributing tests (for example passing `-n0` or not passing `-n` at all) also return 'master'.
 
