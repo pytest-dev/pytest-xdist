@@ -149,7 +149,7 @@ class TestDistOptions:
     def test_getxspecs(self, testdir):
         config = testdir.parseconfigure("--tx=popen", "--tx", "ssh=xyz")
         nodemanager = NodeManager(config)
-        xspecs = nodemanager._getxspecs()
+        xspecs = nodemanager._execnet.specs
         assert len(xspecs) == 2
         print(xspecs)
         assert xspecs[0].popen
@@ -157,7 +157,7 @@ class TestDistOptions:
 
     def test_xspecs_multiplied(self, testdir):
         config = testdir.parseconfigure("--tx=3*popen")
-        xspecs = NodeManager(config)._getxspecs()
+        xspecs = NodeManager(config)._execnet.specs
         assert len(xspecs) == 3
         assert xspecs[1].popen
 

@@ -4,7 +4,8 @@ import textwrap
 import execnet
 from _pytest.pytester import HookRecorder
 from xdist import workermanage, newhooks
-from xdist.workermanage import HostRSync, NodeManager
+from xdist.workermanage import NodeManager
+from xdist.backends import ExecnetNodeControl
 
 pytest_plugins = "pytester"
 
@@ -48,13 +49,13 @@ def workercontroller(monkeypatch):
 class TestNodeManagerPopen:
     def test_popen_no_default_chdir(self, config):
         gm = NodeManager(config, ["popen"])
-        assert gm.specs[0].chdir is None
+        assert gm._execnet.specs[0].chdir is None
 
     def test_default_chdir(self, config):
         specs = ["ssh=noco", "socket=xyz"]
-        for spec in NodeManager(config, specs).specs:
+        for spec in NodeManager(config, specs)._execnet.specs:
             assert spec.chdir == "pyexecnetcache"
-        for spec in NodeManager(config, specs, defaultchdir="abc").specs:
+        for spec in NodeManager(config, specs, defaultchdir="abc")._execnet.specs:
             assert spec.chdir == "abc"
 
     def test_popen_makegateway_events(self, config, hookrecorder, workercontroller):
@@ -68,16 +69,16 @@ class TestNodeManagerPopen:
         assert call.gateway.id == "gw0"
         call = hookrecorder.popcall("pytest_xdist_newgateway")
         assert call.gateway.id == "gw1"
-        assert len(hm.group) == 2
+        assert len(hm._execnet.group) == 2
         hm.teardown_nodes()
-        assert not len(hm.group)
+        assert not len(hm._execnet.group)
 
     def test_popens_rsync(self, config, mysetup, workercontroller):
         source = mysetup.source
         hm = NodeManager(config, ["popen"] * 2)
         hm.setup_nodes(None)
-        assert len(hm.group) == 2
-        for gw in hm.group:
+        assert len(hm._execnet.group) == 2
+        for gw in hm._execnet.group:
 
             class pseudoexec:
                 args = []
@@ -90,11 +91,11 @@ class TestNodeManagerPopen:
 
             gw.remote_exec = pseudoexec
         notifications = []
-        for gw in hm.group:
+        for gw in hm._execnet.group:
             hm.rsync(gw, source, notify=lambda *args: notifications.append(args))
         assert not notifications
         hm.teardown_nodes()
-        assert not len(hm.group)
+        assert not len(hm._execnet.group)
         assert "sys.path.insert" in gw.remote_exec.args[0]
 
     def test_rsync_popen_with_path(self, config, mysetup, workercontroller):
@@ -103,10 +104,14 @@ class TestNodeManagerPopen:
         hm.setup_nodes(None)
         source.ensure("dir1", "dir2", "hello")
         notifications = []
-        for gw in hm.group:
+        for gw in hm._execnet.group:
             hm.rsync(gw, source, notify=lambda *args: notifications.append(args))
         assert len(notifications) == 1
-        assert notifications[0] == ("rsyncrootready", hm.group["gw0"].spec, source)
+        assert notifications[0] == (
+            "rsyncrootready",
+            hm._execnet.group["gw0"].spec,
+            source,
+        )
         hm.teardown_nodes()
         dest = dest.join(source.basename)
         assert dest.join("dir1").check()
@@ -121,12 +126,12 @@ class TestNodeManagerPopen:
         hm.roots = []
         hm.setup_nodes(None)
         source.ensure("dir1", "dir2", "hello")
-        gw = hm.group[0]
+        gw = hm._execnet.group[0]
         hm.rsync(gw, source)
         call = hookrecorder.popcall("pytest_xdist_rsyncstart")
         assert call.source == source
         assert len(call.gateways) == 1
-        assert call.gateways[0] in hm.group
+        assert call.gateways[0] in hm._execnet.group
         call = hookrecorder.popcall("pytest_xdist_rsyncfinish")
 
 
@@ -137,7 +142,9 @@ class TestHRSync:
         source.ensure(".svn", "entries")
         source.ensure(".somedotfile", "moreentries")
         source.ensure("somedir", "editfile~")
-        syncer = HostRSync(source, ignores=NodeManager.DEFAULT_IGNORES)
+        syncer = ExecnetNodeControl.get_rsync(
+            source, ignores=NodeManager.DEFAULT_IGNORES
+        )
         files = list(source.visit(rec=syncer.filter, fil=syncer.filter))
         assert len(files) == 3
         basenames = [x.basename for x in files]
@@ -149,7 +156,7 @@ class TestHRSync:
         source, dest = mysetup.source, mysetup.dest
         gw = execnet.makegateway("popen//chdir=%s" % dest)
         finished = []
-        rsync = HostRSync(source)
+        rsync = ExecnetNodeControl.get_rsync(source)
         rsync.add_target_host(gw, finished=lambda: finished.append(1))
         source.join("hello.py").write("world")
         rsync.send()
@@ -272,7 +279,7 @@ class TestNodeManager:
         config = testdir.parseconfig(source)
         nodemanager = NodeManager(config, specs)
         nodemanager.setup_nodes(None)  # calls .rysnc_roots()
-        for gwspec in nodemanager.specs:
+        for gwspec in nodemanager._execnet.specs:
             assert gwspec._samefilesystem()
             assert not gwspec.chdir
 

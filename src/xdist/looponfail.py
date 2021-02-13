@@ -10,7 +10,6 @@ import py
 import pytest
 import sys
 import time
-import execnet
 
 
 def pytest_addoption(parser):
@@ -65,6 +64,8 @@ class RemoteControl:
             print("RemoteControl:", msg)
 
     def initgateway(self):
+        import execnet
+
         return execnet.makegateway("popen")
 
     def setup(self, out=None):

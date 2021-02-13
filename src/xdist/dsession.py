@@ -308,7 +308,7 @@ class DSession:
         """
         spec = node.gateway.spec
         spec.id = None
-        self.nodemanager.group.allocate_id(spec)
+        self.nodemanager._execnet.group.allocate_id(spec)
         node = self.nodemanager.setup_node(spec, self.queue.put)
         self._active_nodes.add(node)
         return node

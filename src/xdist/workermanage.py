@@ -1,14 +1,12 @@
-import fnmatch
 import os
-import re
 import sys
 import uuid
 
 import py
 import pytest
-import execnet
 
 import xdist.remote
+from .backends import ExecnetNodeControl
 
 
 def parse_spec_config(config):
@@ -38,17 +36,9 @@ class NodeManager:
         self.testrunuid = self.config.getoption("testrunuid")
         if self.testrunuid is None:
             self.testrunuid = uuid.uuid4().hex
-        self.group = execnet.Group()
-        if specs is None:
-            specs = self._getxspecs()
-        self.specs = []
-        for spec in specs:
-            if not isinstance(spec, execnet.XSpec):
-                spec = execnet.XSpec(spec)
-            if not spec.chdir and not spec.popen:
-                spec.chdir = defaultchdir
-            self.group.allocate_id(spec)
-            self.specs.append(spec)
+
+        self._execnet = ExecnetNodeControl.from_config(config, specs, defaultchdir)
+
         self.roots = self._getrsyncdirs()
         self.rsyncoptions = self._getrsyncoptions()
         self._rsynced_specs = set()
@@ -60,12 +50,14 @@ class NodeManager:
                 self.rsync(gateway, root, **self.rsyncoptions)
 
     def setup_nodes(self, putevent):
-        self.config.hook.pytest_xdist_setupnodes(config=self.config, specs=self.specs)
+        self.config.hook.pytest_xdist_setupnodes(
+            config=self.config, specs=self._execnet.specs
+        )
         self.trace("setting up nodes")
-        return [self.setup_node(spec, putevent) for spec in self.specs]
+        return [self.setup_node(spec, putevent) for spec in self._execnet.specs]
 
     def setup_node(self, spec, putevent):
-        gw = self.group.makegateway(spec)
+        gw = self._execnet.group.makegateway(spec)
         self.config.hook.pytest_xdist_newgateway(gateway=gw)
         self.rsync_roots(gw)
         node = WorkerController(self, gw, self.config, putevent)
@@ -75,13 +67,11 @@ class NodeManager:
         return node
 
     def teardown_nodes(self):
-        self.group.terminate(self.EXIT_TIMEOUT)
-
-    def _getxspecs(self):
-        return [execnet.XSpec(x) for x in parse_spec_config(self.config)]
+        self._execnet.group.terminate(self.EXIT_TIMEOUT)
 
     def _getrsyncdirs(self):
-        for spec in self.specs:
+        # todo: move to backends ?
+        for spec in self._execnet.specs:
             if not spec.popen or spec.chdir:
                 break
         else:
@@ -130,7 +120,7 @@ class NodeManager:
         # XXX This changes the calling behaviour of
         #     pytest_xdist_rsyncstart and pytest_xdist_rsyncfinish to
         #     be called once per rsync target.
-        rsync = HostRSync(source, verbose=verbose, ignores=ignores)
+        rsync = self._execnet.get_rsync(source, verbose=verbose, ignores=ignores)
         spec = gateway.spec
         if spec.popen and not spec.chdir:
             # XXX This assumes that sources are python-packages
@@ -154,37 +144,6 @@ class NodeManager:
         self.config.hook.pytest_xdist_rsyncstart(source=source, gateways=[gateway])
         rsync.send()
         self.config.hook.pytest_xdist_rsyncfinish(source=source, gateways=[gateway])
-
-
-class HostRSync(execnet.RSync):
-    """ RSyncer that filters out common files
-    """
-
-    def __init__(self, sourcedir, *args, **kwargs):
-        self._synced = {}
-        ignores = kwargs.pop("ignores", None) or []
-        self._ignores = [
-            re.compile(fnmatch.translate(getattr(x, "strpath", x))) for x in ignores
-        ]
-        super().__init__(sourcedir=sourcedir, **kwargs)
-
-    def filter(self, path):
-        path = py.path.local(path)
-        for cre in self._ignores:
-            if cre.match(path.basename) or cre.match(path.strpath):
-                return False
-        else:
-            return True
-
-    def add_target_host(self, gateway, finished=None):
-        remotepath = os.path.basename(self._sourcedir)
-        super().add_target(gateway, remotepath, finishedcallback=finished, delete=True)
-
-    def _report_send_file(self, gateway, modified_rel_path):
-        if self._verbose > 0:
-            path = os.path.basename(self._sourcedir) + "/" + modified_rel_path
-            remotepath = gateway.spec.chdir
-            print("{}:{} <= {}".format(gateway.spec, remotepath, path))
 
 
 def make_reltoroot(roots, args):
@@ -224,7 +183,7 @@ class WorkerController:
         self.config = config
         self.workerinput = {
             "workerid": gateway.id,
-            "workercount": len(nodemanager.specs),
+            "workercount": len(nodemanager._execnet.specs),
             "testrunuid": nodemanager.testrunuid,
             "mainargv": sys.argv,
         }
