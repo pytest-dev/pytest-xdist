@@ -350,10 +350,17 @@ class LoadScopeScheduling:
             return
 
         # Determine chunks of work (scopes)
+        unsorted_workqueue = OrderedDict()
         for nodeid in self.collection:
             scope = self._split_scope(nodeid)
-            work_unit = self.workqueue.setdefault(scope, default=OrderedDict())
+            work_unit = unsorted_workqueue.setdefault(scope, default=OrderedDict())
             work_unit[nodeid] = False
+
+        # Insert tests scopes into work queue ordered by number of tests
+        for scope, nodeids in sorted(
+            unsorted_workqueue.items(), key=lambda item: -len(item[1])
+        ):
+            self.workqueue[scope] = nodeids
 
         # Avoid having more workers than work
         extra_nodes = len(self.nodes) - len(self.workqueue)
