@@ -1,0 +1,1 @@
+LoadScope scheduler: Sort scopes by number of tests to assign biggest scopes first.
