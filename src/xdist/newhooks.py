@@ -48,8 +48,7 @@ def pytest_testnodedown(node, error):
 
 
 def pytest_xdist_node_collection_finished(node, ids):
-    """called by the controller node when a worker node finishes collecting.
-    """
+    """called by the controller node when a worker node finishes collecting."""
 
 
 @pytest.mark.firstresult

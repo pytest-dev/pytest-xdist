@@ -718,8 +718,7 @@ def test_issue_594_random_parametrize(testdir):
 
 
 def test_tmpdir_disabled(testdir):
-    """Test xdist doesn't break if internal tmpdir plugin is disabled (#22).
-    """
+    """Test xdist doesn't break if internal tmpdir plugin is disabled (#22)."""
     p1 = testdir.makepyfile(
         """
         def test_ok():
@@ -733,8 +732,7 @@ def test_tmpdir_disabled(testdir):
 
 @pytest.mark.parametrize("plugin", ["xdist.looponfail", "xdist.boxed"])
 def test_sub_plugins_disabled(testdir, plugin):
-    """Test that xdist doesn't break if we disable any of its sub-plugins. (#32)
-    """
+    """Test that xdist doesn't break if we disable any of its sub-plugins. (#32)"""
     p1 = testdir.makepyfile(
         """
         def test_ok():
@@ -1239,14 +1237,22 @@ class TestFileScope:
             "test_b.py::TestB", result.outlines
         )
 
-        assert test_a_workers_and_test_count in (
-            {"gw0": 10},
-            {"gw1": 0},
-        ) or test_a_workers_and_test_count in ({"gw0": 0}, {"gw1": 10})
-        assert test_b_workers_and_test_count in (
-            {"gw0": 10},
-            {"gw1": 0},
-        ) or test_b_workers_and_test_count in ({"gw0": 0}, {"gw1": 10})
+        assert (
+            test_a_workers_and_test_count
+            in (
+                {"gw0": 10},
+                {"gw1": 0},
+            )
+            or test_a_workers_and_test_count in ({"gw0": 0}, {"gw1": 10})
+        )
+        assert (
+            test_b_workers_and_test_count
+            in (
+                {"gw0": 10},
+                {"gw1": 0},
+            )
+            or test_b_workers_and_test_count in ({"gw0": 0}, {"gw1": 10})
+        )
 
     def test_by_class(self, testdir):
         testdir.makepyfile(
@@ -1271,14 +1277,22 @@ class TestFileScope:
             "test_a.py::TestB", result.outlines
         )
 
-        assert test_a_workers_and_test_count in (
-            {"gw0": 10},
-            {"gw1": 0},
-        ) or test_a_workers_and_test_count in ({"gw0": 0}, {"gw1": 10})
-        assert test_b_workers_and_test_count in (
-            {"gw0": 10},
-            {"gw1": 0},
-        ) or test_b_workers_and_test_count in ({"gw0": 0}, {"gw1": 10})
+        assert (
+            test_a_workers_and_test_count
+            in (
+                {"gw0": 10},
+                {"gw1": 0},
+            )
+            or test_a_workers_and_test_count in ({"gw0": 0}, {"gw1": 10})
+        )
+        assert (
+            test_b_workers_and_test_count
+            in (
+                {"gw0": 10},
+                {"gw1": 0},
+            )
+            or test_b_workers_and_test_count in ({"gw0": 0}, {"gw1": 10})
+        )
 
     def test_module_single_start(self, testdir):
         """Fix test suite never finishing in case all workers start with a single test (#277)."""

@@ -37,7 +37,9 @@ class WorkerSetup:
         self.testdir = testdir
         self.events = Queue()
 
-    def setup(self,):
+    def setup(
+        self,
+    ):
         self.testdir.chdir()
         # import os ; os.environ['EXECNET_DEBUG'] = "2"
         self.gateway = execnet.makegateway()
