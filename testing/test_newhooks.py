@@ -46,8 +46,7 @@ class TestHooks:
         )
 
     def test_node_collection_finished(self, testdir):
-        """Test pytest_xdist_node_collection_finished hook (#8).
-        """
+        """Test pytest_xdist_node_collection_finished hook (#8)."""
         testdir.makeconftest(
             """
             def pytest_xdist_node_collection_finished(node, ids):
