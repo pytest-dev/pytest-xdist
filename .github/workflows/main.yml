@@ -16,7 +16,7 @@ jobs:
           - "py37-pytestlatest"
           - "py38-pytestlatest"
           - "py39-pytestlatest"
-          - "py38-pytestmaster"
+          - "py38-pytestmain"
           - "py38-psutil"
           - "linting"
 
@@ -32,7 +32,7 @@ jobs:
             python: "3.8"
           - tox_env: "py39-pytestlatest"
             python: "3.9"
-          - tox_env: "py38-pytestmaster"
+          - tox_env: "py38-pytestmain"
             python: "3.8"
           - tox_env: "py38-psutil"
             python: "3.8"
