@@ -92,6 +92,20 @@ class WorkerInteractor:
             "runtest_protocol_complete", item_index=self.item_index, duration=duration
         )
 
+    def pytest_collection_modifyitems(self, session, config, items):
+        # add the group name to nodeid as suffix if --dist=loadgroup
+        if config.getvalue("loadgroup"):
+            for item in items:
+                try:
+                    mark = item.get_closest_marker("xgroup")
+                except AttributeError:
+                    mark = item.get_marker("xgroup")
+
+                if mark:
+                    gname = mark.kwargs.get("name")
+                    if gname:
+                        item._nodeid = "{}@{}".format(item.nodeid, gname)
+
     def pytest_collection_finish(self, session):
         try:
             topdir = str(self.config.rootpath)
@@ -206,6 +220,7 @@ def remote_initconfig(option_dict, args):
 
 
 def setup_config(config, basetemp):
+    config.option.loadgroup = True if config.getvalue("dist") == "loadgroup" else False
     config.option.looponfail = False
     config.option.usepdb = False
     config.option.dist = "no"
