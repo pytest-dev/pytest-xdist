@@ -69,6 +69,12 @@ def test_auto_detect_cpus(testdir, monkeypatch):
     assert config.getoption("numprocesses") == 0
     assert config.getoption("dist") == "no"
 
+    config = testdir.parseconfigure("-nlogical", "--pdb")
+    check_options(config)
+    assert config.getoption("usepdb")
+    assert config.getoption("numprocesses") == 0
+    assert config.getoption("dist") == "no"
+
     monkeypatch.delattr(os, "sched_getaffinity", raising=False)
     monkeypatch.setenv("TRAVIS", "true")
     config = testdir.parseconfigure("-nauto")
@@ -81,11 +87,15 @@ def test_auto_detect_cpus_psutil(testdir, monkeypatch):
 
     psutil = pytest.importorskip("psutil")
 
-    monkeypatch.setattr(psutil, "cpu_count", lambda logical=True: 42)
+    monkeypatch.setattr(psutil, "cpu_count", lambda logical=True: 84 if logical else 42)
 
     config = testdir.parseconfigure("-nauto")
     check_options(config)
     assert config.getoption("numprocesses") == 42
+
+    config = testdir.parseconfigure("-nlogical")
+    check_options(config)
+    assert config.getoption("numprocesses") == 84
 
 
 def test_hook_auto_num_workers(testdir, monkeypatch):
@@ -98,6 +108,10 @@ def test_hook_auto_num_workers(testdir, monkeypatch):
     """
     )
     config = testdir.parseconfigure("-nauto")
+    check_options(config)
+    assert config.getoption("numprocesses") == 42
+
+    config = testdir.parseconfigure("-nlogical")
     check_options(config)
     assert config.getoption("numprocesses") == 42
 
