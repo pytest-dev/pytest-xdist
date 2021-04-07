@@ -1,5 +1,5 @@
 repos:
--   repo: https://github.com/ambv/black
+-   repo: https://github.com/psf/black
     rev: 20.8b1
     hooks:
     -   id: black
@@ -12,12 +12,12 @@ repos:
     -   id: end-of-file-fixer
     -   id: check-yaml
     -   id: debug-statements
--   repo: https://gitlab.com/pycqa/flake8
+-   repo: https://github.com/PyCQA/flake8
     rev: 3.9.0
     hooks:
     -   id: flake8
 -   repo: https://github.com/asottile/pyupgrade
-    rev: v2.10.1
+    rev: v2.11.0
     hooks:
     -   id: pyupgrade
         args: [--py3-plus]
