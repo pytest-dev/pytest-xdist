@@ -243,6 +243,9 @@ class LoadScopeScheduling:
         self.assigned_work[node][scope][nodeid] = True
         self._reschedule(node)
 
+    def mark_test_pending(self, item):
+        raise NotImplementedError()
+
     def _assign_work_unit(self, node):
         """Assign a work unit to a node."""
         assert self.workqueue

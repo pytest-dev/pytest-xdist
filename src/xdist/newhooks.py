@@ -64,3 +64,20 @@ def pytest_xdist_auto_num_workers(config):
 
     .. versionadded:: 2.1
     """
+
+
+@pytest.mark.firstresult
+def pytest_handlecrashitem(crashitem, report, sched):
+    """
+    Handle a crashitem, modifying the report if necessary.
+
+    The scheduler is provided as a parameter to reschedule the test if desired with
+    `sched.mark_test_pending`.
+
+    def pytest_handlecrashitem(crashitem, report, sched):
+        if should_rerun(crashitem):
+            sched.mark_test_pending(crashitem)
+            report.outcome = "rerun"
+
+    .. versionadded:: 2.2.1
+    """

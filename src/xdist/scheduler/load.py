@@ -151,6 +151,14 @@ class LoadScheduling:
         self.node2pending[node].remove(item_index)
         self.check_schedule(node, duration=duration)
 
+    def mark_test_pending(self, item):
+        self.pending.insert(
+            0,
+            self.collection.index(item),
+        )
+        for node in self.node2pending:
+            self.check_schedule(node)
+
     def check_schedule(self, node, duration=0):
         """Maybe schedule new items on the node
 

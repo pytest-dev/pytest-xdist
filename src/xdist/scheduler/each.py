@@ -101,6 +101,14 @@ class EachScheduling:
     def mark_test_complete(self, node, item_index, duration=0):
         self.node2pending[node].remove(item_index)
 
+    def mark_test_pending(self, item):
+        self.pending.insert(
+            0,
+            self.collection.index(item),
+        )
+        for node in self.node2pending:
+            self.check_schedule(node)
+
     def remove_node(self, node):
         # KeyError if we didn't get an add_node() yet
         pending = self.node2pending.pop(node)

@@ -343,6 +343,12 @@ class DSession:
             nodeid, (fspath, None, fspath), (), "failed", msg, "???"
         )
         rep.node = worker
+
+        self.config.hook.pytest_handlecrashitem(
+            crashitem=nodeid,
+            report=rep,
+            sched=self.sched,
+        )
         self.config.hook.pytest_runtest_logreport(report=rep)
 
 

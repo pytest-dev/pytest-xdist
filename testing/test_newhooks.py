@@ -60,3 +60,37 @@ class TestHooks:
             ["*HOOK: gw0 test_a, test_b, test_c", "*HOOK: gw1 test_a, test_b, test_c"]
         )
         res.stdout.fnmatch_lines(["*3 passed*"])
+
+
+class TestCrashItem:
+    @pytest.fixture(autouse=True)
+    def create_test_file(self, testdir):
+        testdir.makepyfile(
+            """
+            import os
+            def test_a(): pass
+            def test_b(): os._exit(1)
+            def test_c(): pass
+            def test_d(): pass
+        """
+        )
+
+    def test_handlecrashitem(self, testdir):
+        """Test pytest_handlecrashitem hook."""
+        testdir.makeconftest(
+            """
+            test_runs = 0
+
+            def pytest_handlecrashitem(crashitem, report, sched):
+                global test_runs
+
+                if test_runs == 0:
+                    sched.mark_test_pending(crashitem)
+                    test_runs = 1
+                else:
+                    print("HOOK: pytest_handlecrashitem")
+        """
+        )
+        res = testdir.runpytest("-n2", "-s")
+        res.stdout.fnmatch_lines_random(["*HOOK: pytest_handlecrashitem"])
+        res.stdout.fnmatch_lines(["*3 passed*"])
