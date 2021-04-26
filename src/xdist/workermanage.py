@@ -293,7 +293,7 @@ class WorkerController:
             self._shutdown_sent = True
 
     def sendcommand(self, name, **kwargs):
-        """ send a named parametrized command to the other side. """
+        """send a named parametrized command to the other side."""
         self.log("sending command {}(**{})".format(name, kwargs))
         self.channel.send((name, kwargs))
 
