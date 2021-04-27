@@ -37,7 +37,7 @@ def pytest_xdist_auto_num_workers(config):
 
 
 def parse_numprocesses(s):
-    if s == "auto" or s == "logical":
+    if s in ("auto", "logical"):
         return s
     elif s is not None:
         return int(s)
@@ -192,7 +192,7 @@ def pytest_configure(config):
 @pytest.mark.tryfirst
 def pytest_cmdline_main(config):
     usepdb = config.getoption("usepdb", False)  # a core option
-    if config.option.numprocesses == "auto" or config.option.numprocesses == "logical":
+    if config.option.numprocesses in ("auto", "logical"):
         if usepdb:
             config.option.numprocesses = 0
             config.option.dist = "no"
