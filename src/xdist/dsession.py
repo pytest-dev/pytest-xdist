@@ -14,7 +14,7 @@ from queue import Empty, Queue
 
 
 class Interrupted(KeyboardInterrupt):
-    """ signals an immediate interruption. """
+    """signals an immediate interruption."""
 
 
 class DSession:

@@ -15,36 +15,36 @@ import pytest
 
 
 def pytest_xdist_setupnodes(config, specs):
-    """ called before any remote node is set up. """
+    """called before any remote node is set up."""
 
 
 def pytest_xdist_newgateway(gateway):
-    """ called on new raw gateway creation. """
+    """called on new raw gateway creation."""
 
 
 def pytest_xdist_rsyncstart(source, gateways):
-    """ called before rsyncing a directory to remote gateways takes place. """
+    """called before rsyncing a directory to remote gateways takes place."""
 
 
 def pytest_xdist_rsyncfinish(source, gateways):
-    """ called after rsyncing a directory to remote gateways takes place. """
+    """called after rsyncing a directory to remote gateways takes place."""
 
 
 @pytest.mark.firstresult
 def pytest_xdist_getremotemodule():
-    """ called when creating remote node"""
+    """called when creating remote node"""
 
 
 def pytest_configure_node(node):
-    """ configure node information before it gets instantiated. """
+    """configure node information before it gets instantiated."""
 
 
 def pytest_testnodeready(node):
-    """ Test Node is ready to operate. """
+    """Test Node is ready to operate."""
 
 
 def pytest_testnodedown(node, error):
-    """ Test Node is down. """
+    """Test Node is down."""
 
 
 def pytest_xdist_node_collection_finished(node, ids):
@@ -53,7 +53,7 @@ def pytest_xdist_node_collection_finished(node, ids):
 
 @pytest.mark.firstresult
 def pytest_xdist_make_scheduler(config, log):
-    """ return a node scheduler implementation """
+    """return a node scheduler implementation"""
 
 
 @pytest.mark.firstresult
