@@ -6,11 +6,6 @@ Bug Fixes
 
 - `#623 <https://github.com/pytest-dev/pytest-xdist/issues/623>`_: Gracefully handle the pending deprecation of Node.fspath by using config.rootpath for topdir.
 
-Features
---------
-
-- `#651 <https://github.com/pytest-dev/pytest-xdist/issues/651>`_: Add new hook to allow handling and rescheduling crashed tests.
-
 
 pytest-xdist 2.2.0 (2020-12-14)
 ===============================
