@@ -6,7 +6,7 @@ repos:
         args: [--safe, --quiet, --target-version, py35]
         language_version: python3.7
 -   repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v3.4.0
+    rev: v4.0.1
     hooks:
     -   id: trailing-whitespace
     -   id: end-of-file-fixer
@@ -17,7 +17,7 @@ repos:
     hooks:
     -   id: flake8
 -   repo: https://github.com/asottile/pyupgrade
-    rev: v2.15.0
+    rev: v2.16.0
     hooks:
     -   id: pyupgrade
         args: [--py3-plus]
