@@ -128,7 +128,7 @@ Here is the code:
             return produce_expensive_data()
 
         # get the temp directory shared by all workers
-        root_tmp_dir = tmp_path_factory.getbasetemp().parent
+        root_tmp_dir = tmp_path_factory.getbasetemp()
 
         fn = root_tmp_dir / "data.json"
         with FileLock(str(fn) + ".lock"):
