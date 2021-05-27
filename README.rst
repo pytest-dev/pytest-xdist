@@ -45,6 +45,9 @@ If you would like to know how pytest-xdist works under the covers, checkout
 `OVERVIEW <https://github.com/pytest-dev/pytest-xdist/blob/master/OVERVIEW.md>`_.
 
 
+**NOTE**: due to how pytest-xdist is implemented, the ``-s/--capture=no`` option does not work.
+
+
 Installation
 ------------
 
