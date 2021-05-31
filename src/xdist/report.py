@@ -16,5 +16,5 @@ def report_collection_diff(from_collection, to_collection, from_id, to_id):
         "The difference is:\n"
         "{diff}"
     ).format(from_id=from_id, to_id=to_id, diff="\n".join(diff))
-    msg = "\n".join([x.rstrip() for x in error_message.split("\n")])
+    msg = "\n".join(x.rstrip() for x in error_message.split("\n"))
     return msg

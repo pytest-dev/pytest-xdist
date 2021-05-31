@@ -61,7 +61,7 @@ class RemoteControl:
 
     def trace(self, *args):
         if self.config.option.debug:
-            msg = " ".join([str(x) for x in args])
+            msg = " ".join(str(x) for x in args)
             print("RemoteControl:", msg)
 
     def initgateway(self):
