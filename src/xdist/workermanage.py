@@ -9,6 +9,7 @@ import pytest
 import execnet
 
 import xdist.remote
+from xdist.plugin import _sys_path
 
 
 def parse_spec_config(config):
@@ -261,7 +262,8 @@ class WorkerController:
         remote_module = self.config.hook.pytest_xdist_getremotemodule()
         self.channel = self.gateway.remote_exec(remote_module)
         # change sys.path only for remote workers
-        change_sys_path = not self.gateway.spec.popen
+        # restore sys.path from a frozen copy for local workers
+        change_sys_path = _sys_path if self.gateway.spec.popen else None
         self.channel.send((self.workerinput, args, option_dict, change_sys_path))
 
         if self.putevent:
