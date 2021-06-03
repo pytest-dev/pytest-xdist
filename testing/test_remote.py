@@ -234,7 +234,7 @@ def test_remote_env_vars(testdir):
 
 
 def test_remote_inner_argv(testdir):
-    """Work around sys.path differences due to execnet using `python -c`."""
+    """Test/document the behavior due to execnet using `python -c`."""
     testdir.makepyfile(
         """
         import sys
@@ -295,7 +295,7 @@ def test_remote_usage_prog(testdir, request):
 
 
 def test_remote_sys_path(testdir):
-    """Test/document the behavior due to execnet using `python -c`."""
+    """Work around sys.path differences due to execnet using `python -c`."""
     testdir.makepyfile(
         """
         import sys
