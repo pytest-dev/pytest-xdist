@@ -5,13 +5,14 @@ import py
 import pytest
 
 
-def pytest_xdist_auto_num_workers():
+def pytest_xdist_auto_num_workers(config):
     try:
         import psutil
     except ImportError:
         pass
     else:
-        count = psutil.cpu_count(logical=False) or psutil.cpu_count()
+        use_logical = config.option.numprocesses == "logical"
+        count = psutil.cpu_count(logical=use_logical) or psutil.cpu_count()
         if count:
             return count
     try:
@@ -36,8 +37,8 @@ def pytest_xdist_auto_num_workers():
 
 
 def parse_numprocesses(s):
-    if s == "auto":
-        return "auto"
+    if s in ("auto", "logical"):
+        return s
     elif s is not None:
         return int(s)
 
@@ -51,9 +52,10 @@ def pytest_addoption(parser):
         metavar="numprocesses",
         action="store",
         type=parse_numprocesses,
-        help="shortcut for '--dist=load --tx=NUM*popen', "
-        "you can use 'auto' here for auto detection CPUs number on "
-        "host system and it will be 0 when used with --pdb",
+        help="Shortcut for '--dist=load --tx=NUM*popen'. With 'auto', attempt "
+        "to detect physical CPU count. With 'logical', detect logical CPU "
+        "count. If physical CPU count cannot be found, falls back to logical "
+        "count. This will be 0 when used with --pdb.",
     )
     group.addoption(
         "--maxprocesses",
@@ -190,7 +192,7 @@ def pytest_configure(config):
 @pytest.mark.tryfirst
 def pytest_cmdline_main(config):
     usepdb = config.getoption("usepdb", False)  # a core option
-    if config.option.numprocesses == "auto":
+    if config.option.numprocesses in ("auto", "logical"):
         if usepdb:
             config.option.numprocesses = 0
             config.option.dist = "no"
