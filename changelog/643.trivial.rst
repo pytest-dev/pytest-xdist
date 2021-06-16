@@ -1,1 +1,0 @@
-Use 'main' to refer to pytest default branch in tox env names.
