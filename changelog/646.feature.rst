@@ -1,3 +1,0 @@
-Add ``--numprocesses=logical`` flag, which automatically uses the number of logical CPUs available, instead of physical CPUs with ``auto``.
-
-This is very useful for test suites which are not CPU-bound.

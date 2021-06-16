@@ -1,3 +1,36 @@
+pytest-xdist 2.3.0 (2021-06-16)
+Deprecations and Removals
+-------------------------
+
+- `#654 <https://github.com/pytest-dev/pytest-xdist/issues/654>`_: Python 3.5 is no longer supported.
+
+
+Features
+--------
+
+- `#646 <https://github.com/pytest-dev/pytest-xdist/issues/646>`_: Add ``--numprocesses=logical`` flag, which automatically uses the number of logical CPUs available, instead of physical CPUs with ``auto``.
+
+  This is very useful for test suites which are not CPU-bound.
+
+- `#650 <https://github.com/pytest-dev/pytest-xdist/issues/650>`_: Added new ``pytest_handlecrashitem`` hook to allow handling and rescheduling crashed items.
+
+
+Bug Fixes
+---------
+
+- `#421 <https://github.com/pytest-dev/pytest-xdist/issues/421>`_: Copy the parent process sys.path into local workers, to work around execnet's python -c adding the current directory to sys.path.
+
+- `#638 <https://github.com/pytest-dev/pytest-xdist/issues/638>`_: Fix issue caused by changing the branch name of the pytest repository.
+
+
+Trivial Changes
+---------------
+
+- `#592 <https://github.com/pytest-dev/pytest-xdist/issues/592>`_: Replace master with controller where ever possible.
+
+- `#643 <https://github.com/pytest-dev/pytest-xdist/issues/643>`_: Use 'main' to refer to pytest default branch in tox env names.
+
+
 pytest-xdist 2.2.1 (2021-02-09)
 ===============================
 

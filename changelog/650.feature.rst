@@ -1,1 +1,0 @@
-Added new ``pytest_handlecrashitem`` hook to allow handling and rescheduling crashed items.
