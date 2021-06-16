@@ -219,12 +219,14 @@ if __name__ == "__channelexec__":
     channel = channel  # noqa
     workerinput, args, option_dict, change_sys_path = channel.receive()
 
-    if change_sys_path:
+    if change_sys_path is None:
         importpath = os.getcwd()
         sys.path.insert(0, importpath)
         os.environ["PYTHONPATH"] = (
             importpath + os.pathsep + os.environ.get("PYTHONPATH", "")
         )
+    else:
+        sys.path = change_sys_path
 
     os.environ["PYTEST_XDIST_TESTRUNUID"] = workerinput["testrunuid"]
     os.environ["PYTEST_XDIST_WORKER"] = workerinput["workerid"]

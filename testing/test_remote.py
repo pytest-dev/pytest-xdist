@@ -292,3 +292,17 @@ def test_remote_usage_prog(testdir, request):
     result = testdir.runpytest_subprocess("-n1")
     assert result.ret == 1
     result.stdout.fnmatch_lines(["*usage: *", "*error: my_usage_error"])
+
+
+def test_remote_sys_path(testdir):
+    """Work around sys.path differences due to execnet using `python -c`."""
+    testdir.makepyfile(
+        """
+        import sys
+
+        def test_sys_path():
+            assert "" not in sys.path
+        """
+    )
+    result = testdir.runpytest("-n1")
+    assert result.ret == 0

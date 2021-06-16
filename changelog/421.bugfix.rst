@@ -1,0 +1,1 @@
+Copy the parent process sys.path into local workers, to work around execnet's python -c adding the current directory to sys.path.

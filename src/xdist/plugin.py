@@ -1,8 +1,11 @@
 import os
 import uuid
+import sys
 
 import py
 import pytest
+
+_sys_path = list(sys.path)  # freeze a copy of sys.path at interpreter startup
 
 
 def pytest_xdist_auto_num_workers(config):
