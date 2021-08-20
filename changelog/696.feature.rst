@@ -1,0 +1,2 @@
+Use setproctitle() to indicate current worker state if correspondent package
+is available.  Absent package (or any errors) just continues unchanged.
