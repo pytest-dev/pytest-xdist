@@ -1,2 +1,3 @@
-Use setproctitle() to indicate current worker state if correspondent package
-is available.  Absent package (or any errors) just continues unchanged.
+On Linux, the process title now changes to indicate the current worker state (running/idle).
+
+Depends on the `setproctitle <https://pypi.org/project/setproctitle/>`__ package, which can be installed with ``pip install pytest-xdist[setproctitle]``.
