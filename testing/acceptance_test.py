@@ -568,7 +568,7 @@ def test_fixture_teardown_failure(testdir):
             pass
     """
     )
-    result = testdir.runpytest_subprocess("--debug", p)  # , "-n1")
+    result = testdir.runpytest_subprocess(p, "-n1")
     result.stdout.fnmatch_lines(["*ValueError*42*", "*1 passed*1 error*"])
     assert result.ret
 
