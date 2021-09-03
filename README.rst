@@ -317,6 +317,26 @@ Since version 2.0, the following functions are also available in the ``xdist`` m
         """
 
 
+Identifying workers from the system environment
+-----------------------------------------------
+
+*New in version UNRELEASED TBD FIXME*
+
+If the `setproctitle`_ package is installed, ``pytest-xdist`` will use it to
+update the process title (command line) on its workers to show their current
+state.  The titles used are ``[pytest-xdist running] file.py/node::id`` and
+``[pytest-xdist idle]``, visible in standard tools like ``ps`` and ``top`` on
+Linux, Mac OS X and BSD systems.  For Windows, please follow `setproctitle`_'s
+pointer regarding the Process Explorer tool.
+
+This is intended purely as an UX enhancement, e.g. to track down issues with
+long-running or CPU intensive tests.  Errors in changing the title are ignored
+silently.  Please try not to rely on the title format or title changes in
+external scripts.
+
+.. _`setproctitle`: https://pypi.org/project/setproctitle/
+
+
 Uniquely identifying the current test run
 -----------------------------------------
 

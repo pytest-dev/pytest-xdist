@@ -16,6 +16,21 @@ from execnet.gateway_base import dumps, DumpError
 
 from _pytest.config import _prepareconfig, Config
 
+try:
+    from setproctitle import setproctitle
+except ImportError:
+
+    def setproctitle(title):
+        pass
+
+
+def worker_title(title):
+    try:
+        setproctitle(title)
+    except Exception:
+        # changing the process name is very optional, no errors please
+        pass
+
 
 class WorkerInteractor:
     def __init__(self, config, channel):
@@ -85,9 +100,14 @@ class WorkerInteractor:
         else:
             nextitem = None
 
+        worker_title("[pytest-xdist running] %s" % item.nodeid)
+
         start = time.time()
         self.config.hook.pytest_runtest_protocol(item=item, nextitem=nextitem)
         duration = time.time() - start
+
+        worker_title("[pytest-xdist idle]")
+
         self.sendevent(
             "runtest_protocol_complete", item_index=self.item_index, duration=duration
         )

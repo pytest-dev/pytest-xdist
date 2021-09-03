@@ -17,6 +17,7 @@ jobs:
           - "py39-pytestlatest"
           - "py38-pytestmain"
           - "py38-psutil"
+          - "py38-setproctitle"
 
         os: [ubuntu-latest, windows-latest]
         include:
@@ -31,6 +32,8 @@ jobs:
           - tox_env: "py38-pytestmain"
             python: "3.8"
           - tox_env: "py38-psutil"
+            python: "3.8"
+          - tox_env: "py38-setproctitle"
             python: "3.8"
 
     steps:
