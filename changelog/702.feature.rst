@@ -1,0 +1,1 @@
+Add ``pytest_xdist_teardownnodes`` hook that is run when the nodes are being torn down.
