@@ -71,6 +71,8 @@ class TestNodeManagerPopen:
         assert len(hm.group) == 2
         hm.teardown_nodes()
         assert not len(hm.group)
+        call = hookrecorder.popcall("pytest_xdist_teardownnodes")
+        assert call.config is not None
 
     def test_popens_rsync(self, config, mysetup, workercontroller):
         source = mysetup.source

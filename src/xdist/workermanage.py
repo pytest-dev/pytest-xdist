@@ -76,6 +76,7 @@ class NodeManager:
         return node
 
     def teardown_nodes(self):
+        self.config.hook.pytest_xdist_teardownnodes(config=self.config)
         self.group.terminate(self.EXIT_TIMEOUT)
 
     def _getxspecs(self):

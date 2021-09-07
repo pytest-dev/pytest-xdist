@@ -51,6 +51,10 @@ def pytest_xdist_node_collection_finished(node, ids):
     """called by the controller node when a worker node finishes collecting."""
 
 
+def pytest_xdist_teardownnodes(config):
+    """Called before before tearing down the nodes."""
+
+
 @pytest.mark.firstresult
 def pytest_xdist_make_scheduler(config, log):
     """return a node scheduler implementation"""
