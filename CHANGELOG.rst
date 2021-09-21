@@ -1,3 +1,16 @@
+pytest-xdist 2.4.0 (2021-09-20)
+===============================
+
+Features
+--------
+
+- `#696 <https://github.com/pytest-dev/pytest-xdist/issues/696>`_: On Linux, the process title now changes to indicate the current worker state (running/idle).
+
+  Depends on the `setproctitle <https://pypi.org/project/setproctitle/>`__ package, which can be installed with ``pip install pytest-xdist[setproctitle]``.
+
+- `#704 <https://github.com/pytest-dev/pytest-xdist/issues/704>`_: Add support for Python 3.10.
+
+
 pytest-xdist 2.3.0 (2021-06-16)
 ===============================
 
