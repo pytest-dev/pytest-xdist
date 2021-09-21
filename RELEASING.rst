@@ -41,3 +41,5 @@ To publish a new release ``X.Y.Z``, the steps are as follows:
     $ git push git@github.com:pytest-dev/pytest-xdist.git v$VERSION
 
 That will build the package and publish it on ``PyPI`` automatically.
+
+#. Merge the release PR to `master`.
