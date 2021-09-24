@@ -30,7 +30,7 @@ def pytest_xdist_rsyncfinish(source, gateways):
     """called after rsyncing a directory to remote gateways takes place."""
 
 
-@pytest.mark.firstresult
+@pytest.hookspec(firstresult=True)
 def pytest_xdist_getremotemodule():
     """called when creating remote node"""
 
@@ -51,12 +51,12 @@ def pytest_xdist_node_collection_finished(node, ids):
     """called by the controller node when a worker node finishes collecting."""
 
 
-@pytest.mark.firstresult
+@pytest.hookspec(firstresult=True)
 def pytest_xdist_make_scheduler(config, log):
     """return a node scheduler implementation"""
 
 
-@pytest.mark.firstresult
+@pytest.hookspec(firstresult=True)
 def pytest_xdist_auto_num_workers(config):
     """
     Return the number of workers to spawn when ``--numprocesses=auto`` is given in the
@@ -66,7 +66,7 @@ def pytest_xdist_auto_num_workers(config):
     """
 
 
-@pytest.mark.firstresult
+@pytest.hookspec(firstresult=True)
 def pytest_handlecrashitem(crashitem, report, sched):
     """
     Handle a crashitem, modifying the report if necessary.
