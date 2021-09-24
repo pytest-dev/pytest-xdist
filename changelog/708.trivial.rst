@@ -1,0 +1,1 @@
+Use ``@pytest.hookspec`` decorator to declare hook options in ``newhooks.py`` to avoid warnings in ``pytest 7.0``.
