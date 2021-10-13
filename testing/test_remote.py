@@ -263,29 +263,15 @@ def test_remote_mainargv(testdir):
 
 
 def test_remote_usage_prog(testdir, request):
+    """Check that pytest's argparser's prog gets monkeypatched."""
     if not hasattr(request.config._parser, "prog"):
         pytest.skip("prog not available in config parser")
-    testdir.makeconftest(
-        """
-        import pytest
-
-        config_parser = None
-
-        @pytest.fixture
-        def get_config_parser():
-            return config_parser
-
-        def pytest_configure(config):
-            global config_parser
-            config_parser = config._parser
-    """
-    )
     testdir.makepyfile(
         """
         import sys
 
-        def test(get_config_parser, request):
-            get_config_parser._getparser().error("my_usage_error")
+        def test(pytestconfig):
+            pytestconfig._parser._getparser().error("my_usage_error")
     """
     )
 
