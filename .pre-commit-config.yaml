@@ -4,7 +4,6 @@ repos:
     hooks:
     -   id: black
         args: [--safe, --quiet, --target-version, py35]
-        language_version: python3.7
 -   repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.0.1
     hooks:
@@ -29,4 +28,3 @@ repos:
         files: ^(CHANGELOG.rst|HOWTORELEASE.rst|README.rst|changelog/.*)$
         language: python
         additional_dependencies: [pygments, restructuredtext_lint]
-        language_version: python3.7
