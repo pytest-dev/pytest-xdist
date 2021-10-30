@@ -1,3 +1,15 @@
+[build-system]
+requires = [
+  # sync with setup.py until we discard non-pep-517/518
+  "setuptools>=45.0",
+  "setuptools-scm[toml]>=6.2.3",
+  "wheel",
+]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools_scm]
+write_to = "src/xdist/_version.py"
+
 [tool.towncrier]
 package = "xdist"
 filename = "CHANGELOG.rst"
