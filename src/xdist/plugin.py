@@ -1,9 +1,13 @@
 import os
 import uuid
 import sys
+from pathlib import Path
 
 import py
 import pytest
+
+
+PYTEST_GTE_7 = hasattr(pytest, "version_tuple") and pytest.version_tuple >= (7, 0)  # type: ignore[attr-defined]
 
 _sys_path = list(sys.path)  # freeze a copy of sys.path at interpreter startup
 
@@ -147,18 +151,18 @@ def pytest_addoption(parser):
     parser.addini(
         "rsyncdirs",
         "list of (relative) paths to be rsynced for remote distributed testing.",
-        type="pathlist",
+        type="paths" if PYTEST_GTE_7 else "pathlist",
     )
     parser.addini(
         "rsyncignore",
         "list of (relative) glob-style paths to be ignored for rsyncing.",
-        type="pathlist",
+        type="paths" if PYTEST_GTE_7 else "pathlist",
     )
     parser.addini(
         "looponfailroots",
-        type="pathlist",
+        type="paths" if PYTEST_GTE_7 else "pathlist",
         help="directories to check for changes",
-        default=[py.path.local()],
+        default=[Path.cwd() if PYTEST_GTE_7 else py.path.local()],
     )
 
 

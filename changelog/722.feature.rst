@@ -1,0 +1,1 @@
+Full compatibility with pytest 7 - no deprecation warnings or use of legacy features.
