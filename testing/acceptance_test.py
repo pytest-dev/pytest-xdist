@@ -1,90 +1,93 @@
 import os
 import re
+import shutil
+from typing import Dict
+from typing import List
+from typing import Tuple
 
-import py
 import pytest
 import xdist
 
 
 class TestDistribution:
-    def test_n1_pass(self, testdir):
-        p1 = testdir.makepyfile(
+    def test_n1_pass(self, pytester: pytest.Pytester) -> None:
+        p1 = pytester.makepyfile(
             """
             def test_ok():
                 pass
         """
         )
-        result = testdir.runpytest(p1, "-n1")
+        result = pytester.runpytest(p1, "-n1")
         assert result.ret == 0
         result.stdout.fnmatch_lines(["*1 passed*"])
 
-    def test_n1_fail(self, testdir):
-        p1 = testdir.makepyfile(
+    def test_n1_fail(self, pytester: pytest.Pytester) -> None:
+        p1 = pytester.makepyfile(
             """
             def test_fail():
                 assert 0
         """
         )
-        result = testdir.runpytest(p1, "-n1")
+        result = pytester.runpytest(p1, "-n1")
         assert result.ret == 1
         result.stdout.fnmatch_lines(["*1 failed*"])
 
-    def test_n1_import_error(self, testdir):
-        p1 = testdir.makepyfile(
+    def test_n1_import_error(self, pytester: pytest.Pytester) -> None:
+        p1 = pytester.makepyfile(
             """
             import __import_of_missing_module
             def test_import():
                 pass
         """
         )
-        result = testdir.runpytest(p1, "-n1")
+        result = pytester.runpytest(p1, "-n1")
         assert result.ret == 1
         result.stdout.fnmatch_lines(
             ["E   *Error: No module named *__import_of_missing_module*"]
         )
 
-    def test_n2_import_error(self, testdir):
+    def test_n2_import_error(self, pytester: pytest.Pytester) -> None:
         """Check that we don't report the same import error multiple times
         in distributed mode."""
-        p1 = testdir.makepyfile(
+        p1 = pytester.makepyfile(
             """
             import __import_of_missing_module
             def test_import():
                 pass
         """
         )
-        result1 = testdir.runpytest(p1, "-n2")
-        result2 = testdir.runpytest(p1, "-n1")
+        result1 = pytester.runpytest(p1, "-n2")
+        result2 = pytester.runpytest(p1, "-n1")
         assert len(result1.stdout.lines) == len(result2.stdout.lines)
 
-    def test_n1_skip(self, testdir):
-        p1 = testdir.makepyfile(
+    def test_n1_skip(self, pytester: pytest.Pytester) -> None:
+        p1 = pytester.makepyfile(
             """
             def test_skip():
                 import pytest
                 pytest.skip("myreason")
         """
         )
-        result = testdir.runpytest(p1, "-n1")
+        result = pytester.runpytest(p1, "-n1")
         assert result.ret == 0
         result.stdout.fnmatch_lines(["*1 skipped*"])
 
-    def test_manytests_to_one_import_error(self, testdir):
-        p1 = testdir.makepyfile(
+    def test_manytests_to_one_import_error(self, pytester: pytest.Pytester) -> None:
+        p1 = pytester.makepyfile(
             """
             import __import_of_missing_module
             def test_import():
                 pass
         """
         )
-        result = testdir.runpytest(p1, "--tx=popen", "--tx=popen")
+        result = pytester.runpytest(p1, "--tx=popen", "--tx=popen")
         assert result.ret in (1, 2)
         result.stdout.fnmatch_lines(
             ["E   *Error: No module named *__import_of_missing_module*"]
         )
 
-    def test_manytests_to_one_popen(self, testdir):
-        p1 = testdir.makepyfile(
+    def test_manytests_to_one_popen(self, pytester: pytest.Pytester) -> None:
+        p1 = pytester.makepyfile(
             """
                 import pytest
                 def test_fail0():
@@ -97,12 +100,12 @@ class TestDistribution:
                     pytest.skip("hello")
             """
         )
-        result = testdir.runpytest(p1, "-v", "-d", "--tx=popen", "--tx=popen")
+        result = pytester.runpytest(p1, "-v", "-d", "--tx=popen", "--tx=popen")
         result.stdout.fnmatch_lines(["*1*Python*", "*2 failed, 1 passed, 1 skipped*"])
         assert result.ret == 1
 
-    def test_n1_fail_minus_x(self, testdir):
-        p1 = testdir.makepyfile(
+    def test_n1_fail_minus_x(self, pytester: pytest.Pytester) -> None:
+        p1 = pytester.makepyfile(
             """
             def test_fail1():
                 assert 0
@@ -110,25 +113,25 @@ class TestDistribution:
                 assert 0
         """
         )
-        result = testdir.runpytest(p1, "-x", "-v", "-n1")
+        result = pytester.runpytest(p1, "-x", "-v", "-n1")
         assert result.ret == 2
         result.stdout.fnmatch_lines(["*Interrupted: stopping*1*", "*1 failed*"])
 
-    def test_basetemp_in_subprocesses(self, testdir):
-        p1 = testdir.makepyfile(
+    def test_basetemp_in_subprocesses(self, pytester: pytest.Pytester) -> None:
+        p1 = pytester.makepyfile(
             """
-            def test_send(tmpdir):
-                import py
-                assert tmpdir.relto(py.path.local(%r)), tmpdir
+            def test_send(tmp_path):
+                from pathlib import Path
+                assert tmp_path.relative_to(Path(%r)), tmp_path
         """
-            % str(testdir.tmpdir)
+            % str(pytester.path)
         )
-        result = testdir.runpytest_subprocess(p1, "-n1")
+        result = pytester.runpytest_subprocess(p1, "-n1")
         assert result.ret == 0
         result.stdout.fnmatch_lines(["*1 passed*"])
 
-    def test_dist_ini_specified(self, testdir):
-        p1 = testdir.makepyfile(
+    def test_dist_ini_specified(self, pytester: pytest.Pytester) -> None:
+        p1 = pytester.makepyfile(
             """
                 import pytest
                 def test_fail0():
@@ -141,22 +144,22 @@ class TestDistribution:
                     pytest.skip("hello")
             """
         )
-        testdir.makeini(
+        pytester.makeini(
             """
             [pytest]
             addopts = --tx=3*popen
         """
         )
-        result = testdir.runpytest(p1, "-d", "-v")
+        result = pytester.runpytest(p1, "-d", "-v")
         result.stdout.fnmatch_lines(["*2*Python*", "*2 failed, 1 passed, 1 skipped*"])
         assert result.ret == 1
 
     @pytest.mark.xfail("sys.platform.startswith('java')", run=False)
-    def test_dist_tests_with_crash(self, testdir):
+    def test_dist_tests_with_crash(self, pytester: pytest.Pytester) -> None:
         if not hasattr(os, "kill"):
             pytest.skip("no os.kill")
 
-        p1 = testdir.makepyfile(
+        p1 = pytester.makepyfile(
             """
                 import pytest
                 def test_fail0():
@@ -174,7 +177,7 @@ class TestDistribution:
                     os.kill(os.getpid(), 15)
             """
         )
-        result = testdir.runpytest(p1, "-v", "-d", "-n1")
+        result = pytester.runpytest(p1, "-v", "-d", "-n1")
         result.stdout.fnmatch_lines(
             [
                 "*Python*",
@@ -185,10 +188,12 @@ class TestDistribution:
         )
         assert result.ret == 1
 
-    def test_distribution_rsyncdirs_example(self, testdir, monkeypatch):
+    def test_distribution_rsyncdirs_example(
+        self, pytester: pytest.Pytester, monkeypatch
+    ) -> None:
         # use a custom plugin that has a custom command-line option to ensure
         # this is propagated to workers (see #491)
-        testdir.makepyfile(
+        pytester.makepyfile(
             **{
                 "myplugin/src/foobarplugin.py": """
             from __future__ import print_function
@@ -207,18 +212,19 @@ class TestDistribution:
             """
             }
         )
-        assert (testdir.tmpdir / "myplugin/src/foobarplugin.py").check(file=1)
+        assert (pytester.path / "myplugin/src/foobarplugin.py").is_file()
         monkeypatch.setenv(
-            "PYTHONPATH", str(testdir.tmpdir / "myplugin/src"), prepend=os.pathsep
+            "PYTHONPATH", str(pytester.path / "myplugin/src"), prepend=os.pathsep
         )
 
-        source = testdir.mkdir("source")
-        dest = testdir.mkdir("dest")
-        subdir = source.mkdir("example_pkg")
-        subdir.ensure("__init__.py")
-        p = subdir.join("test_one.py")
-        p.write("def test_5():\n  assert not __file__.startswith(%r)" % str(p))
-        result = testdir.runpytest_subprocess(
+        source = pytester.mkdir("source")
+        dest = pytester.mkdir("dest")
+        subdir = source / "example_pkg"
+        subdir.mkdir()
+        subdir.joinpath("__init__.py").touch()
+        p = subdir / "test_one.py"
+        p.write_text("def test_5():\n  assert not __file__.startswith(%r)" % str(p))
+        result = pytester.runpytest_subprocess(
             "-v",
             "-d",
             "-s",
@@ -239,10 +245,10 @@ class TestDistribution:
             ]
         )
         result.stderr.fnmatch_lines(["--foobar=123 active! *"])
-        assert dest.join(subdir.basename).check(dir=1)
+        assert dest.joinpath(subdir.name).is_dir()
 
-    def test_data_exchange(self, testdir):
-        testdir.makeconftest(
+    def test_data_exchange(self, pytester: pytest.Pytester) -> None:
+        pytester.makeconftest(
             """
             # This hook only called on the controlling process.
             def pytest_configure_node(node):
@@ -268,22 +274,22 @@ class TestDistribution:
                         'calculated result is %s' % calc_result)
         """
         )
-        p1 = testdir.makepyfile("def test_func(): pass")
-        result = testdir.runpytest("-v", p1, "-d", "--tx=popen")
+        p1 = pytester.makepyfile("def test_func(): pass")
+        result = pytester.runpytest("-v", p1, "-d", "--tx=popen")
         result.stdout.fnmatch_lines(
             ["*0*Python*", "*calculated result is 49*", "*1 passed*"]
         )
         assert result.ret == 0
 
-    def test_keyboardinterrupt_hooks_issue79(self, testdir):
-        testdir.makepyfile(
+    def test_keyboardinterrupt_hooks_issue79(self, pytester: pytest.Pytester) -> None:
+        pytester.makepyfile(
             __init__="",
             test_one="""
             def test_hello():
                 raise KeyboardInterrupt()
         """,
         )
-        testdir.makeconftest(
+        pytester.makeconftest(
             """
             def pytest_sessionfinish(session):
                 # on the worker
@@ -296,22 +302,22 @@ class TestDistribution:
         """
         )
         args = ["-n1", "--debug"]
-        result = testdir.runpytest_subprocess(*args)
+        result = pytester.runpytest_subprocess(*args)
         s = result.stdout.str()
         assert result.ret == 2
         assert "s2call" in s
         assert "Interrupted" in s
 
-    def test_keyboard_interrupt_dist(self, testdir):
+    def test_keyboard_interrupt_dist(self, pytester: pytest.Pytester) -> None:
         # xxx could be refined to check for return code
-        testdir.makepyfile(
+        pytester.makepyfile(
             """
             def test_sleep():
                 import time
                 time.sleep(10)
         """
         )
-        child = testdir.spawn_pytest("-n1 -v", expect_timeout=30.0)
+        child = pytester.spawn_pytest("-n1 -v", expect_timeout=30.0)
         child.expect(".*test_sleep.*")
         child.kill(2)  # keyboard interrupt
         child.expect(".*KeyboardInterrupt.*")
@@ -319,42 +325,42 @@ class TestDistribution:
         child.close()
         # assert ret == 2
 
-    def test_dist_with_collectonly(self, testdir):
-        p1 = testdir.makepyfile(
+    def test_dist_with_collectonly(self, pytester: pytest.Pytester) -> None:
+        p1 = pytester.makepyfile(
             """
             def test_ok():
                 pass
         """
         )
-        result = testdir.runpytest(p1, "-n1", "--collect-only")
+        result = pytester.runpytest(p1, "-n1", "--collect-only")
         assert result.ret == 0
         result.stdout.fnmatch_lines(["*collected 1 item*"])
 
 
 class TestDistEach:
-    def test_simple(self, testdir):
-        testdir.makepyfile(
+    def test_simple(self, pytester: pytest.Pytester) -> None:
+        pytester.makepyfile(
             """
             def test_hello():
                 pass
         """
         )
-        result = testdir.runpytest_subprocess("--debug", "--dist=each", "--tx=2*popen")
+        result = pytester.runpytest_subprocess("--debug", "--dist=each", "--tx=2*popen")
         assert not result.ret
         result.stdout.fnmatch_lines(["*2 pass*"])
 
     @pytest.mark.xfail(
-        run=False, reason="other python versions might not have py.test installed"
+        run=False, reason="other python versions might not have pytest installed"
     )
-    def test_simple_diffoutput(self, testdir):
+    def test_simple_diffoutput(self, pytester: pytest.Pytester) -> None:
         interpreters = []
         for name in ("python2.5", "python2.6"):
-            interp = py.path.local.sysfind(name)
+            interp = shutil.which(name)
             if interp is None:
                 pytest.skip("%s not found" % name)
             interpreters.append(interp)
 
-        testdir.makepyfile(
+        pytester.makepyfile(
             __init__="",
             test_one="""
             import sys
@@ -366,7 +372,7 @@ class TestDistEach:
         args = ["--dist=each", "-v"]
         args += ["--tx", "popen//python=%s" % interpreters[0]]
         args += ["--tx", "popen//python=%s" % interpreters[1]]
-        result = testdir.runpytest(*args)
+        result = pytester.runpytest(*args)
         s = result.stdout.str()
         assert "2...5" in s
         assert "2...6" in s
@@ -374,8 +380,8 @@ class TestDistEach:
 
 class TestTerminalReporting:
     @pytest.mark.parametrize("verbosity", ["", "-q", "-v"])
-    def test_output_verbosity(self, testdir, verbosity):
-        testdir.makepyfile(
+    def test_output_verbosity(self, pytester, verbosity: str) -> None:
+        pytester.makepyfile(
             """
             def test_ok():
                 pass
@@ -384,7 +390,7 @@ class TestTerminalReporting:
         args = ["-n1"]
         if verbosity:
             args.append(verbosity)
-        result = testdir.runpytest(*args)
+        result = pytester.runpytest(*args)
         out = result.stdout.str()
         if verbosity == "-v":
             assert "scheduling tests" in out
@@ -397,8 +403,8 @@ class TestTerminalReporting:
             assert "scheduling tests" not in out
             assert "gw" in out
 
-    def test_pass_skip_fail(self, testdir):
-        testdir.makepyfile(
+    def test_pass_skip_fail(self, pytester: pytest.Pytester) -> None:
+        pytester.makepyfile(
             """
             import pytest
             def test_ok():
@@ -409,7 +415,7 @@ class TestTerminalReporting:
                 assert 0
         """
         )
-        result = testdir.runpytest("-n1", "-v")
+        result = pytester.runpytest("-n1", "-v")
         result.stdout.fnmatch_lines_random(
             [
                 "*PASS*test_pass_skip_fail.py*test_ok*",
@@ -421,14 +427,14 @@ class TestTerminalReporting:
             ["*def test_func():", ">       assert 0", "E       assert 0"]
         )
 
-    def test_fail_platinfo(self, testdir):
-        testdir.makepyfile(
+    def test_fail_platinfo(self, pytester: pytest.Pytester) -> None:
+        pytester.makepyfile(
             """
             def test_func():
                 assert 0
         """
         )
-        result = testdir.runpytest("-n1", "-v")
+        result = pytester.runpytest("-n1", "-v")
         result.stdout.fnmatch_lines(
             [
                 "*FAIL*test_fail_platinfo.py*test_func*",
@@ -439,31 +445,31 @@ class TestTerminalReporting:
             ]
         )
 
-    def test_logfinish_hook(self, testdir):
+    def test_logfinish_hook(self, pytester: pytest.Pytester) -> None:
         """Ensure the pytest_runtest_logfinish hook is being properly handled"""
         from _pytest import hookspec
 
         if not hasattr(hookspec, "pytest_runtest_logfinish"):
             pytest.skip("test requires pytest_runtest_logfinish hook in pytest (3.4+)")
 
-        testdir.makeconftest(
+        pytester.makeconftest(
             """
             def pytest_runtest_logfinish():
                 print('pytest_runtest_logfinish hook called')
         """
         )
-        testdir.makepyfile(
+        pytester.makepyfile(
             """
             def test_func():
                 pass
         """
         )
-        result = testdir.runpytest("-n1", "-s")
+        result = pytester.runpytest("-n1", "-s")
         result.stdout.fnmatch_lines(["*pytest_runtest_logfinish hook called*"])
 
 
-def test_teardownfails_one_function(testdir):
-    p = testdir.makepyfile(
+def test_teardownfails_one_function(pytester: pytest.Pytester) -> None:
+    p = pytester.makepyfile(
         """
         def test_func():
             pass
@@ -471,15 +477,15 @@ def test_teardownfails_one_function(testdir):
             assert 0
     """
     )
-    result = testdir.runpytest(p, "-n1", "--tx=popen")
+    result = pytester.runpytest(p, "-n1", "--tx=popen")
     result.stdout.fnmatch_lines(
         ["*def teardown_function(function):*", "*1 passed*1 error*"]
     )
 
 
 @pytest.mark.xfail
-def test_terminate_on_hangingnode(testdir):
-    p = testdir.makeconftest(
+def test_terminate_on_hangingnode(pytester: pytest.Pytester) -> None:
+    p = pytester.makeconftest(
         """
         def pytest_sessionfinish(session):
             if session.nodeid == "my": # running on worker
@@ -487,14 +493,14 @@ def test_terminate_on_hangingnode(testdir):
                 time.sleep(3)
     """
     )
-    result = testdir.runpytest(p, "--dist=each", "--tx=popen//id=my")
+    result = pytester.runpytest(p, "--dist=each", "--tx=popen//id=my")
     assert result.duration < 2.0
     result.stdout.fnmatch_lines(["*killed*my*"])
 
 
 @pytest.mark.xfail(reason="works if run outside test suite", run=False)
-def test_session_hooks(testdir):
-    testdir.makeconftest(
+def test_session_hooks(pytester: pytest.Pytester) -> None:
+    pytester.makeconftest(
         """
         import sys
         def pytest_sessionstart(session):
@@ -511,28 +517,28 @@ def test_session_hooks(testdir):
                 raise ValueError(42)
     """
     )
-    p = testdir.makepyfile(
+    p = pytester.makepyfile(
         """
         import sys
         def test_hello():
             assert hasattr(sys, 'pytestsessionhooks')
     """
     )
-    result = testdir.runpytest(p, "--dist=each", "--tx=popen")
+    result = pytester.runpytest(p, "--dist=each", "--tx=popen")
     result.stdout.fnmatch_lines(["*ValueError*", "*1 passed*"])
     assert not result.ret
     d = result.parseoutcomes()
     assert d["passed"] == 1
-    assert testdir.tmpdir.join("worker").check()
-    assert testdir.tmpdir.join("controller").check()
+    assert pytester.path.joinpath("worker").exists()
+    assert pytester.path.joinpath("controller").exists()
 
 
-def test_session_testscollected(testdir):
+def test_session_testscollected(pytester: pytest.Pytester) -> None:
     """
     Make sure controller node is updating the session object with the number
     of tests collected from the workers.
     """
-    testdir.makepyfile(
+    pytester.makepyfile(
         test_foo="""
         import pytest
         @pytest.mark.parametrize('i', range(3))
@@ -540,7 +546,7 @@ def test_session_testscollected(testdir):
             pass
     """
     )
-    testdir.makeconftest(
+    pytester.makeconftest(
         """
         def pytest_sessionfinish(session):
             collected = getattr(session, 'testscollected', None)
@@ -548,15 +554,15 @@ def test_session_testscollected(testdir):
                 f.write('collected = %s' % collected)
     """
     )
-    result = testdir.inline_run("-n1")
+    result = pytester.inline_run("-n1")
     result.assertoutcome(passed=3)
-    collected_file = testdir.tmpdir.join("testscollected")
-    assert collected_file.isfile()
-    assert collected_file.read() == "collected = 3"
+    collected_file = pytester.path / "testscollected"
+    assert collected_file.is_file()
+    assert collected_file.read_text() == "collected = 3"
 
 
-def test_fixture_teardown_failure(testdir):
-    p = testdir.makepyfile(
+def test_fixture_teardown_failure(pytester: pytest.Pytester) -> None:
+    p = pytester.makepyfile(
         """
         import pytest
         @pytest.fixture(scope="module")
@@ -568,14 +574,16 @@ def test_fixture_teardown_failure(testdir):
             pass
     """
     )
-    result = testdir.runpytest_subprocess(p, "-n1")
+    result = pytester.runpytest_subprocess(p, "-n1")
     result.stdout.fnmatch_lines(["*ValueError*42*", "*1 passed*1 error*"])
     assert result.ret
 
 
-def test_config_initialization(testdir, monkeypatch, pytestconfig):
+def test_config_initialization(
+    pytester: pytest.Pytester, monkeypatch: pytest.MonkeyPatch, pytestconfig
+) -> None:
     """Ensure workers and controller are initialized consistently. Integration test for #445"""
-    testdir.makepyfile(
+    pytester.makepyfile(
         **{
             "dir_a/test_foo.py": """
                 def test_1(request):
@@ -583,7 +591,7 @@ def test_config_initialization(testdir, monkeypatch, pytestconfig):
         """
         }
     )
-    testdir.makefile(
+    pytester.makefile(
         ".ini",
         myconfig="""
         [pytest]
@@ -591,17 +599,17 @@ def test_config_initialization(testdir, monkeypatch, pytestconfig):
     """,
     )
     monkeypatch.setenv("PYTEST_ADDOPTS", "-v")
-    result = testdir.runpytest("-n2", "-c", "myconfig.ini", "-v")
+    result = pytester.runpytest("-n2", "-c", "myconfig.ini", "-v")
     result.stdout.fnmatch_lines(["dir_a/test_foo.py::test_1*", "*= 1 passed in *"])
     assert result.ret == 0
 
 
 @pytest.mark.parametrize("when", ["setup", "call", "teardown"])
-def test_crashing_item(testdir, when):
+def test_crashing_item(pytester, when) -> None:
     """Ensure crashing item is correctly reported during all testing stages"""
     code = dict(setup="", call="", teardown="")
     code[when] = "py.process.kill(os.getpid())"
-    p = testdir.makepyfile(
+    p = pytester.makepyfile(
         """
         import os
         import py
@@ -624,19 +632,19 @@ def test_crashing_item(testdir, when):
         )
     )
     passes = 2 if when == "teardown" else 1
-    result = testdir.runpytest("-n2", p)
+    result = pytester.runpytest("-n2", p)
     result.stdout.fnmatch_lines(
         ["*crashed*test_crash*", "*1 failed*%d passed*" % passes]
     )
 
 
-def test_multiple_log_reports(testdir):
+def test_multiple_log_reports(pytester: pytest.Pytester) -> None:
     """
     Ensure that pytest-xdist supports plugins that emit multiple logreports
     (#206).
     Inspired by pytest-rerunfailures.
     """
-    testdir.makeconftest(
+    pytester.makeconftest(
         """
         from _pytest.runner import runtestprotocol
         def pytest_runtest_protocol(item, nextitem):
@@ -648,31 +656,31 @@ def test_multiple_log_reports(testdir):
             return True
     """
     )
-    testdir.makepyfile(
+    pytester.makepyfile(
         """
         def test():
             pass
     """
     )
-    result = testdir.runpytest("-n1")
+    result = pytester.runpytest("-n1")
     result.stdout.fnmatch_lines(["*2 passed*"])
 
 
-def test_skipping(testdir):
-    p = testdir.makepyfile(
+def test_skipping(pytester: pytest.Pytester) -> None:
+    p = pytester.makepyfile(
         """
         import pytest
         def test_crash():
             pytest.skip("hello")
     """
     )
-    result = testdir.runpytest("-n1", "-rs", p)
+    result = pytester.runpytest("-n1", "-rs", p)
     assert result.ret == 0
     result.stdout.fnmatch_lines(["*hello*", "*1 skipped*"])
 
 
-def test_fixture_scope_caching_issue503(testdir):
-    p1 = testdir.makepyfile(
+def test_fixture_scope_caching_issue503(pytester: pytest.Pytester) -> None:
+    p1 = pytester.makepyfile(
         """
             import pytest
 
@@ -690,17 +698,17 @@ def test_fixture_scope_caching_issue503(testdir):
                 pass
     """
     )
-    result = testdir.runpytest(p1, "-v", "-n1")
+    result = pytester.runpytest(p1, "-v", "-n1")
     assert result.ret == 0
     result.stdout.fnmatch_lines(["*2 passed*"])
 
 
-def test_issue_594_random_parametrize(testdir):
+def test_issue_594_random_parametrize(pytester: pytest.Pytester) -> None:
     """
     Make sure that tests that are randomly parametrized display an appropriate
     error message, instead of silently skipping the entire test run.
     """
-    p1 = testdir.makepyfile(
+    p1 = pytester.makepyfile(
         """
         import pytest
         import random
@@ -712,42 +720,42 @@ def test_issue_594_random_parametrize(testdir):
             assert 1
     """
     )
-    result = testdir.runpytest(p1, "-v", "-n4")
+    result = pytester.runpytest(p1, "-v", "-n4")
     assert result.ret == 1
     result.stdout.fnmatch_lines(["Different tests were collected between gw* and gw*"])
 
 
-def test_tmpdir_disabled(testdir):
+def test_tmpdir_disabled(pytester: pytest.Pytester) -> None:
     """Test xdist doesn't break if internal tmpdir plugin is disabled (#22)."""
-    p1 = testdir.makepyfile(
+    p1 = pytester.makepyfile(
         """
         def test_ok():
             pass
     """
     )
-    result = testdir.runpytest(p1, "-n1", "-p", "no:tmpdir")
+    result = pytester.runpytest(p1, "-n1", "-p", "no:tmpdir")
     assert result.ret == 0
     result.stdout.fnmatch_lines("*1 passed*")
 
 
 @pytest.mark.parametrize("plugin", ["xdist.looponfail", "xdist.boxed"])
-def test_sub_plugins_disabled(testdir, plugin):
+def test_sub_plugins_disabled(pytester, plugin) -> None:
     """Test that xdist doesn't break if we disable any of its sub-plugins. (#32)"""
-    p1 = testdir.makepyfile(
+    p1 = pytester.makepyfile(
         """
         def test_ok():
             pass
     """
     )
-    result = testdir.runpytest(p1, "-n1", "-p", "no:%s" % plugin)
+    result = pytester.runpytest(p1, "-n1", "-p", "no:%s" % plugin)
     assert result.ret == 0
     result.stdout.fnmatch_lines("*1 passed*")
 
 
 class TestWarnings:
     @pytest.mark.parametrize("n", ["-n0", "-n1"])
-    def test_warnings(self, testdir, n):
-        testdir.makepyfile(
+    def test_warnings(self, pytester, n) -> None:
+        pytester.makepyfile(
             """
             import warnings, py, pytest
 
@@ -756,19 +764,16 @@ class TestWarnings:
                 warnings.warn(UserWarning('this is a warning'))
             """
         )
-        result = testdir.runpytest(n)
+        result = pytester.runpytest(n)
         result.stdout.fnmatch_lines(["*this is a warning*", "*1 passed, 1 warning*"])
 
-    def test_warning_captured_deprecated_in_pytest_6(self, testdir):
+    def test_warning_captured_deprecated_in_pytest_6(
+        self, pytester: pytest.Pytester
+    ) -> None:
         """
         Do not trigger the deprecated pytest_warning_captured hook in pytest 6+ (#562)
         """
-        import _pytest.hookspec
-
-        if not hasattr(_pytest.hookspec, "pytest_warning_recorded"):
-            pytest.skip("test requires pytest 6.0+")
-
-        testdir.makeconftest(
+        pytester.makeconftest(
             """
             def pytest_warning_captured(warning_message):
                 if warning_message == "my custom worker warning":
@@ -778,23 +783,23 @@ class TestWarnings:
                     ).format(warning_message)
         """
         )
-        testdir.makepyfile(
+        pytester.makepyfile(
             """
             import warnings
             def test():
                 warnings.warn("my custom worker warning")
         """
         )
-        result = testdir.runpytest("-n1")
+        result = pytester.runpytest("-n1")
         result.stdout.fnmatch_lines(["*1 passed*"])
         result.stdout.no_fnmatch_line("*this hook should not be called in this version")
 
     @pytest.mark.parametrize("n", ["-n0", "-n1"])
-    def test_custom_subclass(self, testdir, n):
+    def test_custom_subclass(self, pytester, n) -> None:
         """Check that warning subclasses that don't honor the args attribute don't break
         pytest-xdist (#344)
         """
-        testdir.makepyfile(
+        pytester.makepyfile(
             """
             import warnings, py, pytest
 
@@ -809,33 +814,34 @@ class TestWarnings:
                 warnings.warn(MyWarning("foo", 1))
         """
         )
-        testdir.syspathinsert()
-        result = testdir.runpytest(n)
+        pytester.syspathinsert()
+        result = pytester.runpytest(n)
         result.stdout.fnmatch_lines(["*MyWarning*", "*1 passed, 1 warning*"])
 
     @pytest.mark.parametrize("n", ["-n0", "-n1"])
-    def test_unserializable_arguments(self, testdir, n):
+    def test_unserializable_arguments(self, pytester, n) -> None:
         """Check that warnings with unserializable arguments are handled correctly (#349)."""
-        testdir.makepyfile(
+        pytester.makepyfile(
             """
             import warnings, pytest
 
-            def test_func(tmpdir):
-                fn = (tmpdir / 'foo.txt').ensure(file=1)
+            def test_func(tmp_path):
+                fn = tmp_path / 'foo.txt'
+                fn.touch()
                 with fn.open('r') as f:
                     warnings.warn(UserWarning("foo", f))
         """
         )
-        testdir.syspathinsert()
-        result = testdir.runpytest(n)
+        pytester.syspathinsert()
+        result = pytester.runpytest(n)
         result.stdout.fnmatch_lines(["*UserWarning*foo.txt*", "*1 passed, 1 warning*"])
 
     @pytest.mark.parametrize("n", ["-n0", "-n1"])
-    def test_unserializable_warning_details(self, testdir, n):
+    def test_unserializable_warning_details(self, pytester, n) -> None:
         """Check that warnings with unserializable _WARNING_DETAILS are
         handled correctly (#379).
         """
-        testdir.makepyfile(
+        pytester.makepyfile(
             """
             import warnings, pytest
             import socket
@@ -849,28 +855,28 @@ class TestWarnings:
             # _WARNING_DETAIL. We need to test that it is not serialized
             # (it can't be, so the test will fail if we try to).
             @pytest.mark.filterwarnings('always')
-            def test_func(tmpdir):
+            def test_func(tmp_path):
                 abuse_socket()
                 gc.collect()
         """
         )
-        testdir.syspathinsert()
-        result = testdir.runpytest(n)
+        pytester.syspathinsert()
+        result = pytester.runpytest(n)
         result.stdout.fnmatch_lines(
             ["*ResourceWarning*unclosed*", "*1 passed, 1 warning*"]
         )
 
 
 class TestNodeFailure:
-    def test_load_single(self, testdir):
-        f = testdir.makepyfile(
+    def test_load_single(self, pytester: pytest.Pytester) -> None:
+        f = pytester.makepyfile(
             """
             import os
             def test_a(): os._exit(1)
             def test_b(): pass
         """
         )
-        res = testdir.runpytest(f, "-n1")
+        res = pytester.runpytest(f, "-n1")
         res.stdout.fnmatch_lines(
             [
                 "replacing crashed worker gw*",
@@ -879,8 +885,8 @@ class TestNodeFailure:
             ]
         )
 
-    def test_load_multiple(self, testdir):
-        f = testdir.makepyfile(
+    def test_load_multiple(self, pytester: pytest.Pytester) -> None:
+        f = pytester.makepyfile(
             """
             import os
             def test_a(): pass
@@ -889,7 +895,7 @@ class TestNodeFailure:
             def test_d(): pass
         """
         )
-        res = testdir.runpytest(f, "-n2")
+        res = pytester.runpytest(f, "-n2")
         res.stdout.fnmatch_lines(
             [
                 "replacing crashed worker gw*",
@@ -898,15 +904,15 @@ class TestNodeFailure:
             ]
         )
 
-    def test_each_single(self, testdir):
-        f = testdir.makepyfile(
+    def test_each_single(self, pytester: pytest.Pytester) -> None:
+        f = pytester.makepyfile(
             """
             import os
             def test_a(): os._exit(1)
             def test_b(): pass
         """
         )
-        res = testdir.runpytest(f, "--dist=each", "--tx=popen")
+        res = pytester.runpytest(f, "--dist=each", "--tx=popen")
         res.stdout.fnmatch_lines(
             [
                 "replacing crashed worker gw*",
@@ -916,15 +922,15 @@ class TestNodeFailure:
         )
 
     @pytest.mark.xfail(reason="#20: xdist race condition on node restart")
-    def test_each_multiple(self, testdir):
-        f = testdir.makepyfile(
+    def test_each_multiple(self, pytester: pytest.Pytester) -> None:
+        f = pytester.makepyfile(
             """
             import os
             def test_a(): os._exit(1)
             def test_b(): pass
         """
         )
-        res = testdir.runpytest(f, "--dist=each", "--tx=2*popen")
+        res = pytester.runpytest(f, "--dist=each", "--tx=2*popen")
         res.stdout.fnmatch_lines(
             [
                 "*Replacing crashed worker*",
@@ -933,8 +939,8 @@ class TestNodeFailure:
             ]
         )
 
-    def test_max_worker_restart(self, testdir):
-        f = testdir.makepyfile(
+    def test_max_worker_restart(self, pytester: pytest.Pytester) -> None:
+        f = pytester.makepyfile(
             """
             import os
             def test_a(): pass
@@ -943,7 +949,7 @@ class TestNodeFailure:
             def test_d(): pass
         """
         )
-        res = testdir.runpytest(f, "-n4", "--max-worker-restart=1")
+        res = pytester.runpytest(f, "-n4", "--max-worker-restart=1")
         res.stdout.fnmatch_lines(
             [
                 "replacing crashed worker*",
@@ -954,15 +960,15 @@ class TestNodeFailure:
             ]
         )
 
-    def test_max_worker_restart_tests_queued(self, testdir):
-        f = testdir.makepyfile(
+    def test_max_worker_restart_tests_queued(self, pytester: pytest.Pytester) -> None:
+        f = pytester.makepyfile(
             """
             import os, pytest
             @pytest.mark.parametrize('i', range(10))
             def test(i): os._exit(1)
         """
         )
-        res = testdir.runpytest(f, "-n2", "--max-worker-restart=3")
+        res = pytester.runpytest(f, "-n2", "--max-worker-restart=3")
         res.stdout.fnmatch_lines(
             [
                 "replacing crashed worker*",
@@ -975,14 +981,14 @@ class TestNodeFailure:
         )
         assert "INTERNALERROR" not in res.stdout.str()
 
-    def test_max_worker_restart_die(self, testdir):
-        f = testdir.makepyfile(
+    def test_max_worker_restart_die(self, pytester: pytest.Pytester) -> None:
+        f = pytester.makepyfile(
             """
             import os
             os._exit(1)
         """
         )
-        res = testdir.runpytest(f, "-n4", "--max-worker-restart=0")
+        res = pytester.runpytest(f, "-n4", "--max-worker-restart=0")
         res.stdout.fnmatch_lines(
             [
                 "* xdist: worker gw* crashed and worker restarting disabled *",
@@ -990,8 +996,8 @@ class TestNodeFailure:
             ]
         )
 
-    def test_disable_restart(self, testdir):
-        f = testdir.makepyfile(
+    def test_disable_restart(self, pytester: pytest.Pytester) -> None:
+        f = pytester.makepyfile(
             """
             import os
             def test_a(): pass
@@ -999,7 +1005,7 @@ class TestNodeFailure:
             def test_c(): pass
         """
         )
-        res = testdir.runpytest(f, "-n4", "--max-worker-restart=0")
+        res = pytester.runpytest(f, "-n4", "--max-worker-restart=0")
         res.stdout.fnmatch_lines(
             [
                 "worker gw* crashed and worker restarting disabled",
@@ -1011,10 +1017,10 @@ class TestNodeFailure:
 
 
 @pytest.mark.parametrize("n", [0, 2])
-def test_worker_id_fixture(testdir, n):
+def test_worker_id_fixture(pytester, n) -> None:
     import glob
 
-    f = testdir.makepyfile(
+    f = pytester.makepyfile(
         """
         import pytest
         @pytest.mark.parametrize("run_num", range(2))
@@ -1023,10 +1029,10 @@ def test_worker_id_fixture(testdir, n):
                 f.write(worker_id)
     """
     )
-    result = testdir.runpytest(f, "-n%d" % n)
+    result = pytester.runpytest(f, "-n%d" % n)
     result.stdout.fnmatch_lines("* 2 passed in *")
     worker_ids = set()
-    for fname in glob.glob(str(testdir.tmpdir.join("*.txt"))):
+    for fname in glob.glob(str(pytester.path / "*.txt")):
         with open(fname) as f:
             worker_ids.add(f.read().strip())
     if n == 0:
@@ -1036,10 +1042,10 @@ def test_worker_id_fixture(testdir, n):
 
 
 @pytest.mark.parametrize("n", [0, 2])
-def test_testrun_uid_fixture(testdir, n):
+def test_testrun_uid_fixture(pytester, n) -> None:
     import glob
 
-    f = testdir.makepyfile(
+    f = pytester.makepyfile(
         """
         import pytest
         @pytest.mark.parametrize("run_num", range(2))
@@ -1048,10 +1054,10 @@ def test_testrun_uid_fixture(testdir, n):
                 f.write(testrun_uid)
     """
     )
-    result = testdir.runpytest(f, "-n%d" % n)
+    result = pytester.runpytest(f, "-n%d" % n)
     result.stdout.fnmatch_lines("* 2 passed in *")
     testrun_uids = set()
-    for fname in glob.glob(str(testdir.tmpdir.join("*.txt"))):
+    for fname in glob.glob(str(pytester.path / "*.txt")):
         with open(fname) as f:
             testrun_uids.add(f.read().strip())
     assert len(testrun_uids) == 1
@@ -1059,21 +1065,21 @@ def test_testrun_uid_fixture(testdir, n):
 
 
 @pytest.mark.parametrize("tb", ["auto", "long", "short", "no", "line", "native"])
-def test_error_report_styles(testdir, tb):
-    testdir.makepyfile(
+def test_error_report_styles(pytester, tb) -> None:
+    pytester.makepyfile(
         """
         import pytest
         def test_error_report_styles():
             raise RuntimeError('some failure happened')
     """
     )
-    result = testdir.runpytest("-n1", "--tb=%s" % tb)
+    result = pytester.runpytest("-n1", "--tb=%s" % tb)
     if tb != "no":
         result.stdout.fnmatch_lines("*some failure happened*")
     result.assert_outcomes(failed=1)
 
 
-def test_color_yes_collection_on_non_atty(testdir, request):
+def test_color_yes_collection_on_non_atty(pytester, request) -> None:
     """skip collect progress report when working on non-terminals.
 
     Similar to pytest-dev/pytest#1397
@@ -1081,7 +1087,7 @@ def test_color_yes_collection_on_non_atty(testdir, request):
     tr = request.config.pluginmanager.getplugin("terminalreporter")
     if not hasattr(tr, "isatty"):
         pytest.skip("only valid for newer pytest versions")
-    testdir.makepyfile(
+    pytester.makepyfile(
         """
         import pytest
         @pytest.mark.parametrize('i', range(10))
@@ -1090,34 +1096,34 @@ def test_color_yes_collection_on_non_atty(testdir, request):
     """
     )
     args = ["--color=yes", "-n2"]
-    result = testdir.runpytest(*args)
+    result = pytester.runpytest(*args)
     assert "test session starts" in result.stdout.str()
     assert "\x1b[1m" in result.stdout.str()
     assert "gw0 [10] / gw1 [10]" in result.stdout.str()
     assert "gw0 C / gw1 C" not in result.stdout.str()
 
 
-def test_without_terminal_plugin(testdir, request):
+def test_without_terminal_plugin(pytester, request) -> None:
     """
     No output when terminal plugin is disabled
     """
-    testdir.makepyfile(
+    pytester.makepyfile(
         """
         def test_1():
             pass
     """
     )
-    result = testdir.runpytest("-p", "no:terminal", "-n2")
+    result = pytester.runpytest("-p", "no:terminal", "-n2")
     assert result.stdout.str() == ""
     assert result.stderr.str() == ""
     assert result.ret == 0
 
 
-def test_internal_error_with_maxfail(testdir):
+def test_internal_error_with_maxfail(pytester: pytest.Pytester) -> None:
     """
     Internal error when using --maxfail option (#62, #65).
     """
-    testdir.makepyfile(
+    pytester.makepyfile(
         """
         import pytest
 
@@ -1131,33 +1137,33 @@ def test_internal_error_with_maxfail(testdir):
             pass
     """
     )
-    result = testdir.runpytest_subprocess("--maxfail=1", "-n1")
+    result = pytester.runpytest_subprocess("--maxfail=1", "-n1")
     result.stdout.fnmatch_lines(["* 1 error in *"])
     assert "INTERNALERROR" not in result.stderr.str()
 
 
-def test_internal_errors_propagate_to_controller(testdir):
-    testdir.makeconftest(
+def test_internal_errors_propagate_to_controller(pytester: pytest.Pytester) -> None:
+    pytester.makeconftest(
         """
         def pytest_collection_modifyitems():
             raise RuntimeError("Some runtime error")
         """
     )
-    testdir.makepyfile("def test(): pass")
-    result = testdir.runpytest("-n1")
+    pytester.makepyfile("def test(): pass")
+    result = pytester.runpytest("-n1")
     result.stdout.fnmatch_lines(["*RuntimeError: Some runtime error*"])
 
 
 class TestLoadScope:
-    def test_by_module(self, testdir):
+    def test_by_module(self, pytester: pytest.Pytester) -> None:
         test_file = """
             import pytest
             @pytest.mark.parametrize('i', range(10))
             def test(i):
                 pass
         """
-        testdir.makepyfile(test_a=test_file, test_b=test_file)
-        result = testdir.runpytest("-n2", "--dist=loadscope", "-v")
+        pytester.makepyfile(test_a=test_file, test_b=test_file)
+        result = pytester.runpytest("-n2", "--dist=loadscope", "-v")
         assert get_workers_and_test_count_by_prefix(
             "test_a.py::test", result.outlines
         ) in ({"gw0": 10}, {"gw1": 10})
@@ -1165,8 +1171,8 @@ class TestLoadScope:
             "test_b.py::test", result.outlines
         ) in ({"gw0": 10}, {"gw1": 10})
 
-    def test_by_class(self, testdir):
-        testdir.makepyfile(
+    def test_by_class(self, pytester: pytest.Pytester) -> None:
+        pytester.makepyfile(
             test_a="""
             import pytest
             class TestA:
@@ -1180,7 +1186,7 @@ class TestLoadScope:
                     pass
         """
         )
-        result = testdir.runpytest("-n2", "--dist=loadscope", "-v")
+        result = pytester.runpytest("-n2", "--dist=loadscope", "-v")
         assert get_workers_and_test_count_by_prefix(
             "test_a.py::TestA", result.outlines
         ) in ({"gw0": 10}, {"gw1": 10})
@@ -1188,7 +1194,7 @@ class TestLoadScope:
             "test_a.py::TestB", result.outlines
         ) in ({"gw0": 10}, {"gw1": 10})
 
-    def test_module_single_start(self, testdir):
+    def test_module_single_start(self, pytester: pytest.Pytester) -> None:
         """Fix test suite never finishing in case all workers start with a single test (#277)."""
         test_file1 = """
             import pytest
@@ -1202,8 +1208,8 @@ class TestLoadScope:
             def test_2():
                 pass
         """
-        testdir.makepyfile(test_a=test_file1, test_b=test_file1, test_c=test_file2)
-        result = testdir.runpytest("-n2", "--dist=loadscope", "-v")
+        pytester.makepyfile(test_a=test_file1, test_b=test_file1, test_c=test_file2)
+        result = pytester.runpytest("-n2", "--dist=loadscope", "-v")
         a = get_workers_and_test_count_by_prefix("test_a.py::test", result.outlines)
         b = get_workers_and_test_count_by_prefix("test_b.py::test", result.outlines)
         c1 = get_workers_and_test_count_by_prefix("test_c.py::test_1", result.outlines)
@@ -1215,7 +1221,7 @@ class TestLoadScope:
 
 
 class TestFileScope:
-    def test_by_module(self, testdir):
+    def test_by_module(self, pytester: pytest.Pytester) -> None:
         test_file = """
             import pytest
             class TestA:
@@ -1228,8 +1234,8 @@ class TestFileScope:
                 def test(self, i):
                     pass
         """
-        testdir.makepyfile(test_a=test_file, test_b=test_file)
-        result = testdir.runpytest("-n2", "--dist=loadfile", "-v")
+        pytester.makepyfile(test_a=test_file, test_b=test_file)
+        result = pytester.runpytest("-n2", "--dist=loadfile", "-v")
         test_a_workers_and_test_count = get_workers_and_test_count_by_prefix(
             "test_a.py::TestA", result.outlines
         )
@@ -1254,8 +1260,8 @@ class TestFileScope:
             or test_b_workers_and_test_count in ({"gw0": 0}, {"gw1": 10})
         )
 
-    def test_by_class(self, testdir):
-        testdir.makepyfile(
+    def test_by_class(self, pytester: pytest.Pytester) -> None:
+        pytester.makepyfile(
             test_a="""
             import pytest
             class TestA:
@@ -1269,7 +1275,7 @@ class TestFileScope:
                     pass
         """
         )
-        result = testdir.runpytest("-n2", "--dist=loadfile", "-v")
+        result = pytester.runpytest("-n2", "--dist=loadfile", "-v")
         test_a_workers_and_test_count = get_workers_and_test_count_by_prefix(
             "test_a.py::TestA", result.outlines
         )
@@ -1294,7 +1300,7 @@ class TestFileScope:
             or test_b_workers_and_test_count in ({"gw0": 0}, {"gw1": 10})
         )
 
-    def test_module_single_start(self, testdir):
+    def test_module_single_start(self, pytester: pytest.Pytester) -> None:
         """Fix test suite never finishing in case all workers start with a single test (#277)."""
         test_file1 = """
             import pytest
@@ -1308,8 +1314,8 @@ class TestFileScope:
             def test_2():
                 pass
         """
-        testdir.makepyfile(test_a=test_file1, test_b=test_file1, test_c=test_file2)
-        result = testdir.runpytest("-n2", "--dist=loadfile", "-v")
+        pytester.makepyfile(test_a=test_file1, test_b=test_file1, test_c=test_file2)
+        result = pytester.runpytest("-n2", "--dist=loadfile", "-v")
         a = get_workers_and_test_count_by_prefix("test_a.py::test", result.outlines)
         b = get_workers_and_test_count_by_prefix("test_b.py::test", result.outlines)
         c1 = get_workers_and_test_count_by_prefix("test_c.py::test_1", result.outlines)
@@ -1353,24 +1359,24 @@ class TestLocking:
     )
 
     @pytest.mark.parametrize("scope", ["each", "load", "loadscope", "loadfile", "no"])
-    def test_single_file(self, testdir, scope):
-        testdir.makepyfile(test_a=self.test_file1)
-        result = testdir.runpytest("-n2", "--dist=%s" % scope, "-v")
+    def test_single_file(self, pytester, scope) -> None:
+        pytester.makepyfile(test_a=self.test_file1)
+        result = pytester.runpytest("-n2", "--dist=%s" % scope, "-v")
         result.assert_outcomes(passed=(12 if scope != "each" else 12 * 2))
 
     @pytest.mark.parametrize("scope", ["each", "load", "loadscope", "loadfile", "no"])
-    def test_multi_file(self, testdir, scope):
-        testdir.makepyfile(
+    def test_multi_file(self, pytester, scope) -> None:
+        pytester.makepyfile(
             test_a=self.test_file1,
             test_b=self.test_file1,
             test_c=self.test_file1,
             test_d=self.test_file1,
         )
-        result = testdir.runpytest("-n2", "--dist=%s" % scope, "-v")
+        result = pytester.runpytest("-n2", "--dist=%s" % scope, "-v")
         result.assert_outcomes(passed=(48 if scope != "each" else 48 * 2))
 
 
-def parse_tests_and_workers_from_output(lines):
+def parse_tests_and_workers_from_output(lines: List[str]) -> List[Tuple[str, str, str]]:
     result = []
     for line in lines:
         # example match: "[gw0] PASSED test_a.py::test[7]"
@@ -1391,8 +1397,10 @@ def parse_tests_and_workers_from_output(lines):
     return result
 
 
-def get_workers_and_test_count_by_prefix(prefix, lines, expected_status="PASSED"):
-    result = {}
+def get_workers_and_test_count_by_prefix(
+    prefix: str, lines: List[str], expected_status: str = "PASSED"
+) -> Dict[str, int]:
+    result: Dict[str, int] = {}
     for worker, status, nodeid in parse_tests_and_workers_from_output(lines):
         if expected_status == status and nodeid.startswith(prefix):
             result[worker] = result.get(worker, 0) + 1
@@ -1417,13 +1425,12 @@ class TestAPI:
 
         return FakeRequest()
 
-    def test_is_xdist_worker(self, fake_request):
+    def test_is_xdist_worker(self, fake_request) -> None:
         assert xdist.is_xdist_worker(fake_request)
         del fake_request.config.workerinput
         assert not xdist.is_xdist_worker(fake_request)
 
-    def test_is_xdist_controller(self, fake_request):
-
+    def test_is_xdist_controller(self, fake_request) -> None:
         assert not xdist.is_xdist_master(fake_request)
         assert not xdist.is_xdist_controller(fake_request)
 
@@ -1435,7 +1442,7 @@ class TestAPI:
         assert not xdist.is_xdist_master(fake_request)
         assert not xdist.is_xdist_controller(fake_request)
 
-    def test_get_xdist_worker_id(self, fake_request):
+    def test_get_xdist_worker_id(self, fake_request) -> None:
         assert xdist.get_xdist_worker_id(fake_request) == "gw5"
         del fake_request.config.workerinput
         assert xdist.get_xdist_worker_id(fake_request) == "master"

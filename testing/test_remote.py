@@ -1,5 +1,5 @@
-import py
 import pprint
+import py
 import pytest
 import sys
 import uuid
@@ -32,18 +32,16 @@ class EventCall:
 class WorkerSetup:
     use_callback = False
 
-    def __init__(self, request, testdir):
+    def __init__(self, request, pytester: pytest.Pytester) -> None:
         self.request = request
-        self.testdir = testdir
-        self.events = Queue()
+        self.pytester = pytester
+        self.events = Queue()  # type: ignore[var-annotated]
 
-    def setup(
-        self,
-    ):
-        self.testdir.chdir()
+    def setup(self) -> None:
+        self.pytester.chdir()
         # import os ; os.environ['EXECNET_DEBUG'] = "2"
         self.gateway = execnet.makegateway()
-        self.config = config = self.testdir.parseconfigure()
+        self.config = config = self.pytester.parseconfigure()
         putevent = self.use_callback and self.events.put or None
 
         class DummyMananger:
@@ -70,15 +68,15 @@ class WorkerSetup:
 
 
 @pytest.fixture
-def worker(request, testdir):
-    return WorkerSetup(request, testdir)
+def worker(request, pytester: pytest.Pytester) -> WorkerSetup:
+    return WorkerSetup(request, pytester)
 
 
 @pytest.mark.xfail(reason="#59")
-def test_remoteinitconfig(testdir):
+def test_remoteinitconfig(pytester: pytest.Pytester) -> None:
     from xdist.remote import remote_initconfig
 
-    config1 = testdir.parseconfig()
+    config1 = pytester.parseconfig()
     config2 = remote_initconfig(config1.option.__dict__, config1.args)
     assert config2.option.__dict__ == config1.option.__dict__
     assert config2.pluginmanager.getplugin("terminal") in (-1, None)
@@ -94,8 +92,10 @@ class TestWorkerInteractor:
 
         return unserialize
 
-    def test_basic_collect_and_runtests(self, worker, unserialize_report):
-        worker.testdir.makepyfile(
+    def test_basic_collect_and_runtests(
+        self, worker: WorkerSetup, unserialize_report
+    ) -> None:
+        worker.pytester.makepyfile(
             """
             def test_func():
                 pass
@@ -108,7 +108,7 @@ class TestWorkerInteractor:
         assert ev.name == "collectionstart"
         assert not ev.kwargs
         ev = worker.popevent("collectionfinish")
-        assert ev.kwargs["topdir"] == worker.testdir.tmpdir
+        assert ev.kwargs["topdir"] == py.path.local(worker.pytester.path)
         ids = ev.kwargs["ids"]
         assert len(ids) == 1
         worker.sendcommand("runtests", indices=list(range(len(ids))))
@@ -126,8 +126,8 @@ class TestWorkerInteractor:
         ev = worker.popevent("workerfinished")
         assert "workeroutput" in ev.kwargs
 
-    def test_remote_collect_skip(self, worker, unserialize_report):
-        worker.testdir.makepyfile(
+    def test_remote_collect_skip(self, worker: WorkerSetup, unserialize_report) -> None:
+        worker.pytester.makepyfile(
             """
             import pytest
             pytest.skip("hello", allow_module_level=True)
@@ -144,8 +144,8 @@ class TestWorkerInteractor:
         ev = worker.popevent("collectionfinish")
         assert not ev.kwargs["ids"]
 
-    def test_remote_collect_fail(self, worker, unserialize_report):
-        worker.testdir.makepyfile("""aasd qwe""")
+    def test_remote_collect_fail(self, worker: WorkerSetup, unserialize_report) -> None:
+        worker.pytester.makepyfile("""aasd qwe""")
         worker.setup()
         ev = worker.popevent("collectionstart")
         assert not ev.kwargs
@@ -156,8 +156,8 @@ class TestWorkerInteractor:
         ev = worker.popevent("collectionfinish")
         assert not ev.kwargs["ids"]
 
-    def test_runtests_all(self, worker, unserialize_report):
-        worker.testdir.makepyfile(
+    def test_runtests_all(self, worker: WorkerSetup, unserialize_report) -> None:
+        worker.pytester.makepyfile(
             """
             def test_func(): pass
             def test_func2(): pass
@@ -183,17 +183,19 @@ class TestWorkerInteractor:
         ev = worker.popevent("workerfinished")
         assert "workeroutput" in ev.kwargs
 
-    def test_happy_run_events_converted(self, testdir, worker):
-        py.test.xfail("implement a simple test for event production")
-        assert not worker.use_callback
-        worker.testdir.makepyfile(
+    def test_happy_run_events_converted(
+        self, pytester: pytest.Pytester, worker: WorkerSetup
+    ) -> None:
+        pytest.xfail("implement a simple test for event production")
+        assert not worker.use_callback  # type: ignore[unreachable]
+        worker.pytester.makepyfile(
             """
             def test_func():
                 pass
         """
         )
         worker.setup()
-        hookrec = testdir.getreportrecorder(worker.config)
+        hookrec = pytester.getreportrecorder(worker.config)
         for data in worker.slp.channel:
             worker.slp.process_from_remote(data)
         worker.slp.process_from_remote(worker.slp.ENDMARK)
@@ -209,7 +211,9 @@ class TestWorkerInteractor:
             ]
         )
 
-    def test_process_from_remote_error_handling(self, worker, capsys):
+    def test_process_from_remote_error_handling(
+        self, worker: WorkerSetup, capsys: pytest.CaptureFixture[str]
+    ) -> None:
         worker.use_callback = True
         worker.setup()
         worker.slp.process_from_remote(("<nonono>", ()))
@@ -219,8 +223,8 @@ class TestWorkerInteractor:
         assert ev.name == "errordown"
 
 
-def test_remote_env_vars(testdir):
-    testdir.makepyfile(
+def test_remote_env_vars(pytester: pytest.Pytester) -> None:
+    pytester.makepyfile(
         """
         import os
         def test():
@@ -229,13 +233,13 @@ def test_remote_env_vars(testdir):
             assert os.environ['PYTEST_XDIST_WORKER_COUNT'] == '2'
     """
     )
-    result = testdir.runpytest("-n2", "--max-worker-restart=0")
+    result = pytester.runpytest("-n2", "--max-worker-restart=0")
     assert result.ret == 0
 
 
-def test_remote_inner_argv(testdir):
+def test_remote_inner_argv(pytester: pytest.Pytester) -> None:
     """Test/document the behavior due to execnet using `python -c`."""
-    testdir.makepyfile(
+    pytester.makepyfile(
         """
         import sys
 
@@ -243,14 +247,14 @@ def test_remote_inner_argv(testdir):
             assert sys.argv == ["-c"]
         """
     )
-    result = testdir.runpytest("-n1")
+    result = pytester.runpytest("-n1")
     assert result.ret == 0
 
 
-def test_remote_mainargv(testdir):
+def test_remote_mainargv(pytester: pytest.Pytester) -> None:
     outer_argv = sys.argv
 
-    testdir.makepyfile(
+    pytester.makepyfile(
         """
         def test_mainargv(request):
             assert request.config.workerinput["mainargv"] == {!r}
@@ -258,14 +262,14 @@ def test_remote_mainargv(testdir):
             outer_argv
         )
     )
-    result = testdir.runpytest("-n1")
+    result = pytester.runpytest("-n1")
     assert result.ret == 0
 
 
-def test_remote_usage_prog(testdir, request):
+def test_remote_usage_prog(pytester: pytest.Pytester, request) -> None:
     if not hasattr(request.config._parser, "prog"):
         pytest.skip("prog not available in config parser")
-    testdir.makeconftest(
+    pytester.makeconftest(
         """
         import pytest
 
@@ -280,7 +284,7 @@ def test_remote_usage_prog(testdir, request):
             config_parser = config._parser
     """
     )
-    testdir.makepyfile(
+    pytester.makepyfile(
         """
         import sys
 
@@ -289,14 +293,14 @@ def test_remote_usage_prog(testdir, request):
     """
     )
 
-    result = testdir.runpytest_subprocess("-n1")
+    result = pytester.runpytest_subprocess("-n1")
     assert result.ret == 1
     result.stdout.fnmatch_lines(["*usage: *", "*error: my_usage_error"])
 
 
-def test_remote_sys_path(testdir):
+def test_remote_sys_path(pytester: pytest.Pytester) -> None:
     """Work around sys.path differences due to execnet using `python -c`."""
-    testdir.makepyfile(
+    pytester.makepyfile(
         """
         import sys
 
@@ -304,5 +308,5 @@ def test_remote_sys_path(testdir):
             assert "" not in sys.path
         """
     )
-    result = testdir.runpytest("-n1")
+    result = pytester.runpytest("-n1")
     assert result.ret == 0

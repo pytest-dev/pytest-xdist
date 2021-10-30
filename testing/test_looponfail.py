@@ -1,90 +1,106 @@
 import py
 import pytest
-from pkg_resources import parse_version
+import shutil
+import textwrap
+from pathlib import Path
 
 from xdist.looponfail import RemoteControl
 from xdist.looponfail import StatRecorder
 
 
+PYTEST_GTE_7 = hasattr(pytest, "version_tuple") and pytest.version_tuple >= (7, 0)  # type: ignore[attr-defined]
+
+
 class TestStatRecorder:
-    def test_filechange(self, tmpdir):
-        tmp = tmpdir
-        hello = tmp.ensure("hello.py")
-        sd = StatRecorder([tmp])
+    def test_filechange(self, tmp_path: Path) -> None:
+        tmp = tmp_path
+        hello = tmp / "hello.py"
+        hello.touch()
+        sd = StatRecorder([py.path.local(tmp)])
         changed = sd.check()
         assert not changed
 
-        hello.write("world")
+        hello.write_text("world")
         changed = sd.check()
         assert changed
 
-        (hello + "c").write("hello")
+        hello.with_suffix(".pyc").write_text("hello")
         changed = sd.check()
         assert not changed
 
-        p = tmp.ensure("new.py")
+        p = tmp / "new.py"
+        p.touch()
         changed = sd.check()
         assert changed
 
-        p.remove()
+        p.unlink()
         changed = sd.check()
         assert changed
 
-        tmp.join("a", "b", "c.py").ensure()
+        tmp.joinpath("a", "b").mkdir(parents=True)
+        tmp.joinpath("a", "b", "c.py").touch()
         changed = sd.check()
         assert changed
 
-        tmp.join("a", "c.txt").ensure()
+        tmp.joinpath("a", "c.txt").touch()
         changed = sd.check()
         assert changed
         changed = sd.check()
         assert not changed
 
-        tmp.join("a").remove()
+        shutil.rmtree(str(tmp.joinpath("a")))
         changed = sd.check()
         assert changed
 
-    def test_dirchange(self, tmpdir):
-        tmp = tmpdir
-        tmp.ensure("dir", "hello.py")
-        sd = StatRecorder([tmp])
-        assert not sd.fil(tmp.join("dir"))
+    def test_dirchange(self, tmp_path: Path) -> None:
+        tmp = tmp_path
+        tmp.joinpath("dir").mkdir()
+        tmp.joinpath("dir", "hello.py").touch()
+        sd = StatRecorder([py.path.local(tmp)])
+        assert not sd.fil(py.path.local(tmp / "dir"))
 
-    def test_filechange_deletion_race(self, tmpdir, monkeypatch):
-        tmp = tmpdir
-        sd = StatRecorder([tmp])
+    def test_filechange_deletion_race(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        tmp = tmp_path
+        pytmp = py.path.local(tmp)
+        sd = StatRecorder([pytmp])
         changed = sd.check()
         assert not changed
 
-        p = tmp.ensure("new.py")
+        p = tmp.joinpath("new.py")
+        p.touch()
         changed = sd.check()
         assert changed
 
-        p.remove()
+        p.unlink()
         # make check()'s visit() call return our just removed
         # path as if we were in a race condition
-        monkeypatch.setattr(tmp, "visit", lambda *args: [p])
+        monkeypatch.setattr(pytmp, "visit", lambda *args: [py.path.local(p)])
 
         changed = sd.check()
         assert changed
 
-    def test_pycremoval(self, tmpdir):
-        tmp = tmpdir
-        hello = tmp.ensure("hello.py")
-        sd = StatRecorder([tmp])
+    def test_pycremoval(self, tmp_path: Path) -> None:
+        tmp = tmp_path
+        hello = tmp / "hello.py"
+        hello.touch()
+        sd = StatRecorder([py.path.local(tmp)])
         changed = sd.check()
         assert not changed
 
-        pycfile = hello + "c"
-        pycfile.ensure()
-        hello.write("world")
+        pycfile = hello.with_suffix(".pyc")
+        pycfile.touch()
+        hello.write_text("world")
         changed = sd.check()
         assert changed
-        assert not pycfile.check()
+        assert not pycfile.exists()
 
-    def test_waitonchange(self, tmpdir, monkeypatch):
-        tmp = tmpdir
-        sd = StatRecorder([tmp])
+    def test_waitonchange(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        tmp = tmp_path
+        sd = StatRecorder([py.path.local(tmp)])
 
         ret_values = [True, False]
         monkeypatch.setattr(StatRecorder, "check", lambda self: ret_values.pop())
@@ -93,63 +109,74 @@ class TestStatRecorder:
 
 
 class TestRemoteControl:
-    def test_nofailures(self, testdir):
-        item = testdir.getitem("def test_func(): pass\n")
+    def test_nofailures(self, pytester: pytest.Pytester) -> None:
+        item = pytester.getitem("def test_func(): pass\n")
         control = RemoteControl(item.config)
         control.setup()
         topdir, failures = control.runsession()[:2]
         assert not failures
 
-    def test_failures_somewhere(self, testdir):
-        item = testdir.getitem("def test_func():\n assert 0\n")
+    def test_failures_somewhere(self, pytester: pytest.Pytester) -> None:
+        item = pytester.getitem("def test_func():\n assert 0\n")
         control = RemoteControl(item.config)
         control.setup()
         failures = control.runsession()
         assert failures
         control.setup()
-        item.fspath.write("def test_func():\n assert 1\n")
-        removepyc(item.fspath)
+        item_path = item.path if PYTEST_GTE_7 else Path(item.fspath)  # type: ignore[attr-defined]
+        item_path.write_text("def test_func():\n assert 1\n")
+        removepyc(item_path)
         topdir, failures = control.runsession()[:2]
         assert not failures
 
-    def test_failure_change(self, testdir):
-        modcol = testdir.getitem(
-            """
-            def test_func():
-                assert 0
-        """
+    def test_failure_change(self, pytester: pytest.Pytester) -> None:
+        modcol = pytester.getitem(
+            textwrap.dedent(
+                """
+                def test_func():
+                    assert 0
+                """
+            )
         )
         control = RemoteControl(modcol.config)
         control.loop_once()
         assert control.failures
-        modcol.fspath.write(
-            py.code.Source(
+        modcol_path = modcol.path if PYTEST_GTE_7 else Path(modcol.fspath)  # type: ignore[attr-defined]
+        modcol_path.write_text(
+            textwrap.dedent(
                 """
-            def test_func():
-                assert 1
-            def test_new():
-                assert 0
-        """
+                def test_func():
+                    assert 1
+                def test_new():
+                    assert 0
+                """
             )
         )
-        removepyc(modcol.fspath)
+        removepyc(modcol_path)
         control.loop_once()
         assert not control.failures
         control.loop_once()
         assert control.failures
         assert str(control.failures).find("test_new") != -1
 
-    def test_failure_subdir_no_init(self, testdir):
-        modcol = testdir.getitem(
-            """
-            def test_func():
-                assert 0
-        """
+    def test_failure_subdir_no_init(
+        self, pytester: pytest.Pytester, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        modcol = pytester.getitem(
+            textwrap.dedent(
+                """
+                def test_func():
+                    assert 0
+                """
+            )
         )
-        parent = modcol.fspath.dirpath().dirpath()
-        parent.chdir()
+        if PYTEST_GTE_7:
+            parent = modcol.path.parent.parent  # type: ignore[attr-defined]
+        else:
+            parent = Path(modcol.fspath.dirpath().dirpath())
+        monkeypatch.chdir(parent)
         modcol.config.args = [
-            py.path.local(x).relto(parent) for x in modcol.config.args
+            str(Path(x).relative_to(parent)) for x in modcol.config.args
         ]
         control = RemoteControl(modcol.config)
         control.loop_once()
@@ -159,57 +186,63 @@ class TestRemoteControl:
 
 
 class TestLooponFailing:
-    def test_looponfail_from_fail_to_ok(self, testdir):
-        modcol = testdir.getmodulecol(
-            """
-            def test_one():
-                x = 0
-                assert x == 1
-            def test_two():
-                assert 1
-        """
+    def test_looponfail_from_fail_to_ok(self, pytester: pytest.Pytester) -> None:
+        modcol = pytester.getmodulecol(
+            textwrap.dedent(
+                """
+                def test_one():
+                    x = 0
+                    assert x == 1
+                def test_two():
+                    assert 1
+                """
+            )
         )
         remotecontrol = RemoteControl(modcol.config)
         remotecontrol.loop_once()
         assert len(remotecontrol.failures) == 1
 
-        modcol.fspath.write(
-            py.code.Source(
+        modcol_path = modcol.path if PYTEST_GTE_7 else Path(modcol.fspath)
+        modcol_path.write_text(
+            textwrap.dedent(
                 """
-            def test_one():
-                assert 1
-            def test_two():
-                assert 1
-        """
+                def test_one():
+                    assert 1
+                def test_two():
+                    assert 1
+                """
             )
         )
-        removepyc(modcol.fspath)
+        removepyc(modcol_path)
         remotecontrol.loop_once()
         assert not remotecontrol.failures
 
-    def test_looponfail_from_one_to_two_tests(self, testdir):
-        modcol = testdir.getmodulecol(
-            """
-            def test_one():
-                assert 0
-        """
+    def test_looponfail_from_one_to_two_tests(self, pytester: pytest.Pytester) -> None:
+        modcol = pytester.getmodulecol(
+            textwrap.dedent(
+                """
+                def test_one():
+                    assert 0
+                """
+            )
         )
         remotecontrol = RemoteControl(modcol.config)
         remotecontrol.loop_once()
         assert len(remotecontrol.failures) == 1
         assert "test_one" in remotecontrol.failures[0]
 
-        modcol.fspath.write(
-            py.code.Source(
+        modcol_path = modcol.path if PYTEST_GTE_7 else Path(modcol.fspath)
+        modcol_path.write_text(
+            textwrap.dedent(
                 """
-            def test_one():
-                assert 1 # passes now
-            def test_two():
-                assert 0 # new and fails
-        """
+                def test_one():
+                    assert 1 # passes now
+                def test_two():
+                    assert 0 # new and fails
+                """
             )
         )
-        removepyc(modcol.fspath)
+        removepyc(modcol_path)
         remotecontrol.loop_once()
         assert len(remotecontrol.failures) == 0
         remotecontrol.loop_once()
@@ -217,47 +250,49 @@ class TestLooponFailing:
         assert "test_one" not in remotecontrol.failures[0]
         assert "test_two" in remotecontrol.failures[0]
 
-    @pytest.mark.xfail(
-        parse_version(pytest.__version__) >= parse_version("3.1"),
-        reason="broken by pytest 3.1+",
-        strict=True,
-    )
-    def test_looponfail_removed_test(self, testdir):
-        modcol = testdir.getmodulecol(
-            """
-            def test_one():
-                assert 0
-            def test_two():
-                assert 0
-        """
+    @pytest.mark.xfail(reason="broken by pytest 3.1+", strict=True)
+    def test_looponfail_removed_test(self, pytester: pytest.Pytester) -> None:
+        modcol = pytester.getmodulecol(
+            textwrap.dedent(
+                """
+                def test_one():
+                    assert 0
+                def test_two():
+                    assert 0
+                """
+            )
         )
         remotecontrol = RemoteControl(modcol.config)
         remotecontrol.loop_once()
         assert len(remotecontrol.failures) == 2
 
-        modcol.fspath.write(
-            py.code.Source(
+        modcol.path.write_text(
+            textwrap.dedent(
                 """
-            def test_xxx(): # renamed test
-                assert 0
-            def test_two():
-                assert 1 # pass now
-        """
+                def test_xxx(): # renamed test
+                    assert 0
+                def test_two():
+                    assert 1 # pass now
+                """
             )
         )
-        removepyc(modcol.fspath)
+        removepyc(modcol.path)
         remotecontrol.loop_once()
         assert len(remotecontrol.failures) == 0
 
         remotecontrol.loop_once()
         assert len(remotecontrol.failures) == 1
 
-    def test_looponfail_multiple_errors(self, testdir, monkeypatch):
-        modcol = testdir.getmodulecol(
-            """
-            def test_one():
-                assert 0
-        """
+    def test_looponfail_multiple_errors(
+        self, pytester: pytest.Pytester, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        modcol = pytester.getmodulecol(
+            textwrap.dedent(
+                """
+                def test_one():
+                    assert 0
+                """
+            )
         )
         remotecontrol = RemoteControl(modcol.config)
         orig_runsession = remotecontrol.runsession
@@ -274,55 +309,59 @@ class TestLooponFailing:
 
 
 class TestFunctional:
-    def test_fail_to_ok(self, testdir):
-        p = testdir.makepyfile(
-            """
-            def test_one():
-                x = 0
-                assert x == 1
-        """
+    def test_fail_to_ok(self, pytester: pytest.Pytester) -> None:
+        p = pytester.makepyfile(
+            textwrap.dedent(
+                """
+                def test_one():
+                    x = 0
+                    assert x == 1
+                """
+            )
         )
-        # p = testdir.mkdir("sub").join(p1.basename)
+        # p = pytester.mkdir("sub").join(p1.basename)
         # p1.move(p)
-        child = testdir.spawn_pytest("-f %s --traceconfig" % p, expect_timeout=30.0)
+        child = pytester.spawn_pytest("-f %s --traceconfig" % p, expect_timeout=30.0)
         child.expect("def test_one")
         child.expect("x == 1")
         child.expect("1 failed")
         child.expect("### LOOPONFAILING ####")
         child.expect("waiting for changes")
-        p.write(
-            py.code.Source(
+        p.write_text(
+            textwrap.dedent(
                 """
-            def test_one():
-                x = 1
-                assert x == 1
-        """
-            )
+                def test_one():
+                    x = 1
+                    assert x == 1
+                """
+            ),
         )
         child.expect(".*1 passed.*")
         child.kill(15)
 
-    def test_xfail_passes(self, testdir):
-        p = testdir.makepyfile(
-            """
-            import py
-            @py.test.mark.xfail
-            def test_one():
-                pass
-        """
+    def test_xfail_passes(self, pytester: pytest.Pytester) -> None:
+        p = pytester.makepyfile(
+            textwrap.dedent(
+                """
+                import pytest
+                @pytest.mark.xfail
+                def test_one():
+                    pass
+                """
+            )
         )
-        child = testdir.spawn_pytest("-f %s" % p, expect_timeout=30.0)
+        child = pytester.spawn_pytest("-f %s" % p, expect_timeout=30.0)
         child.expect("1 xpass")
         # child.expect("### LOOPONFAILING ####")
         child.expect("waiting for changes")
         child.kill(15)
 
 
-def removepyc(path):
+def removepyc(path: Path) -> None:
     # XXX damn those pyc files
-    pyc = path + "c"
-    if pyc.check():
-        pyc.remove()
-    c = path.dirpath("__pycache__")
-    if c.check():
-        c.remove()
+    pyc = path.with_suffix(".pyc")
+    if pyc.exists():
+        pyc.unlink()
+    c = path.parent / "__pycache__"
+    if c.exists():
+        shutil.rmtree(c)

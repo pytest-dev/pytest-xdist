@@ -423,9 +423,9 @@ def unserialize_warning_message(data):
 
     kwargs = {"message": message, "category": category}
     # access private _WARNING_DETAILS because the attributes vary between Python versions
-    for attr_name in warnings.WarningMessage._WARNING_DETAILS:
+    for attr_name in warnings.WarningMessage._WARNING_DETAILS:  # type: ignore[attr-defined]
         if attr_name in ("message", "category"):
             continue
         kwargs[attr_name] = data[attr_name]
 
-    return warnings.WarningMessage(**kwargs)
+    return warnings.WarningMessage(**kwargs)  # type: ignore[arg-type]
