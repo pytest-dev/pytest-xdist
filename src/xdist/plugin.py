@@ -250,7 +250,7 @@ def is_xdist_controller(request_or_session) -> bool:
 is_xdist_master = is_xdist_controller
 
 
-def get_xdist_worker_id(request_or_session) -> str:
+def get_xdist_worker_id(request_or_session):
     """Return the id of the current worker ('gw0', 'gw1', etc) or 'master'
     if running on the controller node.
 
