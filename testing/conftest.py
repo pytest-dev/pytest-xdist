@@ -1,12 +1,13 @@
-import py
-import pytest
 import execnet
+import pytest
+import shutil
+from typing import List
 
 pytest_plugins = "pytester"
 
 
 @pytest.fixture(autouse=True)
-def _divert_atexit(request, monkeypatch):
+def _divert_atexit(request, monkeypatch: pytest.MonkeyPatch):
     import atexit
 
     finalizers = []
@@ -23,7 +24,7 @@ def _divert_atexit(request, monkeypatch):
         func(*args, **kwargs)
 
 
-def pytest_addoption(parser):
+def pytest_addoption(parser) -> None:
     parser.addoption(
         "--gx",
         action="append",
@@ -33,28 +34,28 @@ def pytest_addoption(parser):
 
 
 @pytest.fixture
-def specssh(request):
+def specssh(request) -> str:
     return getspecssh(request.config)
 
 
 # configuration information for tests
-def getgspecs(config):
+def getgspecs(config) -> List[execnet.XSpec]:
     return [execnet.XSpec(spec) for spec in config.getvalueorskip("gspecs")]
 
 
-def getspecssh(config):
+def getspecssh(config) -> str:  # type: ignore[return]
     xspecs = getgspecs(config)
     for spec in xspecs:
         if spec.ssh:
-            if not py.path.local.sysfind("ssh"):
-                py.test.skip("command not found: ssh")
+            if not shutil.which("ssh"):
+                pytest.skip("command not found: ssh")
             return str(spec)
-    py.test.skip("need '--gx ssh=...'")
+    pytest.skip("need '--gx ssh=...'")
 
 
-def getsocketspec(config):
+def getsocketspec(config) -> execnet.XSpec:
     xspecs = getgspecs(config)
     for spec in xspecs:
         if spec.socket:
             return spec
-    py.test.skip("need '--gx socket=...'")
+    pytest.skip("need '--gx socket=...'")

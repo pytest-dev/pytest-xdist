@@ -1,59 +1,44 @@
 from xdist.dsession import DSession, get_default_max_worker_restart
 from xdist.report import report_collection_diff
 from xdist.scheduler import EachScheduling, LoadScheduling
+from typing import Optional
 
-import py
 import pytest
 import execnet
 
-XSpec = execnet.XSpec
-
-
-def run(item, node, excinfo=None):
-    runner = item.config.pluginmanager.getplugin("runner")
-    rep = runner.ItemTestReport(item=item, excinfo=excinfo, when="call")
-    rep.node = node
-    return rep
-
 
 class MockGateway:
-    _count = 0
-
-    def __init__(self):
+    def __init__(self) -> None:
+        self._count = 0
         self.id = str(self._count)
         self._count += 1
 
 
 class MockNode:
-    def __init__(self):
-        self.sent = []
+    def __init__(self) -> None:
+        self.sent = []  # type: ignore[var-annotated]
         self.gateway = MockGateway()
         self._shutdown = False
 
-    def send_runtest_some(self, indices):
+    def send_runtest_some(self, indices) -> None:
         self.sent.extend(indices)
 
-    def send_runtest_all(self):
+    def send_runtest_all(self) -> None:
         self.sent.append("ALL")
 
-    def shutdown(self):
+    def shutdown(self) -> None:
         self._shutdown = True
 
     @property
-    def shutting_down(self):
+    def shutting_down(self) -> bool:
         return self._shutdown
 
 
-def dumpqueue(queue):
-    while queue.qsize():
-        print(queue.get())
-
-
 class TestEachScheduling:
-    def test_schedule_load_simple(self, testdir):
+    def test_schedule_load_simple(self, pytester: pytest.Pytester) -> None:
         node1 = MockNode()
         node2 = MockNode()
-        config = testdir.parseconfig("--tx=2*popen")
+        config = pytester.parseconfig("--tx=2*popen")
         sched = EachScheduling(config)
         sched.add_node(node1)
         sched.add_node(node2)
@@ -74,9 +59,9 @@ class TestEachScheduling:
         sched.mark_test_complete(node2, 0)
         assert sched.tests_finished
 
-    def test_schedule_remove_node(self, testdir):
+    def test_schedule_remove_node(self, pytester: pytest.Pytester) -> None:
         node1 = MockNode()
-        config = testdir.parseconfig("--tx=popen")
+        config = pytester.parseconfig("--tx=popen")
         sched = EachScheduling(config)
         sched.add_node(node1)
         collection = ["a.py::test_1"]
@@ -93,8 +78,8 @@ class TestEachScheduling:
 
 
 class TestLoadScheduling:
-    def test_schedule_load_simple(self, testdir):
-        config = testdir.parseconfig("--tx=2*popen")
+    def test_schedule_load_simple(self, pytester: pytest.Pytester) -> None:
+        config = pytester.parseconfig("--tx=2*popen")
         sched = LoadScheduling(config)
         sched.add_node(MockNode())
         sched.add_node(MockNode())
@@ -117,8 +102,8 @@ class TestLoadScheduling:
         sched.mark_test_complete(node1, node1.sent[0])
         assert sched.tests_finished
 
-    def test_schedule_batch_size(self, testdir):
-        config = testdir.parseconfig("--tx=2*popen")
+    def test_schedule_batch_size(self, pytester: pytest.Pytester) -> None:
+        config = pytester.parseconfig("--tx=2*popen")
         sched = LoadScheduling(config)
         sched.add_node(MockNode())
         sched.add_node(MockNode())
@@ -144,8 +129,8 @@ class TestLoadScheduling:
         assert node1.sent == [0, 2, 4, 5]
         assert not sched.pending
 
-    def test_schedule_fewer_tests_than_nodes(self, testdir):
-        config = testdir.parseconfig("--tx=2*popen")
+    def test_schedule_fewer_tests_than_nodes(self, pytester: pytest.Pytester) -> None:
+        config = pytester.parseconfig("--tx=2*popen")
         sched = LoadScheduling(config)
         sched.add_node(MockNode())
         sched.add_node(MockNode())
@@ -164,8 +149,10 @@ class TestLoadScheduling:
         assert sent3 == []
         assert not sched.pending
 
-    def test_schedule_fewer_than_two_tests_per_node(self, testdir):
-        config = testdir.parseconfig("--tx=2*popen")
+    def test_schedule_fewer_than_two_tests_per_node(
+        self, pytester: pytest.Pytester
+    ) -> None:
+        config = pytester.parseconfig("--tx=2*popen")
         sched = LoadScheduling(config)
         sched.add_node(MockNode())
         sched.add_node(MockNode())
@@ -184,9 +171,9 @@ class TestLoadScheduling:
         assert sent3 == [2]
         assert not sched.pending
 
-    def test_add_remove_node(self, testdir):
+    def test_add_remove_node(self, pytester: pytest.Pytester) -> None:
         node = MockNode()
-        config = testdir.parseconfig("--tx=popen")
+        config = pytester.parseconfig("--tx=popen")
         sched = LoadScheduling(config)
         sched.add_node(node)
         collection = ["test_file.py::test_func"]
@@ -197,7 +184,7 @@ class TestLoadScheduling:
         crashitem = sched.remove_node(node)
         assert crashitem == collection[0]
 
-    def test_different_tests_collected(self, testdir):
+    def test_different_tests_collected(self, pytester: pytest.Pytester) -> None:
         """
         Test that LoadScheduling is reporting collection errors when
         different test ids are collected by workers.
@@ -215,7 +202,7 @@ class TestLoadScheduling:
                 self.reports.append(report)
 
         collect_hook = CollectHook()
-        config = testdir.parseconfig("--tx=2*popen")
+        config = pytester.parseconfig("--tx=2*popen")
         config.pluginmanager.register(collect_hook, "collect_hook")
         node1 = MockNode()
         node2 = MockNode()
@@ -231,9 +218,9 @@ class TestLoadScheduling:
 
 
 class TestDistReporter:
-    @py.test.mark.xfail
-    def test_rsync_printing(self, testdir, linecomp):
-        config = testdir.parseconfig()
+    @pytest.mark.xfail
+    def test_rsync_printing(self, pytester: pytest.Pytester, linecomp) -> None:
+        config = pytester.parseconfig()
         from _pytest.pytest_terminal import TerminalReporter
 
         rep = TerminalReporter(config, file=linecomp.stringio)
@@ -258,21 +245,21 @@ class TestDistReporter:
         # linecomp.assert_contains_lines([
         #     "*X1*popen*xyz*2.5*"
         # ])
-        dsession.pytest_xdist_rsyncstart(source="hello", gateways=[gw1, gw2])
+        dsession.pytest_xdist_rsyncstart(source="hello", gateways=[gw1, gw2])  # type: ignore[attr-defined]
         linecomp.assert_contains_lines(["[X1,X2] rsyncing: hello"])
 
 
-def test_report_collection_diff_equal():
+def test_report_collection_diff_equal() -> None:
     """Test reporting of equal collections."""
     from_collection = to_collection = ["aaa", "bbb", "ccc"]
     assert report_collection_diff(from_collection, to_collection, 1, 2) is None
 
 
-def test_default_max_worker_restart():
+def test_default_max_worker_restart() -> None:
     class config:
         class option:
-            maxworkerrestart = None
-            numprocesses = 0
+            maxworkerrestart: Optional[str] = None
+            numprocesses: int = 0
 
     assert get_default_max_worker_restart(config) is None
 
@@ -286,7 +273,7 @@ def test_default_max_worker_restart():
     assert get_default_max_worker_restart(config) == 0
 
 
-def test_report_collection_diff_different():
+def test_report_collection_diff_different() -> None:
     """Test reporting of different collections."""
     from_collection = ["aaa", "bbb", "ccc", "YYY"]
     to_collection = ["aZa", "bbb", "XXX", "ccc"]
@@ -311,8 +298,8 @@ def test_report_collection_diff_different():
 
 
 @pytest.mark.xfail(reason="duplicate test ids not supported yet")
-def test_pytest_issue419(testdir):
-    testdir.makepyfile(
+def test_pytest_issue419(pytester: pytest.Pytester) -> None:
+    pytester.makepyfile(
         """
         import pytest
 
@@ -321,6 +308,6 @@ def test_pytest_issue419(testdir):
             pass
     """
     )
-    reprec = testdir.inline_run("-n1")
+    reprec = pytester.inline_run("-n1")
     reprec.assertoutcome(passed=2)
     assert 0

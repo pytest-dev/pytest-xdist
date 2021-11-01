@@ -118,8 +118,8 @@ class NodeManager:
     def _getrsyncoptions(self):
         """Get options to be passed for rsync."""
         ignores = list(self.DEFAULT_IGNORES)
-        ignores += self.config.option.rsyncignore
-        ignores += self.config.getini("rsyncignore")
+        ignores += [str(path) for path in self.config.option.rsyncignore]
+        ignores += [str(path) for path in self.config.getini("rsyncignore")]
 
         return {
             "ignores": ignores,
@@ -254,9 +254,9 @@ class WorkerController:
             args = make_reltoroot(self.nodemanager.roots, args)
         if spec.popen:
             name = "popen-%s" % self.gateway.id
-            if hasattr(self.config, "_tmpdirhandler"):
-                basetemp = self.config._tmpdirhandler.getbasetemp()
-                option_dict["basetemp"] = str(basetemp.join(name))
+            if hasattr(self.config, "_tmp_path_factory"):
+                basetemp = self.config._tmp_path_factory.getbasetemp()
+                option_dict["basetemp"] = str(basetemp / name)
         self.config.hook.pytest_configure_node(node=self)
 
         remote_module = self.config.hook.pytest_xdist_getremotemodule()
@@ -423,9 +423,9 @@ def unserialize_warning_message(data):
 
     kwargs = {"message": message, "category": category}
     # access private _WARNING_DETAILS because the attributes vary between Python versions
-    for attr_name in warnings.WarningMessage._WARNING_DETAILS:
+    for attr_name in warnings.WarningMessage._WARNING_DETAILS:  # type: ignore[attr-defined]
         if attr_name in ("message", "category"):
             continue
         kwargs[attr_name] = data[attr_name]
 
-    return warnings.WarningMessage(**kwargs)
+    return warnings.WarningMessage(**kwargs)  # type: ignore[arg-type]

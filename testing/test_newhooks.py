@@ -3,8 +3,8 @@ import pytest
 
 class TestHooks:
     @pytest.fixture(autouse=True)
-    def create_test_file(self, testdir):
-        testdir.makepyfile(
+    def create_test_file(self, pytester: pytest.Pytester) -> None:
+        pytester.makepyfile(
             """
             import os
             def test_a(): pass
@@ -13,11 +13,11 @@ class TestHooks:
         """
         )
 
-    def test_runtest_logreport(self, testdir):
+    def test_runtest_logreport(self, pytester: pytest.Pytester) -> None:
         """Test that log reports from pytest_runtest_logreport when running
         with xdist contain "node", "nodeid", "worker_id", and "testrun_uid" attributes. (#8)
         """
-        testdir.makeconftest(
+        pytester.makeconftest(
             """
             def pytest_runtest_logreport(report):
                 if hasattr(report, 'node'):
@@ -35,7 +35,7 @@ class TestHooks:
                                    % (report.nodeid, report.worker_id, report.testrun_uid))
         """
         )
-        res = testdir.runpytest("-n1", "-s")
+        res = pytester.runpytest("-n1", "-s")
         res.stdout.fnmatch_lines(
             [
                 "*HOOK: test_runtest_logreport.py::test_a gw0 *",
@@ -45,9 +45,9 @@ class TestHooks:
             ]
         )
 
-    def test_node_collection_finished(self, testdir):
+    def test_node_collection_finished(self, pytester: pytest.Pytester) -> None:
         """Test pytest_xdist_node_collection_finished hook (#8)."""
-        testdir.makeconftest(
+        pytester.makeconftest(
             """
             def pytest_xdist_node_collection_finished(node, ids):
                 workerid = node.workerinput['workerid']
@@ -55,7 +55,7 @@ class TestHooks:
                 print("HOOK: %s %s" % (workerid, ', '.join(stripped_ids)))
         """
         )
-        res = testdir.runpytest("-n2", "-s")
+        res = pytester.runpytest("-n2", "-s")
         res.stdout.fnmatch_lines_random(
             ["*HOOK: gw0 test_a, test_b, test_c", "*HOOK: gw1 test_a, test_b, test_c"]
         )
@@ -64,8 +64,8 @@ class TestHooks:
 
 class TestCrashItem:
     @pytest.fixture(autouse=True)
-    def create_test_file(self, testdir):
-        testdir.makepyfile(
+    def create_test_file(self, pytester: pytest.Pytester) -> None:
+        pytester.makepyfile(
             """
             import os
             def test_a(): pass
@@ -75,9 +75,9 @@ class TestCrashItem:
         """
         )
 
-    def test_handlecrashitem(self, testdir):
+    def test_handlecrashitem(self, pytester: pytest.Pytester) -> None:
         """Test pytest_handlecrashitem hook."""
-        testdir.makeconftest(
+        pytester.makeconftest(
             """
             test_runs = 0
 
@@ -91,6 +91,6 @@ class TestCrashItem:
                     print("HOOK: pytest_handlecrashitem")
         """
         )
-        res = testdir.runpytest("-n2", "-s")
+        res = pytester.runpytest("-n2", "-s")
         res.stdout.fnmatch_lines_random(["*HOOK: pytest_handlecrashitem"])
         res.stdout.fnmatch_lines(["*3 passed*"])

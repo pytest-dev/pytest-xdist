@@ -4,7 +4,6 @@ repos:
     hooks:
     -   id: black
         args: [--safe, --quiet, --target-version, py35]
-        language_version: python3.7
 -   repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.0.1
     hooks:
@@ -29,4 +28,12 @@ repos:
         files: ^(CHANGELOG.rst|HOWTORELEASE.rst|README.rst|changelog/.*)$
         language: python
         additional_dependencies: [pygments, restructuredtext_lint]
-        language_version: python3.7
+-   repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v0.910-1
+    hooks:
+    -   id: mypy
+        files: ^(src/|testing/)
+        args: []
+        additional_dependencies:
+          - pytest>=6.2.0
+          - py>=1.10.0

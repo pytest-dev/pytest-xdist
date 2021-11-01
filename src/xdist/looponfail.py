@@ -38,7 +38,7 @@ def pytest_cmdline_main(config):
 
 def looponfail_main(config):
     remotecontrol = RemoteControl(config)
-    rootdirs = config.getini("looponfailroots")
+    rootdirs = [py.path.local(root) for root in config.getini("looponfailroots")]
     statrecorder = StatRecorder(rootdirs)
     try:
         while 1:
