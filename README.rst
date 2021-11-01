@@ -243,11 +243,11 @@ environment this command will send each tests to all
 platforms - and report back failures from all platforms
 at once. The specifications strings use the `xspec syntax`_.
 
-.. _`xspec syntax`: http://codespeak.net/execnet/basics.html#xspec
+.. _`xspec syntax`: https://codespeak.net/execnet/basics.html#xspec
 
 .. _`socketserver.py`: https://raw.githubusercontent.com/pytest-dev/execnet/master/execnet/script/socketserver.py
 
-.. _`execnet`: http://codespeak.net/execnet
+.. _`execnet`: https://codespeak.net/execnet
 
 Identifying the worker process during a test
 --------------------------------------------
@@ -287,17 +287,6 @@ Since version 2.0, the following functions are also available in the ``xdist`` m
         :param request_or_session: the `pytest` `request` or `session` object
         """
 
-    def is_xdist_master(request_or_session) -> bool:
-        """Return `True` if this is the xdist controller, `False` otherwise
-
-        Note: this method also returns `False` when distribution has not been
-        activated at all.
-
-        deprecated alias for is_xdist_controller
-
-        :param request_or_session: the `pytest` `request` or `session` object
-        """
-
      def is_xdist_controller(request_or_session) -> bool:
         """Return `True` if this is the xdist controller, `False` otherwise
 
@@ -307,11 +296,15 @@ Since version 2.0, the following functions are also available in the ``xdist`` m
         :param request_or_session: the `pytest` `request` or `session` object
         """
 
+    def is_xdist_master(request_or_session) -> bool:
+        """Deprecated alias for is_xdist_controller."""
+
     def get_xdist_worker_id(request_or_session) -> str:
         """Return the id of the current worker ('gw0', 'gw1', etc) or 'master'
         if running on the controller node.
 
-        If not distributing tests (for example passing `-n0` or not passing `-n` at all) also return 'master'.
+        If not distributing tests (for example passing `-n0` or not passing `-n` at all)
+        also return 'master'.
 
         :param request_or_session: the `pytest` `request` or `session` object
         """
@@ -371,10 +364,10 @@ Additionally, during a test run, the following environment variable is defined:
 
 * ``PYTEST_XDIST_TESTRUNUID``: the unique id of the test run.
 
-Accessing ``sys.argv`` from the master node in workers
-------------------------------------------------------
+Accessing ``sys.argv`` from the controller node in workers
+----------------------------------------------------------
 
-To access the ``sys.argv`` passed to the command-line of the master node, use
+To access the ``sys.argv`` passed to the command-line of the controller node, use
 ``request.config.workerinput["mainargv"]``.
 
 
