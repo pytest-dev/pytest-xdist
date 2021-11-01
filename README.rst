@@ -320,7 +320,7 @@ Since version 2.0, the following functions are also available in the ``xdist`` m
 Identifying workers from the system environment
 -----------------------------------------------
 
-*New in version UNRELEASED TBD FIXME*
+*New in version 2.4*
 
 If the `setproctitle`_ package is installed, ``pytest-xdist`` will use it to
 update the process title (command line) on its workers to show their current
