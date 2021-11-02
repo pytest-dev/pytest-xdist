@@ -67,7 +67,7 @@ class DSession:
         if self.terminal and self.config.option.verbose >= 0:
             self.terminal.write_line(line)
 
-    @pytest.mark.trylast
+    @pytest.hookimpl(trylast=True)
     def pytest_sessionstart(self, session):
         """Creates and starts the nodes.
 
@@ -79,6 +79,7 @@ class DSession:
         self._active_nodes.update(nodes)
         self._session = session
 
+    @pytest.hookimpl
     def pytest_sessionfinish(self, session):
         """Shutdown all nodes."""
         nm = getattr(self, "nodemanager", None)  # if not fully initialized
@@ -86,11 +87,12 @@ class DSession:
             nm.teardown_nodes()
         self._session = None
 
+    @pytest.hookimpl
     def pytest_collection(self):
         # prohibit collection of test items in controller process
         return True
 
-    @pytest.mark.trylast
+    @pytest.hookimpl(trylast=True)
     def pytest_xdist_make_scheduler(self, config, log):
         dist = config.getvalue("dist")
         schedulers = {
@@ -101,6 +103,7 @@ class DSession:
         }
         return schedulers[dist](config, log)
 
+    @pytest.hookimpl
     def pytest_runtestloop(self):
         self.sched = self.config.hook.pytest_xdist_make_scheduler(
             config=self.config, log=self.log
@@ -223,6 +226,7 @@ class DSession:
             self._clone_node(node)
         self._active_nodes.remove(node)
 
+    @pytest.hookimpl
     def pytest_terminal_summary(self, terminalreporter):
         if self.config.option.verbose >= 0 and self._summary_report:
             terminalreporter.write_sep("=", "xdist: {}".format(self._summary_report))
@@ -390,6 +394,7 @@ class TerminalDistReporter:
             self._lastlen = len(line)
         self.tr.rewrite(pline, bold=True)
 
+    @pytest.hookimpl
     def pytest_xdist_setupnodes(self, specs):
         self._specs = specs
         for spec in specs:
@@ -397,6 +402,7 @@ class TerminalDistReporter:
         self.setstatus(spec, "I", show=True)
         self.ensure_show_status()
 
+    @pytest.hookimpl
     def pytest_xdist_newgateway(self, gateway):
         if self.config.option.verbose > 0:
             rinfo = gateway._rinfo()
@@ -408,6 +414,7 @@ class TerminalDistReporter:
             )
         self.setstatus(gateway.spec, "C")
 
+    @pytest.hookimpl
     def pytest_testnodeready(self, node):
         if self.config.option.verbose > 0:
             d = node.workerinfo
@@ -417,6 +424,7 @@ class TerminalDistReporter:
             self.rewrite(infoline, newline=True)
         self.setstatus(node.gateway.spec, "ok")
 
+    @pytest.hookimpl
     def pytest_testnodedown(self, node, error):
         if not error:
             return

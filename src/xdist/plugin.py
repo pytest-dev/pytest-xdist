@@ -12,6 +12,7 @@ PYTEST_GTE_7 = hasattr(pytest, "version_tuple") and pytest.version_tuple >= (7, 
 _sys_path = list(sys.path)  # freeze a copy of sys.path at interpreter startup
 
 
+@pytest.hookimpl
 def pytest_xdist_auto_num_workers(config):
     try:
         import psutil
@@ -50,6 +51,7 @@ def parse_numprocesses(s):
         return int(s)
 
 
+@pytest.hookimpl
 def pytest_addoption(parser):
     group = parser.getgroup("xdist", "distributed and subprocess testing")
     group._addoption(
@@ -171,6 +173,7 @@ def pytest_addoption(parser):
 # -------------------------------------------------------------------------
 
 
+@pytest.hookimpl
 def pytest_addhooks(pluginmanager):
     from xdist import newhooks
 
@@ -182,7 +185,7 @@ def pytest_addhooks(pluginmanager):
 # -------------------------------------------------------------------------
 
 
-@pytest.mark.trylast
+@pytest.hookimpl(trylast=True)
 def pytest_configure(config):
     if config.getoption("dist") != "no" and not config.getvalue("collectonly"):
         from xdist.dsession import DSession
@@ -196,7 +199,7 @@ def pytest_configure(config):
         config.option.forked = True
 
 
-@pytest.mark.tryfirst
+@pytest.hookimpl(tryfirst=True)
 def pytest_cmdline_main(config):
     usepdb = config.getoption("usepdb", False)  # a core option
     if config.option.numprocesses in ("auto", "logical"):
