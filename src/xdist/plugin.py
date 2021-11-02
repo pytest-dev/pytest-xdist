@@ -193,6 +193,12 @@ def pytest_configure(config):
         if tr:
             tr.showfspath = False
     if config.getoption("boxed"):
+        warning = DeprecationWarning(
+            "The --boxed commmand line argument is deprecated. "
+            "Install pytest-forked and use --forked instead. "
+            "pytest-xdist 3.0.0 will remove the --boxed argument and pytest-forked dependency."
+        )
+        config.issue_config_time_warning(warning, 2)
         config.option.forked = True
 
 
