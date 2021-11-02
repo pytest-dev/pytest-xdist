@@ -1,9 +1,9 @@
-.. note::
+.. warning::
 
   Since 1.19.0, the actual implementation of the ``--boxed`` option has been moved to a
   separate plugin, `pytest-forked <https://github.com/pytest-dev/pytest-forked>`_
-  which can be installed independently. The ``--boxed`` command-line options remains
-  for backward compatibility reasons.
+  which can be installed independently. The ``--boxed`` command-line option is deprecated
+  and will be removed in pytest-xdist 3.0.0; use ``--forked`` from pytest-forked instead.
 
 
 If your testing involves C or C++ libraries you might have to deal

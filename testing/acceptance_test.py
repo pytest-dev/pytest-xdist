@@ -738,7 +738,7 @@ def test_tmpdir_disabled(pytester: pytest.Pytester) -> None:
     result.stdout.fnmatch_lines("*1 passed*")
 
 
-@pytest.mark.parametrize("plugin", ["xdist.looponfail", "xdist.boxed"])
+@pytest.mark.parametrize("plugin", ["xdist.looponfail"])
 def test_sub_plugins_disabled(pytester, plugin) -> None:
     """Test that xdist doesn't break if we disable any of its sub-plugins. (#32)"""
     p1 = pytester.makepyfile(
