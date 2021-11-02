@@ -205,7 +205,7 @@ class TestDistribution:
             def pytest_addoption(parser):
                 parser.addoption("--foobar", action="store", dest="foobar_opt")
 
-            @pytest.mark.tryfirst
+            @pytest.hookimpl(tryfirst=True)
             def pytest_load_initial_conftests(early_config):
                 opt = early_config.known_args_namespace.foobar_opt
                 print("--foobar=%s active! [%s]" % (opt, os.getpid()), file=sys.stderr)

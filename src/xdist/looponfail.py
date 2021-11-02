@@ -13,6 +13,7 @@ import time
 import execnet
 
 
+@pytest.hookimpl
 def pytest_addoption(parser):
     group = parser.getgroup("xdist", "distributed and subprocess testing")
     group._addoption(
@@ -26,6 +27,7 @@ def pytest_addoption(parser):
     )
 
 
+@pytest.hookimpl
 def pytest_cmdline_main(config):
 
     if config.getoption("looponfail"):
@@ -178,6 +180,7 @@ class WorkerFailSession:
         if self.config.option.debug:
             print(" ".join(map(str, args)))
 
+    @pytest.hookimpl
     def pytest_collection(self, session):
         self.session = session
         self.trails = self.current_command
@@ -192,10 +195,12 @@ class WorkerFailSession:
         hook.pytest_collection_finish(session=session)
         return True
 
+    @pytest.hookimpl
     def pytest_runtest_logreport(self, report):
         if report.failed:
             self.recorded_failures.append(report)
 
+    @pytest.hookimpl
     def pytest_collectreport(self, report):
         if report.failed:
             self.recorded_failures.append(report)

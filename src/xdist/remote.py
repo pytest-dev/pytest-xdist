@@ -47,12 +47,14 @@ class WorkerInteractor:
         self.log("sending", name, kwargs)
         self.channel.send((name, kwargs))
 
+    @pytest.hookimpl
     def pytest_internalerror(self, excrepr):
         formatted_error = str(excrepr)
         for line in formatted_error.split("\n"):
             self.log("IERROR>", line)
         interactor.sendevent("internal_error", formatted_error=formatted_error)
 
+    @pytest.hookimpl
     def pytest_sessionstart(self, session):
         self.session = session
         workerinfo = getinfodict()
@@ -65,9 +67,11 @@ class WorkerInteractor:
         yield
         self.sendevent("workerfinished", workeroutput=self.config.workeroutput)
 
+    @pytest.hookimpl
     def pytest_collection(self, session):
         self.sendevent("collectionstart")
 
+    @pytest.hookimpl
     def pytest_runtestloop(self, session):
         self.log("entering main loop")
         torun = []
@@ -112,6 +116,7 @@ class WorkerInteractor:
             "runtest_protocol_complete", item_index=self.item_index, duration=duration
         )
 
+    @pytest.hookimpl
     def pytest_collection_finish(self, session):
         try:
             topdir = str(self.config.rootpath)
@@ -124,12 +129,15 @@ class WorkerInteractor:
             ids=[item.nodeid for item in session.items],
         )
 
+    @pytest.hookimpl
     def pytest_runtest_logstart(self, nodeid, location):
         self.sendevent("logstart", nodeid=nodeid, location=location)
 
+    @pytest.hookimpl
     def pytest_runtest_logfinish(self, nodeid, location):
         self.sendevent("logfinish", nodeid=nodeid, location=location)
 
+    @pytest.hookimpl
     def pytest_runtest_logreport(self, report):
         data = self.config.hook.pytest_report_to_serializable(
             config=self.config, report=report
@@ -140,6 +148,7 @@ class WorkerInteractor:
         assert self.session.items[self.item_index].nodeid == report.nodeid
         self.sendevent("testreport", data=data)
 
+    @pytest.hookimpl
     def pytest_collectreport(self, report):
         # send only reports that have not passed to controller as optimization (#330)
         if not report.passed:
@@ -148,6 +157,7 @@ class WorkerInteractor:
             )
             self.sendevent("collectreport", data=data)
 
+    @pytest.hookimpl
     def pytest_warning_recorded(self, warning_message, when, nodeid, location):
         self.sendevent(
             "warning_recorded",

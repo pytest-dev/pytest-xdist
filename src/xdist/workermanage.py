@@ -212,7 +212,7 @@ class WorkerController:
     ENDMARK = -1
 
     class RemoteHook:
-        @pytest.mark.trylast
+        @pytest.hookimpl(trylast=True)
         def pytest_xdist_getremotemodule(self):
             return xdist.remote
 
