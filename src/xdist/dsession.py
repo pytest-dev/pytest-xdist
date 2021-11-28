@@ -7,6 +7,7 @@ from xdist.scheduler import (
     LoadScheduling,
     LoadScopeScheduling,
     LoadFileScheduling,
+    LoadGroupScheduling,
 )
 
 
@@ -100,6 +101,7 @@ class DSession:
             "load": LoadScheduling,
             "loadscope": LoadScopeScheduling,
             "loadfile": LoadFileScheduling,
+            "loadgroup": LoadGroupScheduling,
         }
         return schedulers[dist](config, log)
 
