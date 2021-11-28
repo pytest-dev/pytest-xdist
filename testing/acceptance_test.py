@@ -1331,7 +1331,7 @@ class TestGroupScope:
         test_file = """
             import pytest
             class TestA:
-                @pytest.mark.xgroup(name="xgroup")
+                @pytest.mark.xdist_group(name="xdist_group")
                 @pytest.mark.parametrize('i', range(5))
                 def test(self, i):
                     pass
@@ -1371,12 +1371,12 @@ class TestGroupScope:
             test_a="""
             import pytest
             class TestA:
-                @pytest.mark.xgroup(name="xgroup")
+                @pytest.mark.xdist_group(name="xdist_group")
                 @pytest.mark.parametrize('i', range(10))
                 def test(self, i):
                     pass
             class TestB:
-                @pytest.mark.xgroup(name="xgroup")
+                @pytest.mark.xdist_group(name="xdist_group")
                 @pytest.mark.parametrize('i', range(10))
                 def test(self, i):
                     pass
@@ -1414,7 +1414,7 @@ class TestGroupScope:
     def test_module_single_start(self, testdir):
         test_file1 = """
             import pytest
-            @pytest.mark.xgroup(name="xgroup")
+            @pytest.mark.xdist_group(name="xdist_group")
             def test():
                 pass
         """
@@ -1422,7 +1422,7 @@ class TestGroupScope:
             import pytest
             def test_1():
                 pass
-            @pytest.mark.xgroup(name="xgroup")
+            @pytest.mark.xdist_group(name="xdist_group")
             def test_2():
                 pass
         """
@@ -1433,6 +1433,25 @@ class TestGroupScope:
         c = get_workers_and_test_count_by_prefix("test_c.py::test_2", result.outlines)
 
         assert a.keys() == b.keys() and b.keys() == c.keys()
+
+    def test_with_two_group_names(self, testdir):
+        test_file = """
+            import pytest
+            @pytest.mark.xdist_group(name="group1")
+            def test_1():
+                pass
+            @pytest.mark.xdist_group("group2")
+            def test_2():
+                pass
+        """
+        testdir.makepyfile(test_a=test_file, test_b=test_file)
+        result = testdir.runpytest("-n2", "--dist=loadgroup", "-v")
+        a_1 = get_workers_and_test_count_by_prefix("test_a.py::test_1", result.outlines)
+        a_2 = get_workers_and_test_count_by_prefix("test_a.py::test_2", result.outlines)
+        b_1 = get_workers_and_test_count_by_prefix("test_b.py::test_1", result.outlines)
+        b_2 = get_workers_and_test_count_by_prefix("test_b.py::test_2", result.outlines)
+
+        assert a_1.keys() == b_1.keys() and a_2.keys() == b_2.keys()
 
 
 class TestLocking:

@@ -98,8 +98,7 @@ def pytest_addoption(parser):
             " the same scope to any available environment.\n\n"
             "loadfile: load balance by sending test grouped by file"
             " to any available environment.\n\n"
-            "loadgroup: load balance by sending any pending test or test group"
-            " to any available enviroment.\n\n"
+            "loadgroup: like load, but sends tests marked with 'xdist_group' to the same worker.\n\n"
             "(default) no: run tests inprocess, don't distribute."
         ),
     )
@@ -207,7 +206,7 @@ def pytest_configure(config):
         config.option.forked = True
 
     config_line = (
-        "xgroup: specify group for tests should run in same session."
+        "xdist_group: specify group for tests should run in same session."
         "in relation to one another. " + "Provided by pytest-xdist."
     )
     config.addinivalue_line("markers", config_line)

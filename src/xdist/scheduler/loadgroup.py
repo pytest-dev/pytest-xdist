@@ -3,22 +3,10 @@ from py.log import Producer
 
 
 class LoadGroupScheduling(LoadScopeScheduling):
-    """Implement load scheduling across nodes, but grouping test only has group mark.
+    """Implement load scheduling across nodes, but grouping test by xdist_group mark.
 
-    This distributes the tests collected across all nodes so each test is run
-    just once.  All nodes collect and submit the list of tests and when all
-    collections are received it is verified they are identical collections.
-    Then the collection gets divided up in work units, grouped by group mark
-    (If there is no group mark, it is itself a group.), and those work units
-    et submitted to nodes. Whenever a node finishes an item, it calls
-    ``.mark_test_complete()`` which will trigger the scheduler to assign more
-    work units if the number of pending tests for the node falls below a low-watermark.
-
-    When created, ``numnodes`` defines how many nodes are expected to submit a
-    collection. This is used to know when all nodes have finished collection.
-
-    This class behaves very much like LoadScopeScheduling,
-    but with a itself or group(by marked) scope.
+    This class behaves very much like LoadScopeScheduling, but it groups tests by xdist_group mark
+    instead of the module or class to which they belong to.
     """
 
     def __init__(self, config, log=None):
@@ -49,10 +37,9 @@ class LoadGroupScheduling(LoadScopeScheduling):
             example/loadsuite/test/test_gamma.py::test_beta0@gname
             example/loadsuite/test/test_delta.py::Gamma1::test_gamma0@gname
 
-        This function will group tests with the scope determined by splitting
-        the first ``@`` from the right. That is, test will be grouped in a
-        single work unit when they have same group name.
-         In the above example, scopes will be::
+        This function will group tests with the scope determined by splitting the first ``@``
+        from the right. That is, test will be grouped in a single work unit when they have
+        same group name. In the above example, scopes will be::
 
             example/loadsuite/test/test_beta.py::test_beta0
             example/loadsuite/test/test_delta.py::Delta1::test_delta0

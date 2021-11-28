@@ -1,1 +1,1 @@
-Create new dist option 'loadgroup'
+New ``--dist=loadgroup`` option, which ensures all tests marked with ``@pytest.mark.xdist_group`` run in the same session/worker. Other tests run distributed as in ``--dist=load``.
