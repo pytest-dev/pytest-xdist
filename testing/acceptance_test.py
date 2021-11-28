@@ -790,7 +790,7 @@ class TestWarnings:
                 warnings.warn("my custom worker warning")
         """
         )
-        result = pytester.runpytest("-n1")
+        result = pytester.runpytest("-n1", "-Wignore")
         result.stdout.fnmatch_lines(["*1 passed*"])
         result.stdout.no_fnmatch_line("*this hook should not be called in this version")
 
