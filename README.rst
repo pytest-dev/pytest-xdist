@@ -96,6 +96,10 @@ distribution algorithm this with the ``--dist`` option. It takes these values:
   distributed to available workers as whole units. This guarantees that all
   tests in a file run in the same worker.
 
+* ``--dist loadgroup``: Tests are grouped by xdist_group mark. Groups are
+  distributed to available workers as whole units. This guarantees that all
+  tests with same xdist_group name run in the same worker.
+
 Making session-scoped fixtures execute only once
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -414,3 +418,21 @@ where the configuration file was found.
 .. _`pytest-xdist`: http://pypi.python.org/pypi/pytest-xdist
 .. _`pytest-xdist repository`: https://github.com/pytest-dev/pytest-xdist
 .. _`pytest`: http://pytest.org
+
+Groups tests by xdist_group mark
+---------------------------------
+
+*New in version 2.4.*
+
+Two or more tests belonging to different classes or modules can be executed in same worker through the xdist_group marker:
+
+.. code-block:: python
+
+    @pytest.mark.xdist_group(name="group1")
+    def test1():
+        pass
+
+    class TestA:
+        @pytest.mark.xdist_group("group1")
+        def test2():
+            pass
