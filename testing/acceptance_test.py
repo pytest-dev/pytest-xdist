@@ -773,6 +773,13 @@ class TestWarnings:
         """
         Do not trigger the deprecated pytest_warning_captured hook in pytest 6+ (#562)
         """
+        from _pytest import hookspec
+
+        if not hasattr(hookspec, "pytest_warning_captured"):
+            pytest.skip(
+                f"pytest {pytest.__version__} does not have the pytest_warning_captured hook."
+            )
+
         pytester.makeconftest(
             """
             def pytest_warning_captured(warning_message):
