@@ -1,1 +1,0 @@
-Started using type annotations and mypy checking internally. The types are incomplete and not published.

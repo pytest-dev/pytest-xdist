@@ -1,1 +1,0 @@
-Use up-to-date ``setup.cfg``/``pyproject.toml`` packaging setup.

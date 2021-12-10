@@ -447,11 +447,6 @@ class TestTerminalReporting:
 
     def test_logfinish_hook(self, pytester: pytest.Pytester) -> None:
         """Ensure the pytest_runtest_logfinish hook is being properly handled"""
-        from _pytest import hookspec
-
-        if not hasattr(hookspec, "pytest_runtest_logfinish"):
-            pytest.skip("test requires pytest_runtest_logfinish hook in pytest (3.4+)")
-
         pytester.makeconftest(
             """
             def pytest_runtest_logfinish():
@@ -773,6 +768,13 @@ class TestWarnings:
         """
         Do not trigger the deprecated pytest_warning_captured hook in pytest 6+ (#562)
         """
+        from _pytest import hookspec
+
+        if not hasattr(hookspec, "pytest_warning_captured"):
+            pytest.skip(
+                f"pytest {pytest.__version__} does not have the pytest_warning_captured hook."
+            )
+
         pytester.makeconftest(
             """
             def pytest_warning_captured(warning_message):

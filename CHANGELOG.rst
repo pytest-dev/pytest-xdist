@@ -1,3 +1,26 @@
+pytest-xdist 2.5.0 (2021-12-10)
+===============================
+
+Features
+--------
+
+- `#722 <https://github.com/pytest-dev/pytest-xdist/issues/722>`_: Full compatibility with pytest 7 - no deprecation warnings or use of legacy features.
+
+- `#733 <https://github.com/pytest-dev/pytest-xdist/issues/733>`_: New ``--dist=loadgroup`` option, which ensures all tests marked with ``@pytest.mark.xdist_group`` run in the same session/worker. Other tests run distributed as in ``--dist=load``.
+
+
+Trivial Changes
+---------------
+
+- `#708 <https://github.com/pytest-dev/pytest-xdist/issues/708>`_: Use ``@pytest.hookspec`` decorator to declare hook options in ``newhooks.py`` to avoid warnings in ``pytest 7.0``.
+
+- `#719 <https://github.com/pytest-dev/pytest-xdist/issues/719>`_: Use up-to-date ``setup.cfg``/``pyproject.toml`` packaging setup.
+
+- `#720 <https://github.com/pytest-dev/pytest-xdist/issues/720>`_: Require pytest>=6.2.0.
+
+- `#721 <https://github.com/pytest-dev/pytest-xdist/issues/721>`_: Started using type annotations and mypy checking internally. The types are incomplete and not published.
+
+
 pytest-xdist 2.4.0 (2021-09-20)
 ===============================
 
