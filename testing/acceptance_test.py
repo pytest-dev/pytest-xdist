@@ -447,11 +447,6 @@ class TestTerminalReporting:
 
     def test_logfinish_hook(self, pytester: pytest.Pytester) -> None:
         """Ensure the pytest_runtest_logfinish hook is being properly handled"""
-        from _pytest import hookspec
-
-        if not hasattr(hookspec, "pytest_runtest_logfinish"):
-            pytest.skip("test requires pytest_runtest_logfinish hook in pytest (3.4+)")
-
         pytester.makeconftest(
             """
             def pytest_runtest_logfinish():
