@@ -154,7 +154,6 @@ class TestDistribution:
         result.stdout.fnmatch_lines(["*2*Python*", "*2 failed, 1 passed, 1 skipped*"])
         assert result.ret == 1
 
-    @pytest.mark.xfail("sys.platform.startswith('java')", run=False)
     def test_dist_tests_with_crash(self, pytester: pytest.Pytester) -> None:
         if not hasattr(os, "kill"):
             pytest.skip("no os.kill")
