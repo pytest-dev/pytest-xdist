@@ -1,3 +1,5 @@
+from typing import cast
+
 import py
 import pytest
 import shutil
@@ -123,7 +125,7 @@ class TestRemoteControl:
         failures = control.runsession()
         assert failures
         control.setup()
-        item_path = item.path if PYTEST_GTE_7 else Path(item.fspath)  # type: ignore[attr-defined]
+        item_path = item.path if PYTEST_GTE_7 else Path(cast(py.path.local, item.fspath))  # type: ignore[attr-defined]
         item_path.write_text("def test_func():\n assert 1\n")
         removepyc(item_path)
         topdir, failures = control.runsession()[:2]
@@ -141,7 +143,11 @@ class TestRemoteControl:
         control = RemoteControl(modcol.config)
         control.loop_once()
         assert control.failures
-        modcol_path = modcol.path if PYTEST_GTE_7 else Path(modcol.fspath)  # type: ignore[attr-defined]
+        if PYTEST_GTE_7:
+            modcol_path = modcol.path  # type:ignore[attr-defined]
+        else:
+            modcol_path = Path(cast(py.path.local, modcol.fspath))
+
         modcol_path.write_text(
             textwrap.dedent(
                 """
@@ -173,7 +179,7 @@ class TestRemoteControl:
         if PYTEST_GTE_7:
             parent = modcol.path.parent.parent  # type: ignore[attr-defined]
         else:
-            parent = Path(modcol.fspath.dirpath().dirpath())
+            parent = Path(cast(py.path.local, modcol.fspath).dirpath().dirpath())
         monkeypatch.chdir(parent)
         modcol.config.args = [
             str(Path(x).relative_to(parent)) for x in modcol.config.args
