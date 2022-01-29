@@ -79,6 +79,12 @@ Pass ``-n auto`` to use as many processes as your computer has CPU cores. This
 can lead to considerable speed ups, especially if your test suite takes a
 noticeable amount of time.
 
+* ``--maxprocesses=maxprocesses``: limit the maximum number of workers to
+  process the tests.
+
+* ``--max-worker-restart``: maximum number of workers that can be restarted
+  when crashed (set to zero to disable this feature).
+
 The test distribution algorithm is configured with the ``--dist`` command-line option:
 
 .. _distribution modes:
