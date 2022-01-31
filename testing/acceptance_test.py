@@ -1244,22 +1244,14 @@ class TestFileScope:
             "test_b.py::TestB", result.outlines
         )
 
-        assert (
-            test_a_workers_and_test_count
-            in (
-                {"gw0": 10},
-                {"gw1": 0},
-            )
-            or test_a_workers_and_test_count in ({"gw0": 0}, {"gw1": 10})
-        )
-        assert (
-            test_b_workers_and_test_count
-            in (
-                {"gw0": 10},
-                {"gw1": 0},
-            )
-            or test_b_workers_and_test_count in ({"gw0": 0}, {"gw1": 10})
-        )
+        assert test_a_workers_and_test_count in (
+            {"gw0": 10},
+            {"gw1": 0},
+        ) or test_a_workers_and_test_count in ({"gw0": 0}, {"gw1": 10})
+        assert test_b_workers_and_test_count in (
+            {"gw0": 10},
+            {"gw1": 0},
+        ) or test_b_workers_and_test_count in ({"gw0": 0}, {"gw1": 10})
 
     def test_by_class(self, pytester: pytest.Pytester) -> None:
         pytester.makepyfile(
@@ -1284,22 +1276,14 @@ class TestFileScope:
             "test_a.py::TestB", result.outlines
         )
 
-        assert (
-            test_a_workers_and_test_count
-            in (
-                {"gw0": 10},
-                {"gw1": 0},
-            )
-            or test_a_workers_and_test_count in ({"gw0": 0}, {"gw1": 10})
-        )
-        assert (
-            test_b_workers_and_test_count
-            in (
-                {"gw0": 10},
-                {"gw1": 0},
-            )
-            or test_b_workers_and_test_count in ({"gw0": 0}, {"gw1": 10})
-        )
+        assert test_a_workers_and_test_count in (
+            {"gw0": 10},
+            {"gw1": 0},
+        ) or test_a_workers_and_test_count in ({"gw0": 0}, {"gw1": 10})
+        assert test_b_workers_and_test_count in (
+            {"gw0": 10},
+            {"gw1": 0},
+        ) or test_b_workers_and_test_count in ({"gw0": 0}, {"gw1": 10})
 
     def test_module_single_start(self, pytester: pytest.Pytester) -> None:
         """Fix test suite never finishing in case all workers start with a single test (#277)."""
@@ -1346,22 +1330,14 @@ class TestGroupScope:
             "test_b.py::TestA", result.outlines
         )
 
-        assert (
-            test_a_workers_and_test_count
-            in (
-                {"gw0": 5},
-                {"gw1": 0},
-            )
-            or test_a_workers_and_test_count in ({"gw0": 0}, {"gw1": 5})
-        )
-        assert (
-            test_b_workers_and_test_count
-            in (
-                {"gw0": 5},
-                {"gw1": 0},
-            )
-            or test_b_workers_and_test_count in ({"gw0": 0}, {"gw1": 5})
-        )
+        assert test_a_workers_and_test_count in (
+            {"gw0": 5},
+            {"gw1": 0},
+        ) or test_a_workers_and_test_count in ({"gw0": 0}, {"gw1": 5})
+        assert test_b_workers_and_test_count in (
+            {"gw0": 5},
+            {"gw1": 0},
+        ) or test_b_workers_and_test_count in ({"gw0": 0}, {"gw1": 5})
         assert (
             test_a_workers_and_test_count.items()
             == test_b_workers_and_test_count.items()
@@ -1391,22 +1367,14 @@ class TestGroupScope:
             "test_a.py::TestB", result.outlines
         )
 
-        assert (
-            test_a_workers_and_test_count
-            in (
-                {"gw0": 10},
-                {"gw1": 0},
-            )
-            or test_a_workers_and_test_count in ({"gw0": 0}, {"gw1": 10})
-        )
-        assert (
-            test_b_workers_and_test_count
-            in (
-                {"gw0": 10},
-                {"gw1": 0},
-            )
-            or test_b_workers_and_test_count in ({"gw0": 0}, {"gw1": 10})
-        )
+        assert test_a_workers_and_test_count in (
+            {"gw0": 10},
+            {"gw1": 0},
+        ) or test_a_workers_and_test_count in ({"gw0": 0}, {"gw1": 10})
+        assert test_b_workers_and_test_count in (
+            {"gw0": 10},
+            {"gw1": 0},
+        ) or test_b_workers_and_test_count in ({"gw0": 0}, {"gw1": 10})
         assert (
             test_a_workers_and_test_count.items()
             == test_b_workers_and_test_count.items()
