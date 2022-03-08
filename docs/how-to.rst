@@ -222,3 +222,52 @@ initializing a database service and populating initial tables.
 
 This technique might not work for every case, but should be a starting point for many situations
 where executing a high-scope fixture exactly once is important.
+
+
+Creating one log file for each worker
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+To create one log file for each worker with ``pytest-xdist``, add
+an option to ``pytest.ini`` for the file base name. Then, in ``conftest.py``,
+register it with ``pytest_addoption(parser)`` and use ``pytest_configure(config)``
+to rename it with the worker id.
+
+Example:
+
+.. code-block:: python
+
+    # content of pytest.ini
+    [pytest]
+    log_file_format = %(asctime)s %(name)s %(levelname)s %(message)s
+    log_file_level = INFO
+    worker_log_file = tests_%w.log
+
+
+.. code-block:: python
+
+    # content of conftest.py
+    def pytest_addoption(parser):
+        log_help_text = 'Similar to log_file, but %w will be replaced with a worker identifier.'
+        parser.addini('worker_log_file', help=log_help_text)
+
+
+    def pytest_configure(config):
+        configure_logger(config)
+
+
+    def configure_logger(config):
+        if xdist_is_enabled():
+            log_file = config.getini('worker_log_file')
+            logging.basicConfig(
+                format=config.getini('log_file_format'),
+                filename=log_file.replace('%w', os.environ.get('PYTEST_XDIST_WORKER')),
+                level=config.getini('log_file_level')
+            )
+
+
+    def xdist_is_enabled():
+        return os.environ.get('PYTEST_XDIST_WORKER') is not None
+
+
+If running tests with ``-n3``, for example, three files would be created and named
+as ``tests_gw0.log``, ``tests_gw1.log`` and ``tests_gw2.log``.
