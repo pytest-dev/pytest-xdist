@@ -224,7 +224,7 @@ Example:
             log_file = config.getini("worker_log_file")
             logging.basicConfig(
                 format=config.getini("log_file_format"),
-                filename=f"test_{worker_id}.log",
+                filename=f"tests_{worker_id}.log",
                 level=config.getini("log_file_level"),
             )
 
