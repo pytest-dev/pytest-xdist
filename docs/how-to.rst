@@ -211,37 +211,20 @@ Creating one log file for each worker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 To create one log file for each worker with ``pytest-xdist``, you can leverage :envvar:`PYTEST_XDIST_WORKER`
-an option to ``pytest.ini`` for the file base name. Then, in ``conftest.py``,
-register it with ``pytest_addoption(parser)`` and use ``pytest_configure(config)``
-to rename it with the worker id.
+to generate a unique filename for each worker.
 
 Example:
-
-.. code-block:: ini
-
-    [pytest]
-    log_file_format = %(asctime)s %(name)s %(levelname)s %(message)s
-    log_file_level = INFO
-    worker_log_file = tests_{worker_id}.log
-
 
 .. code-block:: python
 
     # content of conftest.py
-    def pytest_addoption(parser):
-        parser.addini(
-            "worker_log_file",
-            help="Similar to log_file, but %w will be replaced with a worker identifier.",
-        )
-
-
     def pytest_configure(config):
         worker_id = os.environ.get("PYTEST_XDIST_WORKER")
         if worker_id is not None:
             log_file = config.getini("worker_log_file")
             logging.basicConfig(
                 format=config.getini("log_file_format"),
-                filename=log_file.format(worker_id=worker_id),
+                filename=f"test_{worker_id}.log",
                 level=config.getini("log_file_level"),
             )
 
