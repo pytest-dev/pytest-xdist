@@ -24,9 +24,13 @@ When ``xdist`` is disabled (running with ``-n0`` for example), then
 Worker processes also have the following environment variables
 defined:
 
-* ``PYTEST_XDIST_WORKER``: the name of the worker, e.g., ``"gw2"``.
-* ``PYTEST_XDIST_WORKER_COUNT``: the total number of workers in this session,
-  e.g., ``"4"`` when ``-n 4`` is given in the command-line.
+.. envvar:: PYTEST_XDIST_WORKER
+
+The name of the worker, e.g., ``"gw2"``.
+
+.. envvar:: PYTEST_XDIST_WORKER_COUNT
+
+The total number of workers in this session, e.g., ``"4"`` when ``-n 4`` is given in the command-line.
 
 The information about the worker_id in a test is stored in the ``TestReport`` as
 well, under the ``worker_id`` attribute.
@@ -116,7 +120,9 @@ wanted to create a separate database for each test run:
 
 Additionally, during a test run, the following environment variable is defined:
 
-* ``PYTEST_XDIST_TESTRUNUID``: the unique id of the test run.
+.. envvar:: PYTEST_XDIST_TESTRUNUID
+
+The unique id of the test run.
 
 Accessing ``sys.argv`` from the controller node in workers
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -227,47 +233,38 @@ where executing a high-scope fixture exactly once is important.
 Creating one log file for each worker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-To create one log file for each worker with ``pytest-xdist``, add
+To create one log file for each worker with ``pytest-xdist``, you can leverage :envvar:`PYTEST_XDIST_WORKER`
 an option to ``pytest.ini`` for the file base name. Then, in ``conftest.py``,
 register it with ``pytest_addoption(parser)`` and use ``pytest_configure(config)``
 to rename it with the worker id.
 
 Example:
 
-.. code-block:: python
+.. code-block:: ini
 
-    # content of pytest.ini
     [pytest]
     log_file_format = %(asctime)s %(name)s %(levelname)s %(message)s
     log_file_level = INFO
-    worker_log_file = tests_%w.log
+    worker_log_file = tests_{worker_id}.log
 
 
 .. code-block:: python
 
     # content of conftest.py
     def pytest_addoption(parser):
-        log_help_text = 'Similar to log_file, but %w will be replaced with a worker identifier.'
-        parser.addini('worker_log_file', help=log_help_text)
+        parser.addini('worker_log_file', help='Similar to log_file, but %w will be replaced with a worker identifier.')
 
 
     def pytest_configure(config):
-        configure_logger(config)
-
-
-    def configure_logger(config):
-        if xdist_is_enabled():
+        worker_id = os.environ.get('PYTEST_XDIST_WORKER')
+        if worker_id is not None:
             log_file = config.getini('worker_log_file')
             logging.basicConfig(
                 format=config.getini('log_file_format'),
-                filename=log_file.replace('%w', os.environ.get('PYTEST_XDIST_WORKER')),
+                filename=log_file.format(worker_id=worker_id),
                 level=config.getini('log_file_level')
             )
 
 
-    def xdist_is_enabled():
-        return os.environ.get('PYTEST_XDIST_WORKER') is not None
-
-
-If running tests with ``-n3``, for example, three files would be created and named
-as ``tests_gw0.log``, ``tests_gw1.log`` and ``tests_gw2.log``.
+When running the tests with ``-n3``, for example, three files will be created in the current directory:
+``tests_gw0.log``, ``tests_gw1.log`` and ``tests_gw2.log``.
