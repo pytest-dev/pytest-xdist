@@ -37,36 +37,11 @@ well, under the ``worker_id`` attribute.
 
 Since version 2.0, the following functions are also available in the ``xdist`` module:
 
-.. code-block:: python
 
-    def is_xdist_worker(request_or_session) -> bool:
-        """Return `True` if this is an xdist worker, `False` otherwise
-
-        :param request_or_session: the `pytest` `request` or `session` object
-        """
-
-     def is_xdist_controller(request_or_session) -> bool:
-        """Return `True` if this is the xdist controller, `False` otherwise
-
-        Note: this method also returns `False` when distribution has not been
-        activated at all.
-
-        :param request_or_session: the `pytest` `request` or `session` object
-        """
-
-    def is_xdist_master(request_or_session) -> bool:
-        """Deprecated alias for is_xdist_controller."""
-
-    def get_xdist_worker_id(request_or_session) -> str:
-        """Return the id of the current worker ('gw0', 'gw1', etc) or 'master'
-        if running on the controller node.
-
-        If not distributing tests (for example passing `-n0` or not passing `-n` at all)
-        also return 'master'.
-
-        :param request_or_session: the `pytest` `request` or `session` object
-        """
-
+.. autofunction:: xdist.is_xdist_worker
+.. autofunction:: xdist.is_xdist_controller
+.. autofunction:: xdist.is_xdist_master
+.. autofunction:: xdist.get_xdist_worker_id
 
 Identifying workers from the system environment
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -102,6 +77,7 @@ wanted to create a separate database for each test run:
     import pytest
     from posix_ipc import Semaphore, O_CREAT
 
+
     @pytest.fixture(scope="session", autouse=True)
     def create_unique_database(testrun_uid):
         """ create a unique database for this particular test run """
@@ -110,6 +86,7 @@ wanted to create a separate database for each test run:
         with Semaphore(f"/{testrun_uid}-lock", flags=O_CREAT, initial_value=1):
             if not database_exists(database_url):
                 create_database(database_url)
+
 
     @pytest.fixture()
     def db(testrun_uid):
@@ -252,17 +229,20 @@ Example:
 
     # content of conftest.py
     def pytest_addoption(parser):
-        parser.addini('worker_log_file', help='Similar to log_file, but %w will be replaced with a worker identifier.')
+        parser.addini(
+            "worker_log_file",
+            help="Similar to log_file, but %w will be replaced with a worker identifier.",
+        )
 
 
     def pytest_configure(config):
-        worker_id = os.environ.get('PYTEST_XDIST_WORKER')
+        worker_id = os.environ.get("PYTEST_XDIST_WORKER")
         if worker_id is not None:
-            log_file = config.getini('worker_log_file')
+            log_file = config.getini("worker_log_file")
             logging.basicConfig(
-                format=config.getini('log_file_format'),
+                format=config.getini("log_file_format"),
                 filename=log_file.format(worker_id=worker_id),
-                level=config.getini('log_file_level')
+                level=config.getini("log_file_level"),
             )
 
 
