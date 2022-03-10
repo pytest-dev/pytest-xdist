@@ -45,6 +45,7 @@ The test distribution algorithm is configured with the ``--dist`` command-line o
       def test1():
           pass
 
+
       class TestA:
           @pytest.mark.xdist_group("group1")
           def test2():

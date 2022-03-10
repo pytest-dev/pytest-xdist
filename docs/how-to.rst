@@ -24,45 +24,24 @@ When ``xdist`` is disabled (running with ``-n0`` for example), then
 Worker processes also have the following environment variables
 defined:
 
-* ``PYTEST_XDIST_WORKER``: the name of the worker, e.g., ``"gw2"``.
-* ``PYTEST_XDIST_WORKER_COUNT``: the total number of workers in this session,
-  e.g., ``"4"`` when ``-n 4`` is given in the command-line.
+.. envvar:: PYTEST_XDIST_WORKER
+
+The name of the worker, e.g., ``"gw2"``.
+
+.. envvar:: PYTEST_XDIST_WORKER_COUNT
+
+The total number of workers in this session, e.g., ``"4"`` when ``-n 4`` is given in the command-line.
 
 The information about the worker_id in a test is stored in the ``TestReport`` as
 well, under the ``worker_id`` attribute.
 
 Since version 2.0, the following functions are also available in the ``xdist`` module:
 
-.. code-block:: python
 
-    def is_xdist_worker(request_or_session) -> bool:
-        """Return `True` if this is an xdist worker, `False` otherwise
-
-        :param request_or_session: the `pytest` `request` or `session` object
-        """
-
-     def is_xdist_controller(request_or_session) -> bool:
-        """Return `True` if this is the xdist controller, `False` otherwise
-
-        Note: this method also returns `False` when distribution has not been
-        activated at all.
-
-        :param request_or_session: the `pytest` `request` or `session` object
-        """
-
-    def is_xdist_master(request_or_session) -> bool:
-        """Deprecated alias for is_xdist_controller."""
-
-    def get_xdist_worker_id(request_or_session) -> str:
-        """Return the id of the current worker ('gw0', 'gw1', etc) or 'master'
-        if running on the controller node.
-
-        If not distributing tests (for example passing `-n0` or not passing `-n` at all)
-        also return 'master'.
-
-        :param request_or_session: the `pytest` `request` or `session` object
-        """
-
+.. autofunction:: xdist.is_xdist_worker
+.. autofunction:: xdist.is_xdist_controller
+.. autofunction:: xdist.is_xdist_master
+.. autofunction:: xdist.get_xdist_worker_id
 
 Identifying workers from the system environment
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -98,6 +77,7 @@ wanted to create a separate database for each test run:
     import pytest
     from posix_ipc import Semaphore, O_CREAT
 
+
     @pytest.fixture(scope="session", autouse=True)
     def create_unique_database(testrun_uid):
         """ create a unique database for this particular test run """
@@ -106,6 +86,7 @@ wanted to create a separate database for each test run:
         with Semaphore(f"/{testrun_uid}-lock", flags=O_CREAT, initial_value=1):
             if not database_exists(database_url):
                 create_database(database_url)
+
 
     @pytest.fixture()
     def db(testrun_uid):
@@ -116,7 +97,9 @@ wanted to create a separate database for each test run:
 
 Additionally, during a test run, the following environment variable is defined:
 
-* ``PYTEST_XDIST_TESTRUNUID``: the unique id of the test run.
+.. envvar:: PYTEST_XDIST_TESTRUNUID
+
+The unique id of the test run.
 
 Accessing ``sys.argv`` from the controller node in workers
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -222,3 +205,46 @@ initializing a database service and populating initial tables.
 
 This technique might not work for every case, but should be a starting point for many situations
 where executing a high-scope fixture exactly once is important.
+
+
+Creating one log file for each worker
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+To create one log file for each worker with ``pytest-xdist``, you can leverage :envvar:`PYTEST_XDIST_WORKER`
+an option to ``pytest.ini`` for the file base name. Then, in ``conftest.py``,
+register it with ``pytest_addoption(parser)`` and use ``pytest_configure(config)``
+to rename it with the worker id.
+
+Example:
+
+.. code-block:: ini
+
+    [pytest]
+    log_file_format = %(asctime)s %(name)s %(levelname)s %(message)s
+    log_file_level = INFO
+    worker_log_file = tests_{worker_id}.log
+
+
+.. code-block:: python
+
+    # content of conftest.py
+    def pytest_addoption(parser):
+        parser.addini(
+            "worker_log_file",
+            help="Similar to log_file, but %w will be replaced with a worker identifier.",
+        )
+
+
+    def pytest_configure(config):
+        worker_id = os.environ.get("PYTEST_XDIST_WORKER")
+        if worker_id is not None:
+            log_file = config.getini("worker_log_file")
+            logging.basicConfig(
+                format=config.getini("log_file_format"),
+                filename=log_file.format(worker_id=worker_id),
+                level=config.getini("log_file_level"),
+            )
+
+
+When running the tests with ``-n3``, for example, three files will be created in the current directory:
+``tests_gw0.log``, ``tests_gw1.log`` and ``tests_gw2.log``.
