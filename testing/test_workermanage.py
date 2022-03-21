@@ -335,12 +335,18 @@ class MyWarning(UserWarning):
     pass
 
 
-@pytest.mark.parametrize("w_cls", [
-    UserWarning,
-    MyWarning,
-    "Imported",
-    pytest.param("Nested", marks=pytest.mark.xfail(reason="Nested warning classes are not supported.")),
-])
+@pytest.mark.parametrize(
+    "w_cls",
+    [
+        UserWarning,
+        MyWarning,
+        "Imported",
+        pytest.param(
+            "Nested",
+            marks=pytest.mark.xfail(reason="Nested warning classes are not supported."),
+        ),
+    ],
+)
 def test_unserialize_warning_msg(w_cls):
     """Test that warning serialization process works well"""
 
@@ -354,6 +360,7 @@ def test_unserialize_warning_msg(w_cls):
             # dynamic creation
             class MyWarning2(UserWarning):
                 pass
+
             warnings.warn("hello", MyWarning2)
 
     # Unpack
