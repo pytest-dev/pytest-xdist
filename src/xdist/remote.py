@@ -6,15 +6,16 @@
     needs not to be installed in remote environments.
 """
 
-import sys
 import os
+import sys
 import time
 
 import py
 import pytest
+from _pytest.config import _prepareconfig, Config
 from execnet.gateway_base import dumps, DumpError
 
-from _pytest.config import _prepareconfig, Config
+from xdist.plugin import shared_key
 
 try:
     from setproctitle import setproctitle
@@ -64,6 +65,9 @@ class WorkerInteractor:
     def pytest_sessionfinish(self, exitstatus):
         # in pytest 5.0+, exitstatus is an IntEnum object
         self.config.workeroutput["exitstatus"] = int(exitstatus)
+        shared = self.config.stash.get(shared_key, None)
+        if shared:
+            self.config.workeroutput["shared"] = shared
         yield
         self.sendevent("workerfinished", workeroutput=self.config.workeroutput)
 

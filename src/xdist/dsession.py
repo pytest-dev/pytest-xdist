@@ -1,7 +1,9 @@
+from queue import Empty, Queue
+
 import py
 import pytest
 
-from xdist.workermanage import NodeManager
+from xdist.remote import shared_key
 from xdist.scheduler import (
     EachScheduling,
     LoadScheduling,
@@ -9,9 +11,7 @@ from xdist.scheduler import (
     LoadFileScheduling,
     LoadGroupScheduling,
 )
-
-
-from queue import Empty, Queue
+from xdist.workermanage import NodeManager
 
 
 class Interrupted(KeyboardInterrupt):
@@ -174,6 +174,13 @@ class DSession:
             self.shouldstop = "{} received keyboard-interrupt".format(node)
             self.worker_errordown(node, "keyboard-interrupt")
             return
+        if "shared" in node.workeroutput:
+            shared = self.config.stash.setdefault(shared_key, {})
+            for key, value in node.workeroutput["shared"].items():
+                if key in shared:
+                    shared[key].append(value)
+                else:
+                    shared[key] = [value]
         if node in self.sched.nodes:
             crashitem = self.sched.remove_node(node)
             assert not crashitem, (crashitem, node)
