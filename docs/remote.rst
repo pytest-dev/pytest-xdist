@@ -10,7 +10,7 @@ tests that you can successfully run locally. And you
 have a ssh-reachable machine ``myhost``.  Then
 you can ad-hoc distribute your tests by typing::
 
-    pytest -d --tx ssh=myhostpopen --rsyncdir mypkg mypkg
+    pytest -d --tx ssh=myhostpopen --rsyncdir mypkg
 
 This will synchronize your :code:`mypkg` package directory
 to a remote ssh account and then locally collect tests
@@ -49,7 +49,7 @@ It will tell you that it starts listening on the default
 port.  You can now on your home machine specify this
 new socket host with something like this::
 
-    pytest -d --tx socket=192.168.1.102:8888 --rsyncdir mypkg mypkg
+    pytest -d --tx socket=192.168.1.102:8888 --rsyncdir mypkg
 
 
 
