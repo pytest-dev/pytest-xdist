@@ -10,7 +10,7 @@ tests that you can successfully run locally. And you
 have a ssh-reachable machine ``myhost``.  Then
 you can ad-hoc distribute your tests by typing::
 
-    pytest -d  --rsyncdir mypkg --tx ssh=myhostpopen mypkg/tests/unit/test_sometihng.py
+    pytest -d  --rsyncdir mypkg --tx ssh=myhostpopen mypkg/tests/unit/test_something.py
 
 This will synchronize your :code:`mypkg` package directory
 to a remote ssh account and then locally collect tests
