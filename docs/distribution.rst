@@ -18,7 +18,7 @@ To specify a different meaning for ``-n auto`` for your tests,
 you can implement the ``pytest_xdist_auto_num_workers``
 `pytest hook <https://docs.pytest.org/en/latest/how-to/writing_plugins.html>`__
 (a function named ``pytest_xdist_auto_num_workers`` in e.g. ``conftest.py``)
-that returns the number of workers ``-n auto``.
+that returns the number of processes to use.
 
 
 Parallelization can be configured further with these options:
