@@ -1,10 +1,20 @@
 from contextlib import suppress
 from pathlib import Path
+import sys
+import os
 
 import execnet
 from xdist.workermanage import NodeManager
 
 import pytest
+
+
+@pytest.fixture
+def monkeypatch_3_cpus(monkeypatch: pytest.MonkeyPatch):
+    """Make pytest-xdist believe the system has 3 CPUs"""
+    monkeypatch.setitem(sys.modules, "psutil", None)  # block import
+    monkeypatch.delattr(os, "sched_getaffinity", raising=False)
+    monkeypatch.setattr(os, "cpu_count", lambda: 3)
 
 
 def test_dist_incompatibility_messages(pytester: pytest.Pytester) -> None:
@@ -41,7 +51,6 @@ def test_dist_options(pytester: pytest.Pytester) -> None:
 def test_auto_detect_cpus(
     pytester: pytest.Pytester, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    import os
     from xdist.plugin import pytest_cmdline_main as check_options
 
     with suppress(ImportError):
@@ -102,6 +111,20 @@ def test_auto_detect_cpus_psutil(
     assert config.getoption("numprocesses") == 84
 
 
+def test_auto_detect_cpus_os(
+    pytester: pytest.Pytester, monkeypatch: pytest.MonkeyPatch, monkeypatch_3_cpus
+) -> None:
+    from xdist.plugin import pytest_cmdline_main as check_options
+
+    config = pytester.parseconfigure("-nauto")
+    check_options(config)
+    assert config.getoption("numprocesses") == 3
+
+    config = pytester.parseconfigure("-nlogical")
+    check_options(config)
+    assert config.getoption("numprocesses") == 3
+
+
 def test_hook_auto_num_workers(
     pytester: pytest.Pytester, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -120,6 +143,105 @@ def test_hook_auto_num_workers(
     config = pytester.parseconfigure("-nlogical")
     check_options(config)
     assert config.getoption("numprocesses") == 42
+
+
+def test_hook_auto_num_workers_arg(
+    pytester: pytest.Pytester, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # config.option.numprocesses is a pytest feature,
+    # but we document it so let's test it.
+    from xdist.plugin import pytest_cmdline_main as check_options
+
+    pytester.makeconftest(
+        """
+        def pytest_xdist_auto_num_workers(config):
+            if config.option.numprocesses == 'auto':
+                return 42
+            if config.option.numprocesses == 'logical':
+                return 8
+    """
+    )
+    config = pytester.parseconfigure("-nauto")
+    check_options(config)
+    assert config.getoption("numprocesses") == 42
+
+    config = pytester.parseconfigure("-nlogical")
+    check_options(config)
+    assert config.getoption("numprocesses") == 8
+
+
+def test_hook_auto_num_workers_none(
+    pytester: pytest.Pytester, monkeypatch: pytest.MonkeyPatch, monkeypatch_3_cpus
+) -> None:
+    # Returning None from a hook to skip it is pytest behavior,
+    # but we document it so let's test it.
+    from xdist.plugin import pytest_cmdline_main as check_options
+
+    pytester.makeconftest(
+        """
+        def pytest_xdist_auto_num_workers():
+            return None
+    """
+    )
+    config = pytester.parseconfigure("-nauto")
+    check_options(config)
+    assert config.getoption("numprocesses") == 3
+
+    monkeypatch.setenv("PYTEST_XDIST_AUTO_NUM_WORKERS", "5")
+
+    config = pytester.parseconfigure("-nauto")
+    check_options(config)
+    assert config.getoption("numprocesses") == 5
+
+
+def test_envvar_auto_num_workers(
+    pytester: pytest.Pytester, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from xdist.plugin import pytest_cmdline_main as check_options
+
+    monkeypatch.setenv("PYTEST_XDIST_AUTO_NUM_WORKERS", "7")
+
+    config = pytester.parseconfigure("-nauto")
+    check_options(config)
+    assert config.getoption("numprocesses") == 7
+
+    config = pytester.parseconfigure("-nlogical")
+    check_options(config)
+    assert config.getoption("numprocesses") == 7
+
+
+def test_envvar_auto_num_workers_warn(
+    pytester: pytest.Pytester, monkeypatch: pytest.MonkeyPatch, monkeypatch_3_cpus
+) -> None:
+    from xdist.plugin import pytest_cmdline_main as check_options
+
+    monkeypatch.setenv("PYTEST_XDIST_AUTO_NUM_WORKERS", "fourscore")
+
+    config = pytester.parseconfigure("-nauto")
+    with pytest.warns(UserWarning):
+        check_options(config)
+    assert config.getoption("numprocesses") == 3
+
+
+def test_auto_num_workers_hook_overrides_envvar(
+    pytester: pytest.Pytester, monkeypatch: pytest.MonkeyPatch, monkeypatch_3_cpus
+) -> None:
+    from xdist.plugin import pytest_cmdline_main as check_options
+
+    monkeypatch.setenv("PYTEST_XDIST_AUTO_NUM_WORKERS", "987")
+    pytester.makeconftest(
+        """
+        def pytest_xdist_auto_num_workers():
+            return 2
+    """
+    )
+    config = pytester.parseconfigure("-nauto")
+    check_options(config)
+    assert config.getoption("numprocesses") == 2
+
+    config = pytester.parseconfigure("-nauto")
+    check_options(config)
+    assert config.getoption("numprocesses") == 2
 
 
 def test_dsession_with_collect_only(pytester: pytest.Pytester) -> None:

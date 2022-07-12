@@ -1,6 +1,7 @@
 import os
 import uuid
 import sys
+import warnings
 
 import pytest
 
@@ -12,6 +13,13 @@ _sys_path = list(sys.path)  # freeze a copy of sys.path at interpreter startup
 
 @pytest.hookimpl
 def pytest_xdist_auto_num_workers(config):
+    env_var = os.environ.get("PYTEST_XDIST_AUTO_NUM_WORKERS")
+    if env_var:
+        try:
+            return int(env_var)
+        except ValueError:
+            warnings.warn("PYTEST_XDIST_AUTO_NUM_WORKERS is not a number. Ignoring it.")
+
     try:
         import psutil
     except ImportError:
