@@ -5,11 +5,23 @@ Running tests across multiple CPUs
 
 To send tests to multiple CPUs, use the ``-n`` (or ``--numprocesses``) option::
 
-    pytest -n 8
+    pytest -n auto
 
-Pass ``-n auto`` to use as many processes as your computer has CPU cores. This
-can lead to considerable speed ups, especially if your test suite takes a
+This can lead to considerable speed ups, especially if your test suite takes a
 noticeable amount of time.
+
+With ``-n auto``, pytest-xdist will use as many processes as your computer
+has CPU cores.
+Pass a number, e.g. ``-n 8``, to specify the number of processes explicitly.
+
+To specify a different meaning for ``-n auto`` for your tests,
+you can implement the ``pytest_xdist_auto_num_workers``
+`pytest hook <https://docs.pytest.org/en/latest/how-to/writing_plugins.html>`__
+(a function named ``pytest_xdist_auto_num_workers`` in e.g. ``conftest.py``)
+that returns the number of workers ``-n auto``.
+
+
+Parallelization can be configured further with these options:
 
 * ``--maxprocesses=maxprocesses``: limit the maximum number of workers to
   process the tests.

@@ -1,0 +1,1 @@
+Document the ``pytest_xdist_auto_num_workers`` hook.
