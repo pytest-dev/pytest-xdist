@@ -61,3 +61,30 @@ Features
     how-to
     how-it-works
     changelog
+
+Known limitations
+-----------------
+pytest-xdist have some limitation that may be supported in pytest but can't be supported in pytest-xdist
+
+Order and amount of test must be constant
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Is is not possible to have test that differs in order or their amount across threads/execution.
+
+This is especially true with `pytest.mark.parametrize`.
+When parametrize is used with set or other unordered iterable-like/generator
+pytest-xdist
+
+
+Example
+::
+    import pytest
+
+    @pytest.mark.parametrize("param",{"a","b"})
+    def test_pytest_parametrize_unordered(param):
+        pass
+
+will cause issue despite pytest supports it.
+
+Truncated pytest signature:
+::
+    argvalues: Iterable[Union[ParameterSet, Sequence[object], object]]
