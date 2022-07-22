@@ -60,4 +60,5 @@ Features
     crash
     how-to
     how-it-works
+    known-limitations
     changelog

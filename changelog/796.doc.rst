@@ -1,0 +1,1 @@
+Added known limitations section to documentation.

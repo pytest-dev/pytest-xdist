@@ -14,7 +14,8 @@ def report_collection_diff(from_collection, to_collection, from_id, to_id):
     error_message = (
         "Different tests were collected between {from_id} and {to_id}. "
         "The difference is:\n"
-        "{diff}"
+        "{diff}\n"
+        "To see why this happens see Known limitations in documentation"
     ).format(from_id=from_id, to_id=to_id, diff="\n".join(diff))
     msg = "\n".join(x.rstrip() for x in error_message.split("\n"))
     return msg

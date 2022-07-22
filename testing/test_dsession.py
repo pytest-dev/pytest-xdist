@@ -290,7 +290,8 @@ def test_report_collection_diff_different() -> None:
         " bbb\n"
         "+XXX\n"
         " ccc\n"
-        "-YYY"
+        "-YYY\n"
+        "To see why this happens see Known limitations in documentation"
     )
 
     msg = report_collection_diff(from_collection, to_collection, "1", "2")
