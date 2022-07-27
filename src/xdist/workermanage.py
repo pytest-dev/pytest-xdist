@@ -246,12 +246,11 @@ class WorkerController:
         spec = self.gateway.spec
         if hasattr(self.config, "invocation_params"):
             args = [str(x) for x in self.config.invocation_params.args or ()]
-            option_dict = {}
         else:
             args = self.config.args
-            option_dict = vars(self.config.option)
         if not spec.popen or spec.chdir:
             args = make_reltoroot(self.nodemanager.roots, args)
+        option_dict = vars(self.config.option)
         if spec.popen:
             name = "popen-%s" % self.gateway.id
             if hasattr(self.config, "_tmp_path_factory"):
