@@ -249,7 +249,7 @@ def remote_initconfig(option_dict, args):
     return Config.fromdictargs(option_dict, args)
 
 
-def setup_config(config, basetemp):
+def setup_config(config):
     config.option.loadgroup = config.getvalue("dist") == "loadgroup"
     config.option.looponfail = False
     config.option.usepdb = False
@@ -257,7 +257,7 @@ def setup_config(config, basetemp):
     config.option.distload = False
     config.option.numprocesses = None
     config.option.maxprocesses = None
-    config.option.basetemp = basetemp
+    
 
 
 if __name__ == "__channelexec__":
@@ -279,11 +279,12 @@ if __name__ == "__channelexec__":
 
     if hasattr(Config, "InvocationParams"):
         config = _prepareconfig(args, None)
+        config.option.__dict__.update(option_dict)
     else:
         config = remote_initconfig(option_dict, args)
         config.args = args
 
-    setup_config(config, option_dict.get("basetemp"))
+    setup_config(config)
     config._parser.prog = os.path.basename(workerinput["mainargv"][0])
     config.workerinput = workerinput  # type: ignore[attr-defined]
     config.workeroutput = {}  # type: ignore[attr-defined]
