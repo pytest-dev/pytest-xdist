@@ -5,11 +5,13 @@ from pathlib import Path
 
 import py
 import pytest
-
+from _pytest.stash import StashKey
 
 PYTEST_GTE_7 = hasattr(pytest, "version_tuple") and pytest.version_tuple >= (7, 0)  # type: ignore[attr-defined]
 
 _sys_path = list(sys.path)  # freeze a copy of sys.path at interpreter startup
+
+shared_key = StashKey["str"]()
 
 
 @pytest.hookimpl
@@ -302,3 +304,25 @@ def testrun_uid(request):
         return request.config.workerinput["testrunuid"]
     else:
         return uuid.uuid4().hex
+
+
+def get_shared_data(request_or_session):
+    """Return shared data and True, if it is ran from xdist_controller"""
+    if is_xdist_controller(request_or_session):
+        return request_or_session.config.stash.setdefault(shared_key, {}), True
+    return request_or_session.config.stash.setdefault(shared_key, {}), False
+
+
+@pytest.fixture(scope="session")
+def add_shared_data(request, worker_id):
+    """Adds data that will be collected from all workers and be accessible from master node in sessionfinish hook"""
+
+    def _add(key, value):
+        shared = request.config.stash.setdefault(shared_key, {})
+        if worker_id == "master":
+            # Worker shared_data are grouped together, master data aren't
+            shared[key] = [value]
+        else:
+            shared[key] = value
+
+    return _add

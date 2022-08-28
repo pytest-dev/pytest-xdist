@@ -1543,3 +1543,37 @@ class TestAPI:
         assert xdist.get_xdist_worker_id(fake_request) == "gw5"
         del fake_request.config.workerinput
         assert xdist.get_xdist_worker_id(fake_request) == "master"
+
+
+class TestSharedData:
+    def test_shared_data_two_nodes(self, pytester: pytest.Pytester) -> None:
+        pytester.makepyfile(
+            """
+            def test_shared1(add_shared_data):
+                add_shared_data("test","value2")
+                assert 1
+            def test_shared2(add_shared_data):
+                add_shared_data("test","value1")
+                assert 1
+
+        """
+        )
+        pytester.makeconftest(
+            """
+            from xdist.plugin import get_shared_data
+            def pytest_sessionfinish(session):
+                data, master = get_shared_data(session)
+                if master:
+                    with open('shared_data', 'w') as f:
+                        for key, values in data.items():
+                            for value in values:
+                                f.write('data[%s] = %s\\n' % (key,value))
+        """
+        )
+        result = pytester.inline_run("-x", "-v", "-n2")
+        assert result.ret == 0
+        collected_file = pytester.path / "shared_data"
+        assert collected_file.is_file()
+        collected_text = collected_file.read_text()
+        assert "data[test] = value2" in collected_text
+        assert "data[test] = value1" in collected_text
