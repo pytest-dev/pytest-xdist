@@ -1,0 +1,1 @@
+Cancel shutdown when a crashed worker is restarted.

@@ -225,6 +225,7 @@ class DSession:
             self.triggershutdown()
         else:
             self.report_line("\nreplacing crashed worker %s" % node.gateway.id)
+            self.shuttingdown = False
             self._clone_node(node)
         self._active_nodes.remove(node)
 
