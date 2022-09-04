@@ -94,3 +94,22 @@ class TestCrashItem:
         res = pytester.runpytest("-n2", "-s")
         res.stdout.fnmatch_lines_random(["*HOOK: pytest_handlecrashitem"])
         res.stdout.fnmatch_lines(["*3 passed*"])
+
+    def test_handlecrashitem_one(self, pytester: pytest.Pytester) -> None:
+        """Test pytest_handlecrashitem hook with just one test."""
+        pytester.makeconftest(
+            """
+            test_runs = 0
+
+            def pytest_handlecrashitem(crashitem, report, sched):
+                global test_runs
+
+                if test_runs == 0:
+                    sched.mark_test_pending(crashitem)
+                    test_runs = 1
+                else:
+                    print("HOOK: pytest_handlecrashitem")
+        """
+        )
+        res = pytester.runpytest("-n1", "-s", "-k", "test_b")
+        res.stdout.fnmatch_lines_random(["*HOOK: pytest_handlecrashitem"])
