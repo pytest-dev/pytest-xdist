@@ -113,3 +113,9 @@ class TestCrashItem:
         )
         res = pytester.runpytest("-n1", "-s", "-k", "test_b")
         res.stdout.fnmatch_lines_random(["*HOOK: pytest_handlecrashitem"])
+        res.stdout.fnmatch_lines(
+            [
+                "FAILED test_handlecrashitem_one.py::test_b",
+                "FAILED test_handlecrashitem_one.py::test_b",
+            ]
+        )
