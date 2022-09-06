@@ -1543,3 +1543,22 @@ class TestAPI:
         assert xdist.get_xdist_worker_id(fake_request) == "gw5"
         del fake_request.config.workerinput
         assert xdist.get_xdist_worker_id(fake_request) == "master"
+
+
+def test_collection_crash(testdir):
+    p1 = testdir.makepyfile(
+        """
+        assert 0
+    """
+    )
+    result = testdir.runpytest(p1, "-n1")
+    assert result.ret == 1
+    result.stdout.fnmatch_lines(
+        [
+            "gw0 I",
+            "gw0 [[]0[]]",
+            "*_ ERROR collecting test_collection_crash.py _*",
+            "E   assert 0",
+            "*= 1 error in *",
+        ]
+    )
