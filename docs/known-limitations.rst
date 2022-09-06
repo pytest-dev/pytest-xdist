@@ -50,3 +50,12 @@ Some solutions:
     @pytest.mark.parametrize("param", sorted({"a", "b"}))
     def test_pytest_parametrize_unordered(param):
         pass
+
+Output (stdout and stderr) from workers
+---------------------------------------
+
+The ``-s``/``--capture=no`` option is meant to disable pytest capture, so users can then see stdout and stderr output in the terminal from tests and application code in real time. 
+
+However this option does not work with ``pytest-xdist`` because `execnet <https://github.com/pytest-dev/execnet>`__ the underlying library used for communication between master and workers, does not support transferring stdout/stderr from workers.
+
+Currenlty there are no plans ot support this in ``pytest-xdist``.
