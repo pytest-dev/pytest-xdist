@@ -20,5 +20,3 @@ So restore the old behavior for typical cases where the number of tests is
 much greater than the number of workers (or, strictly speaking, when there
 are at least 2 tests for every node).
 
-In my test suite, where fixtures create Docker containers, this change reduces
-total run time by 10-15%.
