@@ -1,5 +1,5 @@
 from .loadscope import LoadScopeScheduling
-from py.log import Producer
+from xdist.remote import Producer
 
 
 class LoadFileScheduling(LoadScopeScheduling):
