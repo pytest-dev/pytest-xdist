@@ -602,11 +602,10 @@ def test_config_initialization(
 def test_crashing_item(pytester, when) -> None:
     """Ensure crashing item is correctly reported during all testing stages"""
     code = dict(setup="", call="", teardown="")
-    code[when] = "py.process.kill(os.getpid())"
+    code[when] = "os._exit(1)"
     p = pytester.makepyfile(
         """
         import os
-        import py
         import pytest
 
         @pytest.fixture

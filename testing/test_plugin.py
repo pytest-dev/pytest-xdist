@@ -122,22 +122,6 @@ def test_hook_auto_num_workers(
     assert config.getoption("numprocesses") == 42
 
 
-def test_boxed_with_collect_only(pytester: pytest.Pytester) -> None:
-    from xdist.plugin import pytest_cmdline_main as check_options
-
-    config = pytester.parseconfigure("-n1", "--boxed")
-    check_options(config)
-    assert config.option.forked
-
-    config = pytester.parseconfigure("-n1", "--collect-only")
-    check_options(config)
-    assert not config.option.forked
-
-    config = pytester.parseconfigure("-n1", "--boxed", "--collect-only")
-    check_options(config)
-    assert config.option.forked
-
-
 def test_dsession_with_collect_only(pytester: pytest.Pytester) -> None:
     from xdist.plugin import pytest_cmdline_main as check_options
     from xdist.plugin import pytest_configure as configure
