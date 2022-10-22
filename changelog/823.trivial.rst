@@ -1,0 +1,1 @@
+Remove usage of ``py._pydir`` as an rsync candidate.

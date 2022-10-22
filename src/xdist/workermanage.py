@@ -101,7 +101,7 @@ class NodeManager:
         pytestpath = get_dir(pytest.__file__)
         pytestdir = get_dir(_pytest.__file__)
         config = self.config
-        candidates = [py._pydir, pytestpath, pytestdir]
+        candidates = [pytestpath, pytestdir]
         candidates += config.option.rsyncdir
         rsyncroots = config.getini("rsyncdirs")
         if rsyncroots:
