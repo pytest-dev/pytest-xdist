@@ -740,7 +740,7 @@ def test_sub_plugins_disabled(pytester, plugin) -> None:
             pass
     """
     )
-    result = pytester.runpytest(p1, "-n1", "-p", "no:%s" % plugin)
+    result = pytester.runpytest(p1, "-n1", "-p", f"no:{plugin}")
     assert result.ret == 0
     result.stdout.fnmatch_lines("*1 passed*")
 

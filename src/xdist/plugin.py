@@ -1,7 +1,6 @@
 import os
 import uuid
 import sys
-from pathlib import Path
 
 import pytest
 
@@ -158,8 +157,7 @@ def pytest_addoption(parser):
     parser.addini(
         "looponfailroots",
         type="paths" if PYTEST_GTE_7 else "pathlist",
-        help="directories to check for changes",
-        default=[Path.cwd()],
+        help="directories to check for changes. Default: current directory.",
     )
 
 
@@ -190,6 +188,13 @@ def pytest_configure(config):
         tr = config.pluginmanager.getplugin("terminalreporter")
         if tr:
             tr.showfspath = False
+
+    if config.getoption("looponfail", None) or config.getini("looponfailroots"):
+        warning = DeprecationWarning(
+            "The --looponfail command line argument and looponfailroots config variable are deprecated.\n"
+            "The loop-on-fail feature will be removed in pytest-xdist 4.0."
+        )
+        config.issue_config_time_warning(warning, 2)
 
     config_line = (
         "xdist_group: specify group for tests should run in same session."
