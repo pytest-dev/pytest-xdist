@@ -1,1 +1,1 @@
-Replace internal usage of ``py.log``.
+Replace internal usage of ``py.log`` with a custom solution (but with the same interface).
