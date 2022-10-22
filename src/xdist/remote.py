@@ -9,8 +9,8 @@
 import sys
 import os
 import time
+from typing import Any
 
-import py
 import pytest
 from execnet.gateway_base import dumps, DumpError
 
@@ -22,6 +22,29 @@ except ImportError:
 
     def setproctitle(title):
         pass
+
+
+class Producer:
+    """
+    Simplified implementation of the same interface as py.log, for backward compatibility
+    since we dropped the dependency on pylib.
+    Note: this is defined here because this module can't depend on xdist, so we need 
+    to have the other way around.    
+    """
+
+    def __init__(self, name: str, *, enabled: bool = True):
+        self.name = name
+        self.enabled = enabled
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}({self.name!r}, enabled={self.enabled})"
+
+    def __call__(self, *a: Any, **k: Any) -> None:
+        if self.enabled:
+            print(f"[{self.name}]", *a, **k, file=sys.stderr)
+
+    def __getattr__(self, name: str) -> "Producer":
+        return type(self)(name, enabled=self.enabled)
 
 
 def worker_title(title):
@@ -37,9 +60,7 @@ class WorkerInteractor:
         self.config = config
         self.workerid = config.workerinput.get("workerid", "?")
         self.testrunuid = config.workerinput["testrunuid"]
-        self.log = py.log.Producer("worker-%s" % self.workerid)
-        if not config.option.debug:
-            py.log.setconsumer(self.log._keywords, None)
+        self.log = Producer(f"worker-{self.workerid}", enabled=config.option.debug)
         self.channel = channel
         config.pluginmanager.register(self)
 

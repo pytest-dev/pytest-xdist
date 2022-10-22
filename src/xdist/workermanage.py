@@ -11,6 +11,7 @@ import pytest
 import execnet
 
 import xdist.remote
+from xdist.remote import Producer
 from xdist.plugin import _sys_path
 
 
@@ -246,9 +247,7 @@ class WorkerController:
         }
         self._down = False
         self._shutdown_sent = False
-        self.log = py.log.Producer("workerctl-%s" % gateway.id)
-        if not self.config.option.debug:
-            py.log.setconsumer(self.log._keywords, None)
+        self.log = Producer(f"workerctl-{gateway.id}", enabled=config.option.debug)
 
     def __repr__(self):
         return "<{} {}>".format(self.__class__.__name__, self.gateway.id)

@@ -1,6 +1,6 @@
-import py
 import pytest
 
+from xdist.remote import Producer
 from xdist.workermanage import NodeManager
 from xdist.scheduler import (
     EachScheduling,
@@ -34,9 +34,7 @@ class DSession:
 
     def __init__(self, config):
         self.config = config
-        self.log = py.log.Producer("dsession")
-        if not config.option.debug:
-            py.log.setconsumer(self.log._keywords, None)
+        self.log = Producer("dsession", enabled=config.option.debug)
         self.nodemanager = None
         self.sched = None
         self.shuttingdown = False

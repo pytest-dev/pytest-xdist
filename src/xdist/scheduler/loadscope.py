@@ -1,7 +1,7 @@
 from collections import OrderedDict
 
 from _pytest.runner import CollectReport
-from py.log import Producer
+from xdist.remote import Producer
 from xdist.report import report_collection_diff
 from xdist.workermanage import parse_spec_config
 
