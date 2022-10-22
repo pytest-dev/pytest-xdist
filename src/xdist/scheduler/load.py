@@ -248,13 +248,27 @@ class LoadScheduling:
         # Send a batch of tests to run. If we don't have at least two
         # tests per node, we have to send them all so that we can send
         # shutdown signals and get all nodes working.
-        initial_batch = max(len(self.pending) // 4, 2 * len(self.nodes))
+        if len(self.pending) < 2 * len(self.nodes):
+            # Distribute tests round-robin. Try to load all nodes if there are
+            # enough tests. The other branch tries sends at least 2 tests
+            # to each node - which is suboptimal when you have less than
+            # 2 * len(nodes) tests.
+            nodes = cycle(self.nodes)
+            for i in range(len(self.pending)):
+                self._send_tests(next(nodes), 1)
+        else:
+            # Send batches of consecutive tests. By default, pytest sorts tests
+            # in order for optimal single-threaded execution, minimizing the
+            # number of necessary fixture setup/teardown. Try to keep that
+            # optimal order for every worker.
 
-        # distribute tests round-robin up to the batch size
-        # (or until we run out)
-        nodes = cycle(self.nodes)
-        for i in range(initial_batch):
-            self._send_tests(next(nodes), 1)
+            # how many items per node do we have about?
+            items_per_node = len(self.collection) // len(self.node2pending)
+            # take a fraction of tests for initial distribution
+            node_chunksize = max(items_per_node // 4, 2)
+            # and initialize each node with a chunk of tests
+            for node in self.nodes:
+                self._send_tests(node, node_chunksize)
 
         if not self.pending:
             # initial distribution sent all tests, start node shutdown

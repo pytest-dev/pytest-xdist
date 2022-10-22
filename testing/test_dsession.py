@@ -115,18 +115,18 @@ class TestLoadScheduling:
         # assert not sched.tests_finished
         sent1 = node1.sent
         sent2 = node2.sent
-        assert sent1 == [0, 2]
-        assert sent2 == [1, 3]
+        assert sent1 == [0, 1]
+        assert sent2 == [2, 3]
         assert sched.pending == [4, 5]
         assert sched.node2pending[node1] == sent1
         assert sched.node2pending[node2] == sent2
         assert len(sched.pending) == 2
         sched.mark_test_complete(node1, 0)
-        assert node1.sent == [0, 2, 4]
+        assert node1.sent == [0, 1, 4]
         assert sched.pending == [5]
-        assert node2.sent == [1, 3]
-        sched.mark_test_complete(node1, 2)
-        assert node1.sent == [0, 2, 4, 5]
+        assert node2.sent == [2, 3]
+        sched.mark_test_complete(node1, 1)
+        assert node1.sent == [0, 1, 4, 5]
         assert not sched.pending
 
     def test_schedule_fewer_tests_than_nodes(self, pytester: pytest.Pytester) -> None:
