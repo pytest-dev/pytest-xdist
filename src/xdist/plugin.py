@@ -3,7 +3,6 @@ import uuid
 import sys
 from pathlib import Path
 
-import py
 import pytest
 
 
@@ -165,7 +164,7 @@ def pytest_addoption(parser):
         "looponfailroots",
         type="paths" if PYTEST_GTE_7 else "pathlist",
         help="directories to check for changes",
-        default=[Path.cwd() if PYTEST_GTE_7 else py.path.local()],
+        default=[Path.cwd()],
     )
 
 

@@ -6,11 +6,17 @@
     processes) otherwise changes to source code can crash
     the controlling process which should best never happen.
 """
-import py
+import os
+from pathlib import Path
+from typing import Dict, Sequence
+
 import pytest
 import sys
 import time
 import execnet
+from _pytest._io import TerminalWriter
+
+from xdist._path import visit_path
 
 
 @pytest.hookimpl
@@ -38,9 +44,9 @@ def pytest_cmdline_main(config):
         return 2  # looponfail only can get stop with ctrl-C anyway
 
 
-def looponfail_main(config):
+def looponfail_main(config: pytest.Config) -> None:
     remotecontrol = RemoteControl(config)
-    rootdirs = [py.path.local(root) for root in config.getini("looponfailroots")]
+    rootdirs = [Path(root) for root in config.getini("looponfailroots")]
     statrecorder = StatRecorder(rootdirs)
     try:
         while 1:
@@ -71,7 +77,7 @@ class RemoteControl:
 
     def setup(self, out=None):
         if out is None:
-            out = py.io.TerminalWriter()
+            out = TerminalWriter()
         if hasattr(self, "gateway"):
             raise ValueError("already have gateway %r" % self.gateway)
         self.trace("setting up worker session")
@@ -129,7 +135,7 @@ class RemoteControl:
 
 
 def repr_pytest_looponfailinfo(failreports, rootdirs):
-    tr = py.io.TerminalWriter()
+    tr = TerminalWriter()
     if failreports:
         tr.sep("#", "LOOPONFAILING", bold=True)
         for report in failreports:
@@ -225,16 +231,16 @@ class WorkerFailSession:
 
 
 class StatRecorder:
-    def __init__(self, rootdirlist):
+    def __init__(self, rootdirlist: Sequence[Path]) -> None:
         self.rootdirlist = rootdirlist
-        self.statcache = {}
+        self.statcache: Dict[Path, os.stat_result] = {}
         self.check()  # snapshot state
 
-    def fil(self, p):
-        return p.check(file=1, dotfile=0) and p.ext != ".pyc"
+    def fil(self, p: Path) -> bool:
+        return p.is_file() and not p.name.startswith(".") and p.suffix != ".pyc"
 
-    def rec(self, p):
-        return p.check(dotfile=0)
+    def rec(self, p: Path) -> bool:
+        return not p.name.startswith(".") and p.exists()
 
     def waitonchange(self, checkinterval=1.0):
         while 1:
@@ -243,34 +249,34 @@ class StatRecorder:
                 return
             time.sleep(checkinterval)
 
-    def check(self, removepycfiles=True):  # noqa, too complex
+    def check(self, removepycfiles: bool = True) -> bool:  # noqa, too complex
         changed = False
-        statcache = self.statcache
-        newstat = {}
+        newstat: Dict[Path, os.stat_result] = {}
         for rootdir in self.rootdirlist:
-            for path in rootdir.visit(self.fil, self.rec):
-                oldstat = statcache.pop(path, None)
+            for path in visit_path(rootdir, filter=self.fil, recurse=self.rec):
+                oldstat = self.statcache.pop(path, None)
                 try:
-                    newstat[path] = curstat = path.stat()
-                except py.error.ENOENT:
+                    curstat = path.stat()
+                except OSError:
                     if oldstat:
                         changed = True
                 else:
-                    if oldstat:
+                    newstat[path] = curstat
+                    if oldstat is not None:
                         if (
-                            oldstat.mtime != curstat.mtime
-                            or oldstat.size != curstat.size
+                            oldstat.st_mtime != curstat.st_mtime
+                            or oldstat.st_size != curstat.st_size
                         ):
                             changed = True
                             print("# MODIFIED", path)
-                            if removepycfiles and path.ext == ".py":
-                                pycfile = path + "c"
-                                if pycfile.check():
-                                    pycfile.remove()
+                            if removepycfiles and path.suffix == ".py":
+                                pycfile = path.with_suffix(".pyc")
+                                if pycfile.is_file():
+                                    os.unlink(pycfile)
 
                     else:
                         changed = True
-        if statcache:
+        if self.statcache:
             changed = True
         self.statcache = newstat
         return changed
