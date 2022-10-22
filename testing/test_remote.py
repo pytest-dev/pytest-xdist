@@ -1,5 +1,4 @@
 import pprint
-import py
 import pytest
 import sys
 import uuid
@@ -108,7 +107,7 @@ class TestWorkerInteractor:
         assert ev.name == "collectionstart"
         assert not ev.kwargs
         ev = worker.popevent("collectionfinish")
-        assert ev.kwargs["topdir"] == py.path.local(worker.pytester.path)
+        assert ev.kwargs["topdir"] == str(worker.pytester.path)
         ids = ev.kwargs["ids"]
         assert len(ids) == 1
         worker.sendcommand("runtests", indices=list(range(len(ids))))

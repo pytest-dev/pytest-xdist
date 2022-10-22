@@ -3,6 +3,8 @@ import os
 import re
 import sys
 import uuid
+from pathlib import Path
+from typing import List, Union, Sequence, Optional, Any, Tuple, Set
 
 import py
 import pytest
@@ -33,7 +35,7 @@ class NodeManager:
     EXIT_TIMEOUT = 10
     DEFAULT_IGNORES = [".*", "*.pyc", "*.pyo", "*~"]
 
-    def __init__(self, config, specs=None, defaultchdir="pyexecnetcache"):
+    def __init__(self, config, specs=None, defaultchdir="pyexecnetcache") -> None:
         self.config = config
         self.trace = self.config.trace.get("nodemanager")
         self.testrunuid = self.config.getoption("testrunuid")
@@ -52,7 +54,7 @@ class NodeManager:
             self.specs.append(spec)
         self.roots = self._getrsyncdirs()
         self.rsyncoptions = self._getrsyncoptions()
-        self._rsynced_specs = set()
+        self._rsynced_specs: Set[Tuple[Any, Any]] = set()
 
     def rsync_roots(self, gateway):
         """Rsync the set of roots to the node's gateway cwd."""
@@ -81,7 +83,7 @@ class NodeManager:
     def _getxspecs(self):
         return [execnet.XSpec(x) for x in parse_spec_config(self.config)]
 
-    def _getrsyncdirs(self):
+    def _getrsyncdirs(self) -> List[Path]:
         for spec in self.specs:
             if not spec.popen or spec.chdir:
                 break
@@ -108,8 +110,8 @@ class NodeManager:
             candidates.extend(rsyncroots)
         roots = []
         for root in candidates:
-            root = py.path.local(root).realpath()
-            if not root.check():
+            root = Path(root).resolve()
+            if not root.exists():
                 raise pytest.UsageError("rsyncdir doesn't exist: {!r}".format(root))
             if root not in roots:
                 roots.append(root)
@@ -160,18 +162,24 @@ class NodeManager:
 class HostRSync(execnet.RSync):
     """RSyncer that filters out common files"""
 
-    def __init__(self, sourcedir, *args, **kwargs):
-        self._synced = {}
-        ignores = kwargs.pop("ignores", None) or []
-        self._ignores = [
-            re.compile(fnmatch.translate(getattr(x, "strpath", x))) for x in ignores
-        ]
-        super().__init__(sourcedir=sourcedir, **kwargs)
+    PathLike = Union[str, "os.PathLike[str]"]
 
-    def filter(self, path):
-        path = py.path.local(path)
+    def __init__(
+        self,
+        sourcedir: PathLike,
+        *,
+        ignores: Optional[Sequence[PathLike]] = None,
+        **kwargs: object
+    ) -> None:
+        if ignores is None:
+            ignores = []
+        self._ignores = [re.compile(fnmatch.translate(os.fspath(x))) for x in ignores]
+        super().__init__(sourcedir=Path(sourcedir), **kwargs)
+
+    def filter(self, path: PathLike) -> bool:
+        path = Path(path)
         for cre in self._ignores:
-            if cre.match(path.basename) or cre.match(path.strpath):
+            if cre.match(path.name) or cre.match(str(path)):
                 return False
         else:
             return True
@@ -187,20 +195,28 @@ class HostRSync(execnet.RSync):
             print("{}:{} <= {}".format(gateway.spec, remotepath, path))
 
 
-def make_reltoroot(roots, args):
+def make_reltoroot(roots: Sequence[Path], args: List[str]) -> List[str]:
     # XXX introduce/use public API for splitting pytest args
     splitcode = "::"
     result = []
     for arg in args:
         parts = arg.split(splitcode)
-        fspath = py.path.local(parts[0])
-        if not fspath.exists():
+        fspath = Path(parts[0])
+        try:
+            exists = fspath.exists()
+        except OSError:
+            exists = False
+        if not exists:
             result.append(arg)
             continue
         for root in roots:
-            x = fspath.relto(root)
+            x: Optional[Path]
+            try:
+                x = fspath.relative_to(root)
+            except ValueError:
+                x = None
             if x or fspath == root:
-                parts[0] = root.basename + "/" + x
+                parts[0] = root.name + "/" + str(x)
                 break
         else:
             raise ValueError("arg {} not relative to an rsync root".format(arg))

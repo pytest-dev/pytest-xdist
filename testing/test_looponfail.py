@@ -1,4 +1,6 @@
-import py
+import unittest.mock
+from typing import List
+
 import pytest
 import shutil
 import textwrap
@@ -16,7 +18,7 @@ class TestStatRecorder:
         tmp = tmp_path
         hello = tmp / "hello.py"
         hello.touch()
-        sd = StatRecorder([py.path.local(tmp)])
+        sd = StatRecorder([tmp])
         changed = sd.check()
         assert not changed
 
@@ -56,15 +58,12 @@ class TestStatRecorder:
         tmp = tmp_path
         tmp.joinpath("dir").mkdir()
         tmp.joinpath("dir", "hello.py").touch()
-        sd = StatRecorder([py.path.local(tmp)])
-        assert not sd.fil(py.path.local(tmp / "dir"))
+        sd = StatRecorder([tmp])
+        assert not sd.fil(tmp / "dir")
 
-    def test_filechange_deletion_race(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_filechange_deletion_race(self, tmp_path: Path) -> None:
         tmp = tmp_path
-        pytmp = py.path.local(tmp)
-        sd = StatRecorder([pytmp])
+        sd = StatRecorder([tmp])
         changed = sd.check()
         assert not changed
 
@@ -76,16 +75,20 @@ class TestStatRecorder:
         p.unlink()
         # make check()'s visit() call return our just removed
         # path as if we were in a race condition
-        monkeypatch.setattr(pytmp, "visit", lambda *args: [py.path.local(p)])
-
-        changed = sd.check()
+        dirname = str(tmp)
+        dirnames: List[str] = []
+        filenames = [str(p)]
+        with unittest.mock.patch(
+            "os.walk", return_value=[(dirname, dirnames, filenames)], autospec=True
+        ):
+            changed = sd.check()
         assert changed
 
     def test_pycremoval(self, tmp_path: Path) -> None:
         tmp = tmp_path
         hello = tmp / "hello.py"
         hello.touch()
-        sd = StatRecorder([py.path.local(tmp)])
+        sd = StatRecorder([tmp])
         changed = sd.check()
         assert not changed
 
@@ -100,7 +103,7 @@ class TestStatRecorder:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         tmp = tmp_path
-        sd = StatRecorder([py.path.local(tmp)])
+        sd = StatRecorder([tmp])
 
         ret_values = [True, False]
         monkeypatch.setattr(StatRecorder, "check", lambda self: ret_values.pop())

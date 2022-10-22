@@ -1,5 +1,4 @@
 import execnet
-import py
 import pytest
 import shutil
 import textwrap
@@ -7,6 +6,7 @@ import warnings
 from pathlib import Path
 from util import generate_warning
 from xdist import workermanage
+from xdist._path import visit_path
 from xdist.remote import serialize_warning_message
 from xdist.workermanage import HostRSync, NodeManager, unserialize_warning_message
 
@@ -157,12 +157,9 @@ class TestHRSync:
         source.joinpath("somedir").mkdir()
         source.joinpath("somedir", "editfile~").touch()
         syncer = HostRSync(source, ignores=NodeManager.DEFAULT_IGNORES)
-        files = list(py.path.local(source).visit(rec=syncer.filter, fil=syncer.filter))
-        assert len(files) == 3
-        basenames = [x.basename for x in files]
-        assert "dir" in basenames
-        assert "file.txt" in basenames
-        assert "somedir" in basenames
+        files = list(visit_path(source, recurse=syncer.filter, filter=syncer.filter))
+        names = {x.name for x in files}
+        assert names == {"dir", "file.txt", "somedir"}
 
     def test_hrsync_one_host(self, source: Path, dest: Path) -> None:
         gw = execnet.makegateway("popen//chdir=%s" % dest)
