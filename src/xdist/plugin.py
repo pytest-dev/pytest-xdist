@@ -135,11 +135,6 @@ def pytest_addoption(parser):
         help="add expression for ignores when rsyncing to remote tx nodes.",
     )
     group.addoption(
-        "--boxed",
-        action="store_true",
-        help="backward compatibility alias for pytest-forked --forked",
-    )
-    group.addoption(
         "--testrunuid",
         action="store",
         help=(
@@ -195,14 +190,6 @@ def pytest_configure(config):
         tr = config.pluginmanager.getplugin("terminalreporter")
         if tr:
             tr.showfspath = False
-    if config.getoption("boxed"):
-        warning = DeprecationWarning(
-            "The --boxed command line argument is deprecated. "
-            "Install pytest-forked and use --forked instead. "
-            "pytest-xdist 3.0.0 will remove the --boxed argument and pytest-forked dependency."
-        )
-        config.issue_config_time_warning(warning, 2)
-        config.option.forked = True
 
     config_line = (
         "xdist_group: specify group for tests should run in same session."

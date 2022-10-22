@@ -6,7 +6,6 @@ import uuid
 from pathlib import Path
 from typing import List, Union, Sequence, Optional, Any, Tuple, Set
 
-import py
 import pytest
 import execnet
 

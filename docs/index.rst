@@ -55,7 +55,6 @@ Features
 
     distribution
     subprocess
-    boxed
     remote
     crash
     how-to

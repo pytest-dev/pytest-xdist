@@ -4,7 +4,7 @@ pytest-xdist 2.5.0 (2021-12-10)
 Deprecations and Removals
 -------------------------
 
-- `#468 <https://github.com/pytest-dev/pytest-xdist/issues/468>`_: The ``--boxed`` command line argument is deprecated. Install pytest-forked and use ``--forked`` instead. pytest-xdist 3.0.0 will remove the ``--boxed`` argument and pytest-forked dependency.
+- `#468 <https://github.com/pytest-dev/pytest-xdist/issues/468>`_: The ``--boxed`` command line argument is deprecated. Install `pytest-forked <https://pypi.org/project/pytest-forked>`__ and use ``--forked`` instead. pytest-xdist 3.0.0 will remove the ``--boxed`` argument and ``pytest-forked`` dependency.
 
 
 Features
