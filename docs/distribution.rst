@@ -12,13 +12,29 @@ noticeable amount of time.
 
 With ``-n auto``, pytest-xdist will use as many processes as your computer
 has CPU cores.
+
+Use ``-n logical`` to use the number of *logical* CPU cores rather than
+physical ones. This currently requires the ``psutils`` package to be installed;
+if it is not, pytest-xdist will fall back to ``-n auto`` behavior.
+
 Pass a number, e.g. ``-n 8``, to specify the number of processes explicitly.
 
-To specify a different meaning for ``-n auto`` for your tests,
-you can implement the ``pytest_xdist_auto_num_workers``
-`pytest hook <https://docs.pytest.org/en/latest/how-to/writing_plugins.html>`__
-(a function named ``pytest_xdist_auto_num_workers`` in e.g. ``conftest.py``)
-that returns the number of processes to use.
+To specify a different meaning for ``-n auto`` and ``-n logical`` for your
+tests, you can:
+
+* Set the environment variable ``PYTEST_XDIST_AUTO_NUM_WORKERS`` to the
+  desired number of processes.
+
+* Implement the ``pytest_xdist_auto_num_workers``
+  `pytest hook <https://docs.pytest.org/en/latest/how-to/writing_plugins.html>`__
+  (a ``pytest_xdist_auto_num_workers(config)`` function in e.g. ``conftest.py``)
+  that returns the number of processes to use.
+  The hook can use ``config.option.numprocesses`` to determine if the user
+  asked for ``"auto"`` or ``"logical"``, and it can return ``None`` to fall
+  back to the default.
+
+If both the hook and environment variable are specified, the hook takes
+priority.
 
 
 Parallelization can be configured further with these options:
