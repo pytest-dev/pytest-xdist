@@ -1,0 +1,3 @@
+The ``--looponfail`` command line argument and ``looponfailroots`` config variable are deprecated.
+
+The loop-on-fail feature will be removed in pytest-xdist 4.0.

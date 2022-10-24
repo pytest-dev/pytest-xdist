@@ -1,0 +1,3 @@
+The ``--rsyncdir`` command line argument and ``rsyncdirs`` config variable are deprecated.
+
+The rsync feature will be removed in pytest-xdist 4.0.
