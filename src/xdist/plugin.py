@@ -18,7 +18,7 @@ def pytest_xdist_auto_num_workers(config):
         try:
             return int(env_var)
         except ValueError:
-            warnings.warn("PYTEST_XDIST_AUTO_NUM_WORKERS is not a number. Ignoring it.")
+            warnings.warn("PYTEST_XDIST_AUTO_NUM_WORKERS is not a number: {env_var!r}. Ignoring it.")
 
     try:
         import psutil
