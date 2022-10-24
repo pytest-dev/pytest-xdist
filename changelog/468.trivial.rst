@@ -1,1 +1,0 @@
-The ``py`` dependency has been dropped.

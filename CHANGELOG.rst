@@ -1,3 +1,81 @@
+pytest-xdist 3.0.0 (2022-10-24)
+===============================
+
+Bug Fixes
+---------
+
+- `#813 <https://github.com/pytest-dev/pytest-xdist/issues/813>`_: Cancel shutdown when a crashed worker is restarted.
+
+
+Deprecations
+------------
+
+- `#825 <https://github.com/pytest-dev/pytest-xdist/issues/825>`_: The ``--rsyncdir`` command line argument and ``rsyncdirs`` config variable are deprecated.
+
+  The rsync feature will be removed in pytest-xdist 4.0.
+
+- `#826 <https://github.com/pytest-dev/pytest-xdist/issues/826>`_: The ``--looponfail`` command line argument and ``looponfailroots`` config variable are deprecated.
+
+  The loop-on-fail feature will be removed in pytest-xdist 4.0.
+
+
+Improved Documentation
+----------------------
+
+- `#791 <https://github.com/pytest-dev/pytest-xdist/issues/791>`_: Document the ``pytest_xdist_auto_num_workers`` hook.
+
+- `#796 <https://github.com/pytest-dev/pytest-xdist/issues/796>`_: Added known limitations section to documentation.
+
+- `#829 <https://github.com/pytest-dev/pytest-xdist/issues/829>`_: Document the ``-n logical`` option.
+
+
+Features
+--------
+
+- `#792 <https://github.com/pytest-dev/pytest-xdist/issues/792>`_: The environment variable ``PYTEST_XDIST_AUTO_NUM_WORKERS`` can now be used to
+  specify the default for ``-n auto`` and ``-n logical``.
+
+- `#812 <https://github.com/pytest-dev/pytest-xdist/issues/812>`_: Partially restore old initial batch distribution algorithm in ``LoadScheduling``.
+
+  pytest orders tests for optimal sequential execution - i. e. avoiding
+  unnecessary setup and teardown of fixtures. So executing tests in consecutive
+  chunks is important for optimal performance.
+
+  In v1.14, initial test distribution in ``LoadScheduling`` was changed to
+  round-robin, optimized for the corner case, when the number of tests is less
+  than ``2 * number of nodes``. At the same time, it became worse for all other
+  cases.
+
+  For example: if some tests use some "heavy" fixture, and these tests fit into
+  the initial batch, with round-robin distribution the fixture will be created
+  ``min(n_tests, n_workers)`` times, no matter how many other tests there are.
+
+  With the old algorithm (before v1.14), if there are enough tests not using
+  the fixture, the fixture was created only once.
+
+  So restore the old behavior for typical cases where the number of tests is
+  much greater than the number of workers (or, strictly speaking, when there
+  are at least 2 tests for every node).
+
+
+Removals
+--------
+
+- `#468 <https://github.com/pytest-dev/pytest-xdist/issues/468>`_: The ``--boxed`` command-line option has been removed. If you still need this functionality, install `pytest-forked <https://pypi.org/project/pytest-forked>`__ separately.
+
+
+Trivial Changes
+---------------
+
+- `#468 <https://github.com/pytest-dev/pytest-xdist/issues/468>`_: The ``py`` dependency has been dropped.
+
+- `#822 <https://github.com/pytest-dev/pytest-xdist/issues/822>`_: Replace internal usage of ``py.log`` with a custom solution (but with the same interface).
+
+- `#823 <https://github.com/pytest-dev/pytest-xdist/issues/823>`_: Remove usage of ``py._pydir`` as an rsync candidate.
+
+- `#824 <https://github.com/pytest-dev/pytest-xdist/issues/824>`_: Replace internal usages of ``py.path.local`` by ``pathlib.Path``.
+
+
 pytest-xdist 2.5.0 (2021-12-10)
 ===============================
 

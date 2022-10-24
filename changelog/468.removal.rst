@@ -1,1 +1,0 @@
-The ``--boxed`` command-line option has been removed. If you still need this functionality, install `pytest-forked <https://pypi.org/project/pytest-forked>`__ separately.
