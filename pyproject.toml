@@ -17,37 +17,23 @@ directory = "changelog/"
 title_format = "pytest-xdist {version} ({project_date})"
 template = "changelog/_template.rst"
 
-  [[tool.towncrier.type]]
-  directory = "removal"
-  name = "Removals"
-  showcontent = true
+[tool.towncrier.fragment.removal]
+name = "Removals"
 
-  [[tool.towncrier.type]]
-  directory = "deprecation"
-  name = "Deprecations"
-  showcontent = true
+[tool.towncrier.fragment.deprecation]
+name = "Deprecations"
 
-  [[tool.towncrier.type]]
-  directory = "feature"
-  name = "Features"
-  showcontent = true
+[tool.towncrier.fragment.feature]
+name = "Features"
 
-  [[tool.towncrier.type]]
-  directory = "bugfix"
-  name = "Bug Fixes"
-  showcontent = true
+[tool.towncrier.fragment.bugfix]
+name = "Bug Fixes"
 
-  [[tool.towncrier.type]]
-  directory = "vendor"
-  name = "Vendored Libraries"
-  showcontent = true
+[tool.towncrier.fragment.vendor]
+name = "Vendored Libraries"
 
-  [[tool.towncrier.type]]
-  directory = "doc"
-  name = "Improved Documentation"
-  showcontent = true
+[tool.towncrier.fragment.doc]
+name = "Improved Documentation"
 
-  [[tool.towncrier.type]]
-  directory = "trivial"
-  name = "Trivial Changes"
-  showcontent = true
+[tool.towncrier.fragment.trivial]
+name = "Trivial Changes"
