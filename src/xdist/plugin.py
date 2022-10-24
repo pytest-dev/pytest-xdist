@@ -204,6 +204,13 @@ def pytest_configure(config):
         )
         config.issue_config_time_warning(warning, 2)
 
+    if config.getoption("rsyncdir", None) or config.getini("rsyncdirs"):
+        warning = DeprecationWarning(
+            "The --rsyncdir command line argument and rsyncdirs config variable are deprecated.\n"
+            "The rsync feature will be removed in pytest-xdist 4.0."
+        )
+        config.issue_config_time_warning(warning, 2)
+
     config_line = (
         "xdist_group: specify group for tests should run in same session."
         "in relation to one another. " + "Provided by pytest-xdist."
