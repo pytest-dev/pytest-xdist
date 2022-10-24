@@ -44,7 +44,7 @@ def pytest_cmdline_main(config):
         return 2  # looponfail only can get stop with ctrl-C anyway
 
 
-def looponfail_main(config: pytest.Config) -> None:
+def looponfail_main(config: "pytest.Config") -> None:
     remotecontrol = RemoteControl(config)
     config_roots = config.getini("looponfailroots")
     if not config_roots:

@@ -34,7 +34,7 @@ Features
 * ``--looponfail``: run your tests repeatedly in a subprocess.  After each run
   pytest waits until a file in your project changes and then re-runs
   the previously failing tests.  This is repeated until all tests pass
-  after which again a full run is performed.
+  after which again a full run is performed (DEPRECATED).
 
 * :ref:`Multi-Platform` coverage: you can specify different Python interpreters
   or different platforms and run tests in parallel on all of them.
