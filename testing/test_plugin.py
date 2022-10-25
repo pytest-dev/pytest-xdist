@@ -12,7 +12,8 @@ import pytest
 @pytest.fixture
 def monkeypatch_3_cpus(monkeypatch: pytest.MonkeyPatch):
     """Make pytest-xdist believe the system has 3 CPUs"""
-    monkeypatch.setitem(sys.modules, "psutil", None)  # block import
+    # block import
+    monkeypatch.setitem(sys.modules, "psutil", None)  # type: ignore
     monkeypatch.delattr(os, "sched_getaffinity", raising=False)
     monkeypatch.setattr(os, "cpu_count", lambda: 3)
 
