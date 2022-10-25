@@ -28,8 +28,8 @@ class Producer:
     """
     Simplified implementation of the same interface as py.log, for backward compatibility
     since we dropped the dependency on pylib.
-    Note: this is defined here because this module can't depend on xdist, so we need 
-    to have the other way around.    
+    Note: this is defined here because this module can't depend on xdist, so we need
+    to have the other way around.
     """
 
     def __init__(self, name: str, *, enabled: bool = True):
