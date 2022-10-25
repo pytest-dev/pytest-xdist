@@ -19,4 +19,3 @@ the fixture, the fixture was created only once.
 So restore the old behavior for typical cases where the number of tests is
 much greater than the number of workers (or, strictly speaking, when there
 are at least 2 tests for every node).
-
