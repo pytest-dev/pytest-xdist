@@ -1,0 +1,1 @@
+Fixed failed deploy of ``3.0.0`` release.
