@@ -1,3 +1,12 @@
+pytest-xdist 3.0.1 (2022-10-25)
+===============================
+
+Trivial Changes
+---------------
+
+- `#830 <https://github.com/pytest-dev/pytest-xdist/issues/830>`_: Fixed failed deploy of ``3.0.0`` release.
+
+
 pytest-xdist 3.0.0 (2022-10-24)
 ===============================
 
