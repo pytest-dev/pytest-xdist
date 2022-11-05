@@ -169,7 +169,7 @@ class DSession:
         """
         self.config.hook.pytest_testnodedown(node=node, error=None)
         if node.workeroutput["exitstatus"] == 2:  # keyboard-interrupt
-            self.shouldstop = "{} received keyboard-interrupt".format(node)
+            self.shouldstop = f"{node} received keyboard-interrupt"
             self.worker_errordown(node, "keyboard-interrupt")
             return
         if node in self.sched.nodes:
@@ -230,7 +230,7 @@ class DSession:
     @pytest.hookimpl
     def pytest_terminal_summary(self, terminalreporter):
         if self.config.option.verbose >= 0 and self._summary_report:
-            terminalreporter.write_sep("=", "xdist: {}".format(self._summary_report))
+            terminalreporter.write_sep("=", f"xdist: {self._summary_report}")
 
     def worker_collectionfinish(self, node, ids):
         """worker has finished test collection.
@@ -345,7 +345,7 @@ class DSession:
         # XXX count no of failures and retry N times
         runner = self.config.pluginmanager.getplugin("runner")
         fspath = nodeid.split("::")[0]
-        msg = "worker {!r} crashed while running {!r}".format(worker.gateway.id, nodeid)
+        msg = f"worker {worker.gateway.id!r} crashed while running {nodeid!r}"
         rep = runner.TestReport(
             nodeid, (fspath, None, fspath), (), "failed", msg, "???"
         )
@@ -381,9 +381,7 @@ class TerminalDistReporter:
 
     def getstatus(self):
         if self.config.option.verbose >= 0:
-            parts = [
-                "{} {}".format(spec.id, self._status[spec.id]) for spec in self._specs
-            ]
+            parts = [f"{spec.id} {self._status[spec.id]}" for spec in self._specs]
             return " / ".join(parts)
         else:
             return "bringing up nodes..."
@@ -431,7 +429,7 @@ class TerminalDistReporter:
     def pytest_testnodedown(self, node, error):
         if not error:
             return
-        self.write_line("[{}] node down: {}".format(node.gateway.id, error))
+        self.write_line(f"[{node.gateway.id}] node down: {error}")
 
 
 def get_default_max_worker_restart(config):
