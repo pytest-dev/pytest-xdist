@@ -25,7 +25,7 @@ class EventCall:
         self.name, self.kwargs = eventcall
 
     def __str__(self):
-        return "<EventCall {}(**{})>".format(self.name, self.kwargs)
+        return f"<EventCall {self.name}(**{self.kwargs})>"
 
 
 class WorkerSetup:
@@ -60,7 +60,7 @@ class WorkerSetup:
             ev = EventCall(data)
             if name is None or ev.name == name:
                 return ev
-            print("skipping {}".format(ev))
+            print(f"skipping {ev}")
 
     def sendcommand(self, name, **kwargs):
         self.slp.sendcommand(name, **kwargs)

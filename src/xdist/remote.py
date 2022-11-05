@@ -149,7 +149,7 @@ class WorkerInteractor:
                     if len(mark.args) > 0
                     else mark.kwargs.get("name", "default")
                 )
-                item._nodeid = "{}@{}".format(item.nodeid, gname)
+                item._nodeid = f"{item.nodeid}@{gname}"
 
     @pytest.hookimpl
     def pytest_collection_finish(self, session):

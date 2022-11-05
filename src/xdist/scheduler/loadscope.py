@@ -361,12 +361,12 @@ class LoadScopeScheduling:
         extra_nodes = len(self.nodes) - len(self.workqueue)
 
         if extra_nodes > 0:
-            self.log("Shutting down {} nodes".format(extra_nodes))
+            self.log(f"Shutting down {extra_nodes} nodes")
 
             for _ in range(extra_nodes):
                 unused_node, assigned = self.assigned_work.popitem(last=True)
 
-                self.log("Shutting down unused node {}".format(unused_node))
+                self.log(f"Shutting down unused node {unused_node}")
                 unused_node.shutdown()
 
         # Assign initial workload
