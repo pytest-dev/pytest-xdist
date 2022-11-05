@@ -31,7 +31,7 @@ jobs:
           - tox_env: "py39-pytestlatest"
             python: "3.9"
           - tox_env: "py310-pytestlatest"
-            python: "3.10-dev"
+            python: "3.10"
           - tox_env: "py38-pytestmain"
             python: "3.8"
           - tox_env: "py38-psutil"
