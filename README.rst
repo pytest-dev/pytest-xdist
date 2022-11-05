@@ -13,7 +13,7 @@ pytest-xdist
     :alt: Python versions
     :target: https://pypi.python.org/pypi/pytest-xdist
 
-.. image:: https://github.com/pytest-dev/pytest-xdist/workflows/build/badge.svg
+.. image:: https://github.com/pytest-dev/pytest-xdist/workflows/test/badge.svg
     :target: https://github.com/pytest-dev/pytest-xdist/actions
 
 .. image:: https://img.shields.io/badge/code%20style-black-000000.svg
