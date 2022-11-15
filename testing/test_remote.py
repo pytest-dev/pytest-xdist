@@ -29,11 +29,10 @@ class EventCall:
 
 
 class WorkerSetup:
-    use_callback = False
-
     def __init__(self, request, pytester: pytest.Pytester) -> None:
         self.request = request
         self.pytester = pytester
+        self.use_callback = False
         self.events = Queue()  # type: ignore[var-annotated]
 
     def setup(self) -> None:
@@ -41,7 +40,7 @@ class WorkerSetup:
         # import os ; os.environ['EXECNET_DEBUG'] = "2"
         self.gateway = execnet.makegateway()
         self.config = config = self.pytester.parseconfigure()
-        putevent = self.use_callback and self.events.put or None
+        putevent = self.events.put if self.use_callback else None
 
         class DummyMananger:
             testrunuid = uuid.uuid4().hex
