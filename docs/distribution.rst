@@ -14,7 +14,7 @@ With ``-n auto``, pytest-xdist will use as many processes as your computer
 has CPU cores.
 
 Use ``-n logical`` to use the number of *logical* CPU cores rather than
-physical ones. This currently requires the ``psutils`` package to be installed;
+physical ones. This currently requires the ``psutil`` package to be installed;
 if it is not, pytest-xdist will fall back to ``-n auto`` behavior.
 
 Pass a number, e.g. ``-n 8``, to specify the number of processes explicitly.
