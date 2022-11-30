@@ -1561,3 +1561,21 @@ def test_collection_crash(testdir):
             "*= 1 error in *",
         ]
     )
+
+
+def test_dist_in_addopts(testdir):
+    """Users can set a default distribution in the configuration file (#789)."""
+    testdir.makepyfile(
+        """
+        def test():
+            pass
+        """
+    )
+    testdir.makeini(
+        """
+        [pytest]
+        addopts = --dist loadscope
+        """
+    )
+    result = testdir.runpytest()
+    assert result.ret == 0
