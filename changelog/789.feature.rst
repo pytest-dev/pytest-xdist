@@ -1,0 +1,6 @@
+Users can now set a default distribution mode in their configuration file:
+
+.. code-block:: ini
+
+    [pytest]
+    addopts = --dist loadscope

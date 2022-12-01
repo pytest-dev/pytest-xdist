@@ -190,7 +190,19 @@ def pytest_addhooks(pluginmanager):
 
 @pytest.hookimpl(trylast=True)
 def pytest_configure(config):
-    if config.getoption("dist") != "no" and not config.getvalue("collectonly"):
+    config_line = (
+        "xdist_group: specify group for tests should run in same session."
+        "in relation to one another. Provided by pytest-xdist."
+    )
+    config.addinivalue_line("markers", config_line)
+
+    # Skip this plugin entirely when only doing collection.
+    if config.getvalue("collectonly"):
+        return
+
+    # Create the distributed session in case we have a valid distribution
+    # mode and test environments.
+    if config.getoption("dist") != "no" and config.getoption("tx"):
         from xdist.dsession import DSession
 
         session = DSession(config)
@@ -199,6 +211,7 @@ def pytest_configure(config):
         if tr:
             tr.showfspath = False
 
+    # Deprecation warnings for deprecated command-line/configuration options.
     if config.getoption("looponfail", None) or config.getini("looponfailroots"):
         warning = DeprecationWarning(
             "The --looponfail command line argument and looponfailroots config variable are deprecated.\n"
@@ -212,12 +225,6 @@ def pytest_configure(config):
             "The rsync feature will be removed in pytest-xdist 4.0."
         )
         config.issue_config_time_warning(warning, 2)
-
-    config_line = (
-        "xdist_group: specify group for tests should run in same session."
-        "in relation to one another. " + "Provided by pytest-xdist."
-    )
-    config.addinivalue_line("markers", config_line)
 
 
 @pytest.hookimpl(tryfirst=True)
