@@ -1,3 +1,25 @@
+pytest-xdist 3.1.0 (2022-12-01)
+===============================
+
+Features
+--------
+
+- `#789 <https://github.com/pytest-dev/pytest-xdist/issues/789>`_: Users can now set a default distribution mode in their configuration file:
+
+  .. code-block:: ini
+
+      [pytest]
+      addopts = --dist loadscope
+
+- `#842 <https://github.com/pytest-dev/pytest-xdist/issues/842>`_: Python 3.11 is now officially supported.
+
+
+Removals
+--------
+
+- `#842 <https://github.com/pytest-dev/pytest-xdist/issues/842>`_: Python 3.6 is no longer supported.
+
+
 pytest-xdist 3.0.2 (2022-10-25)
 ===============================
 
