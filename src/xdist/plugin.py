@@ -153,6 +153,19 @@ def pytest_addoption(parser):
             "on every test run."
         ),
     )
+    group.addoption(
+        "--maxschedchunk",
+        action="store",
+        type=int,
+        help=(
+            "Maximum number of tests scheduled in one step. "
+            "Setting it to 1 will force pytest to send tests to workers one by "
+            "one - might be useful for a small number of slow tests. "
+            "Larger numbers will allow the scheduler to submit consecutive "
+            "chunks of tests to workers - allows reusing fixtures. "
+            "Unlimited if not set."
+        ),
+    )
 
     parser.addini(
         "rsyncdirs",

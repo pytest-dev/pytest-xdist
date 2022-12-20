@@ -129,6 +129,56 @@ class TestLoadScheduling:
         assert node1.sent == [0, 1, 4, 5]
         assert not sched.pending
 
+    def test_schedule_maxchunk_none(self, pytester: pytest.Pytester) -> None:
+        config = pytester.parseconfig("--tx=2*popen")
+        sched = LoadScheduling(config)
+        sched.add_node(MockNode())
+        sched.add_node(MockNode())
+        node1, node2 = sched.nodes
+        col = [f"test{i}" for i in range(16)]
+        sched.add_node_collection(node1, col)
+        sched.add_node_collection(node2, col)
+        sched.schedule()
+        assert node1.sent == [0, 1]
+        assert node2.sent == [2, 3]
+        assert sched.pending == list(range(4, 16))
+        assert sched.node2pending[node1] == node1.sent
+        assert sched.node2pending[node2] == node2.sent
+        sched.mark_test_complete(node1, 0)
+        assert node1.sent == [0, 1, 4, 5]
+        assert sched.pending == list(range(6, 16))
+        sched.mark_test_complete(node1, 1)
+        assert node1.sent == [0, 1, 4, 5]
+        assert sched.pending == list(range(6, 16))
+
+        for i in range(7, 16):
+            sched.mark_test_complete(node1, i - 3)
+            assert node1.sent == [0, 1] + list(range(4, i))
+            assert node2.sent == [2, 3]
+            assert sched.pending == list(range(i, 16))
+
+    def test_schedule_maxchunk_1(self, pytester: pytest.Pytester) -> None:
+        config = pytester.parseconfig("--tx=2*popen", "--maxschedchunk=1")
+        sched = LoadScheduling(config)
+        sched.add_node(MockNode())
+        sched.add_node(MockNode())
+        node1, node2 = sched.nodes
+        col = [f"test{i}" for i in range(16)]
+        sched.add_node_collection(node1, col)
+        sched.add_node_collection(node2, col)
+        sched.schedule()
+        assert node1.sent == [0, 1]
+        assert node2.sent == [2, 3]
+        assert sched.pending == list(range(4, 16))
+        assert sched.node2pending[node1] == node1.sent
+        assert sched.node2pending[node2] == node2.sent
+
+        for complete_index, first_pending in enumerate(range(5, 16)):
+            sched.mark_test_complete(node1, node1.sent[complete_index])
+            assert node1.sent == [0, 1] + list(range(4, first_pending))
+            assert node2.sent == [2, 3]
+            assert sched.pending == list(range(first_pending, 16))
+
     def test_schedule_fewer_tests_than_nodes(self, pytester: pytest.Pytester) -> None:
         config = pytester.parseconfig("--tx=2*popen")
         sched = LoadScheduling(config)
