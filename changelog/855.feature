@@ -1,2 +1,2 @@
-Users can now configure scheduling precision using --maxschedchunk command
+Users can now configure ``load`` scheduling precision using ``--maxschedchunk`` command
 line option.

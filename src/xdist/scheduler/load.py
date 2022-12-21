@@ -272,9 +272,10 @@ class LoadScheduling:
             items_per_node = len(self.collection) // len(self.node2pending)
             # take a fraction of tests for initial distribution
             node_chunksize = min(items_per_node // 4, self.maxschedchunk)
+            node_chunksize = max(node_chunksize, 2)
             # and initialize each node with a chunk of tests
             for node in self.nodes:
-                self._send_tests(node, max(node_chunksize, 2))
+                self._send_tests(node, node_chunksize)
 
         if not self.pending:
             # initial distribution sent all tests, start node shutdown

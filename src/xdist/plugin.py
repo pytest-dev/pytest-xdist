@@ -158,7 +158,7 @@ def pytest_addoption(parser):
         action="store",
         type=int,
         help=(
-            "Maximum number of tests scheduled in one step. "
+            "Maximum number of tests scheduled in one step for --dist=load. "
             "Setting it to 1 will force pytest to send tests to workers one by "
             "one - might be useful for a small number of slow tests. "
             "Larger numbers will allow the scheduler to submit consecutive "
