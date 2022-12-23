@@ -64,6 +64,7 @@ class LoadScheduling:
         else:
             self.log = log.loadsched
         self.config = config
+        self.maxschedchunk = self.config.getoption("maxschedchunk")
 
     @property
     def nodes(self):
@@ -185,7 +186,9 @@ class LoadScheduling:
                     # so let's rather wait with sending new items
                     return
                 num_send = items_per_node_max - len(node_pending)
-                self._send_tests(node, num_send)
+                # keep at least 2 tests pending even if --maxschedchunk=1
+                maxschedchunk = max(2 - len(node_pending), self.maxschedchunk)
+                self._send_tests(node, min(num_send, maxschedchunk))
         else:
             node.shutdown()
 
@@ -245,6 +248,9 @@ class LoadScheduling:
         if not self.collection:
             return
 
+        if self.maxschedchunk is None:
+            self.maxschedchunk = len(self.collection)
+
         # Send a batch of tests to run. If we don't have at least two
         # tests per node, we have to send them all so that we can send
         # shutdown signals and get all nodes working.
@@ -265,7 +271,8 @@ class LoadScheduling:
             # how many items per node do we have about?
             items_per_node = len(self.collection) // len(self.node2pending)
             # take a fraction of tests for initial distribution
-            node_chunksize = max(items_per_node // 4, 2)
+            node_chunksize = min(items_per_node // 4, self.maxschedchunk)
+            node_chunksize = max(node_chunksize, 2)
             # and initialize each node with a chunk of tests
             for node in self.nodes:
                 self._send_tests(node, node_chunksize)
