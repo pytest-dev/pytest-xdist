@@ -6,6 +6,7 @@
     needs not to be installed in remote environments.
 """
 
+import contextlib
 import sys
 import os
 import time
@@ -64,9 +65,12 @@ class WorkerInteractor:
         self.testrunuid = config.workerinput["testrunuid"]
         self.log = Producer(f"worker-{self.workerid}", enabled=config.option.debug)
         self.channel = channel
-        self.torun = channel.gateway.execmodel.queue.Queue()
+        self.torun = self._make_queue()
         self.nextitem_index = None
         config.pluginmanager.register(self)
+
+    def _make_queue(self):
+        return self.channel.gateway.execmodel.queue.Queue()
 
     def sendevent(self, name, **kwargs):
         self.log("sending", name, kwargs)
@@ -112,6 +116,26 @@ class WorkerInteractor:
                 self.torun.put(i)
         elif name == "shutdown":
             self.torun.put(self.SHUTDOWN_MARK)
+        elif name == "steal":
+            self.steal(kwargs["indices"])
+
+    def steal(self, indices):
+        indices = set(indices)
+        stolen = []
+
+        old_queue, self.torun = self.torun, self._make_queue()
+
+        def old_queue_get_nowait_noraise():
+            with contextlib.suppress(self.channel.gateway.execmodel.queue.Empty):
+                return old_queue.get_nowait()
+
+        for i in iter(old_queue_get_nowait_noraise, None):
+            if i in indices:
+                stolen.append(i)
+            else:
+                self.torun.put(i)
+
+        self.sendevent("unscheduled", indices=stolen)
 
     @pytest.hookimpl
     def pytest_runtestloop(self, session):
