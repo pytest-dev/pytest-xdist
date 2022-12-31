@@ -300,6 +300,9 @@ class WorkerController:
     def send_runtest_all(self):
         self.sendcommand("runtests_all")
 
+    def send_steal(self, indices):
+        self.sendcommand("steal", indices=indices)
+
     def shutdown(self):
         if not self._down:
             try:
@@ -358,6 +361,8 @@ class WorkerController:
             elif eventname == "collectionfinish":
                 self.notify_inproc(eventname, node=self, ids=kwargs["ids"])
             elif eventname == "runtest_protocol_complete":
+                self.notify_inproc(eventname, node=self, **kwargs)
+            elif eventname == "unscheduled":
                 self.notify_inproc(eventname, node=self, **kwargs)
             elif eventname == "logwarning":
                 self.notify_inproc(

@@ -82,4 +82,13 @@ The test distribution algorithm is configured with the ``--dist`` command-line o
   This will make sure ``test1`` and ``TestA::test2`` will run in the same worker.
   Tests without the ``xdist_group`` mark are distributed normally as in the ``--dist=load`` mode.
 
+* ``--dist worksteal``: Initially, tests are distributed evenly among all
+  available workers. When a worker completes most of its assigned tests and
+  doesn't have enough tests to continue (currently, every worker needs at least
+  two tests in its queue), an attempt is made to reassign ("steal") a portion
+  of tests from some other worker's queue. The results should be similar to
+  the ``load`` method, but ``worksteal`` should handle tests with significantly
+  differing duration better, and, at the same time, it should provide similar
+  or better reuse of fixtures.
+
 * ``--dist no``: The normal pytest execution mode, runs one test at a time (no distribution at all).
