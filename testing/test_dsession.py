@@ -184,7 +184,7 @@ class TestLoadScheduling:
             assert sched.pending == list(range(first_pending, 16))
 
     def test_schedule_fewer_tests_than_nodes(self, pytester: pytest.Pytester) -> None:
-        config = pytester.parseconfig("--tx=2*popen")
+        config = pytester.parseconfig("--tx=3*popen")
         sched = LoadScheduling(config)
         sched.add_node(MockNode())
         sched.add_node(MockNode())
@@ -193,20 +193,19 @@ class TestLoadScheduling:
         col = ["xyz"] * 2
         sched.add_node_collection(node1, col)
         sched.add_node_collection(node2, col)
+        sched.add_node_collection(node3, col)
+        assert sched.collection_is_completed
         sched.schedule()
         # assert not sched.tests_finished
-        sent1 = node1.sent
-        sent2 = node2.sent
-        sent3 = node3.sent
-        assert sent1 == [0]
-        assert sent2 == [1]
-        assert sent3 == []
+        assert node1.sent == [0]
+        assert node2.sent == [1]
+        assert node3.sent == []
         assert not sched.pending
 
     def test_schedule_fewer_than_two_tests_per_node(
         self, pytester: pytest.Pytester
     ) -> None:
-        config = pytester.parseconfig("--tx=2*popen")
+        config = pytester.parseconfig("--tx=3*popen")
         sched = LoadScheduling(config)
         sched.add_node(MockNode())
         sched.add_node(MockNode())
@@ -215,14 +214,13 @@ class TestLoadScheduling:
         col = ["xyz"] * 5
         sched.add_node_collection(node1, col)
         sched.add_node_collection(node2, col)
+        sched.add_node_collection(node3, col)
+        assert sched.collection_is_completed
         sched.schedule()
         # assert not sched.tests_finished
-        sent1 = node1.sent
-        sent2 = node2.sent
-        sent3 = node3.sent
-        assert sent1 == [0, 3]
-        assert sent2 == [1, 4]
-        assert sent3 == [2]
+        assert node1.sent == [0, 3]
+        assert node2.sent == [1, 4]
+        assert node3.sent == [2]
         assert not sched.pending
 
     def test_add_remove_node(self, pytester: pytest.Pytester) -> None:
