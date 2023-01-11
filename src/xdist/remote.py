@@ -6,6 +6,7 @@
     needs not to be installed in remote environments.
 """
 
+import contextlib
 import sys
 import os
 import time
@@ -56,13 +57,20 @@ def worker_title(title):
 
 
 class WorkerInteractor:
+    SHUTDOWN_MARK = object()
+
     def __init__(self, config, channel):
         self.config = config
         self.workerid = config.workerinput.get("workerid", "?")
         self.testrunuid = config.workerinput["testrunuid"]
         self.log = Producer(f"worker-{self.workerid}", enabled=config.option.debug)
         self.channel = channel
+        self.torun = self._make_queue()
+        self.nextitem_index = None
         config.pluginmanager.register(self)
+
+    def _make_queue(self):
+        return self.channel.gateway.execmodel.queue.Queue()
 
     def sendevent(self, name, **kwargs):
         self.log("sending", name, kwargs)
@@ -92,38 +100,60 @@ class WorkerInteractor:
     def pytest_collection(self, session):
         self.sendevent("collectionstart")
 
+    def handle_command(self, command):
+        if command is self.SHUTDOWN_MARK:
+            self.torun.put(self.SHUTDOWN_MARK)
+            return
+
+        name, kwargs = command
+
+        self.log("received command", name, kwargs)
+        if name == "runtests":
+            for i in kwargs["indices"]:
+                self.torun.put(i)
+        elif name == "runtests_all":
+            for i in range(len(self.session.items)):
+                self.torun.put(i)
+        elif name == "shutdown":
+            self.torun.put(self.SHUTDOWN_MARK)
+        elif name == "steal":
+            self.steal(kwargs["indices"])
+
+    def steal(self, indices):
+        indices = set(indices)
+        stolen = []
+
+        old_queue, self.torun = self.torun, self._make_queue()
+
+        def old_queue_get_nowait_noraise():
+            with contextlib.suppress(self.channel.gateway.execmodel.queue.Empty):
+                return old_queue.get_nowait()
+
+        for i in iter(old_queue_get_nowait_noraise, None):
+            if i in indices:
+                stolen.append(i)
+            else:
+                self.torun.put(i)
+
+        self.sendevent("unscheduled", indices=stolen)
+
     @pytest.hookimpl
     def pytest_runtestloop(self, session):
         self.log("entering main loop")
-        torun = []
-        while 1:
-            try:
-                name, kwargs = self.channel.receive()
-            except EOFError:
-                return True
-            self.log("received command", name, kwargs)
-            if name == "runtests":
-                torun.extend(kwargs["indices"])
-            elif name == "runtests_all":
-                torun.extend(range(len(session.items)))
-            self.log("items to run:", torun)
-            # only run if we have an item and a next item
-            while len(torun) >= 2:
-                self.run_one_test(torun)
-            if name == "shutdown":
-                if torun:
-                    self.run_one_test(torun)
-                break
+        self.channel.setcallback(self.handle_command, endmarker=self.SHUTDOWN_MARK)
+        self.nextitem_index = self.torun.get()
+        while self.nextitem_index is not self.SHUTDOWN_MARK:
+            self.run_one_test()
         return True
 
-    def run_one_test(self, torun):
+    def run_one_test(self):
         items = self.session.items
-        self.item_index = torun.pop(0)
+        self.item_index, self.nextitem_index = self.nextitem_index, self.torun.get()
         item = items[self.item_index]
-        if torun:
-            nextitem = items[torun[0]]
-        else:
+        if self.nextitem_index is self.SHUTDOWN_MARK:
             nextitem = None
+        else:
+            nextitem = items[self.nextitem_index]
 
         worker_title("[pytest-xdist running] %s" % item.nodeid)
 

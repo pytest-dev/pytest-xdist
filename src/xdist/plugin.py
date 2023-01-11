@@ -94,7 +94,15 @@ def pytest_addoption(parser):
         "--dist",
         metavar="distmode",
         action="store",
-        choices=["each", "load", "loadscope", "loadfile", "loadgroup", "no"],
+        choices=[
+            "each",
+            "load",
+            "loadscope",
+            "loadfile",
+            "loadgroup",
+            "worksteal",
+            "no",
+        ],
         dest="dist",
         default="no",
         help=(
@@ -107,6 +115,8 @@ def pytest_addoption(parser):
             "loadfile: load balance by sending test grouped by file"
             " to any available environment.\n\n"
             "loadgroup: like load, but sends tests marked with 'xdist_group' to the same worker.\n\n"
+            "worksteal: split the test suite between available environments,"
+            " then rebalance when any worker runs out of tests.\n\n"
             "(default) no: run tests inprocess, don't distribute."
         ),
     )

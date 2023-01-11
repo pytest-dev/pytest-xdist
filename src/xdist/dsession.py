@@ -8,6 +8,7 @@ from xdist.scheduler import (
     LoadScopeScheduling,
     LoadFileScheduling,
     LoadGroupScheduling,
+    WorkStealingScheduling,
 )
 
 
@@ -100,6 +101,7 @@ class DSession:
             "loadscope": LoadScopeScheduling,
             "loadfile": LoadFileScheduling,
             "loadgroup": LoadGroupScheduling,
+            "worksteal": WorkStealingScheduling,
         }
         return schedulers[dist](config, log)
 
@@ -281,6 +283,17 @@ class DSession:
         removed from the pending list in the scheduler.
         """
         self.sched.mark_test_complete(node, item_index, duration)
+
+    def worker_unscheduled(self, node, indices):
+        """
+        Emitted when a node fires the 'unscheduled' event, signalling that
+        some tests have been removed from the worker's queue and should be
+        sent to some worker again.
+
+        This should happen only in response to 'steal' command, so schedulers
+        not using 'steal' command don't have to implement it.
+        """
+        self.sched.remove_pending_tests_from_node(node, indices)
 
     def worker_collectreport(self, node, rep):
         """Emitted when a node calls the pytest_collectreport hook.

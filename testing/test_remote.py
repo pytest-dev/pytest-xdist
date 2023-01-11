@@ -220,6 +220,57 @@ class TestWorkerInteractor:
         ev = worker.popevent()
         assert ev.name == "errordown"
 
+    def test_steal_work(self, worker: WorkerSetup, unserialize_report) -> None:
+        worker.pytester.makepyfile(
+            """
+            import time
+            def test_func(): time.sleep(1)
+            def test_func2(): pass
+            def test_func3(): pass
+            def test_func4(): pass
+        """
+        )
+        worker.setup()
+        ev = worker.popevent("collectionfinish")
+        ids = ev.kwargs["ids"]
+        assert len(ids) == 4
+        worker.sendcommand("runtests_all")
+
+        # wait for test_func setup
+        ev = worker.popevent("testreport")
+        rep = unserialize_report(ev.kwargs["data"])
+        assert rep.nodeid.endswith("::test_func")
+        assert rep.when == "setup"
+
+        worker.sendcommand("steal", indices=[1, 2])
+        ev = worker.popevent("unscheduled")
+        assert ev.kwargs["indices"] == [2]
+
+        reports = [
+            ("test_func", "call"),
+            ("test_func", "teardown"),
+            ("test_func2", "setup"),
+            ("test_func2", "call"),
+            ("test_func2", "teardown"),
+        ]
+
+        for func, when in reports:
+            ev = worker.popevent("testreport")
+            rep = unserialize_report(ev.kwargs["data"])
+            assert rep.nodeid.endswith(f"::{func}")
+            assert rep.when == when
+
+        worker.sendcommand("shutdown")
+
+        for when in ["setup", "call", "teardown"]:
+            ev = worker.popevent("testreport")
+            rep = unserialize_report(ev.kwargs["data"])
+            assert rep.nodeid.endswith("::test_func4")
+            assert rep.when == when
+
+        ev = worker.popevent("workerfinished")
+        assert "workeroutput" in ev.kwargs
+
 
 def test_remote_env_vars(pytester: pytest.Pytester) -> None:
     pytester.makepyfile(

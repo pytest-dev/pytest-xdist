@@ -1,6 +1,6 @@
 from xdist.dsession import DSession, get_default_max_worker_restart
 from xdist.report import report_collection_diff
-from xdist.scheduler import EachScheduling, LoadScheduling
+from xdist.scheduler import EachScheduling, LoadScheduling, WorkStealingScheduling
 from typing import Optional
 
 import pytest
@@ -17,6 +17,7 @@ class MockGateway:
 class MockNode:
     def __init__(self) -> None:
         self.sent = []  # type: ignore[var-annotated]
+        self.stolen = []  # type: ignore[var-annotated]
         self.gateway = MockGateway()
         self._shutdown = False
 
@@ -25,6 +26,9 @@ class MockNode:
 
     def send_runtest_all(self) -> None:
         self.sent.append("ALL")
+
+    def send_steal(self, indices) -> None:
+        self.stolen.extend(indices)
 
     def shutdown(self) -> None:
         self._shutdown = True
@@ -257,6 +261,169 @@ class TestLoadScheduling:
         node1 = MockNode()
         node2 = MockNode()
         sched = LoadScheduling(config)
+        sched.add_node(node1)
+        sched.add_node(node2)
+        sched.add_node_collection(node1, ["a.py::test_1"])
+        sched.add_node_collection(node2, ["a.py::test_2"])
+        sched.schedule()
+        assert len(collect_hook.reports) == 1
+        rep = collect_hook.reports[0]
+        assert "Different tests were collected between" in rep.longrepr
+
+
+class TestWorkStealingScheduling:
+    def test_ideal_case(self, pytester: pytest.Pytester) -> None:
+        config = pytester.parseconfig("--tx=2*popen")
+        sched = WorkStealingScheduling(config)
+        sched.add_node(MockNode())
+        sched.add_node(MockNode())
+        node1, node2 = sched.nodes
+        collection = [f"test_workstealing.py::test_{i}" for i in range(16)]
+        assert not sched.collection_is_completed
+        sched.add_node_collection(node1, collection)
+        assert not sched.collection_is_completed
+        sched.add_node_collection(node2, collection)
+        assert sched.collection_is_completed
+        assert sched.node2collection[node1] == collection
+        assert sched.node2collection[node2] == collection
+        sched.schedule()
+        assert not sched.pending
+        assert not sched.tests_finished
+        assert node1.sent == list(range(0, 8))
+        assert node2.sent == list(range(8, 16))
+        for i in range(8):
+            sched.mark_test_complete(node1, node1.sent[i])
+            sched.mark_test_complete(node2, node2.sent[i])
+        assert sched.tests_finished
+        assert node1.stolen == []
+        assert node2.stolen == []
+
+    def test_stealing(self, pytester: pytest.Pytester) -> None:
+        config = pytester.parseconfig("--tx=2*popen")
+        sched = WorkStealingScheduling(config)
+        sched.add_node(MockNode())
+        sched.add_node(MockNode())
+        node1, node2 = sched.nodes
+        collection = [f"test_workstealing.py::test_{i}" for i in range(16)]
+        sched.add_node_collection(node1, collection)
+        sched.add_node_collection(node2, collection)
+        assert sched.collection_is_completed
+        sched.schedule()
+        assert node1.sent == list(range(0, 8))
+        assert node2.sent == list(range(8, 16))
+        for i in range(8):
+            sched.mark_test_complete(node1, node1.sent[i])
+        assert node2.stolen == list(range(12, 16))
+        sched.remove_pending_tests_from_node(node2, node2.stolen)
+        for i in range(4):
+            sched.mark_test_complete(node2, node2.sent[i])
+        assert node1.stolen == [14, 15]
+        sched.remove_pending_tests_from_node(node1, node1.stolen)
+        sched.mark_test_complete(node1, 12)
+        sched.mark_test_complete(node2, 14)
+        assert node2.stolen == list(range(12, 16))
+        assert node1.stolen == [14, 15]
+        assert sched.tests_finished
+
+    def test_steal_on_add_node(self, pytester: pytest.Pytester) -> None:
+        node = MockNode()
+        config = pytester.parseconfig("--tx=popen")
+        sched = WorkStealingScheduling(config)
+        sched.add_node(node)
+        collection = [f"test_workstealing.py::test_{i}" for i in range(5)]
+        sched.add_node_collection(node, collection)
+        assert sched.collection_is_completed
+        sched.schedule()
+        assert not sched.pending
+        sched.mark_test_complete(node, 0)
+        node2 = MockNode()
+        sched.add_node(node2)
+        sched.add_node_collection(node2, collection)
+        assert sched.collection_is_completed
+        sched.schedule()
+        assert node.stolen == [3, 4]
+        sched.remove_pending_tests_from_node(node, node.stolen)
+        sched.mark_test_complete(node, 1)
+        sched.mark_test_complete(node2, 3)
+        assert sched.tests_finished
+        assert node2.stolen == []
+
+    def test_schedule_fewer_tests_than_nodes(self, pytester: pytest.Pytester) -> None:
+        config = pytester.parseconfig("--tx=3*popen")
+        sched = WorkStealingScheduling(config)
+        sched.add_node(MockNode())
+        sched.add_node(MockNode())
+        sched.add_node(MockNode())
+        node1, node2, node3 = sched.nodes
+        col = ["xyz"] * 2
+        sched.add_node_collection(node1, col)
+        sched.add_node_collection(node2, col)
+        sched.add_node_collection(node3, col)
+        sched.schedule()
+        assert node1.sent == []
+        assert node1.stolen == []
+        assert node2.sent == [0]
+        assert node2.stolen == []
+        assert node3.sent == [1]
+        assert node3.stolen == []
+        assert not sched.pending
+        assert sched.tests_finished
+
+    def test_schedule_fewer_than_two_tests_per_node(
+        self, pytester: pytest.Pytester
+    ) -> None:
+        config = pytester.parseconfig("--tx=3*popen")
+        sched = WorkStealingScheduling(config)
+        sched.add_node(MockNode())
+        sched.add_node(MockNode())
+        sched.add_node(MockNode())
+        node1, node2, node3 = sched.nodes
+        col = ["xyz"] * 5
+        sched.add_node_collection(node1, col)
+        sched.add_node_collection(node2, col)
+        sched.add_node_collection(node3, col)
+        sched.schedule()
+        assert node1.sent == [0]
+        assert node2.sent == [1, 2]
+        assert node3.sent == [3, 4]
+        assert not sched.pending
+        assert not sched.tests_finished
+        sched.mark_test_complete(node1, node1.sent[0])
+        sched.mark_test_complete(node2, node2.sent[0])
+        sched.mark_test_complete(node3, node3.sent[0])
+        sched.mark_test_complete(node3, node3.sent[1])
+        assert sched.tests_finished
+        assert node1.stolen == []
+        assert node2.stolen == []
+        assert node3.stolen == []
+
+    def test_add_remove_node(self, pytester: pytest.Pytester) -> None:
+        node = MockNode()
+        config = pytester.parseconfig("--tx=popen")
+        sched = WorkStealingScheduling(config)
+        sched.add_node(node)
+        collection = ["test_file.py::test_func"]
+        sched.add_node_collection(node, collection)
+        assert sched.collection_is_completed
+        sched.schedule()
+        assert not sched.pending
+        crashitem = sched.remove_node(node)
+        assert crashitem == collection[0]
+
+    def test_different_tests_collected(self, pytester: pytest.Pytester) -> None:
+        class CollectHook:
+            def __init__(self):
+                self.reports = []
+
+            def pytest_collectreport(self, report):
+                self.reports.append(report)
+
+        collect_hook = CollectHook()
+        config = pytester.parseconfig("--tx=2*popen")
+        config.pluginmanager.register(collect_hook, "collect_hook")
+        node1 = MockNode()
+        node2 = MockNode()
+        sched = WorkStealingScheduling(config)
         sched.add_node(node1)
         sched.add_node(node2)
         sched.add_node_collection(node1, ["a.py::test_1"])
