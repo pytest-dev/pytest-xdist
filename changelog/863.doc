@@ -1,0 +1,1 @@
+Document limitations for debugging due to standard I/O of workers not being forwarded. Also, mention remote debugging as a possible workaround.
