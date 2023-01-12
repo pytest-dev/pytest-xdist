@@ -6,7 +6,7 @@ pytest-xdist has some limitations that may be supported in pytest but can't be s
 Order and amount of test must be consistent
 -------------------------------------------
 
-Is is not possible to have tests that differ in order or their amount across workers.
+It is not possible to have tests that differ in order or their amount across workers.
 
 This is especially true with ``pytest.mark.parametrize``, when values are produced with sets or other unordered iterables/generators.
 
@@ -59,6 +59,6 @@ Output (stdout and stderr) from workers
 
 The ``-s``/``--capture=no`` option is meant to disable pytest capture, so users can then see stdout and stderr output in the terminal from tests and application code in real time.
 
-However this option does not work with ``pytest-xdist`` because `execnet <https://github.com/pytest-dev/execnet>`__ the underlying library used for communication between master and workers, does not support transferring stdout/stderr from workers.
+However, this option does not work with ``pytest-xdist`` because `execnet <https://github.com/pytest-dev/execnet>`__ the underlying library used for communication between master and workers, does not support transferring stdout/stderr from workers.
 
-Currenlty there are no plans ot support this in ``pytest-xdist``.
+Currently, there are no plans to support this in ``pytest-xdist``.
