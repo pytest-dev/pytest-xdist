@@ -54,6 +54,8 @@ def test_auto_detect_cpus(
 ) -> None:
     from xdist.plugin import pytest_cmdline_main as check_options
 
+    monkeypatch.delenv("PYTEST_XDIST_AUTO_NUM_WORKERS", raising=False)
+
     with suppress(ImportError):
         import psutil
 
@@ -101,6 +103,7 @@ def test_auto_detect_cpus_psutil(
 
     psutil = pytest.importorskip("psutil")
 
+    monkeypatch.delenv("PYTEST_XDIST_AUTO_NUM_WORKERS", raising=False)
     monkeypatch.setattr(psutil, "cpu_count", lambda logical=True: 84 if logical else 42)
 
     config = pytester.parseconfigure("-nauto")
@@ -116,6 +119,8 @@ def test_auto_detect_cpus_os(
     pytester: pytest.Pytester, monkeypatch: pytest.MonkeyPatch, monkeypatch_3_cpus
 ) -> None:
     from xdist.plugin import pytest_cmdline_main as check_options
+
+    monkeypatch.delenv("PYTEST_XDIST_AUTO_NUM_WORKERS", raising=False)
 
     config = pytester.parseconfigure("-nauto")
     check_options(config)
@@ -177,6 +182,8 @@ def test_hook_auto_num_workers_none(
     # Returning None from a hook to skip it is pytest behavior,
     # but we document it so let's test it.
     from xdist.plugin import pytest_cmdline_main as check_options
+
+    monkeypatch.delenv("PYTEST_XDIST_AUTO_NUM_WORKERS", raising=False)
 
     pytester.makeconftest(
         """
