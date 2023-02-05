@@ -9,30 +9,38 @@ import pytest
 import xdist
 
 
+parametrize_dist = pytest.mark.parametrize(
+    "dist_arg", ["--dist=load", "--dist=worksteal", "--dist=loadscope"]
+)
+
+
 class TestDistribution:
-    def test_n1_pass(self, pytester: pytest.Pytester) -> None:
+    @parametrize_dist
+    def test_n1_pass(self, dist_arg, pytester: pytest.Pytester) -> None:
         p1 = pytester.makepyfile(
             """
             def test_ok():
                 pass
         """
         )
-        result = pytester.runpytest(p1, "-n1")
+        result = pytester.runpytest(p1, "-n1", dist_arg)
         assert result.ret == 0
         result.stdout.fnmatch_lines(["*1 passed*"])
 
-    def test_n1_fail(self, pytester: pytest.Pytester) -> None:
+    @parametrize_dist
+    def test_n1_fail(self, dist_arg, pytester: pytest.Pytester) -> None:
         p1 = pytester.makepyfile(
             """
             def test_fail():
                 assert 0
         """
         )
-        result = pytester.runpytest(p1, "-n1")
+        result = pytester.runpytest(p1, "-n1", dist_arg)
         assert result.ret == 1
         result.stdout.fnmatch_lines(["*1 failed*"])
 
-    def test_n1_import_error(self, pytester: pytest.Pytester) -> None:
+    @parametrize_dist
+    def test_n1_import_error(self, dist_arg, pytester: pytest.Pytester) -> None:
         p1 = pytester.makepyfile(
             """
             import __import_of_missing_module
@@ -40,7 +48,7 @@ class TestDistribution:
                 pass
         """
         )
-        result = pytester.runpytest(p1, "-n1")
+        result = pytester.runpytest(p1, "-n1", dist_arg)
         assert result.ret == 1
         result.stdout.fnmatch_lines(
             ["E   *Error: No module named *__import_of_missing_module*"]
@@ -60,7 +68,8 @@ class TestDistribution:
         result2 = pytester.runpytest(p1, "-n1")
         assert len(result1.stdout.lines) == len(result2.stdout.lines)
 
-    def test_n1_skip(self, pytester: pytest.Pytester) -> None:
+    @parametrize_dist
+    def test_n1_skip(self, dist_arg, pytester: pytest.Pytester) -> None:
         p1 = pytester.makepyfile(
             """
             def test_skip():
@@ -68,11 +77,14 @@ class TestDistribution:
                 pytest.skip("myreason")
         """
         )
-        result = pytester.runpytest(p1, "-n1")
+        result = pytester.runpytest(p1, "-n1", dist_arg)
         assert result.ret == 0
         result.stdout.fnmatch_lines(["*1 skipped*"])
 
-    def test_manytests_to_one_import_error(self, pytester: pytest.Pytester) -> None:
+    @parametrize_dist
+    def test_manytests_to_one_import_error(
+        self, dist_arg, pytester: pytest.Pytester
+    ) -> None:
         p1 = pytester.makepyfile(
             """
             import __import_of_missing_module
@@ -80,13 +92,14 @@ class TestDistribution:
                 pass
         """
         )
-        result = pytester.runpytest(p1, "--tx=popen", "--tx=popen")
+        result = pytester.runpytest(p1, "--tx=popen", "--tx=popen", dist_arg)
         assert result.ret in (1, 2)
         result.stdout.fnmatch_lines(
             ["E   *Error: No module named *__import_of_missing_module*"]
         )
 
-    def test_manytests_to_one_popen(self, pytester: pytest.Pytester) -> None:
+    @parametrize_dist
+    def test_manytests_to_one_popen(self, dist_arg, pytester: pytest.Pytester) -> None:
         p1 = pytester.makepyfile(
             """
                 import pytest
@@ -100,11 +113,12 @@ class TestDistribution:
                     pytest.skip("hello")
             """
         )
-        result = pytester.runpytest(p1, "-v", "-d", "--tx=popen", "--tx=popen")
+        result = pytester.runpytest(p1, "-v", dist_arg, "--tx=popen", "--tx=popen")
         result.stdout.fnmatch_lines(["*1*Python*", "*2 failed, 1 passed, 1 skipped*"])
         assert result.ret == 1
 
-    def test_n1_fail_minus_x(self, pytester: pytest.Pytester) -> None:
+    @parametrize_dist
+    def test_n1_fail_minus_x(self, dist_arg, pytester: pytest.Pytester) -> None:
         p1 = pytester.makepyfile(
             """
             def test_fail1():
@@ -113,7 +127,7 @@ class TestDistribution:
                 assert 0
         """
         )
-        result = pytester.runpytest(p1, "-x", "-v", "-n1")
+        result = pytester.runpytest(p1, "-x", "-v", "-n1", dist_arg)
         assert result.ret == 2
         result.stdout.fnmatch_lines(["*Interrupted: stopping*1*", "*1 failed*"])
 
@@ -672,7 +686,8 @@ def test_skipping(pytester: pytest.Pytester) -> None:
     result.stdout.fnmatch_lines(["*hello*", "*1 skipped*"])
 
 
-def test_fixture_scope_caching_issue503(pytester: pytest.Pytester) -> None:
+@parametrize_dist
+def test_fixture_scope_caching_issue503(dist_arg, pytester: pytest.Pytester) -> None:
     p1 = pytester.makepyfile(
         """
             import pytest
@@ -691,12 +706,13 @@ def test_fixture_scope_caching_issue503(pytester: pytest.Pytester) -> None:
                 pass
     """
     )
-    result = pytester.runpytest(p1, "-v", "-n1")
+    result = pytester.runpytest(p1, "-v", "-n1", dist_arg)
     assert result.ret == 0
     result.stdout.fnmatch_lines(["*2 passed*"])
 
 
-def test_issue_594_random_parametrize(pytester: pytest.Pytester) -> None:
+@parametrize_dist
+def test_issue_594_random_parametrize(dist_arg, pytester: pytest.Pytester) -> None:
     """
     Make sure that tests that are randomly parametrized display an appropriate
     error message, instead of silently skipping the entire test run.
@@ -713,7 +729,7 @@ def test_issue_594_random_parametrize(pytester: pytest.Pytester) -> None:
             assert 1
     """
     )
-    result = pytester.runpytest(p1, "-v", "-n4")
+    result = pytester.runpytest(p1, "-v", "-n4", dist_arg)
     assert result.ret == 1
     result.stdout.fnmatch_lines(["Different tests were collected between gw* and gw*"])
 
