@@ -15,7 +15,7 @@ a test or fixture, you may use the ``worker_id`` fixture to do so:
 
     @pytest.fixture()
     def user_account(worker_id):
-        """ use a different account in each xdist worker """
+        """use a different account in each xdist worker"""
         return "account_%s" % worker_id
 
 When ``xdist`` is disabled (running with ``-n0`` for example), then
@@ -80,7 +80,7 @@ wanted to create a separate database for each test run:
 
     @pytest.fixture(scope="session", autouse=True)
     def create_unique_database(testrun_uid):
-        """ create a unique database for this particular test run """
+        """create a unique database for this particular test run"""
         database_url = f"psql://myapp-{testrun_uid}"
 
         with Semaphore(f"/{testrun_uid}-lock", flags=O_CREAT, initial_value=1):
@@ -90,7 +90,7 @@ wanted to create a separate database for each test run:
 
     @pytest.fixture()
     def db(testrun_uid):
-        """ retrieve unique database """
+        """retrieve unique database"""
         database_url = f"psql://myapp-{testrun_uid}"
         return database_get_instance(database_url)
 
