@@ -35,7 +35,6 @@ def pytest_addoption(parser):
 
 @pytest.hookimpl
 def pytest_cmdline_main(config):
-
     if config.getoption("looponfail"):
         usepdb = config.getoption("usepdb", False)  # a core option
         if usepdb:

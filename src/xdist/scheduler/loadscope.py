@@ -213,13 +213,11 @@ class LoadScopeScheduling:
 
         # A new node has been added later, perhaps an original one died.
         if self.collection_is_completed:
-
             # Assert that .schedule() should have been called by now
             assert self.collection
 
             # Check that the new collection matches the official collection
             if collection != self.collection:
-
                 other_node = next(iter(self.registered_collections.keys()))
 
                 msg = report_collection_diff(
