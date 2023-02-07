@@ -1,3 +1,27 @@
+pytest-xdist 3.2.0 (2023-02-07)
+===============================
+
+Improved Documentation
+----------------------
+
+- `#863 <https://github.com/pytest-dev/pytest-xdist/issues/863>`_: Document limitations for debugging due to standard I/O of workers not being forwarded. Also, mention remote debugging as a possible workaround.
+
+
+Features
+--------
+
+- `#855 <https://github.com/pytest-dev/pytest-xdist/issues/855>`_: Users can now configure ``load`` scheduling precision using ``--maxschedchunk`` command
+  line option.
+
+- `#858 <https://github.com/pytest-dev/pytest-xdist/issues/858>`_: New ``worksteal`` scheduler, based on the idea of `work stealing <https://en.wikipedia.org/wiki/Work_stealing>`_. It's similar to ``load`` scheduler, but it should handle tests with significantly differing duration better, and, at the same time, it should provide similar or better reuse of fixtures.
+
+
+Trivial Changes
+---------------
+
+- `#870 <https://github.com/pytest-dev/pytest-xdist/issues/870>`_: Make the tests pass even when ``$PYTEST_XDIST_AUTO_NUM_WORKERS`` is set.
+
+
 pytest-xdist 3.1.0 (2022-12-01)
 ===============================
 
