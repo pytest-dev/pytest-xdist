@@ -58,6 +58,7 @@ def worker_title(title):
         # changing the process name is very optional, no errors please
         pass
 
+
 class RemoteMessageHandler(logging.Handler):
     """
     This handler sends events to a queue. Typically, it would be used together
@@ -93,8 +94,9 @@ class RemoteMessageHandler(logging.Handler):
             record.exc_text = None
             x = pickle.dumps(record)
             self.queue.send_log(x)
-        except Exception as e:
+        except Exception:
             self.handleError(record)
+
 
 class WorkerInteractor:
     SHUTDOWN_MARK = object()
