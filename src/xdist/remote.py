@@ -58,6 +58,7 @@ def worker_title(title):
 
 class WorkerInteractor:
     SHUTDOWN_MARK = object()
+    QUEUE_REPLACED_MARK = object()
 
     def __init__(self, config, channel):
         self.config = config
@@ -71,6 +72,15 @@ class WorkerInteractor:
 
     def _make_queue(self):
         return self.channel.gateway.execmodel.queue.Queue()
+
+    def _get_next_item_index(self):
+        """Gets the next item from test queue. Handles the case when the queue
+        is replaced concurrently in another thread.
+        """
+        result = self.torun.get()
+        while result is self.QUEUE_REPLACED_MARK:
+            result = self.torun.get()
+        return result
 
     def sendevent(self, name, **kwargs):
         self.log("sending", name, kwargs)
@@ -136,19 +146,22 @@ class WorkerInteractor:
                 self.torun.put(i)
 
         self.sendevent("unscheduled", indices=stolen)
+        old_queue.put(self.QUEUE_REPLACED_MARK)
 
     @pytest.hookimpl
     def pytest_runtestloop(self, session):
         self.log("entering main loop")
         self.channel.setcallback(self.handle_command, endmarker=self.SHUTDOWN_MARK)
-        self.nextitem_index = self.torun.get()
+        self.nextitem_index = self._get_next_item_index()
         while self.nextitem_index is not self.SHUTDOWN_MARK:
             self.run_one_test()
         return True
 
     def run_one_test(self):
+        self.item_index = self.nextitem_index
+        self.nextitem_index = self._get_next_item_index()
+
         items = self.session.items
-        self.item_index, self.nextitem_index = self.nextitem_index, self.torun.get()
         item = items[self.item_index]
         if self.nextitem_index is self.SHUTDOWN_MARK:
             nextitem = None

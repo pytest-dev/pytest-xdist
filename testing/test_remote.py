@@ -271,6 +271,40 @@ class TestWorkerInteractor:
         ev = worker.popevent("workerfinished")
         assert "workeroutput" in ev.kwargs
 
+    def test_steal_empty_queue(self, worker: WorkerSetup, unserialize_report) -> None:
+        worker.pytester.makepyfile(
+            """
+            def test_func(): pass
+            def test_func2(): pass
+        """
+        )
+        worker.setup()
+        ev = worker.popevent("collectionfinish")
+        ids = ev.kwargs["ids"]
+        assert len(ids) == 2
+        worker.sendcommand("runtests_all")
+
+        for when in ["setup", "call", "teardown"]:
+            ev = worker.popevent("testreport")
+            rep = unserialize_report(ev.kwargs["data"])
+            assert rep.nodeid.endswith("::test_func")
+            assert rep.when == when
+
+        worker.sendcommand("steal", indices=[0, 1])
+        ev = worker.popevent("unscheduled")
+        assert ev.kwargs["indices"] == []
+
+        worker.sendcommand("shutdown")
+
+        for when in ["setup", "call", "teardown"]:
+            ev = worker.popevent("testreport")
+            rep = unserialize_report(ev.kwargs["data"])
+            assert rep.nodeid.endswith("::test_func2")
+            assert rep.when == when
+
+        ev = worker.popevent("workerfinished")
+        assert "workeroutput" in ev.kwargs
+
 
 def test_remote_env_vars(pytester: pytest.Pytester) -> None:
     pytester.makepyfile(
