@@ -1,3 +1,12 @@
+pytest-xdist 3.2.1 (2023-03-12)
+===============================
+
+Bug Fixes
+---------
+
+- `#884 <https://github.com/pytest-dev/pytest-xdist/issues/884>`_: Fixed hang in ``worksteal`` scheduler.
+
+
 pytest-xdist 3.2.0 (2023-02-07)
 ===============================
 
