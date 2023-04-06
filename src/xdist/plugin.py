@@ -173,6 +173,8 @@ def pytest_addoption(parser):
             "one - might be useful for a small number of slow tests. "
             "Larger numbers will allow the scheduler to submit consecutive "
             "chunks of tests to workers - allows reusing fixtures. "
+            "Due to implementation reasons, at least 2 tests are scheduled per "
+            "worker at the start. Only later tests can be scheduled one by one. "
             "Unlimited if not set."
         ),
     )
