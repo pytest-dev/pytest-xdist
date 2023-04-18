@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pathlib import Path
 import shutil
 import textwrap
@@ -19,13 +21,15 @@ pytest_plugins = "pytester"
 
 
 @pytest.fixture
-def hookrecorder(request, config, pytester: pytest.Pytester):
+def hookrecorder(
+    config: pytest.Config, pytester: pytest.Pytester
+) -> pytest.HookRecorder:
     hookrecorder = pytester.make_hook_recorder(config.pluginmanager)
     return hookrecorder
 
 
 @pytest.fixture
-def config(pytester: pytest.Pytester):
+def config(pytester: pytest.Pytester) -> pytest.Config:
     return pytester.parseconfig()
 
 
@@ -44,24 +48,23 @@ def dest(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def workercontroller(monkeypatch: pytest.MonkeyPatch):
+def workercontroller(monkeypatch: pytest.MonkeyPatch) -> None:
     class MockController:
-        def __init__(self, *args):
+        def __init__(self, *args: object) -> None:
             pass
 
-        def setup(self):
+        def setup(self) -> None:
             pass
 
     monkeypatch.setattr(workermanage, "WorkerController", MockController)
-    return MockController
 
 
 class TestNodeManagerPopen:
-    def test_popen_no_default_chdir(self, config) -> None:
+    def test_popen_no_default_chdir(self, config: pytest.Config) -> None:
         gm = NodeManager(config, ["popen"])
         assert gm.specs[0].chdir is None
 
-    def test_default_chdir(self, config) -> None:
+    def test_default_chdir(self, config: pytest.Config) -> None:
         specs = ["ssh=noco", "socket=xyz"]
         for spec in NodeManager(config, specs).specs:
             assert spec.chdir == "pyexecnetcache"
@@ -69,10 +72,13 @@ class TestNodeManagerPopen:
             assert spec.chdir == "abc"
 
     def test_popen_makegateway_events(
-        self, config, hookrecorder, workercontroller
+        self,
+        config: pytest.Config,
+        hookrecorder: pytest.HookRecorder,
+        workercontroller: None,
     ) -> None:
         hm = NodeManager(config, ["popen"] * 2)
-        hm.setup_nodes(None)
+        hm.setup_nodes(None)  # type: ignore[arg-type]
         call = hookrecorder.popcall("pytest_xdist_setupnodes")
         assert len(call.specs) == 2
 
@@ -86,20 +92,24 @@ class TestNodeManagerPopen:
         assert not len(hm.group)
 
     def test_popens_rsync(
-        self, config, source: Path, dest: Path, workercontroller
+        self,
+        config: pytest.Config,
+        source: Path,
+        dest: Path,
+        workercontroller: None,
     ) -> None:
         hm = NodeManager(config, ["popen"] * 2)
-        hm.setup_nodes(None)
+        hm.setup_nodes(None)  # type: ignore[arg-type]
         assert len(hm.group) == 2
         for gw in hm.group:
 
             class pseudoexec:
                 args = []  # type: ignore[var-annotated]
 
-                def __init__(self, *args):
+                def __init__(self, *args: object) -> None:
                     self.args.extend(args)
 
-                def waitclose(self):
+                def waitclose(self) -> None:
                     pass
 
             gw.remote_exec = pseudoexec  # type: ignore[assignment]
@@ -112,10 +122,10 @@ class TestNodeManagerPopen:
         assert "sys.path.insert" in gw.remote_exec.args[0]  # type: ignore[attr-defined]
 
     def test_rsync_popen_with_path(
-        self, config, source: Path, dest: Path, workercontroller
+        self, config: pytest.Config, source: Path, dest: Path, workercontroller: None
     ) -> None:
         hm = NodeManager(config, ["popen//chdir=%s" % dest] * 1)
-        hm.setup_nodes(None)
+        hm.setup_nodes(None)  # type: ignore[arg-type]
         source.joinpath("dir1", "dir2").mkdir(parents=True)
         source.joinpath("dir1", "dir2", "hello").touch()
         notifications = []
@@ -131,15 +141,15 @@ class TestNodeManagerPopen:
 
     def test_rsync_same_popen_twice(
         self,
-        config,
+        config: pytest.Config,
         source: Path,
         dest: Path,
-        hookrecorder,
-        workercontroller,
+        hookrecorder: pytest.HookRecorder,
+        workercontroller: None,
     ) -> None:
         hm = NodeManager(config, ["popen//chdir=%s" % dest] * 2)
         hm.roots = []
-        hm.setup_nodes(None)
+        hm.setup_nodes(None)  # type: ignore[arg-type]
         source.joinpath("dir1", "dir2").mkdir(parents=True)
         source.joinpath("dir1", "dir2", "hello").touch()
         gw = hm.group[0]
@@ -200,7 +210,11 @@ class TestNodeManager:
         assert p.joinpath("dir1", "file1").check()
 
     def test_popen_rsync_subdir(
-        self, pytester: pytest.Pytester, source: Path, dest: Path, workercontroller
+        self,
+        pytester: pytest.Pytester,
+        source: Path,
+        dest: Path,
+        workercontroller: None,
     ) -> None:
         dir1 = source / "dir1"
         dir1.mkdir()
@@ -214,7 +228,8 @@ class TestNodeManager:
                     "--tx", "popen//chdir=%s" % dest, "--rsyncdir", rsyncroot, source
                 )
             )
-            nodemanager.setup_nodes(None)  # calls .rsync_roots()
+            # calls .rsync_roots()
+            nodemanager.setup_nodes(None)  # type: ignore[arg-type]
             if rsyncroot == source:
                 dest = dest.joinpath("source")
             assert dest.joinpath("dir1").exists()
@@ -223,14 +238,19 @@ class TestNodeManager:
             nodemanager.teardown_nodes()
 
     @pytest.mark.parametrize(
-        "flag, expects_report", [("-q", False), ("", False), ("-v", True)]
+        ["flag", "expects_report"],
+        [
+            ("-q", False),
+            ("", False),
+            ("-v", True),
+        ],
     )
     def test_rsync_report(
         self,
         pytester: pytest.Pytester,
         source: Path,
         dest: Path,
-        workercontroller,
+        workercontroller: None,
         capsys: pytest.CaptureFixture[str],
         flag: str,
         expects_report: bool,
@@ -241,7 +261,8 @@ class TestNodeManager:
         if flag:
             args.append(flag)
         nodemanager = NodeManager(pytester.parseconfig(*args))
-        nodemanager.setup_nodes(None)  # calls .rsync_roots()
+        # calls .rsync_roots()
+        nodemanager.setup_nodes(None)  # type: ignore[arg-type]
         out, _ = capsys.readouterr()
         if expects_report:
             assert "<= pytest/__init__.py" in out
@@ -249,7 +270,11 @@ class TestNodeManager:
             assert "<= pytest/__init__.py" not in out
 
     def test_init_rsync_roots(
-        self, pytester: pytest.Pytester, source: Path, dest: Path, workercontroller
+        self,
+        pytester: pytest.Pytester,
+        source: Path,
+        dest: Path,
+        workercontroller: None,
     ) -> None:
         dir2 = source.joinpath("dir1", "dir2")
         dir2.mkdir(parents=True)
@@ -267,13 +292,18 @@ class TestNodeManager:
         )
         config = pytester.parseconfig(source)
         nodemanager = NodeManager(config, ["popen//chdir=%s" % dest])
-        nodemanager.setup_nodes(None)  # calls .rsync_roots()
+        # calls .rsync_roots()
+        nodemanager.setup_nodes(None)  # type: ignore[arg-type]
         assert dest.joinpath("dir2").exists()
         assert not dest.joinpath("dir1").exists()
         assert not dest.joinpath("bogus").exists()
 
     def test_rsyncignore(
-        self, pytester: pytest.Pytester, source: Path, dest: Path, workercontroller
+        self,
+        pytester: pytest.Pytester,
+        source: Path,
+        dest: Path,
+        workercontroller: None,
     ) -> None:
         dir2 = source.joinpath("dir1", "dir2")
         dir2.mkdir(parents=True)
@@ -297,7 +327,8 @@ class TestNodeManager:
         config = pytester.parseconfig(source)
         config.option.rsyncignore = ["bar"]
         nodemanager = NodeManager(config, ["popen//chdir=%s" % dest])
-        nodemanager.setup_nodes(None)  # calls .rsync_roots()
+        # calls .rsync_roots()
+        nodemanager.setup_nodes(None)  # type: ignore[arg-type]
         assert dest.joinpath("dir1").exists()
         assert not dest.joinpath("dir1", "dir2").exists()
         assert dest.joinpath("dir5", "file").exists()
@@ -306,14 +337,19 @@ class TestNodeManager:
         assert not dest.joinpath("bar").exists()
 
     def test_optimise_popen(
-        self, pytester: pytest.Pytester, source: Path, dest: Path, workercontroller
+        self,
+        pytester: pytest.Pytester,
+        source: Path,
+        dest: Path,
+        workercontroller: None,
     ) -> None:
         specs = ["popen"] * 3
         source.joinpath("conftest.py").write_text("rsyncdirs = ['a']")
         source.joinpath("a").mkdir()
         config = pytester.parseconfig(source)
         nodemanager = NodeManager(config, specs)
-        nodemanager.setup_nodes(None)  # calls .rysnc_roots()
+        # calls .rysnc_roots()
+        nodemanager.setup_nodes(None)  # type: ignore[arg-type]
         for gwspec in nodemanager.specs:
             assert gwspec._samefilesystem()
             assert not gwspec.chdir
@@ -349,7 +385,7 @@ class MyWarning(UserWarning):
         ),
     ],
 )
-def test_unserialize_warning_msg(w_cls):
+def test_unserialize_warning_msg(w_cls: type[Warning] | str) -> None:
     """Test that warning serialization process works well."""
     # Create a test warning message
     with pytest.warns(UserWarning) as w:
@@ -390,7 +426,7 @@ class MyWarningUnknown(UserWarning):
     __module__ = "unknown"
 
 
-def test_warning_serialization_tweaked_module():
+def test_warning_serialization_tweaked_module() -> None:
     """Test for GH#404."""
     # Create a test warning message
     with pytest.warns(UserWarning) as w:

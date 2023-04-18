@@ -1,36 +1,46 @@
+from __future__ import annotations
+
 import marshal
 import pprint
 from queue import Queue
 import sys
+from typing import Any
+from typing import Callable
+from typing import cast
+from typing import Dict
+from typing import Union
 import uuid
 
 import execnet
 import pytest
 
+from xdist.workermanage import NodeManager
 from xdist.workermanage import WorkerController
 
 
 WAIT_TIMEOUT = 10.0
 
 
-def check_marshallable(d):
+def check_marshallable(d: object) -> None:
     try:
-        marshal.dumps(d)
+        marshal.dumps(d)  # type: ignore[arg-type]
     except ValueError as e:
         pprint.pprint(d)
         raise ValueError("not marshallable") from e
 
 
 class EventCall:
-    def __init__(self, eventcall):
+    def __init__(self, eventcall: tuple[str, dict[str, Any]]) -> None:
         self.name, self.kwargs = eventcall
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"<EventCall {self.name}(**{self.kwargs})>"
 
 
 class WorkerSetup:
-    def __init__(self, request, pytester: pytest.Pytester) -> None:
+    def __init__(
+        self, request: pytest.FixtureRequest, pytester: pytest.Pytester
+    ) -> None:
         self.request = request
         self.pytester = pytester
         self.use_callback = False
@@ -47,11 +57,18 @@ class WorkerSetup:
             testrunuid = uuid.uuid4().hex
             specs = [0, 1]
 
-        self.slp = WorkerController(DummyMananger, self.gateway, config, putevent)
+        nodemanager = cast(NodeManager, DummyMananger)
+
+        self.slp = WorkerController(
+            nodemanager=nodemanager,
+            gateway=self.gateway,
+            config=config,
+            putevent=putevent,  # type: ignore[arg-type]
+        )
         self.request.addfinalizer(self.slp.ensure_teardown)
         self.slp.setup()
 
-    def popevent(self, name=None):
+    def popevent(self, name: str | None = None) -> EventCall:
         while 1:
             if self.use_callback:
                 data = self.events.get(timeout=WAIT_TIMEOUT)
@@ -62,27 +79,33 @@ class WorkerSetup:
                 return ev
             print(f"skipping {ev}")
 
-    def sendcommand(self, name, **kwargs):
+    def sendcommand(self, name: str, **kwargs: Any) -> None:
         self.slp.sendcommand(name, **kwargs)
 
 
 @pytest.fixture
-def worker(request, pytester: pytest.Pytester) -> WorkerSetup:
+def worker(request: pytest.FixtureRequest, pytester: pytest.Pytester) -> WorkerSetup:
     return WorkerSetup(request, pytester)
 
 
 class TestWorkerInteractor:
+    UnserializerReport = Callable[
+        [Dict[str, Any]], Union[pytest.CollectReport, pytest.TestReport]
+    ]
+
     @pytest.fixture
-    def unserialize_report(self, pytestconfig):
-        def unserialize(data):
-            return pytestconfig.hook.pytest_report_from_serializable(
+    def unserialize_report(self, pytestconfig: pytest.Config) -> UnserializerReport:
+        def unserialize(
+            data: dict[str, Any],
+        ) -> pytest.CollectReport | pytest.TestReport:
+            return pytestconfig.hook.pytest_report_from_serializable(  # type: ignore[no-any-return]
                 config=pytestconfig, data=data
             )
 
         return unserialize
 
     def test_basic_collect_and_runtests(
-        self, worker: WorkerSetup, unserialize_report
+        self, worker: WorkerSetup, unserialize_report: UnserializerReport
     ) -> None:
         worker.pytester.makepyfile(
             """
@@ -115,7 +138,9 @@ class TestWorkerInteractor:
         ev = worker.popevent("workerfinished")
         assert "workeroutput" in ev.kwargs
 
-    def test_remote_collect_skip(self, worker: WorkerSetup, unserialize_report) -> None:
+    def test_remote_collect_skip(
+        self, worker: WorkerSetup, unserialize_report: UnserializerReport
+    ) -> None:
         worker.pytester.makepyfile(
             """
             import pytest
@@ -129,11 +154,14 @@ class TestWorkerInteractor:
         assert ev.name == "collectreport"
         rep = unserialize_report(ev.kwargs["data"])
         assert rep.skipped
+        assert isinstance(rep.longrepr, tuple)
         assert rep.longrepr[2] == "Skipped: hello"
         ev = worker.popevent("collectionfinish")
         assert not ev.kwargs["ids"]
 
-    def test_remote_collect_fail(self, worker: WorkerSetup, unserialize_report) -> None:
+    def test_remote_collect_fail(
+        self, worker: WorkerSetup, unserialize_report: UnserializerReport
+    ) -> None:
         worker.pytester.makepyfile("""aasd qwe""")
         worker.setup()
         ev = worker.popevent("collectionstart")
@@ -145,7 +173,9 @@ class TestWorkerInteractor:
         ev = worker.popevent("collectionfinish")
         assert not ev.kwargs["ids"]
 
-    def test_runtests_all(self, worker: WorkerSetup, unserialize_report) -> None:
+    def test_runtests_all(
+        self, worker: WorkerSetup, unserialize_report: UnserializerReport
+    ) -> None:
         worker.pytester.makepyfile(
             """
             def test_func(): pass
@@ -205,13 +235,15 @@ class TestWorkerInteractor:
     ) -> None:
         worker.use_callback = True
         worker.setup()
-        worker.slp.process_from_remote(("<nonono>", ()))
+        worker.slp.process_from_remote(("<nonono>", {}))
         out, err = capsys.readouterr()
         assert "INTERNALERROR> ValueError: unknown event: <nonono>" in out
         ev = worker.popevent()
         assert ev.name == "errordown"
 
-    def test_steal_work(self, worker: WorkerSetup, unserialize_report) -> None:
+    def test_steal_work(
+        self, worker: WorkerSetup, unserialize_report: UnserializerReport
+    ) -> None:
         worker.pytester.makepyfile(
             """
             import time
@@ -262,7 +294,9 @@ class TestWorkerInteractor:
         ev = worker.popevent("workerfinished")
         assert "workeroutput" in ev.kwargs
 
-    def test_steal_empty_queue(self, worker: WorkerSetup, unserialize_report) -> None:
+    def test_steal_empty_queue(
+        self, worker: WorkerSetup, unserialize_report: UnserializerReport
+    ) -> None:
         worker.pytester.makepyfile(
             """
             def test_func(): pass

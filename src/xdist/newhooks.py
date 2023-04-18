@@ -12,16 +12,32 @@ must be taken in plugins in case ``xdist`` is not installed. Please see:
     http://pytest.org/en/latest/writing_plugins.html#optionally-using-hooks-from-3rd-party-plugins
 """
 
+from __future__ import annotations
+
+import os
+from typing import Any
+from typing import Sequence
+from typing import TYPE_CHECKING
+
+import execnet
 import pytest
 
 
+if TYPE_CHECKING:
+    from xdist.remote import Producer
+    from xdist.scheduler.protocol import Scheduling
+    from xdist.workermanage import WorkerController
+
+
 @pytest.hookspec()
-def pytest_xdist_setupnodes(config, specs):
+def pytest_xdist_setupnodes(
+    config: pytest.Config, specs: Sequence[execnet.XSpec]
+) -> None:
     """Called before any remote node is set up."""
 
 
 @pytest.hookspec()
-def pytest_xdist_newgateway(gateway):
+def pytest_xdist_newgateway(gateway: execnet.Gateway) -> None:
     """Called on new raw gateway creation."""
 
 
@@ -30,7 +46,10 @@ def pytest_xdist_newgateway(gateway):
         "rsync feature is deprecated and will be removed in pytest-xdist 4.0"
     )
 )
-def pytest_xdist_rsyncstart(source, gateways):
+def pytest_xdist_rsyncstart(
+    source: str | os.PathLike[str],
+    gateways: Sequence[execnet.Gateway],
+) -> None:
     """Called before rsyncing a directory to remote gateways takes place."""
 
 
@@ -39,52 +58,62 @@ def pytest_xdist_rsyncstart(source, gateways):
         "rsync feature is deprecated and will be removed in pytest-xdist 4.0"
     )
 )
-def pytest_xdist_rsyncfinish(source, gateways):
+def pytest_xdist_rsyncfinish(
+    source: str | os.PathLike[str],
+    gateways: Sequence[execnet.Gateway],
+) -> None:
     """Called after rsyncing a directory to remote gateways takes place."""
 
 
 @pytest.hookspec(firstresult=True)
-def pytest_xdist_getremotemodule():
+def pytest_xdist_getremotemodule() -> Any:
     """Called when creating remote node."""
 
 
 @pytest.hookspec()
-def pytest_configure_node(node):
+def pytest_configure_node(node: WorkerController) -> None:
     """Configure node information before it gets instantiated."""
 
 
 @pytest.hookspec()
-def pytest_testnodeready(node):
+def pytest_testnodeready(node: WorkerController) -> None:
     """Test Node is ready to operate."""
 
 
 @pytest.hookspec()
-def pytest_testnodedown(node, error):
+def pytest_testnodedown(node: WorkerController, error: object | None) -> None:
     """Test Node is down."""
 
 
 @pytest.hookspec()
-def pytest_xdist_node_collection_finished(node, ids):
+def pytest_xdist_node_collection_finished(
+    node: WorkerController, ids: Sequence[str]
+) -> None:
     """Called by the controller node when a worker node finishes collecting."""
 
 
 @pytest.hookspec(firstresult=True)
-def pytest_xdist_make_scheduler(config, log):
+def pytest_xdist_make_scheduler(
+    config: pytest.Config, log: Producer
+) -> Scheduling | None:
     """Return a node scheduler implementation."""
 
 
 @pytest.hookspec(firstresult=True)
-def pytest_xdist_auto_num_workers(config):
+def pytest_xdist_auto_num_workers(config: pytest.Config) -> int:
     """
     Return the number of workers to spawn when ``--numprocesses=auto`` is given in the
     command-line.
 
     .. versionadded:: 2.1
     """
+    raise NotImplementedError()
 
 
 @pytest.hookspec(firstresult=True)
-def pytest_handlecrashitem(crashitem, report, sched):
+def pytest_handlecrashitem(
+    crashitem: str, report: pytest.TestReport, sched: Scheduling
+) -> None:
     """
     Handle a crashitem, modifying the report if necessary.
 

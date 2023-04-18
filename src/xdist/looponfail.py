@@ -13,6 +13,7 @@ import os
 from pathlib import Path
 import sys
 import time
+from typing import Any
 from typing import Sequence
 
 from _pytest._io import TerminalWriter
@@ -23,7 +24,7 @@ from xdist._path import visit_path
 
 
 @pytest.hookimpl
-def pytest_addoption(parser):
+def pytest_addoption(parser: pytest.Parser) -> None:
     group = parser.getgroup("xdist", "distributed and subprocess testing")
     group._addoption(
         "-f",
@@ -37,13 +38,14 @@ def pytest_addoption(parser):
 
 
 @pytest.hookimpl
-def pytest_cmdline_main(config):
+def pytest_cmdline_main(config: pytest.Config) -> int | None:
     if config.getoption("looponfail"):
         usepdb = config.getoption("usepdb", False)  # a core option
         if usepdb:
             raise pytest.UsageError("--pdb is incompatible with --looponfail.")
         looponfail_main(config)
         return 2  # looponfail only can get stop with ctrl-C anyway
+    return None
 
 
 def looponfail_main(config: pytest.Config) -> None:
@@ -68,19 +70,21 @@ def looponfail_main(config: pytest.Config) -> None:
 
 
 class RemoteControl:
-    def __init__(self, config):
-        self.config = config
-        self.failures = []
+    gateway: execnet.Gateway
 
-    def trace(self, *args):
+    def __init__(self, config: pytest.Config) -> None:
+        self.config = config
+        self.failures: list[str] = []
+
+    def trace(self, *args: object) -> None:
         if self.config.option.debug:
             msg = " ".join(str(x) for x in args)
             print("RemoteControl:", msg)
 
-    def initgateway(self):
+    def initgateway(self) -> execnet.Gateway:
         return execnet.makegateway("popen")
 
-    def setup(self):
+    def setup(self) -> None:
         if hasattr(self, "gateway"):
             raise ValueError("already have gateway %r" % self.gateway)
         self.trace("setting up worker session")
@@ -90,17 +94,17 @@ class RemoteControl:
             args=self.config.args,
             option_dict=vars(self.config.option),
         )
-        remote_outchannel = channel.receive()
+        remote_outchannel: execnet.Channel = channel.receive()
 
         out = TerminalWriter()
 
-        def write(s):
+        def write(s: str) -> None:
             out._file.write(s)
             out._file.flush()
 
         remote_outchannel.setcallback(write)
 
-    def ensure_teardown(self):
+    def ensure_teardown(self) -> None:
         if hasattr(self, "channel"):
             if not self.channel.isclosed():
                 self.trace("closing", self.channel)
@@ -111,12 +115,12 @@ class RemoteControl:
             self.gateway.exit()
             del self.gateway
 
-    def runsession(self):
+    def runsession(self) -> tuple[list[str], list[str], bool]:
         try:
             self.trace("sending", self.failures)
             self.channel.send(self.failures)
             try:
-                return self.channel.receive()
+                return self.channel.receive()  # type: ignore[no-any-return]
             except self.channel.RemoteError:
                 e = sys.exc_info()[1]
                 self.trace("ERROR", e)
@@ -124,7 +128,7 @@ class RemoteControl:
         finally:
             self.ensure_teardown()
 
-    def loop_once(self):
+    def loop_once(self) -> None:
         self.setup()
         self.wasfailing = self.failures and len(self.failures)
         result = self.runsession()
@@ -139,7 +143,9 @@ class RemoteControl:
             self.failures = uniq_failures
 
 
-def repr_pytest_looponfailinfo(failreports, rootdirs):
+def repr_pytest_looponfailinfo(
+    failreports: Sequence[str], rootdirs: Sequence[Path]
+) -> None:
     tr = TerminalWriter()
     if failreports:
         tr.sep("#", "LOOPONFAILING", bold=True)
@@ -151,12 +157,16 @@ def repr_pytest_looponfailinfo(failreports, rootdirs):
         tr.line(f"### Watching:   {rootdir}", bold=True)
 
 
-def init_worker_session(channel, args, option_dict):
+def init_worker_session(
+    channel: "execnet.Channel",  # noqa: UP037
+    args: list[str],
+    option_dict: dict[str, "Any"],  # noqa: UP037
+) -> None:
     import os
     import sys
 
     outchannel = channel.gateway.newchannel()
-    sys.stdout = sys.stderr = outchannel.makefile("w")
+    sys.stdout = sys.stderr = outchannel.makefile("w")  # type: ignore[assignment]
     channel.send(outchannel)
     # prune sys.path to not contain relative paths
     newpaths = []
@@ -179,21 +189,21 @@ def init_worker_session(channel, args, option_dict):
 
 
 class WorkerFailSession:
-    def __init__(self, config, channel):
+    def __init__(self, config: pytest.Config, channel: execnet.Channel) -> None:
         self.config = config
         self.channel = channel
-        self.recorded_failures = []
+        self.recorded_failures: list[pytest.CollectReport | pytest.TestReport] = []
         self.collection_failed = False
         config.pluginmanager.register(self)
         config.option.looponfail = False
         config.option.usepdb = False
 
-    def DEBUG(self, *args):
+    def DEBUG(self, *args: object) -> None:
         if self.config.option.debug:
             print(" ".join(map(str, args)))
 
     @pytest.hookimpl
-    def pytest_collection(self, session):
+    def pytest_collection(self, session: pytest.Session) -> bool:
         self.session = session
         self.trails = self.current_command
         hook = self.session.ihook
@@ -208,17 +218,17 @@ class WorkerFailSession:
         return True
 
     @pytest.hookimpl
-    def pytest_runtest_logreport(self, report):
+    def pytest_runtest_logreport(self, report: pytest.TestReport) -> None:
         if report.failed:
             self.recorded_failures.append(report)
 
     @pytest.hookimpl
-    def pytest_collectreport(self, report):
+    def pytest_collectreport(self, report: pytest.CollectReport) -> None:
         if report.failed:
             self.recorded_failures.append(report)
             self.collection_failed = True
 
-    def main(self):
+    def main(self) -> None:
         self.DEBUG("WORKER: received configuration, waiting for command trails")
         try:
             command = self.channel.receive()
@@ -233,7 +243,8 @@ class WorkerFailSession:
             loc = rep.longrepr
             loc = str(getattr(loc, "reprcrash", loc))
             failreports.append(loc)
-        self.channel.send((trails, failreports, self.collection_failed))
+        result = (trails, failreports, self.collection_failed)
+        self.channel.send(result)
 
 
 class StatRecorder:
@@ -248,7 +259,7 @@ class StatRecorder:
     def rec(self, p: Path) -> bool:
         return not p.name.startswith(".") and p.exists()
 
-    def waitonchange(self, checkinterval=1.0):
+    def waitonchange(self, checkinterval: float = 1.0) -> None:
         while 1:
             changed = self.check()
             if changed:

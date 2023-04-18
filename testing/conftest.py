@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import shutil
+from typing import Callable
+from typing import Generator
 
 import execnet
 import pytest
@@ -10,12 +12,14 @@ pytest_plugins = "pytester"
 
 
 @pytest.fixture(autouse=True)
-def _divert_atexit(request, monkeypatch: pytest.MonkeyPatch):
+def _divert_atexit(monkeypatch: pytest.MonkeyPatch) -> Generator[None, None, None]:
     import atexit
 
     finalizers = []
 
-    def fake_register(func, *args, **kwargs):
+    def fake_register(
+        func: Callable[..., object], *args: object, **kwargs: object
+    ) -> None:
         finalizers.append((func, args, kwargs))
 
     monkeypatch.setattr(atexit, "register", fake_register)
@@ -27,7 +31,7 @@ def _divert_atexit(request, monkeypatch: pytest.MonkeyPatch):
         func(*args, **kwargs)
 
 
-def pytest_addoption(parser) -> None:
+def pytest_addoption(parser: pytest.Parser) -> None:
     parser.addoption(
         "--gx",
         action="append",
@@ -37,16 +41,16 @@ def pytest_addoption(parser) -> None:
 
 
 @pytest.fixture
-def specssh(request) -> str:
+def specssh(request: pytest.FixtureRequest) -> str:
     return getspecssh(request.config)
 
 
 # configuration information for tests
-def getgspecs(config) -> list[execnet.XSpec]:
+def getgspecs(config: pytest.Config) -> list[execnet.XSpec]:
     return [execnet.XSpec(spec) for spec in config.getvalueorskip("gspecs")]
 
 
-def getspecssh(config) -> str:  # type: ignore[return]
+def getspecssh(config: pytest.Config) -> str:
     xspecs = getgspecs(config)
     for spec in xspecs:
         if spec.ssh:
@@ -56,7 +60,7 @@ def getspecssh(config) -> str:  # type: ignore[return]
     pytest.skip("need '--gx ssh=...'")
 
 
-def getsocketspec(config) -> execnet.XSpec:
+def getsocketspec(config: pytest.Config) -> execnet.XSpec:
     xspecs = getgspecs(config)
     for spec in xspecs:
         if spec.socket:

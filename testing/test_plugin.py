@@ -10,7 +10,7 @@ from xdist.workermanage import NodeManager
 
 
 @pytest.fixture
-def monkeypatch_3_cpus(monkeypatch: pytest.MonkeyPatch):
+def monkeypatch_3_cpus(monkeypatch: pytest.MonkeyPatch) -> None:
     """Make pytest-xdist believe the system has 3 CPUs."""
     # block import
     monkeypatch.setitem(sys.modules, "psutil", None)
@@ -128,7 +128,7 @@ def test_auto_detect_cpus_psutil(
 
 
 def test_auto_detect_cpus_os(
-    pytester: pytest.Pytester, monkeypatch: pytest.MonkeyPatch, monkeypatch_3_cpus
+    pytester: pytest.Pytester, monkeypatch: pytest.MonkeyPatch, monkeypatch_3_cpus: None
 ) -> None:
     from xdist.plugin import pytest_cmdline_main as check_options
 
@@ -189,7 +189,7 @@ def test_hook_auto_num_workers_arg(
 
 
 def test_hook_auto_num_workers_none(
-    pytester: pytest.Pytester, monkeypatch: pytest.MonkeyPatch, monkeypatch_3_cpus
+    pytester: pytest.Pytester, monkeypatch: pytest.MonkeyPatch, monkeypatch_3_cpus: None
 ) -> None:
     # Returning None from a hook to skip it is pytest behavior,
     # but we document it so let's test it.
@@ -231,7 +231,7 @@ def test_envvar_auto_num_workers(
 
 
 def test_envvar_auto_num_workers_warn(
-    pytester: pytest.Pytester, monkeypatch: pytest.MonkeyPatch, monkeypatch_3_cpus
+    pytester: pytest.Pytester, monkeypatch: pytest.MonkeyPatch, monkeypatch_3_cpus: None
 ) -> None:
     from xdist.plugin import pytest_cmdline_main as check_options
 
@@ -244,7 +244,7 @@ def test_envvar_auto_num_workers_warn(
 
 
 def test_auto_num_workers_hook_overrides_envvar(
-    pytester: pytest.Pytester, monkeypatch: pytest.MonkeyPatch, monkeypatch_3_cpus
+    pytester: pytest.Pytester, monkeypatch: pytest.MonkeyPatch, monkeypatch_3_cpus: None
 ) -> None:
     from xdist.plugin import pytest_cmdline_main as check_options
 

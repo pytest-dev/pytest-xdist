@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+import pytest
+
 from xdist.remote import Producer
 
 from .loadscope import LoadScopeScheduling
@@ -10,14 +14,14 @@ class LoadGroupScheduling(LoadScopeScheduling):
     instead of the module or class to which they belong to.
     """
 
-    def __init__(self, config, log=None):
+    def __init__(self, config: pytest.Config, log: Producer | None = None) -> None:
         super().__init__(config, log)
         if log is None:
             self.log = Producer("loadgroupsched")
         else:
             self.log = log.loadgroupsched
 
-    def _split_scope(self, nodeid):
+    def _split_scope(self, nodeid: str) -> str:
         """Determine the scope (grouping) of a nodeid.
 
         There are usually 3 cases for a nodeid::

@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+from typing import Any
+from typing import cast
 from typing import Sequence
+from typing import TYPE_CHECKING
 
 import execnet
 import pytest
@@ -13,29 +16,38 @@ from xdist.report import report_collection_diff
 from xdist.scheduler import EachScheduling
 from xdist.scheduler import LoadScheduling
 from xdist.scheduler import WorkStealingScheduling
+from xdist.workermanage import WorkerController
 
 
-class MockGateway:
+if TYPE_CHECKING:
+    BaseOfMockGateway = execnet.Gateway
+    BaseOfMockNode = WorkerController
+else:
+    BaseOfMockGateway = object
+    BaseOfMockNode = object
+
+
+class MockGateway(BaseOfMockGateway):
     def __init__(self) -> None:
         self._count = 0
         self.id = str(self._count)
         self._count += 1
 
 
-class MockNode:
+class MockNode(BaseOfMockNode):
     def __init__(self) -> None:
-        self.sent = []  # type: ignore[var-annotated]
-        self.stolen = []  # type: ignore[var-annotated]
+        self.sent: list[int | str] = []
+        self.stolen: list[int] = []
         self.gateway = MockGateway()
         self._shutdown = False
 
-    def send_runtest_some(self, indices) -> None:
+    def send_runtest_some(self, indices: Sequence[int]) -> None:
         self.sent.extend(indices)
 
     def send_runtest_all(self) -> None:
         self.sent.append("ALL")
 
-    def send_steal(self, indices) -> None:
+    def send_steal(self, indices: Sequence[int]) -> None:
         self.stolen.extend(indices)
 
     def shutdown(self) -> None:
@@ -48,10 +60,9 @@ class MockNode:
 
 class TestEachScheduling:
     def test_schedule_load_simple(self, pytester: pytest.Pytester) -> None:
-        node1 = MockNode()
-        node2 = MockNode()
         config = pytester.parseconfig("--tx=2*popen")
         sched = EachScheduling(config)
+        node1, node2 = MockNode(), MockNode()
         sched.add_node(node1)
         sched.add_node(node2)
         collection = ["a.py::test_1"]
@@ -59,7 +70,7 @@ class TestEachScheduling:
         sched.add_node_collection(node1, collection)
         assert not sched.collection_is_completed
         sched.add_node_collection(node2, collection)
-        assert sched.collection_is_completed
+        assert bool(sched.collection_is_completed)
         assert sched.node2collection[node1] == collection
         assert sched.node2collection[node2] == collection
         sched.schedule()
@@ -72,14 +83,14 @@ class TestEachScheduling:
         assert sched.tests_finished
 
     def test_schedule_remove_node(self, pytester: pytest.Pytester) -> None:
-        node1 = MockNode()
         config = pytester.parseconfig("--tx=popen")
         sched = EachScheduling(config)
+        node1 = MockNode()
         sched.add_node(node1)
         collection = ["a.py::test_1"]
         assert not sched.collection_is_completed
         sched.add_node_collection(node1, collection)
-        assert sched.collection_is_completed
+        assert bool(sched.collection_is_completed)
         assert sched.node2collection[node1] == collection
         sched.schedule()
         assert sched.tests_finished
@@ -93,15 +104,15 @@ class TestLoadScheduling:
     def test_schedule_load_simple(self, pytester: pytest.Pytester) -> None:
         config = pytester.parseconfig("--tx=2*popen")
         sched = LoadScheduling(config)
-        sched.add_node(MockNode())
-        sched.add_node(MockNode())
-        node1, node2 = sched.nodes
+        node1, node2 = MockNode(), MockNode()
+        sched.add_node(node1)
+        sched.add_node(node2)
         collection = ["a.py::test_1", "a.py::test_2"]
         assert not sched.collection_is_completed
         sched.add_node_collection(node1, collection)
         assert not sched.collection_is_completed
         sched.add_node_collection(node2, collection)
-        assert sched.collection_is_completed
+        assert bool(sched.collection_is_completed)
         assert sched.node2collection[node1] == collection
         assert sched.node2collection[node2] == collection
         sched.schedule()
@@ -111,15 +122,17 @@ class TestLoadScheduling:
         assert len(node2.sent) == 1
         assert node1.sent == [0]
         assert node2.sent == [1]
-        sched.mark_test_complete(node1, node1.sent[0])
+        sent10 = node1.sent[0]
+        assert isinstance(sent10, int)
+        sched.mark_test_complete(node1, sent10)
         assert sched.tests_finished
 
     def test_schedule_batch_size(self, pytester: pytest.Pytester) -> None:
         config = pytester.parseconfig("--tx=2*popen")
         sched = LoadScheduling(config)
-        sched.add_node(MockNode())
-        sched.add_node(MockNode())
-        node1, node2 = sched.nodes
+        node1, node2 = MockNode(), MockNode()
+        sched.add_node(node1)
+        sched.add_node(node2)
         col = ["xyz"] * 6
         sched.add_node_collection(node1, col)
         sched.add_node_collection(node2, col)
@@ -144,9 +157,9 @@ class TestLoadScheduling:
     def test_schedule_maxchunk_none(self, pytester: pytest.Pytester) -> None:
         config = pytester.parseconfig("--tx=2*popen")
         sched = LoadScheduling(config)
-        sched.add_node(MockNode())
-        sched.add_node(MockNode())
-        node1, node2 = sched.nodes
+        node1, node2 = MockNode(), MockNode()
+        sched.add_node(node1)
+        sched.add_node(node2)
         col = [f"test{i}" for i in range(16)]
         sched.add_node_collection(node1, col)
         sched.add_node_collection(node2, col)
@@ -172,9 +185,9 @@ class TestLoadScheduling:
     def test_schedule_maxchunk_1(self, pytester: pytest.Pytester) -> None:
         config = pytester.parseconfig("--tx=2*popen", "--maxschedchunk=1")
         sched = LoadScheduling(config)
-        sched.add_node(MockNode())
-        sched.add_node(MockNode())
-        node1, node2 = sched.nodes
+        node1, node2 = MockNode(), MockNode()
+        sched.add_node(node1)
+        sched.add_node(node2)
         col = [f"test{i}" for i in range(16)]
         sched.add_node_collection(node1, col)
         sched.add_node_collection(node2, col)
@@ -186,7 +199,9 @@ class TestLoadScheduling:
         assert sched.node2pending[node2] == node2.sent
 
         for complete_index, first_pending in enumerate(range(5, 16)):
-            sched.mark_test_complete(node1, node1.sent[complete_index])
+            sent_index = node1.sent[complete_index]
+            assert isinstance(sent_index, int)
+            sched.mark_test_complete(node1, sent_index)
             assert node1.sent == [0, 1, *range(4, first_pending)]
             assert node2.sent == [2, 3]
             assert sched.pending == list(range(first_pending, 16))
@@ -194,10 +209,10 @@ class TestLoadScheduling:
     def test_schedule_fewer_tests_than_nodes(self, pytester: pytest.Pytester) -> None:
         config = pytester.parseconfig("--tx=3*popen")
         sched = LoadScheduling(config)
-        sched.add_node(MockNode())
-        sched.add_node(MockNode())
-        sched.add_node(MockNode())
-        node1, node2, node3 = sched.nodes
+        node1, node2, node3 = MockNode(), MockNode(), MockNode()
+        sched.add_node(node1)
+        sched.add_node(node2)
+        sched.add_node(node3)
         col = ["xyz"] * 2
         sched.add_node_collection(node1, col)
         sched.add_node_collection(node2, col)
@@ -215,10 +230,10 @@ class TestLoadScheduling:
     ) -> None:
         config = pytester.parseconfig("--tx=3*popen")
         sched = LoadScheduling(config)
-        sched.add_node(MockNode())
-        sched.add_node(MockNode())
-        sched.add_node(MockNode())
-        node1, node2, node3 = sched.nodes
+        node1, node2, node3 = MockNode(), MockNode(), MockNode()
+        sched.add_node(node1)
+        sched.add_node(node2)
+        sched.add_node(node3)
         col = ["xyz"] * 5
         sched.add_node_collection(node1, col)
         sched.add_node_collection(node2, col)
@@ -232,9 +247,9 @@ class TestLoadScheduling:
         assert not sched.pending
 
     def test_add_remove_node(self, pytester: pytest.Pytester) -> None:
-        node = MockNode()
         config = pytester.parseconfig("--tx=popen")
         sched = LoadScheduling(config)
+        node = MockNode()
         sched.add_node(node)
         collection = ["test_file.py::test_func"]
         sched.add_node_collection(node, collection)
@@ -253,18 +268,17 @@ class TestLoadScheduling:
         class CollectHook:
             """Dummy hook that stores collection reports."""
 
-            def __init__(self):
-                self.reports = []
+            def __init__(self) -> None:
+                self.reports: list[pytest.CollectReport] = []
 
-            def pytest_collectreport(self, report):
+            def pytest_collectreport(self, report: pytest.CollectReport) -> None:
                 self.reports.append(report)
 
         collect_hook = CollectHook()
         config = pytester.parseconfig("--tx=2*popen")
         config.pluginmanager.register(collect_hook, "collect_hook")
-        node1 = MockNode()
-        node2 = MockNode()
         sched = LoadScheduling(config)
+        node1, node2 = MockNode(), MockNode()
         sched.add_node(node1)
         sched.add_node(node2)
         sched.add_node_collection(node1, ["a.py::test_1"])
@@ -272,6 +286,7 @@ class TestLoadScheduling:
         sched.schedule()
         assert len(collect_hook.reports) == 1
         rep = collect_hook.reports[0]
+        assert isinstance(rep.longrepr, str)
         assert "Different tests were collected between" in rep.longrepr
 
 
@@ -279,15 +294,15 @@ class TestWorkStealingScheduling:
     def test_ideal_case(self, pytester: pytest.Pytester) -> None:
         config = pytester.parseconfig("--tx=2*popen")
         sched = WorkStealingScheduling(config)
-        sched.add_node(MockNode())
-        sched.add_node(MockNode())
-        node1, node2 = sched.nodes
+        node1, node2 = MockNode(), MockNode()
+        sched.add_node(node1)
+        sched.add_node(node2)
         collection = [f"test_workstealing.py::test_{i}" for i in range(16)]
         assert not sched.collection_is_completed
         sched.add_node_collection(node1, collection)
         assert not sched.collection_is_completed
         sched.add_node_collection(node2, collection)
-        assert sched.collection_is_completed
+        assert bool(sched.collection_is_completed)
         assert sched.node2collection[node1] == collection
         assert sched.node2collection[node2] == collection
         sched.schedule()
@@ -296,18 +311,20 @@ class TestWorkStealingScheduling:
         assert node1.sent == list(range(8))
         assert node2.sent == list(range(8, 16))
         for i in range(8):
-            sched.mark_test_complete(node1, node1.sent[i])
-            sched.mark_test_complete(node2, node2.sent[i])
-        assert sched.tests_finished
+            sent1, sent2 = node1.sent[i], node2.sent[i]
+            assert isinstance(sent1, int) and isinstance(sent2, int)
+            sched.mark_test_complete(node1, sent1)
+            sched.mark_test_complete(node2, sent2)
+        assert bool(sched.tests_finished)
         assert node1.stolen == []
         assert node2.stolen == []
 
     def test_stealing(self, pytester: pytest.Pytester) -> None:
         config = pytester.parseconfig("--tx=2*popen")
         sched = WorkStealingScheduling(config)
-        sched.add_node(MockNode())
-        sched.add_node(MockNode())
-        node1, node2 = sched.nodes
+        node1, node2 = MockNode(), MockNode()
+        sched.add_node(node1)
+        sched.add_node(node2)
         collection = [f"test_workstealing.py::test_{i}" for i in range(16)]
         sched.add_node_collection(node1, collection)
         sched.add_node_collection(node2, collection)
@@ -316,11 +333,15 @@ class TestWorkStealingScheduling:
         assert node1.sent == list(range(8))
         assert node2.sent == list(range(8, 16))
         for i in range(8):
-            sched.mark_test_complete(node1, node1.sent[i])
+            sent = node1.sent[i]
+            assert isinstance(sent, int)
+            sched.mark_test_complete(node1, sent)
         assert node2.stolen == list(range(12, 16))
         sched.remove_pending_tests_from_node(node2, node2.stolen)
         for i in range(4):
-            sched.mark_test_complete(node2, node2.sent[i])
+            sent = node2.sent[i]
+            assert isinstance(sent, int)
+            sched.mark_test_complete(node2, sent)
         assert node1.stolen == [14, 15]
         sched.remove_pending_tests_from_node(node1, node1.stolen)
         sched.mark_test_complete(node1, 12)
@@ -355,10 +376,10 @@ class TestWorkStealingScheduling:
     def test_schedule_fewer_tests_than_nodes(self, pytester: pytest.Pytester) -> None:
         config = pytester.parseconfig("--tx=3*popen")
         sched = WorkStealingScheduling(config)
-        sched.add_node(MockNode())
-        sched.add_node(MockNode())
-        sched.add_node(MockNode())
-        node1, node2, node3 = sched.nodes
+        node1, node2, node3 = MockNode(), MockNode(), MockNode()
+        sched.add_node(node1)
+        sched.add_node(node2)
+        sched.add_node(node3)
         col = ["xyz"] * 2
         sched.add_node_collection(node1, col)
         sched.add_node_collection(node2, col)
@@ -378,10 +399,10 @@ class TestWorkStealingScheduling:
     ) -> None:
         config = pytester.parseconfig("--tx=3*popen")
         sched = WorkStealingScheduling(config)
-        sched.add_node(MockNode())
-        sched.add_node(MockNode())
-        sched.add_node(MockNode())
-        node1, node2, node3 = sched.nodes
+        node1, node2, node3 = MockNode(), MockNode(), MockNode()
+        sched.add_node(node1)
+        sched.add_node(node2)
+        sched.add_node(node3)
         col = ["xyz"] * 5
         sched.add_node_collection(node1, col)
         sched.add_node_collection(node2, col)
@@ -392,11 +413,19 @@ class TestWorkStealingScheduling:
         assert node3.sent == [3, 4]
         assert not sched.pending
         assert not sched.tests_finished
-        sched.mark_test_complete(node1, node1.sent[0])
-        sched.mark_test_complete(node2, node2.sent[0])
-        sched.mark_test_complete(node3, node3.sent[0])
-        sched.mark_test_complete(node3, node3.sent[1])
-        assert sched.tests_finished
+        sent10 = node1.sent[0]
+        assert isinstance(sent10, int)
+        sent20 = node2.sent[0]
+        assert isinstance(sent20, int)
+        sent30 = node3.sent[0]
+        assert isinstance(sent30, int)
+        sent31 = node3.sent[1]
+        assert isinstance(sent31, int)
+        sched.mark_test_complete(node1, sent10)
+        sched.mark_test_complete(node2, sent20)
+        sched.mark_test_complete(node3, sent30)
+        sched.mark_test_complete(node3, sent31)
+        assert bool(sched.tests_finished)
         assert node1.stolen == []
         assert node2.stolen == []
         assert node3.stolen == []
@@ -416,18 +445,17 @@ class TestWorkStealingScheduling:
 
     def test_different_tests_collected(self, pytester: pytest.Pytester) -> None:
         class CollectHook:
-            def __init__(self):
-                self.reports = []
+            def __init__(self) -> None:
+                self.reports: list[pytest.CollectReport] = []
 
-            def pytest_collectreport(self, report):
+            def pytest_collectreport(self, report: pytest.CollectReport) -> None:
                 self.reports.append(report)
 
         collect_hook = CollectHook()
         config = pytester.parseconfig("--tx=2*popen")
         config.pluginmanager.register(collect_hook, "collect_hook")
-        node1 = MockNode()
-        node2 = MockNode()
         sched = WorkStealingScheduling(config)
+        node1, node2 = MockNode(), MockNode()
         sched.add_node(node1)
         sched.add_node(node2)
         sched.add_node_collection(node1, ["a.py::test_1"])
@@ -435,12 +463,13 @@ class TestWorkStealingScheduling:
         sched.schedule()
         assert len(collect_hook.reports) == 1
         rep = collect_hook.reports[0]
+        assert isinstance(rep.longrepr, str)
         assert "Different tests were collected between" in rep.longrepr
 
 
 class TestDistReporter:
     @pytest.mark.xfail
-    def test_rsync_printing(self, pytester: pytest.Pytester, linecomp) -> None:
+    def test_rsync_printing(self, pytester: pytest.Pytester, linecomp: Any) -> None:
         config = pytester.parseconfig()
         from _pytest.terminal import TerminalReporter
 
@@ -473,14 +502,16 @@ class TestDistReporter:
 def test_report_collection_diff_equal() -> None:
     """Test reporting of equal collections."""
     from_collection = to_collection = ["aaa", "bbb", "ccc"]
-    assert report_collection_diff(from_collection, to_collection, 1, 2) is None
+    assert report_collection_diff(from_collection, to_collection, "1", "2") is None
 
 
 def test_default_max_worker_restart() -> None:
-    class config:
+    class MockConfig:
         class option:
             maxworkerrestart: str | None = None
             numprocesses: int = 0
+
+    config = cast(pytest.Config, MockConfig)
 
     assert get_default_max_worker_restart(config) is None
 
