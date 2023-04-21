@@ -1,6 +1,6 @@
 repos:
 -   repo: https://github.com/PyCQA/autoflake
-    rev: v2.0.2
+    rev: v2.1.0
     hooks:
     -   id: autoflake
         args: ["--in-place", "--remove-unused-variables", "--remove-all-unused-imports"]
