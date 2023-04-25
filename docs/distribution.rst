@@ -50,7 +50,8 @@ The test distribution algorithm is configured with the ``--dist`` command-line o
 .. _distribution modes:
 
 * ``--dist load`` **(default)**: Sends pending tests to any worker that is
-  available, without any guaranteed order.
+  available, without any guaranteed order. Scheduling can be fine-tuned with
+  the `--maxschedchunk` option, see output of `pytest --help`.
 
 * ``--dist loadscope``: Tests are grouped by **module** for *test functions*
   and by **class** for *test methods*. Groups are distributed to available
