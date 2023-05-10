@@ -1,0 +1,1 @@
+Improved progress output when collecting nodes to be less verbose.

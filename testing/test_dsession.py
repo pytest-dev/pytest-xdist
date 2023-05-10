@@ -1,7 +1,13 @@
-from xdist.dsession import DSession, get_default_max_worker_restart
+from __future__ import annotations
+from xdist.dsession import (
+    DSession,
+    get_default_max_worker_restart,
+    get_workers_status_line,
+    WorkerStatus,
+)
 from xdist.report import report_collection_diff
 from xdist.scheduler import EachScheduling, LoadScheduling, WorkStealingScheduling
-from typing import Optional
+from typing import Sequence
 
 import pytest
 import execnet
@@ -473,7 +479,7 @@ def test_report_collection_diff_equal() -> None:
 def test_default_max_worker_restart() -> None:
     class config:
         class option:
-            maxworkerrestart: Optional[str] = None
+            maxworkerrestart: str | None = None
             numprocesses: int = 0
 
     assert get_default_max_worker_restart(config) is None
@@ -527,3 +533,70 @@ def test_pytest_issue419(pytester: pytest.Pytester) -> None:
     reprec = pytester.inline_run("-n1")
     reprec.assertoutcome(passed=2)
     assert 0
+
+
+Created = WorkerStatus.Created
+Initialized = WorkerStatus.Initialized
+Ready = WorkerStatus.Ready
+CollectionDone = WorkerStatus.CollectionDone
+
+
+@pytest.mark.parametrize(
+    "status_and_items, expected",
+    [
+        (
+            [],
+            "",
+        ),
+        (
+            [(Created, 0)],
+            "created: 1/1 worker",
+        ),
+        (
+            [(Created, 0), (Created, 0)],
+            "created: 2/2 workers",
+        ),
+        (
+            [(Initialized, 0), (Created, 0)],
+            "initialized: 1/2 workers",
+        ),
+        (
+            [(Initialized, 0), (Initialized, 0)],
+            "initialized: 2/2 workers",
+        ),
+        (
+            [(Ready, 0), (Created, 0)],
+            "ready: 1/2 workers",
+        ),
+        (
+            [(Ready, 0), (Ready, 0)],
+            "ready: 2/2 workers",
+        ),
+        (
+            [(CollectionDone, 12), (Created, 0)],
+            "collecting: 1/2 workers",
+        ),
+        (
+            [(CollectionDone, 12), (CollectionDone, 12)],
+            "2 workers [12 items]",
+        ),
+        (
+            [(CollectionDone, 1), (CollectionDone, 1)],
+            "2 workers [1 item]",
+        ),
+        (
+            [(CollectionDone, 1)],
+            "1 worker [1 item]",
+        ),
+        # Different number of tests collected will raise an error and should not happen in practice,
+        # but we test for it anyway.
+        (
+            [(CollectionDone, 1), (CollectionDone, 12)],
+            "2 workers [1 item]",
+        ),
+    ],
+)
+def test_get_workers_status_line(
+    status_and_items: Sequence[tuple[WorkerStatus, int]], expected: str
+) -> None:
+    assert get_workers_status_line(status_and_items) == expected
