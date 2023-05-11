@@ -43,5 +43,5 @@ jobs:
 
     - name: Push tag
       run: |
-        git tag v${{ github.event.inputs.version }} ${{ github.sha }}
+        git tag --annotate --message=v${{ github.event.inputs.version }} v${{ github.event.inputs.version }} ${{ github.sha }}
         git push origin v${{ github.event.inputs.version }}
