@@ -537,7 +537,7 @@ def test_pytest_issue419(pytester: pytest.Pytester) -> None:
 
 Created = WorkerStatus.Created
 Initialized = WorkerStatus.Initialized
-Ready = WorkerStatus.Ready
+ReadyForCollection = WorkerStatus.ReadyForCollection
 CollectionDone = WorkerStatus.CollectionDone
 
 
@@ -565,11 +565,11 @@ CollectionDone = WorkerStatus.CollectionDone
             "initialized: 2/2 workers",
         ),
         (
-            [(Ready, 0), (Created, 0)],
+            [(ReadyForCollection, 0), (Created, 0)],
             "ready: 1/2 workers",
         ),
         (
-            [(Ready, 0), (Ready, 0)],
+            [(ReadyForCollection, 0), (ReadyForCollection, 0)],
             "ready: 2/2 workers",
         ),
         (

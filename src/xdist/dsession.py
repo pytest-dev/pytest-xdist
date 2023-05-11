@@ -389,7 +389,7 @@ class WorkerStatus(Enum):
     Initialized = auto()
 
     # Worker is now ready for collection.
-    Ready = auto()
+    ReadyForCollection = auto()
 
     # Worker has finished collection.
     CollectionDone = auto()
@@ -464,7 +464,9 @@ class TerminalDistReporter:
                 d["id"], d["version"].replace("\n", " -- ")
             )
             self.rewrite(infoline, newline=True)
-        self.setstatus(node.gateway.spec, WorkerStatus.Ready, tests_collected=0)
+        self.setstatus(
+            node.gateway.spec, WorkerStatus.ReadyForCollection, tests_collected=0
+        )
 
     @pytest.hookimpl
     def pytest_testnodedown(self, node, error) -> None:
@@ -498,6 +500,8 @@ def get_workers_status_line(
     total_workers = len(statuses)
     workers_noun = "worker" if total_workers == 1 else "workers"
     if status_and_items and all(s == WorkerStatus.CollectionDone for s in statuses):
+        # All workers collect the same number of items, so we grab
+        # the total number of items from the first worker.
         first = status_and_items[0]
         status, tests_collected = first
         tests_noun = "item" if tests_collected == 1 else "items"
@@ -505,14 +509,14 @@ def get_workers_status_line(
     if WorkerStatus.CollectionDone in statuses:
         done = sum(1 for s, c in status_and_items if c > 0)
         return f"collecting: {done}/{total_workers} {workers_noun}"
-    if WorkerStatus.Ready in statuses:
-        ready = list(statuses).count(WorkerStatus.Ready)
+    if WorkerStatus.ReadyForCollection in statuses:
+        ready = statuses.count(WorkerStatus.ReadyForCollection)
         return f"ready: {ready}/{total_workers} {workers_noun}"
     if WorkerStatus.Initialized in statuses:
-        initialized = list(statuses).count(WorkerStatus.Initialized)
+        initialized = statuses.count(WorkerStatus.Initialized)
         return f"initialized: {initialized}/{total_workers} {workers_noun}"
     if WorkerStatus.Created in statuses:
-        created = list(statuses).count(WorkerStatus.Created)
+        created = statuses.count(WorkerStatus.Created)
         return f"created: {created}/{total_workers} {workers_noun}"
 
     return ""
