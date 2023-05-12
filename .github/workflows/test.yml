@@ -10,6 +10,11 @@ on:
     branches:
       - "*"
 
+# Cancel running jobs for the same workflow and branch.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
 
   check-package:
