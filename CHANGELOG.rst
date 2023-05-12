@@ -1,3 +1,12 @@
+pytest-xdist 3.3.0 (2023-05-12)
+===============================
+
+Features
+--------
+
+- `#555 <https://github.com/pytest-dev/pytest-xdist/issues/555>`_: Improved progress output when collecting nodes to be less verbose.
+
+
 pytest-xdist 3.2.1 (2023-03-12)
 ===============================
 

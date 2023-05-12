@@ -3,13 +3,27 @@ name: test
 on:
   push:
     branches:
-      - "*"
+      - master
+      - "test-me-*"
 
   pull_request:
     branches:
       - "*"
 
+# Cancel running jobs for the same workflow and branch.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
+
+  check-package:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Build and Check Package
+      uses: hynek/build-and-inspect-python-package@v1.5
+
   test:
 
     runs-on: ${{ matrix.os }}
