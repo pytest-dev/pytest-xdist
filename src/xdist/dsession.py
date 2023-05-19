@@ -444,26 +444,25 @@ class TerminalDistReporter:
 
     @pytest.hookimpl
     def pytest_xdist_newgateway(self, gateway) -> None:
-        rinfo = gateway._rinfo()
-        is_local = rinfo.executable == sys.executable
-        if self.config.option.verbose > 0 and not is_local:
-            version = "%s.%s.%s" % rinfo.version_info[:3]
-            self.rewrite(
-                "[%s] %s Python %s cwd: %s"
-                % (gateway.id, rinfo.platform, version, rinfo.cwd),
-                newline=True,
-            )
+        if self.config.option.verbose > 0:
+            rinfo = gateway._rinfo()
+            different_interpreter = rinfo.executable != sys.executable
+            if different_interpreter:
+                version = "%s.%s.%s" % rinfo.version_info[:3]
+                self.rewrite(
+                    f"[{gateway.id}] {rinfo.platform} Python {version} cwd: {rinfo.cwd}",
+                    newline=True,
+                )
         self.setstatus(gateway.spec, WorkerStatus.Initialized, tests_collected=0)
 
     @pytest.hookimpl
     def pytest_testnodeready(self, node) -> None:
-        d = node.workerinfo
-        is_local = d.get("executable") == sys.executable
-        if self.config.option.verbose > 0 and not is_local:
-            infoline = "[{}] Python {}".format(
-                d["id"], d["version"].replace("\n", " -- ")
-            )
-            self.rewrite(infoline, newline=True)
+        if self.config.option.verbose > 0:
+            d = node.workerinfo
+            different_interpreter = d.get("executable") != sys.executable
+            if different_interpreter:
+                version = d["version"].replace("\n", " -- ")
+                self.rewrite(f"[{d['id']}] Python {version}", newline=True)
         self.setstatus(
             node.gateway.spec, WorkerStatus.ReadyForCollection, tests_collected=0
         )
