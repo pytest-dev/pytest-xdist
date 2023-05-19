@@ -1,2 +1,4 @@
-Avoid unnecessary remote calls during node startup, which might trigger a bug in execnet that causes
-tests to execute in threads other than the main thread.
+Avoid remote calls during startup as execnet by default does not ensure remote affinity with the main thread and accidentially sheduling the pytest worker into a non main thread breaks numerous frameworks.
+For example asyncio, anyio, pyqt/pyside.
+
+A more safe correction will require thread affinity in execnet.
