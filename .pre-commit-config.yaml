@@ -1,6 +1,6 @@
 repos:
 -   repo: https://github.com/PyCQA/autoflake
-    rev: v2.1.1
+    rev: v2.2.0
     hooks:
     -   id: autoflake
         args: ["--in-place", "--remove-unused-variables", "--remove-all-unused-imports"]
@@ -39,7 +39,7 @@ repos:
         language: python
         additional_dependencies: [pygments, restructuredtext_lint]
 -   repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.3.0
+    rev: v1.4.1
     hooks:
     -   id: mypy
         files: ^(src/|testing/)
