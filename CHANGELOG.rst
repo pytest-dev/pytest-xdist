@@ -1,3 +1,25 @@
+pytest-xdist 3.3.1 (2023-05-19)
+===============================
+
+Bug Fixes
+---------
+
+- `#907 <https://github.com/pytest-dev/pytest-xdist/issues/907>`_: Avoid remote calls during startup as ``execnet`` by default does not ensure remote affinity with the
+  main thread and might accidentally schedule the pytest worker into a non-main thread, which breaks numerous frameworks,
+  for example ``asyncio``, ``anyio``, ``PyQt/PySide``, etc.
+
+  A more safe correction will require thread affinity in ``execnet`` (`pytest-dev/execnet#96 <https://github.com/pytest-dev/execnet/issues/96>`__).
+
+
+pytest-xdist 3.3.0 (2023-05-12)
+===============================
+
+Features
+--------
+
+- `#555 <https://github.com/pytest-dev/pytest-xdist/issues/555>`_: Improved progress output when collecting nodes to be less verbose.
+
+
 pytest-xdist 3.2.1 (2023-03-12)
 ===============================
 

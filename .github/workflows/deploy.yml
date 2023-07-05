@@ -1,33 +1,49 @@
 name: deploy
 
 on:
-  push:
-    tags:
-      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version'
+        required: true
+        default: '1.2.3'
 
 jobs:
-  deploy:
 
+  package:
     runs-on: ubuntu-latest
+    env:
+      SETUPTOOLS_SCM_PRETEND_VERSION: ${{ github.event.inputs.version }}
 
     steps:
     - uses: actions/checkout@v3
+
+    - name: Build and Check Package
+      uses: hynek/build-and-inspect-python-package@v1.5
+
+  deploy:
+    needs: package
+    runs-on: ubuntu-latest
+    environment: deploy
+    permissions:
+      id-token: write  # For PyPI trusted publishers.
+      contents: write  # For tag.
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Download Package
+      uses: actions/download-artifact@v3
       with:
-        # Needed to fetch tags, which are required by setuptools-scm.
-        fetch-depth: 0
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: "3.10"
-    - name: Install build
-      run: |
-        python -m pip install --upgrade pip
-        pip install build
-    - name: Build package
-      run: |
-        python -m build
+        name: Packages
+        path: dist
+
     - name: Publish package to PyPI
-      uses: pypa/gh-action-pypi-publish@release/v1
-      with:
-        user: __token__
-        password: ${{ secrets.pypi_token }}
+      uses: pypa/gh-action-pypi-publish@v1.8.5
+
+    - name: Push tag
+      run: |
+        git config user.name "pytest bot"
+        git config user.email "pytestbot@gmail.com"
+        git tag --annotate --message=v${{ github.event.inputs.version }} v${{ github.event.inputs.version }} ${{ github.sha }}
+        git push origin v${{ github.event.inputs.version }}

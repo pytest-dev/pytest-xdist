@@ -1,3 +1,8 @@
+from __future__ import annotations
+import sys
+from enum import Enum, auto
+from typing import Sequence
+
 import pytest
 
 from xdist.remote import Producer
@@ -252,14 +257,16 @@ class DSession:
         self._session.testscollected = len(ids)
         self.sched.add_node_collection(node, ids)
         if self.terminal:
-            self.trdist.setstatus(node.gateway.spec, "[%d]" % (len(ids)))
+            self.trdist.setstatus(
+                node.gateway.spec, WorkerStatus.CollectionDone, tests_collected=len(ids)
+            )
         if self.sched.collection_is_completed:
             if self.terminal and not self.sched.has_pending:
                 self.trdist.ensure_show_status()
                 self.terminal.write_line("")
                 if self.config.option.verbose > 0:
                     self.terminal.write_line(
-                        "scheduling tests via %s" % (self.sched.__class__.__name__)
+                        f"scheduling tests via {self.sched.__class__.__name__}"
                     )
             self.sched.schedule()
 
@@ -356,7 +363,7 @@ class DSession:
         if rep.failed:
             self.countfailures += 1
             if self.maxfail and self.countfailures >= self.maxfail:
-                self.shouldstop = "stopping after %d failures" % (self.countfailures)
+                self.shouldstop = f"stopping after {self.countfailures} failures"
 
     def triggershutdown(self):
         self.log("triggering shutdown")
@@ -383,32 +390,51 @@ class DSession:
         self.config.hook.pytest_runtest_logreport(report=rep)
 
 
+class WorkerStatus(Enum):
+    """Status of each worker during creation/collection."""
+
+    # Worker spec has just been created.
+    Created = auto()
+
+    # Worker has been initialized.
+    Initialized = auto()
+
+    # Worker is now ready for collection.
+    ReadyForCollection = auto()
+
+    # Worker has finished collection.
+    CollectionDone = auto()
+
+
 class TerminalDistReporter:
-    def __init__(self, config):
+    def __init__(self, config) -> None:
         self.config = config
         self.tr = config.pluginmanager.getplugin("terminalreporter")
-        self._status = {}
+        self._status: dict[str, tuple[WorkerStatus, int]] = {}
         self._lastlen = 0
         self._isatty = getattr(self.tr, "isatty", self.tr.hasmarkup)
 
-    def write_line(self, msg):
+    def write_line(self, msg: str) -> None:
         self.tr.write_line(msg)
 
-    def ensure_show_status(self):
+    def ensure_show_status(self) -> None:
         if not self._isatty:
             self.write_line(self.getstatus())
 
-    def setstatus(self, spec, status, show=True):
-        self._status[spec.id] = status
+    def setstatus(
+        self, spec, status: WorkerStatus, *, tests_collected: int, show: bool = True
+    ) -> None:
+        self._status[spec.id] = (status, tests_collected)
         if show and self._isatty:
             self.rewrite(self.getstatus())
 
-    def getstatus(self):
+    def getstatus(self) -> str:
         if self.config.option.verbose >= 0:
-            parts = [f"{spec.id} {self._status[spec.id]}" for spec in self._specs]
-            return " / ".join(parts)
-        else:
-            return "bringing up nodes..."
+            line = get_workers_status_line(list(self._status.values()))
+            if line:
+                return line
+
+        return "bringing up nodes..."
 
     def rewrite(self, line, newline=False):
         pline = line + " " * max(self._lastlen - len(line), 0)
@@ -420,37 +446,40 @@ class TerminalDistReporter:
         self.tr.rewrite(pline, bold=True)
 
     @pytest.hookimpl
-    def pytest_xdist_setupnodes(self, specs):
+    def pytest_xdist_setupnodes(self, specs) -> None:
         self._specs = specs
         for spec in specs:
-            self.setstatus(spec, "I", show=False)
-        self.setstatus(spec, "I", show=True)
+            self.setstatus(spec, WorkerStatus.Created, tests_collected=0, show=False)
+        self.setstatus(spec, WorkerStatus.Created, tests_collected=0, show=True)
         self.ensure_show_status()
 
     @pytest.hookimpl
-    def pytest_xdist_newgateway(self, gateway):
+    def pytest_xdist_newgateway(self, gateway) -> None:
         if self.config.option.verbose > 0:
             rinfo = gateway._rinfo()
-            version = "%s.%s.%s" % rinfo.version_info[:3]
-            self.rewrite(
-                "[%s] %s Python %s cwd: %s"
-                % (gateway.id, rinfo.platform, version, rinfo.cwd),
-                newline=True,
-            )
-        self.setstatus(gateway.spec, "C")
+            different_interpreter = rinfo.executable != sys.executable
+            if different_interpreter:
+                version = "%s.%s.%s" % rinfo.version_info[:3]
+                self.rewrite(
+                    f"[{gateway.id}] {rinfo.platform} Python {version} cwd: {rinfo.cwd}",
+                    newline=True,
+                )
+        self.setstatus(gateway.spec, WorkerStatus.Initialized, tests_collected=0)
 
     @pytest.hookimpl
-    def pytest_testnodeready(self, node):
+    def pytest_testnodeready(self, node) -> None:
         if self.config.option.verbose > 0:
             d = node.workerinfo
-            infoline = "[{}] Python {}".format(
-                d["id"], d["version"].replace("\n", " -- ")
-            )
-            self.rewrite(infoline, newline=True)
-        self.setstatus(node.gateway.spec, "ok")
+            different_interpreter = d.get("executable") != sys.executable
+            if different_interpreter:
+                version = d["version"].replace("\n", " -- ")
+                self.rewrite(f"[{d['id']}] Python {version}", newline=True)
+        self.setstatus(
+            node.gateway.spec, WorkerStatus.ReadyForCollection, tests_collected=0
+        )
 
     @pytest.hookimpl
-    def pytest_testnodedown(self, node, error):
+    def pytest_testnodedown(self, node, error) -> None:
         if not error:
             return
         self.write_line(f"[{node.gateway.id}] node down: {error}")
@@ -468,3 +497,36 @@ def get_default_max_worker_restart(config):
         # if --max-worker-restart was not provided, use a reasonable default (#226)
         result = config.option.numprocesses * 4
     return result
+
+
+def get_workers_status_line(
+    status_and_items: Sequence[tuple[WorkerStatus, int]]
+) -> str:
+    """
+    Return the line to display during worker setup/collection based on the
+    status of the workers and number of tests collected for each.
+    """
+    statuses = [s for s, c in status_and_items]
+    total_workers = len(statuses)
+    workers_noun = "worker" if total_workers == 1 else "workers"
+    if status_and_items and all(s == WorkerStatus.CollectionDone for s in statuses):
+        # All workers collect the same number of items, so we grab
+        # the total number of items from the first worker.
+        first = status_and_items[0]
+        status, tests_collected = first
+        tests_noun = "item" if tests_collected == 1 else "items"
+        return f"{total_workers} {workers_noun} [{tests_collected} {tests_noun}]"
+    if WorkerStatus.CollectionDone in statuses:
+        done = sum(1 for s, c in status_and_items if c > 0)
+        return f"collecting: {done}/{total_workers} {workers_noun}"
+    if WorkerStatus.ReadyForCollection in statuses:
+        ready = statuses.count(WorkerStatus.ReadyForCollection)
+        return f"ready: {ready}/{total_workers} {workers_noun}"
+    if WorkerStatus.Initialized in statuses:
+        initialized = statuses.count(WorkerStatus.Initialized)
+        return f"initialized: {initialized}/{total_workers} {workers_noun}"
+    if WorkerStatus.Created in statuses:
+        created = statuses.count(WorkerStatus.Created)
+        return f"created: {created}/{total_workers} {workers_noun}"
+
+    return ""

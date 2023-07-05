@@ -101,7 +101,12 @@ class TestDistribution:
             """
         )
         result = pytester.runpytest(p1, "-v", "-d", "--tx=popen", "--tx=popen")
-        result.stdout.fnmatch_lines(["*1*Python*", "*2 failed, 1 passed, 1 skipped*"])
+        result.stdout.fnmatch_lines(
+            [
+                "created: 2/2 workers",
+                "*2 failed, 1 passed, 1 skipped*",
+            ]
+        )
         assert result.ret == 1
 
     def test_n1_fail_minus_x(self, pytester: pytest.Pytester) -> None:
@@ -151,7 +156,12 @@ class TestDistribution:
         """
         )
         result = pytester.runpytest(p1, "-d", "-v")
-        result.stdout.fnmatch_lines(["*2*Python*", "*2 failed, 1 passed, 1 skipped*"])
+        result.stdout.fnmatch_lines(
+            [
+                "created: 3/3 workers",
+                "*2 failed, 1 passed, 1 skipped*",
+            ]
+        )
         assert result.ret == 1
 
     def test_dist_tests_with_crash(self, pytester: pytest.Pytester) -> None:
@@ -237,9 +247,6 @@ class TestDistribution:
         assert result.ret == 0
         result.stdout.fnmatch_lines(
             [
-                "*0* *cwd*",
-                # "RSyncStart: [G1]",
-                # "RSyncFinished: [G1]",
                 "*1 passed*",
             ]
         )
@@ -276,7 +283,11 @@ class TestDistribution:
         p1 = pytester.makepyfile("def test_func(): pass")
         result = pytester.runpytest("-v", p1, "-d", "--tx=popen")
         result.stdout.fnmatch_lines(
-            ["*0*Python*", "*calculated result is 49*", "*1 passed*"]
+            [
+                "created: 1/1 worker",
+                "*calculated result is 49*",
+                "*1 passed*",
+            ]
         )
         assert result.ret == 0
 
@@ -393,14 +404,14 @@ class TestTerminalReporting:
         out = result.stdout.str()
         if verbosity == "-v":
             assert "scheduling tests" in out
-            assert "gw" in out
+            assert "1 worker [1 item]" in out
         elif verbosity == "-q":
             assert "scheduling tests" not in out
             assert "gw" not in out
             assert "bringing up nodes..." in out
         else:
             assert "scheduling tests" not in out
-            assert "gw" in out
+            assert "1 worker [1 item]" in out
 
     def test_pass_skip_fail(self, pytester: pytest.Pytester) -> None:
         pytester.makepyfile(
@@ -1099,8 +1110,9 @@ def test_color_yes_collection_on_non_atty(pytester, request) -> None:
     result = pytester.runpytest(*args)
     assert "test session starts" in result.stdout.str()
     assert "\x1b[1m" in result.stdout.str()
-    assert "gw0 [10] / gw1 [10]" in result.stdout.str()
-    assert "gw0 C / gw1 C" not in result.stdout.str()
+    assert "created: 2/2 workers" in result.stdout.str()
+    assert "2 workers [10 items]" in result.stdout.str()
+    assert "collecting:" not in result.stdout.str()
 
 
 def test_without_terminal_plugin(pytester, request) -> None:
@@ -1554,8 +1566,8 @@ def test_collection_crash(testdir):
     assert result.ret == 1
     result.stdout.fnmatch_lines(
         [
-            "gw0 I",
-            "gw0 [[]0[]]",
+            "created: 1/1 worker",
+            "1 worker [[]0 items[]]",
             "*_ ERROR collecting test_collection_crash.py _*",
             "E   assert 0",
             "*= 1 error in *",
