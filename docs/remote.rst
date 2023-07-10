@@ -9,12 +9,15 @@ Sending tests to remote SSH accounts
 
 .. warning::
 
-    This feature is deprecated because the support for ``rsync`` is faulty
+    The ``rsync`` feature is deprecated because its implementation is faulty
     in terms of reproducing the development environment in the remote
     worker, and there is no clear solution moving forward.
 
-    This feature is scheduled to be removed in release 4.0, to let the team
+    For that reason, ``rsync`` is scheduled to be removed in release 4.0, to let the team
     focus on a smaller set of features.
+
+    Note that SSH and socket server are not planned for removal, as they are part
+    of the ``execnet`` feature set.
 
 Suppose you have a package ``mypkg`` which contains some
 tests that you can successfully run locally. And you
