@@ -179,6 +179,7 @@ class WorkerInteractor:
         self.sendevent(
             "runtest_protocol_complete", item_index=self.item_index, duration=duration
         )
+        self.log("Just sent runtest_protocol_complete", self.item_index)
 
     def pytest_collection_modifyitems(self, session, config, items):
         # add the group name to nodeid as suffix if --dist=loadgroup
