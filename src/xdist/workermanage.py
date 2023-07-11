@@ -276,7 +276,6 @@ class WorkerController:
     def setup(self):
         self.log("setting up worker session")
         spec = self.gateway.spec
-        self.log(spec)
         if hasattr(self.config, "invocation_params"):
             args = [str(x) for x in self.config.invocation_params.args or ()]
             option_dict = {}
@@ -297,11 +296,9 @@ class WorkerController:
         # change sys.path only for remote workers
         # restore sys.path from a frozen copy for local workers
         change_sys_path = _sys_path if self.gateway.spec.popen else None
-        self.log(self.workerinput, args, option_dict, change_sys_path)
         del args[0]
         for path in self.path.split(","):
             args.insert(0, path)
-        self.log(self.workerinput, args, option_dict, change_sys_path)
         self.channel.send((self.workerinput, args, option_dict, change_sys_path))
 
         if self.putevent:

@@ -302,7 +302,6 @@ class LoadScopeScheduling:
                 continue
 
             same_collection = False
-            # self.log(msg)
 
             if self.config is None:
                 continue
