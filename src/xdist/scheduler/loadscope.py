@@ -232,7 +232,7 @@ class LoadScopeScheduling:
 
     def _assign_work_unit(self, node):
         """Assign a work unit to a node."""
-        self.log('assign work unit')
+        self.log("assign work unit")
         self.log(self.assigned_work)
         self.log(self.registered_collections)
 
