@@ -83,7 +83,7 @@ class WorkerInteractor:
         return result
 
     def sendevent(self, name, **kwargs):
-        self.log("sending", name)
+        #self.log("sending", name)
         self.channel.send((name, kwargs))
 
     @pytest.hookimpl
@@ -117,7 +117,7 @@ class WorkerInteractor:
 
         name, kwargs = command
 
-        self.log("received command", name, kwargs)
+        #self.log("received command", name, kwargs)
         if name == "runtests":
             for i in kwargs["indices"]:
                 self.torun.put(i)
@@ -150,7 +150,7 @@ class WorkerInteractor:
 
     @pytest.hookimpl
     def pytest_runtestloop(self, session):
-        self.log("entering main loop")
+        #self.log("entering main loop")
         self.channel.setcallback(self.handle_command, endmarker=self.SHUTDOWN_MARK)
         self.nextitem_index = self._get_next_item_index()
         while self.nextitem_index is not self.SHUTDOWN_MARK:
@@ -201,7 +201,7 @@ class WorkerInteractor:
         except AttributeError:  # pytest <= 6.1.0
             topdir = str(self.config.rootdir)
 
-        self.log(f"Collected {len(session.items)} items")
+            self.log(f"Collected {len(session.items)} items")
 
         self.sendevent(
             "collectionfinish",
