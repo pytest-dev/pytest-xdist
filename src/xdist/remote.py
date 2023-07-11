@@ -172,7 +172,9 @@ class WorkerInteractor:
 
         self.log("running", item.nodeid, self.item_index)
         start = time.time()
-        self.config.hook.pytest_runtest_protocol(item=item, nextitem=nextitem if nextitem else items[0])
+        self.config.hook.pytest_runtest_protocol(
+            item=item, nextitem=nextitem if nextitem else items[0]
+        )
         duration = time.time() - start
         self.log("finished", item.nodeid, self.item_index)
 
