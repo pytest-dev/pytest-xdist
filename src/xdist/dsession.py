@@ -288,6 +288,7 @@ class DSession:
         signalling that a test has completed the runtestprotocol and should be
         removed from the pending list in the scheduler.
         """
+        self.log("worker_runtest_protocol_complete", node, item_index, duration)
         self.sched.mark_test_complete(node, item_index, duration)
 
     def worker_unscheduled(self, node, indices):
