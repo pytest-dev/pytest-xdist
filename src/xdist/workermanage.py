@@ -366,6 +366,7 @@ class WorkerController:
                 return
             eventname, kwargs = eventcall
             if eventname in ("collectionstart",):
+                pass
             elif eventname == "workerready":
                 self.notify_inproc(eventname, node=self, **kwargs)
             elif eventname == "internal_error":
