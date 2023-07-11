@@ -123,14 +123,17 @@ class LoadScopeScheduling:
 
         self.log(self.assigned_work)
 
+        self.log("Checking len assigned work")
         if len(self.assigned_work) == 0:
             # We haven't begun
             return False
 
-        if [len(i) == 0 for i in self.assigned_work.values()]:
+        self.log("Checking len tests")
+        if all([len(i) == 0 for i in self.assigned_work.values()]):
             # We haven't begun
             return False
 
+        self.log("Checking all tests finished")
         for node in self.assigned_work:
             if not all([x for x in self.assigned_work[node].values()]):
                 return False
