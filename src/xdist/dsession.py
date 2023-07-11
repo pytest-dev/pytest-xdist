@@ -141,7 +141,7 @@ class DSession:
         assert callname, kwargs
         method = "worker_" + callname
         call = getattr(self, method)
-        self.log("calling method", method, kwargs)
+        self.log("calling method", method)
         call(**kwargs)
         if self.sched.tests_finished:
             self.triggershutdown()

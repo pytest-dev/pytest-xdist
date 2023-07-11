@@ -121,6 +121,14 @@ class LoadScopeScheduling:
         # if self.workqueue:
         #    return False
 
+        if len(self.assigned_work) == 0:
+            # We haven't begun
+            return False
+
+        if [len(i) == 0 for i in self.assigned_work.values()]:
+            # We haven't begun
+            return False
+
         self.log(self.assigned_work)
 
         for node in self.assigned_work:
@@ -137,7 +145,7 @@ class LoadScopeScheduling:
         processing test items, so this can be thought of as
         "the scheduler is active".
         """
-        return not self.tests_finished
+        return not self.tests_finished and self.collection_is_completed
 
     def add_node(self, node):
         """Add a new node to the scheduler.
@@ -224,6 +232,7 @@ class LoadScopeScheduling:
 
     def _assign_work_unit(self, node):
         """Assign a work unit to a node."""
+        self.log('assign work unit')
         self.log(self.assigned_work)
         self.log(self.registered_collections)
 
