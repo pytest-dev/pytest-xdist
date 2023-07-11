@@ -201,6 +201,8 @@ class WorkerInteractor:
         except AttributeError:  # pytest <= 6.1.0
             topdir = str(self.config.rootdir)
 
+        self.log(f"Collected {len(session.items)} items")
+
         self.sendevent(
             "collectionfinish",
             topdir=topdir,
