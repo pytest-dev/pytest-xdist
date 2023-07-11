@@ -170,7 +170,6 @@ class LoadScopeScheduling:
         Return the item being executed while the node crashed or None if the
         node has no more pending items.
         """
-        pass
 
     def add_node_collection(self, node, collection):
         """Add the collected test items from a node.
