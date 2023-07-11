@@ -117,11 +117,11 @@ class LoadScopeScheduling:
     def tests_finished(self):
         """Return True if all tests have been executed by the nodes."""
         self.log("TESTS FINISHED CHECK")
-        if not self.collection_is_completed:
-            return False
 
         # if self.workqueue:
         #    return False
+
+        self.log(self.assigned_work)
 
         for node in self.assigned_work:
             if not all([x for x in self.assigned_work[node].values()]):
@@ -137,11 +137,7 @@ class LoadScopeScheduling:
         processing test items, so this can be thought of as
         "the scheduler is active".
         """
-        for assigned_unit in self.assigned_work.values():
-            if self._pending_of(assigned_unit) > 0:
-                return True
-
-        return False
+        return not self.tests_finished
 
     def add_node(self, node):
         """Add a new node to the scheduler.
@@ -170,8 +166,6 @@ class LoadScopeScheduling:
         node has no more pending items.
         """
         workload = self.assigned_work.pop(node)
-        if not self._pending_of(workload):
-            return None
 
         # The node crashed, identify test that crashed
         for work_unit in workload.values():
@@ -243,6 +237,9 @@ class LoadScopeScheduling:
             )
             assigned_to_node[nodeid] = False
 
+        self.log(f"Assigned work to {node}")
+        self.log(self.assigned_work)
+
         node.send_runtest_some(nodeids_indexes)
 
     def _pending_of(self, workload):
@@ -270,19 +267,9 @@ class LoadScopeScheduling:
         """
         assert self.collection_is_completed
 
-        # Initial distribution already happened, reschedule on all nodes
-        if self.collection is not None:
-            for node in self.nodes:
-                self._reschedule(node)
-            return
-
-        # Check that all nodes collected the same tests
-        # if not self._check_nodes_have_same_collection():
-        #    self.log("**Different tests collected, aborting run**")
-        #    return
-
         # Collections are identical, create the final list of items
         self.collection = list(next(iter(self.registered_collections.values())))
+
         if not self.collection:
             return
 
