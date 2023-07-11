@@ -82,6 +82,7 @@ class RemoteControl:
             out = TerminalWriter()
         if hasattr(self, "gateway"):
             raise ValueError("already have gateway %r" % self.gateway)
+        self.trace("setting up session")
         self.trace("setting up worker session")
         self.gateway = self.initgateway()
         self.channel = channel = self.gateway.remote_exec(

@@ -117,11 +117,12 @@ class LoadScopeScheduling:
     @property
     def tests_finished(self):
         """Return True if all tests have been executed by the nodes."""
+        self.log("TESTS FINISHED CHECK")
         if not self.collection_is_completed:
             return False
 
-        if self.workqueue:
-            return False
+        #if self.workqueue:
+        #    return False
 
         for assigned_unit in self.assigned_work.values():
             if self._pending_of(assigned_unit) >= 2:
@@ -223,7 +224,7 @@ class LoadScopeScheduling:
                 msg = report_collection_diff(
                     self.collection, collection, other_node.gateway.id, node.gateway.id
                 )
-                self.log(msg)
+                #self.log(msg)
                 return
 
         self.registered_collections[node] = list(collection)
@@ -248,20 +249,19 @@ class LoadScopeScheduling:
         """Assign a work unit to a node."""
         assert self.workqueue
 
-        # Grab a unit of work
-        scope, work_unit = self.workqueue.popitem(last=False)
+        self.log(self.workqueue)
+        self.log(self.assigned_work)
+        self.log(self.registered_collections)
 
-        # Keep track of the assigned work
-        assigned_to_node = self.assigned_work.setdefault(node, default=OrderedDict())
-        assigned_to_node[scope] = work_unit
+        nodeids_indexes = [i for i in range(len(self.registered_collections[node]))]
 
-        # Ask the node to execute the workload
-        worker_collection = self.registered_collections[node]
-        nodeids_indexes = [
-            worker_collection.index(nodeid)
-            for nodeid, completed in work_unit.items()
-            if not completed
-        ]
+        for idx in nodeids_indexes:
+            nodeid = self.registered_collections[node][idx]
+            scope = self._split_scope(nodeid)
+
+            assigned_to_node = self.assigned_work.setdefault(node, default=OrderedDict())
+            scope = assigned_to_node.setdefault(scope, default=OrderedDict())
+            scope.update({nodeid: False})
 
         node.send_runtest_some(nodeids_indexes)
 
@@ -306,19 +306,9 @@ class LoadScopeScheduling:
             return
 
         # Check that more work is available
-        if not self.workqueue:
+        if self._pending_of(self.assigned_work[node]) == 0:
             node.shutdown()
             return
-
-        self.log("Number of units waiting for node:", len(self.workqueue))
-
-        # Check that the node is almost depleted of work
-        # 2: Heuristic of minimum tests to enqueue more work
-        if self._pending_of(self.assigned_work[node]) > 2:
-            return
-
-        # Pop one unit of work and assign it
-        self._assign_work_unit(node)
 
     def schedule(self):
         """Initiate distribution of the test collection.
@@ -340,9 +330,9 @@ class LoadScopeScheduling:
             return
 
         # Check that all nodes collected the same tests
-        if not self._check_nodes_have_same_collection():
-            self.log("**Different tests collected, aborting run**")
-            return
+        #if not self._check_nodes_have_same_collection():
+        #    self.log("**Different tests collected, aborting run**")
+        #    return
 
         # Collections are identical, create the final list of items
         self.collection = list(next(iter(self.registered_collections.values())))
@@ -399,7 +389,7 @@ class LoadScopeScheduling:
                 continue
 
             same_collection = False
-            self.log(msg)
+            #self.log(msg)
 
             if self.config is None:
                 continue
