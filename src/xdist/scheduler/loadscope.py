@@ -280,7 +280,6 @@ class LoadScopeScheduling:
         If there are any globally pending work units left then this will check
         if the given node should be given any more tests.
         """
-        pass
 
     def schedule(self):
         """Initiate distribution of the test collection.
@@ -320,7 +319,6 @@ class LoadScopeScheduling:
         # Assign initial workload
         for node in self.nodes:
             self._assign_work_unit(node)
-
 
     def _check_nodes_have_same_collection(self):
         """Return True if all nodes have collected the same items.
