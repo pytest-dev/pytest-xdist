@@ -258,6 +258,7 @@ class LoadScopeScheduling:
         if the given node should be given any more tests.
         """
         if self._pending_of(self.assigned_work[node]) == 0:
+            self.log("Shutting down node due to no more work")
             node.shutdown()
 
     def schedule(self):
