@@ -58,7 +58,12 @@ class NodeManager:
         self.rsyncoptions = self._getrsyncoptions()
         self._rsynced_specs: Set[Tuple[Any, Any]] = set()
         self.log = Producer(f"node-manager", enabled=config.option.debug)
-        paths = json.loads(open("bins_48.json").read())
+        paths = [
+            'tests/test_accounting/test_workflows',
+            'tests/test_workflows',
+            'tests/test_bill_pay/test_autofilling.py'
+        ]
+        #paths = json.loads(open("bins_48.json").read())
 
         self.paths = [",".join(path) for path in paths]
 
