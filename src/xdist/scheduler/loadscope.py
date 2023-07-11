@@ -170,26 +170,7 @@ class LoadScopeScheduling:
         Return the item being executed while the node crashed or None if the
         node has no more pending items.
         """
-        workload = self.assigned_work.pop(node)
-
-        # The node crashed, identify test that crashed
-        for work_unit in workload.values():
-            for nodeid, completed in work_unit.items():
-                if not completed:
-                    crashitem = nodeid
-                    break
-            else:
-                continue
-            break
-        else:
-            raise RuntimeError(
-                "Unable to identify crashitem on a workload with pending items"
-            )
-
-        for node in self.assigned_work:
-            self._reschedule(node)
-
-        return crashitem
+        pass
 
     def add_node_collection(self, node, collection):
         """Add the collected test items from a node.
