@@ -126,18 +126,22 @@ class LoadScopeScheduling:
         self.log("Checking len assigned work")
         if len(self.assigned_work) == 0:
             # We haven't begun
+            self.log("Returning False")
             return False
 
         self.log("Checking len tests")
         if all([len(i) == 0 for i in self.assigned_work.values()]):
             # We haven't begun
+            self.log("Returning False")
             return False
 
         self.log("Checking all tests finished")
         for node in self.assigned_work:
             if not all([x for x in self.assigned_work[node].values()]):
+                self.log("Returning False")
                 return False
 
+        self.log("Returning True")
         return True
 
     @property
@@ -256,7 +260,10 @@ class LoadScopeScheduling:
 
     def _pending_of(self, workload):
         """Return the number of pending tests in a workload."""
+        self.log("_pending_of")
+
         pending = sum(list(scope.values()).count(False) for scope in workload.values())
+        self.log(f"returning {pending}")
         return pending
 
     def _reschedule(self, node):
@@ -265,6 +272,8 @@ class LoadScopeScheduling:
         If there are any globally pending work units left then this will check
         if the given node should be given any more tests.
         """
+        if self._pending_of(self.assigned_work[node]) == 0:
+            node.shutdown()
 
     def schedule(self):
         """Initiate distribution of the test collection.
