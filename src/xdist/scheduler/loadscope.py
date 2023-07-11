@@ -121,8 +121,6 @@ class LoadScopeScheduling:
         # if self.workqueue:
         #    return False
 
-        self.log(self.assigned_work)
-
         self.log("Checking len assigned work")
         if len(self.assigned_work) == 0:
             # We haven't begun
@@ -240,8 +238,6 @@ class LoadScopeScheduling:
     def _assign_work_unit(self, node):
         """Assign a work unit to a node."""
         self.log("assign work unit")
-        self.log(self.assigned_work)
-        self.log(self.registered_collections)
 
         nodeids_indexes = [i for i in range(len(self.registered_collections[node]))]
 
@@ -254,7 +250,8 @@ class LoadScopeScheduling:
             assigned_to_node[nodeid] = False
 
         self.log(f"Assigned work to {node}")
-        self.log(self.assigned_work)
+
+        self.log("Running f{nodeids_indexes}")
 
         node.send_runtest_some(nodeids_indexes)
 
