@@ -60,8 +60,8 @@ class NodeManager:
         paths = [
             # list of lists of paths]
         ]
-        
-        self.paths = [','.join(path) for path in paths]
+
+        self.paths = [",".join(path) for path in paths]
 
     def rsync_roots(self, gateway):
         """Rsync the set of roots to the node's gateway cwd."""
