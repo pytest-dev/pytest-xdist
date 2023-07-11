@@ -154,6 +154,8 @@ class WorkerInteractor:
         self.channel.setcallback(self.handle_command, endmarker=self.SHUTDOWN_MARK)
         self.nextitem_index = self._get_next_item_index()
         self.log("nextitem_index", self.nextitem_index)
+        self.log(self.SHUTDOWN_MARK)
+        self.log(self.nextitem_index is not self.SHUTDOWN_MARK)
         while self.nextitem_index is not self.SHUTDOWN_MARK:
             self.run_one_test()
         return True
