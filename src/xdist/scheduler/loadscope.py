@@ -251,7 +251,7 @@ class LoadScopeScheduling:
 
         self.log(f"Assigned work to {node}")
 
-        self.log("Running f{nodeids_indexes}")
+        self.log(f"Running {nodeids_indexes}")
 
         node.send_runtest_some(nodeids_indexes)
 

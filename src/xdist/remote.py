@@ -226,6 +226,7 @@ class WorkerInteractor:
         data["worker_id"] = self.workerid
         data["testrun_uid"] = self.testrunuid
         assert self.session.items[self.item_index].nodeid == report.nodeid
+        self.log(f"Finished {self.item_index}")
         self.sendevent("testreport", data=data)
 
     @pytest.hookimpl
