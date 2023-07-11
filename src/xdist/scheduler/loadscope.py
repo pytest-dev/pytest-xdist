@@ -245,30 +245,6 @@ class LoadScopeScheduling:
 
         node.send_runtest_some(nodeids_indexes)
 
-    def _split_scope(self, nodeid):
-        """Determine the scope (grouping) of a nodeid.
-
-        There are usually 3 cases for a nodeid::
-
-            example/loadsuite/test/test_beta.py::test_beta0
-            example/loadsuite/test/test_delta.py::Delta1::test_delta0
-            example/loadsuite/epsilon/__init__.py::epsilon.epsilon
-
-        #. Function in a test module.
-        #. Method of a class in a test module.
-        #. Doctest in a function in a package.
-
-        This function will group tests with the scope determined by splitting
-        the first ``::`` from the right. That is, classes will be grouped in a
-        single work unit, and functions from a test module will be grouped by
-        their module. In the above example, scopes will be::
-
-            example/loadsuite/test/test_beta.py
-            example/loadsuite/test/test_delta.py::Delta1
-            example/loadsuite/epsilon/__init__.py
-        """
-        return nodeid
-
     def _pending_of(self, workload):
         """Return the number of pending tests in a workload."""
         pending = sum(list(scope.values()).count(False) for scope in workload.values())
