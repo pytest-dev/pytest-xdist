@@ -80,7 +80,7 @@ class NodeManager:
                 "tests/test_loan_origination/test_services/test_loan_state_machine.py",
                 "tests/test_flex/test_admin_api/test_update_risk_policy_outcome_for_business.py",
                 "tests/test_business/test_dao/test_bank_referrals.py",
-                "tests/test_stripe/test_stripe_utils.py"
+                "tests/test_stripe/test_stripe_utils.py",
             ],
             [
                 "tests/test_bill_pay/test_api/test_public_api.py",
@@ -110,7 +110,7 @@ class NodeManager:
                 "tests/test_banking/test_api/test_update_whitelists.py",
                 "tests/test_utils/test_utils.py",
                 "tests/test_business/test_dao/test_bank_referrals.py",
-                "tests/test_flex/test_services/test_balance.py"
+                "tests/test_flex/test_services/test_balance.py",
             ],
             [
                 "tests/test_financing_application/test_api/test_post_submit.py",
@@ -141,7 +141,7 @@ class NodeManager:
                 "tests/test_loan_origination/test_services/test_loan_state_machine.py",
                 "tests/test_flex/test_admin_api/test_update_risk_policy_outcome_for_business.py",
                 "tests/test_business/test_dao/test_bank_referrals.py",
-                "tests/test_stripe/test_stripe_utils.py"
+                "tests/test_stripe/test_stripe_utils.py",
             ],
             [
                 "tests/test_reimbursement/test_api/test_public_api.py",
@@ -173,7 +173,7 @@ class NodeManager:
                 "tests/test_business/test_api/test_currency_settings.py",
                 "tests/test_accounting/test_lists/test_apis/test_cardholder_can_select_none.py",
                 "tests/test_docs/test_restx.py",
-                "tests/test_stripe/test_stripe_utils.py"
+                "tests/test_stripe/test_stripe_utils.py",
             ],
             [
                 "tests/test_transaction/test_api/test_list_transactions.py",
@@ -208,7 +208,7 @@ class NodeManager:
                 "tests/test_business/test_api/test_currency_settings.py",
                 "tests/test_docs/test_restx.py",
                 "tests/test_docs/test_restx.py",
-                "tests/test_flex/test_services/test_balance.py"
+                "tests/test_flex/test_services/test_balance.py",
             ],
             [
                 "tests/test_spend_allocations/test_api/test_public_api.py",
@@ -243,7 +243,7 @@ class NodeManager:
                 "tests/test_utils/test_admin_api_auth.py",
                 "tests/test_business/test_api/test_currency_settings.py",
                 "tests/test_docs/test_restx.py",
-                "tests/test_docs/test_restx.py"
+                "tests/test_docs/test_restx.py",
             ],
             [
                 "tests/test_celery/test_bill_pay_tasks.py",
@@ -282,7 +282,7 @@ class NodeManager:
                 "tests/test_business/test_api/test_currency_settings.py",
                 "tests/test_business/test_api/test_currency_settings.py",
                 "tests/test_docs/test_restx.py",
-                "tests/test_docs/test_restx.py"
+                "tests/test_docs/test_restx.py",
             ],
             [
                 "tests/test_webhooks/test_twilio_webhooks.py",
@@ -322,7 +322,7 @@ class NodeManager:
                 "tests/test_utils/test_admin_api_auth.py",
                 "tests/test_loan_origination/test_services/test_loan_state_machine.py",
                 "tests/test_flex/test_admin_api/test_update_risk_policy_outcome_for_business.py",
-                "tests/test_ledger/test_internal/test_services/test_ledgers.py"
+                "tests/test_ledger/test_internal/test_services/test_ledgers.py",
             ],
             [
                 "tests/test_approval_policy/api/test_public_api.py",
@@ -364,7 +364,7 @@ class NodeManager:
                 "tests/test_profile/test_dao/test_user_change_request.py",
                 "tests/test_utils/test_read_replica_session.py",
                 "tests/test_ledger/test_internal/test_services/test_ledgers.py",
-                "tests/test_stripe/test_stripe_utils.py"
+                "tests/test_stripe/test_stripe_utils.py",
             ],
             [
                 "tests/test_spend/test_spend_events/test_bill_pay_service.py",
@@ -406,7 +406,7 @@ class NodeManager:
                 "tests/test_profile/test_dao/test_user_change_request.py",
                 "tests/test_utils/test_read_replica_session.py",
                 "tests/test_ledger/test_internal/test_services/test_ledgers.py",
-                "tests/test_stripe/test_stripe_utils.py"
+                "tests/test_stripe/test_stripe_utils.py",
             ],
             [
                 "tests/test_transaction/test_query/test_core.py",
@@ -447,7 +447,7 @@ class NodeManager:
                 "tests/test_webhooks/test_increase_webhooks.py",
                 "tests/test_banking/test_api/test_update_whitelists.py",
                 "tests/test_utils/test_utils.py",
-                "tests/test_business/test_dao/test_bank_referrals.py"
+                "tests/test_business/test_dao/test_bank_referrals.py",
             ],
             [
                 "tests/test_spend/test_spend_events/test_reimbursement_triggers.py",
@@ -490,7 +490,7 @@ class NodeManager:
                 "tests/test_banking/test_api/test_update_whitelists.py",
                 "tests/test_flex/test_admin_api/test_update_risk_policy_outcome_for_business.py",
                 "tests/test_business/test_dao/test_bank_referrals.py",
-                "tests/test_stripe/test_stripe_utils.py"
+                "tests/test_stripe/test_stripe_utils.py",
             ],
             [
                 "tests/test_celery/test_communicate/test_authorizer_declined.py",
@@ -533,7 +533,7 @@ class NodeManager:
                 "tests/test_profile/test_dao/test_user_change_request.py",
                 "tests/test_utils/test_read_replica_session.py",
                 "tests/test_ledger/test_internal/test_services/test_ledgers.py",
-                "tests/test_stripe/test_stripe_utils.py"
+                "tests/test_stripe/test_stripe_utils.py",
             ],
             [
                 "tests/test_spend_request/test_public_api.py",
@@ -575,7 +575,7 @@ class NodeManager:
                 "tests/test_ledger/test_internal/test_services/test_balances.py",
                 "tests/test_profile/test_dao/test_user_change_request.py",
                 "tests/test_utils/test_read_replica_session.py",
-                "tests/test_docs/test_restx.py"
+                "tests/test_docs/test_restx.py",
             ],
             [
                 "tests/test_celery/test_spend_allocations_backfill.py",
@@ -618,7 +618,7 @@ class NodeManager:
                 "tests/test_profile/test_dao/test_user_change_request.py",
                 "tests/test_utils/test_read_replica_session.py",
                 "tests/test_ledger/test_internal/test_services/test_ledgers.py",
-                "tests/test_stripe/test_stripe_utils.py"
+                "tests/test_stripe/test_stripe_utils.py",
             ],
             [
                 "tests/test_accounting/test_mapping/test_services.py",
@@ -661,7 +661,7 @@ class NodeManager:
                 "tests/test_profile/test_dao/test_user_change_request.py",
                 "tests/test_utils/test_read_replica_session.py",
                 "tests/test_ledger/test_internal/test_services/test_ledgers.py",
-                "tests/test_stripe/test_stripe_utils.py"
+                "tests/test_stripe/test_stripe_utils.py",
             ],
             [
                 "tests/test_payments/test_services/test_engine.py",
@@ -704,7 +704,7 @@ class NodeManager:
                 "tests/test_profile/test_dao/test_user_change_request.py",
                 "tests/test_utils/test_read_replica_session.py",
                 "tests/test_ledger/test_internal/test_services/test_ledgers.py",
-                "tests/test_stripe/test_stripe_utils.py"
+                "tests/test_stripe/test_stripe_utils.py",
             ],
             [
                 "tests/test_bill_pay/test_dao.py",
@@ -747,7 +747,7 @@ class NodeManager:
                 "tests/test_profile/test_dao/test_user_change_request.py",
                 "tests/test_utils/test_read_replica_session.py",
                 "tests/test_ledger/test_internal/test_services/test_ledgers.py",
-                "tests/test_stripe/test_stripe_utils.py"
+                "tests/test_stripe/test_stripe_utils.py",
             ],
             [
                 "tests/test_celery/risk_automation/test_auto_approval.py",
@@ -790,7 +790,7 @@ class NodeManager:
                 "tests/test_profile/test_dao/test_user_change_request.py",
                 "tests/test_utils/test_read_replica_session.py",
                 "tests/test_ledger/test_internal/test_services/test_ledgers.py",
-                "tests/test_stripe/test_stripe_utils.py"
+                "tests/test_stripe/test_stripe_utils.py",
             ],
             [
                 "tests/test_celery/test_policy_tasks.py",
@@ -833,7 +833,7 @@ class NodeManager:
                 "tests/test_banking/test_api/test_update_whitelists.py",
                 "tests/test_utils/test_utils.py",
                 "tests/test_stripe/test_stripe_utils.py",
-                "tests/test_stripe/test_stripe_utils.py"
+                "tests/test_stripe/test_stripe_utils.py",
             ],
             [
                 "tests/test_reimbursement/test_dao.py",
@@ -876,7 +876,7 @@ class NodeManager:
                 "tests/test_business/test_api/test_currency_settings.py",
                 "tests/test_utils/test_read_replica_session.py",
                 "tests/test_ledger/test_internal/test_services/test_ledgers.py",
-                "tests/test_flex/test_services/test_balance.py"
+                "tests/test_flex/test_services/test_balance.py",
             ],
             [
                 "tests/test_payments/test_services/test_init.py",
@@ -919,7 +919,7 @@ class NodeManager:
                 "tests/test_profile/test_dao/test_user_change_request.py",
                 "tests/test_utils/test_read_replica_session.py",
                 "tests/test_ledger/test_internal/test_services/test_ledgers.py",
-                "tests/test_stripe/test_stripe_utils.py"
+                "tests/test_stripe/test_stripe_utils.py",
             ],
             [
                 "tests/test_accounting/test_sync/test_sync_reimbursement.py",
@@ -962,7 +962,7 @@ class NodeManager:
                 "tests/test_business/test_api/test_currency_settings.py",
                 "tests/test_utils/test_read_replica_session.py",
                 "tests/test_ledger/test_internal/test_services/test_ledgers.py",
-                "tests/test_flex/test_services/test_balance.py"
+                "tests/test_flex/test_services/test_balance.py",
             ],
             [
                 "tests/test_celery/test_accounting_sync.py",
@@ -1006,7 +1006,7 @@ class NodeManager:
                 "tests/test_profile/test_dao/test_user_change_request.py",
                 "tests/test_utils/test_read_replica_session.py",
                 "tests/test_ledger/test_internal/test_services/test_ledgers.py",
-                "tests/test_flex/test_services/test_balance.py"
+                "tests/test_flex/test_services/test_balance.py",
             ],
             [
                 "tests/test_approval_policy/services/test_services.py",
@@ -1050,7 +1050,7 @@ class NodeManager:
                 "tests/test_profile/test_dao/test_user_change_request.py",
                 "tests/test_flex/test_admin_api/test_update_risk_policy_outcome_for_business.py",
                 "tests/test_business/test_dao/test_bank_referrals.py",
-                "tests/test_stripe/test_stripe_utils.py"
+                "tests/test_stripe/test_stripe_utils.py",
             ],
             [
                 "tests/test_celery/test_reimbursement_tasks.py",
@@ -1093,7 +1093,7 @@ class NodeManager:
                 "tests/test_spend/test_spend_criteria/test_services.py",
                 "tests/test_banking/test_api/test_update_whitelists.py",
                 "tests/test_flex/test_admin_api/test_update_risk_policy_outcome_for_business.py",
-                "tests/test_ledger/test_internal/test_services/test_ledgers.py"
+                "tests/test_ledger/test_internal/test_services/test_ledgers.py",
             ],
             [
                 "tests/test_flex/test_services/test_installments.py",
@@ -1137,7 +1137,7 @@ class NodeManager:
                 "tests/test_profile/test_dao/test_user_change_request.py",
                 "tests/test_docs/test_restx.py",
                 "tests/test_docs/test_restx.py",
-                "tests/test_flex/test_services/test_balance.py"
+                "tests/test_flex/test_services/test_balance.py",
             ],
             [
                 "tests/test_accounting/test_sync/test_sync_transaction.py",
@@ -1180,7 +1180,7 @@ class NodeManager:
                 "tests/test_webhooks/test_increase_webhooks.py",
                 "tests/test_banking/test_api/test_update_whitelists.py",
                 "tests/test_flex/test_admin_api/test_update_risk_policy_outcome_for_business.py",
-                "tests/test_ledger/test_internal/test_services/test_ledgers.py"
+                "tests/test_ledger/test_internal/test_services/test_ledgers.py",
             ],
             [
                 "tests/test_payee/test_routes/test_public_api.py",
@@ -1224,7 +1224,7 @@ class NodeManager:
                 "tests/test_banking/test_api/test_update_whitelists.py",
                 "tests/test_utils/test_utils.py",
                 "tests/test_business/test_dao/test_bank_referrals.py",
-                "tests/test_flex/test_services/test_balance.py"
+                "tests/test_flex/test_services/test_balance.py",
             ],
             [
                 "tests/test_payments/test_celery/test_wise_settlement.py",
@@ -1268,7 +1268,7 @@ class NodeManager:
                 "tests/test_profile/test_dao/test_user_change_request.py",
                 "tests/test_docs/test_restx.py",
                 "tests/test_docs/test_restx.py",
-                "tests/test_flex/test_services/test_balance.py"
+                "tests/test_flex/test_services/test_balance.py",
             ],
             [
                 "tests/test_reimbursement/test_api/test_export_reimbursements.py",
@@ -1312,7 +1312,7 @@ class NodeManager:
                 "tests/test_profile/test_dao/test_user_change_request.py",
                 "tests/test_utils/test_read_replica_session.py",
                 "tests/test_ledger/test_internal/test_services/test_ledgers.py",
-                "tests/test_stripe/test_stripe_utils.py"
+                "tests/test_stripe/test_stripe_utils.py",
             ],
             [
                 "tests/test_flex/test_clients/test_bill_pay/test_services.py",
@@ -1356,7 +1356,7 @@ class NodeManager:
                 "tests/test_profile/test_dao/test_user_change_request.py",
                 "tests/test_docs/test_restx.py",
                 "tests/test_docs/test_restx.py",
-                "tests/test_flex/test_services/test_balance.py"
+                "tests/test_flex/test_services/test_balance.py",
             ],
             [
                 "tests/test_flex/test_services/test_flex_balance_eligibility_validator.py",
@@ -1399,7 +1399,7 @@ class NodeManager:
                 "tests/test_utils/test_admin_api_auth.py",
                 "tests/test_business/test_api/test_currency_settings.py",
                 "tests/test_docs/test_restx.py",
-                "tests/test_docs/test_restx.py"
+                "tests/test_docs/test_restx.py",
             ],
             [
                 "tests/test_banking/test_api/test_list_accounts.py",
@@ -1443,7 +1443,7 @@ class NodeManager:
                 "tests/test_profile/test_dao/test_user_change_request.py",
                 "tests/test_flex/test_admin_api/test_update_risk_policy_outcome_for_business.py",
                 "tests/test_business/test_dao/test_bank_referrals.py",
-                "tests/test_stripe/test_stripe_utils.py"
+                "tests/test_stripe/test_stripe_utils.py",
             ],
             [
                 "tests/test_transaction/test_services/test_should_file_dispute.py",
@@ -1486,7 +1486,7 @@ class NodeManager:
                 "tests/test_utils/test_admin_api_auth.py",
                 "tests/test_business/test_api/test_currency_settings.py",
                 "tests/test_docs/test_restx.py",
-                "tests/test_docs/test_restx.py"
+                "tests/test_docs/test_restx.py",
             ],
             [
                 "tests/test_transaction/test_services/test_dispute_filing.py",
@@ -1530,7 +1530,7 @@ class NodeManager:
                 "tests/test_banking/test_api/test_update_whitelists.py",
                 "tests/test_accounting/test_lists/test_apis/test_cardholder_can_select_none.py",
                 "tests/test_business/test_dao/test_bank_referrals.py",
-                "tests/test_stripe/test_stripe_utils.py"
+                "tests/test_stripe/test_stripe_utils.py",
             ],
             [
                 "tests/test_customer_management/test_tasks.py",
@@ -1574,7 +1574,7 @@ class NodeManager:
                 "tests/test_banking/test_api/test_update_whitelists.py",
                 "tests/test_accounting/test_lists/test_apis/test_cardholder_can_select_none.py",
                 "tests/test_business/test_dao/test_bank_referrals.py",
-                "tests/test_stripe/test_stripe_utils.py"
+                "tests/test_stripe/test_stripe_utils.py",
             ],
             [
                 "tests/test_metrics/test_transaction_metrics/test_api/test_transactions_metrics.py",
@@ -1618,7 +1618,7 @@ class NodeManager:
                 "tests/test_banking/test_api/test_update_whitelists.py",
                 "tests/test_utils/test_utils.py",
                 "tests/test_business/test_dao/test_bank_referrals.py",
-                "tests/test_flex/test_services/test_balance.py"
+                "tests/test_flex/test_services/test_balance.py",
             ],
             [
                 "tests/test_migrations.py",
@@ -1662,7 +1662,7 @@ class NodeManager:
                 "tests/test_banking/test_api/test_update_whitelists.py",
                 "tests/test_utils/test_utils.py",
                 "tests/test_business/test_dao/test_bank_referrals.py",
-                "tests/test_stripe/test_stripe_utils.py"
+                "tests/test_stripe/test_stripe_utils.py",
             ],
             [
                 "tests/test_spend/test_spend_events/test_backfill.py",
@@ -1705,7 +1705,7 @@ class NodeManager:
                 "tests/test_utils/test_admin_api_auth.py",
                 "tests/test_business/test_api/test_currency_settings.py",
                 "tests/test_docs/test_restx.py",
-                "tests/test_docs/test_restx.py"
+                "tests/test_docs/test_restx.py",
             ],
             [
                 "tests/test_capital_markets/test_services.py",
@@ -1749,7 +1749,7 @@ class NodeManager:
                 "tests/test_banking/test_api/test_update_whitelists.py",
                 "tests/test_utils/test_utils.py",
                 "tests/test_business/test_dao/test_bank_referrals.py",
-                "tests/test_flex/test_services/test_balance.py"
+                "tests/test_flex/test_services/test_balance.py",
             ],
             [
                 "tests/test_customer_management/test_admin_api.py",
@@ -1793,7 +1793,7 @@ class NodeManager:
                 "tests/test_banking/test_api/test_update_whitelists.py",
                 "tests/test_utils/test_utils.py",
                 "tests/test_business/test_dao/test_bank_referrals.py",
-                "tests/test_stripe/test_stripe_utils.py"
+                "tests/test_stripe/test_stripe_utils.py",
             ],
             [
                 "tests/test_communication/test_admin_communication/test_daily_digest/test_dao.py",
@@ -1836,7 +1836,7 @@ class NodeManager:
                 "tests/test_utils/test_admin_api_auth.py",
                 "tests/test_loan_origination/test_services/test_loan_state_machine.py",
                 "tests/test_flex/test_admin_api/test_update_risk_policy_outcome_for_business.py",
-                "tests/test_ledger/test_internal/test_services/test_ledgers.py"
+                "tests/test_ledger/test_internal/test_services/test_ledgers.py",
             ],
             [
                 "tests/test_reimbursement/test_services.py",
@@ -1880,7 +1880,7 @@ class NodeManager:
                 "tests/test_banking/test_api/test_update_whitelists.py",
                 "tests/test_utils/test_utils.py",
                 "tests/test_business/test_dao/test_bank_referrals.py",
-                "tests/test_stripe/test_stripe_utils.py"
+                "tests/test_stripe/test_stripe_utils.py",
             ],
             [
                 "tests/test_celery/test_stripe.py",
@@ -1924,7 +1924,7 @@ class NodeManager:
                 "tests/test_profile/test_dao/test_user_change_request.py",
                 "tests/test_flex/test_admin_api/test_update_risk_policy_outcome_for_business.py",
                 "tests/test_business/test_dao/test_bank_referrals.py",
-                "tests/test_stripe/test_stripe_utils.py"
+                "tests/test_stripe/test_stripe_utils.py",
             ],
             [
                 "tests/test_card/test_utils/test_process_restricted_card_request_update.py",
@@ -1968,7 +1968,7 @@ class NodeManager:
                 "tests/test_banking/test_api/test_update_whitelists.py",
                 "tests/test_utils/test_utils.py",
                 "tests/test_business/test_dao/test_bank_referrals.py",
-                "tests/test_stripe/test_stripe_utils.py"
+                "tests/test_stripe/test_stripe_utils.py",
             ],
             [
                 "tests/test_transaction/test_dao/test_refresh_transaction_canonical/test_original_amount.py",
@@ -2012,7 +2012,7 @@ class NodeManager:
                 "tests/test_banking/test_api/test_update_whitelists.py",
                 "tests/test_utils/test_utils.py",
                 "tests/test_business/test_dao/test_bank_referrals.py",
-                "tests/test_stripe/test_stripe_utils.py"
+                "tests/test_stripe/test_stripe_utils.py",
             ],
             [
                 "tests/test_missing_items_wizard/test_api/test_public_api.py",
@@ -2056,11 +2056,11 @@ class NodeManager:
                 "tests/test_profile/test_dao/test_user_change_request.py",
                 "tests/test_utils/test_read_replica_session.py",
                 "tests/test_ledger/test_internal/test_services/test_ledgers.py",
-                "tests/test_stripe/test_stripe_utils.py"
-            ]
-            ]
-        
-        self.paths = [','.join(path) for path in paths]
+                "tests/test_stripe/test_stripe_utils.py",
+            ],
+        ]
+
+        self.paths = [",".join(path) for path in paths]
 
     def rsync_roots(self, gateway):
         """Rsync the set of roots to the node's gateway cwd."""
@@ -2072,7 +2072,10 @@ class NodeManager:
         start_time = time.time()
         self.config.hook.pytest_xdist_setupnodes(config=self.config, specs=self.specs)
         self.trace("setting up nodes")
-        to_return = [self.setup_node(spec, putevent, self.paths[i]) for i, spec in enumerate(self.specs)]
+        to_return = [
+            self.setup_node(spec, putevent, self.paths[i])
+            for i, spec in enumerate(self.specs)
+        ]
         end_time = time.time()
         self.log("setup_nodes", end_time - start_time)
         return to_return
