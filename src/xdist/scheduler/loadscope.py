@@ -88,7 +88,6 @@ class LoadScopeScheduling:
         self.numnodes = len(parse_spec_config(config))
         self.collection = None
 
-        self.workqueue = OrderedDict()
         self.assigned_work = OrderedDict()
         self.registered_collections = OrderedDict()
 
@@ -124,8 +123,8 @@ class LoadScopeScheduling:
         # if self.workqueue:
         #    return False
 
-        for assigned_unit in self.assigned_work.values():
-            if self._pending_of(assigned_unit) >= 2:
+        for node in self.assigned_work:
+            if not all([x for x in self.assigned_work[node].values()]):
                 return False
 
         return True
@@ -138,9 +137,6 @@ class LoadScopeScheduling:
         processing test items, so this can be thought of as
         "the scheduler is active".
         """
-        if self.workqueue:
-            return True
-
         for assigned_unit in self.assigned_work.values():
             if self._pending_of(assigned_unit) > 0:
                 return True
@@ -191,9 +187,6 @@ class LoadScopeScheduling:
                 "Unable to identify crashitem on a workload with pending items"
             )
 
-        # Made uncompleted work unit available again
-        self.workqueue.update(workload)
-
         for node in self.assigned_work:
             self._reschedule(node)
 
@@ -216,16 +209,7 @@ class LoadScopeScheduling:
         if self.collection_is_completed:
             # Assert that .schedule() should have been called by now
             assert self.collection
-
-            # Check that the new collection matches the official collection
-            if collection != self.collection:
-                other_node = next(iter(self.registered_collections.keys()))
-
-                msg = report_collection_diff(
-                    self.collection, collection, other_node.gateway.id, node.gateway.id
-                )
-                # self.log(msg)
-                return
+            self.registered_collections[node] = list(collection)
 
         self.registered_collections[node] = list(collection)
 
@@ -237,9 +221,8 @@ class LoadScopeScheduling:
         - ``DSession.worker_testreport``.
         """
         nodeid = self.registered_collections[node][item_index]
-        scope = self._split_scope(nodeid)
 
-        self.assigned_work[node][scope][nodeid] = True
+        self.assigned_work[node][nodeid] = True
         self._reschedule(node)
 
     def mark_test_pending(self, item):
@@ -247,9 +230,6 @@ class LoadScopeScheduling:
 
     def _assign_work_unit(self, node):
         """Assign a work unit to a node."""
-        assert self.workqueue
-
-        self.log(self.workqueue)
         self.log(self.assigned_work)
         self.log(self.registered_collections)
 
@@ -257,13 +237,11 @@ class LoadScopeScheduling:
 
         for idx in nodeids_indexes:
             nodeid = self.registered_collections[node][idx]
-            scope = self._split_scope(nodeid)
 
             assigned_to_node = self.assigned_work.setdefault(
                 node, default=OrderedDict()
             )
-            scope = assigned_to_node.setdefault(scope, default=OrderedDict())
-            scope.update({nodeid: False})
+            assigned_to_node[nodeid] = False
 
         node.send_runtest_some(nodeids_indexes)
 
@@ -289,7 +267,7 @@ class LoadScopeScheduling:
             example/loadsuite/test/test_delta.py::Delta1
             example/loadsuite/epsilon/__init__.py
         """
-        return nodeid.rsplit("::", 1)[0]
+        return nodeid
 
     def _pending_of(self, workload):
         """Return the number of pending tests in a workload."""
@@ -302,15 +280,7 @@ class LoadScopeScheduling:
         If there are any globally pending work units left then this will check
         if the given node should be given any more tests.
         """
-
-        # Do not add more work to a node shutting down
-        if node.shutting_down:
-            return
-
-        # Check that more work is available
-        if self._pending_of(self.assigned_work[node]) == 0:
-            node.shutdown()
-            return
+        pass
 
     def schedule(self):
         """Initiate distribution of the test collection.
@@ -341,36 +311,16 @@ class LoadScopeScheduling:
         if not self.collection:
             return
 
-        # Determine chunks of work (scopes)
-        for nodeid in self.collection:
-            scope = self._split_scope(nodeid)
-            work_unit = self.workqueue.setdefault(scope, default=OrderedDict())
-            work_unit[nodeid] = False
-
         # Avoid having more workers than work
-        extra_nodes = len(self.nodes) - len(self.workqueue)
-
-        if extra_nodes > 0:
-            self.log(f"Shutting down {extra_nodes} nodes")
-
-            for _ in range(extra_nodes):
-                unused_node, assigned = self.assigned_work.popitem(last=True)
-
-                self.log(f"Shutting down unused node {unused_node}")
-                unused_node.shutdown()
+        for node, values in self.registered_collections.items():
+            if len(values) == 0:
+                self.log(f"Shutting down unused node {node}")
+                node.shutdown()
 
         # Assign initial workload
         for node in self.nodes:
             self._assign_work_unit(node)
 
-        # Ensure nodes start with at least two work units if possible (#277)
-        for node in self.nodes:
-            self._reschedule(node)
-
-        # Initial distribution sent all tests, start node shutdown
-        if not self.workqueue:
-            for node in self.nodes:
-                node.shutdown()
 
     def _check_nodes_have_same_collection(self):
         """Return True if all nodes have collected the same items.
