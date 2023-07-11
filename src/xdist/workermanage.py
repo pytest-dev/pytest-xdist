@@ -304,8 +304,8 @@ class WorkerController:
         for path in self.path.split(","):
             args.insert(0, path)
 
-        print (self.workerinput)
-        print (args)
+        print(self.workerinput)
+        print(args)
 
         self.channel.send((self.workerinput, args, option_dict, change_sys_path))
 
