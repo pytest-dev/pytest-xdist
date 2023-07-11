@@ -245,6 +245,7 @@ class LoadScopeScheduling:
         self.log(f"Running {nodeids_indexes}")
 
         node.send_runtest_some(nodeids_indexes)
+        node.shutdown()
 
     def _pending_of(self, workload):
         """Return the number of pending tests in a workload."""
