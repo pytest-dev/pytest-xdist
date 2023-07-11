@@ -262,7 +262,7 @@ class LoadScopeScheduling:
         """Return the number of pending tests in a workload."""
         self.log("_pending_of")
 
-        pending = sum(list(scope.values()).count(False) for scope in workload.values())
+        pending = len([1 for scope in workload.values() if not scope])
         self.log(f"returning {pending}")
         return pending
 
