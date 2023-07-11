@@ -342,11 +342,9 @@ class WorkerController:
 
     def sendcommand(self, name, **kwargs):
         """send a named parametrized command to the other side."""
-        self.log(f"sending command {name}")
         self.channel.send((name, kwargs))
 
     def notify_inproc(self, eventname, **kwargs):
-        self.log(f"queuing {eventname}")
         self.putevent((eventname, kwargs))
 
     def process_from_remote(self, eventcall):  # noqa too complex
@@ -368,7 +366,6 @@ class WorkerController:
                 return
             eventname, kwargs = eventcall
             if eventname in ("collectionstart",):
-                self.log(f"ignoring {eventname}")
             elif eventname == "workerready":
                 self.notify_inproc(eventname, node=self, **kwargs)
             elif eventname == "internal_error":

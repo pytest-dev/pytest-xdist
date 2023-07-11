@@ -141,7 +141,6 @@ class DSession:
         assert callname, kwargs
         method = "worker_" + callname
         call = getattr(self, method)
-        self.log("calling method", method)
         call(**kwargs)
         if self.sched.tests_finished:
             self.triggershutdown()
@@ -355,7 +354,6 @@ class DSession:
                 self.shouldstop = f"stopping after {self.countfailures} failures"
 
     def triggershutdown(self):
-        self.log("triggering shutdown")
         self.shuttingdown = True
         for node in self.sched.nodes:
             node.shutdown()
