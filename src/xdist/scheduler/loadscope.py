@@ -121,6 +121,8 @@ class LoadScopeScheduling:
         # if self.workqueue:
         #    return False
 
+        self.log(self.assigned_work)
+
         if len(self.assigned_work) == 0:
             # We haven't begun
             return False
@@ -128,8 +130,6 @@ class LoadScopeScheduling:
         if [len(i) == 0 for i in self.assigned_work.values()]:
             # We haven't begun
             return False
-
-        self.log(self.assigned_work)
 
         for node in self.assigned_work:
             if not all([x for x in self.assigned_work[node].values()]):
