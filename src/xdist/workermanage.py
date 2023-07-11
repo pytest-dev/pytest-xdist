@@ -63,7 +63,7 @@ class NodeManager:
         #     ["tests/test_workflows"],
         #     ["tests/test_bill_pay/test_autofilling.py"],
         # ]
-        paths = json.loads(open("bins_48.json").read())
+        paths = json.loads(open("bins.json").read())
 
         self.paths = [",".join(path) for path in paths]
 
