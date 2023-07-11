@@ -83,7 +83,7 @@ class WorkerInteractor:
         return result
 
     def sendevent(self, name, **kwargs):
-        self.log("sending", name, kwargs)
+        self.log("sending", name))
         self.channel.send((name, kwargs))
 
     @pytest.hookimpl
