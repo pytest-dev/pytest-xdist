@@ -170,9 +170,11 @@ class WorkerInteractor:
 
         worker_title("[pytest-xdist running] %s" % item.nodeid)
 
+        self.log("running", item.nodeid, self.item_index)
         start = time.time()
-        self.config.hook.pytest_runtest_protocol(item=item, nextitem=nextitem)
+        self.config.hook.pytest_runtest_protocol(item=item, nextitem=nextitem if nextitem else items[0])
         duration = time.time() - start
+        self.log("finished", item.nodeid, self.item_index)
 
         worker_title("[pytest-xdist idle]")
 
@@ -180,6 +182,9 @@ class WorkerInteractor:
             "runtest_protocol_complete", item_index=self.item_index, duration=duration
         )
         self.log("Just sent runtest_protocol_complete", self.item_index)
+
+        if nextitem is None:
+            self.config.hook.pytest_runtest_protocol(item=item, nextitem=None)
 
     def pytest_collection_modifyitems(self, session, config, items):
         # add the group name to nodeid as suffix if --dist=loadgroup
