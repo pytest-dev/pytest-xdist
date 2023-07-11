@@ -121,7 +121,7 @@ class LoadScopeScheduling:
         if not self.collection_is_completed:
             return False
 
-        #if self.workqueue:
+        # if self.workqueue:
         #    return False
 
         for assigned_unit in self.assigned_work.values():
@@ -224,7 +224,7 @@ class LoadScopeScheduling:
                 msg = report_collection_diff(
                     self.collection, collection, other_node.gateway.id, node.gateway.id
                 )
-                #self.log(msg)
+                # self.log(msg)
                 return
 
         self.registered_collections[node] = list(collection)
@@ -259,7 +259,9 @@ class LoadScopeScheduling:
             nodeid = self.registered_collections[node][idx]
             scope = self._split_scope(nodeid)
 
-            assigned_to_node = self.assigned_work.setdefault(node, default=OrderedDict())
+            assigned_to_node = self.assigned_work.setdefault(
+                node, default=OrderedDict()
+            )
             scope = assigned_to_node.setdefault(scope, default=OrderedDict())
             scope.update({nodeid: False})
 
@@ -330,7 +332,7 @@ class LoadScopeScheduling:
             return
 
         # Check that all nodes collected the same tests
-        #if not self._check_nodes_have_same_collection():
+        # if not self._check_nodes_have_same_collection():
         #    self.log("**Different tests collected, aborting run**")
         #    return
 
@@ -389,7 +391,7 @@ class LoadScopeScheduling:
                 continue
 
             same_collection = False
-            #self.log(msg)
+            # self.log(msg)
 
             if self.config is None:
                 continue

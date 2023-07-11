@@ -73,7 +73,10 @@ class NodeManager:
         start_time = time.time()
         self.config.hook.pytest_xdist_setupnodes(config=self.config, specs=self.specs)
         self.trace("setting up nodes")
-        to_return = [self.setup_node(spec, putevent, self.paths[i]) for i, spec in enumerate(self.specs)]
+        to_return = [
+            self.setup_node(spec, putevent, self.paths[i])
+            for i, spec in enumerate(self.specs)
+        ]
         end_time = time.time()
         self.log("setup_nodes", end_time - start_time)
         return to_return
