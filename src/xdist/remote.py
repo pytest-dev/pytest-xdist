@@ -162,9 +162,9 @@ class WorkerInteractor:
 
     def run_one_test(self):
         self.item_index = self.nextitem_index
-        self.log('before get next item index')
+        self.log("before get next item index")
         self.nextitem_index = self._get_next_item_index()
-        self.log('after get next item index')
+        self.log("after get next item index")
 
         items = self.session.items
         item = items[self.item_index]
@@ -190,7 +190,7 @@ class WorkerInteractor:
         )
         self.log("Just sent runtest_protocol_complete", self.item_index)
 
-        #if nextitem is None:
+        # if nextitem is None:
         #    self.config.hook.pytest_runtest_protocol(item=item, nextitem=None)
 
     def pytest_collection_modifyitems(self, session, config, items):
