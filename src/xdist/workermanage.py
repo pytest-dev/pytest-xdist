@@ -1,4 +1,5 @@
 import fnmatch
+import glob
 import json
 import time
 import os
@@ -64,6 +65,23 @@ class NodeManager:
         #     ["tests/test_bill_pay/test_autofilling.py"],
         # ]
         paths = json.loads(open("bins.json").read())
+
+        complete_tests = glob.glob("tests/*.py")
+
+        new_tests = []
+        for test in complete_tests:
+            found = False
+            for bucket in paths:
+                if test in bucket:
+                    found = True
+
+            if not found:
+                new_tests.append(test)
+
+        for bucket in paths:
+            bucket = [test for test in bucket if test in complete_tests]
+
+        paths[0] += new_tests
 
         self.paths = [",".join(path) for path in paths]
 
