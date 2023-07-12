@@ -1,5 +1,5 @@
 import fnmatch
-improt os
+import os
 import glob
 import json
 import time
