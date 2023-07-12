@@ -68,8 +68,6 @@ class NodeManager:
 
         complete_tests = glob.glob("tests/**/*.py", recursive=True)
 
-        self.log("Complete tests: ", complete_tests)
-
         new_tests = []
         for test in complete_tests:
             found = False
