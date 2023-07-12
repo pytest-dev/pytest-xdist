@@ -75,17 +75,17 @@ class NodeManager:
         complete_tests = [c for c in complete_tests if "factory.py" not in c]
         complete_tests = [c for c in complete_tests if "factories.py" not in c]
 
-        # new_tests = []
-        # for test in complete_tests:
-        #     found = False
-        #     for bucket in paths:
-        #         if test in bucket:
-        #             found = True
+        new_tests = []
+        for test in complete_tests:
+            found = False
+            for bucket in paths:
+                if test in bucket:
+                    found = True
 
-        #     if not found:
-        #         new_tests.append(test)
+            if not found:
+                new_tests.append(test)
 
-        # self.log("New tests: ", new_tests)
+        self.log("New tests: ", new_tests)
 
         for i in range(len(paths)):
             bucket = paths[i]
