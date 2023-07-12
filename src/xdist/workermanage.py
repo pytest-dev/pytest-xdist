@@ -66,7 +66,7 @@ class NodeManager:
         # ]
         paths = json.loads(open("bins.json").read())
 
-        complete_tests = glob.glob("tests/*.py")
+        complete_tests = glob.glob("tests/**/*.py", recursive=True)
 
         self.log("Complete tests: ", complete_tests)
 
