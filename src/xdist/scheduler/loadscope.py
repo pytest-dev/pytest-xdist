@@ -1,5 +1,7 @@
 from collections import OrderedDict
 
+import csv
+
 from _pytest.runner import CollectReport
 from xdist.remote import Producer
 from xdist.report import report_collection_diff
@@ -90,6 +92,7 @@ class LoadScopeScheduling:
 
         self.assigned_work = OrderedDict()
         self.registered_collections = OrderedDict()
+        self.durations = OrderedDict()
 
         if log is None:
             self.log = Producer("loadscopesched")
@@ -131,6 +134,12 @@ class LoadScopeScheduling:
         for node in self.assigned_work:
             if not all([x for x in self.assigned_work[node].values()]):
                 return False
+
+        with open('durations.csv', 'w') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(['nodeid', 'duration'])
+            for nodeid, duration in self.durations.items():
+                writer.writerow([nodeid, duration])
 
         return True
 
@@ -204,6 +213,8 @@ class LoadScopeScheduling:
         - ``DSession.worker_testreport``.
         """
         nodeid = self.registered_collections[node][item_index]
+
+        self.durations[nodeid] = duration
 
         self.assigned_work[node][nodeid] = True
         self._reschedule(node)

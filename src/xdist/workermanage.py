@@ -86,12 +86,8 @@ class NodeManager:
             if not found:
                 new_tests.append(test)
 
-        self.log("New tests: ", new_tests)
-
         for i in range(len(paths)):
             bucket = paths[i]
-            tests_to_remove = [test for test in bucket if test not in complete_tests]
-            self.log("Removing tests: ", tests_to_remove)
             paths[i] = [test for test in bucket if test in complete_tests]
 
         # paths[0] += new_tests
@@ -335,9 +331,6 @@ class WorkerController:
         del args[0]
         for path in self.path.split(","):
             args.insert(0, path)
-
-        print(self.workerinput)
-        print(args)
 
         self.channel.send((self.workerinput, args, option_dict, change_sys_path))
 
