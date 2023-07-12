@@ -135,14 +135,14 @@ class LoadScopeScheduling:
             if not all([x for x in self.assigned_work[node].values()]):
                 return False
 
-        print ('writing durations')
-        with open('durations.csv', 'w') as csvfile:
+        print("writing durations")
+        with open("durations.csv", "w") as csvfile:
             writer = csv.writer(csvfile)
-            writer.writerow(['nodeid', 'duration'])
+            writer.writerow(["nodeid", "duration"])
             for nodeid, duration in self.durations.items():
                 writer.writerow([nodeid, duration])
 
-        print ('written durations')
+        print("written durations")
 
         return True
 
