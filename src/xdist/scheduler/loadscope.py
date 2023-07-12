@@ -170,6 +170,7 @@ class LoadScopeScheduling:
         Return the item being executed while the node crashed or None if the
         node has no more pending items.
         """
+        self.log("remove_node", node)
         return None
 
     def add_node_collection(self, node, collection):
@@ -181,6 +182,8 @@ class LoadScopeScheduling:
 
         - ``DSession.worker_collectionfinish``.
         """
+
+        self.log("add_node_collection", node, len(collection))
 
         # Check that add_node() was called on the node before
         assert node in self.assigned_work
@@ -263,10 +266,10 @@ class LoadScopeScheduling:
             return
 
         # Avoid having more workers than work
-        # for node, values in self.registered_collections.items():
-        #    if len(values) == 0:
-        #        self.log(f"Shutting down unused node {node}")
-        #        node.shutdown()
+        for node, values in self.registered_collections.items():
+           if len(values) == 0:
+               self.log(f"Shutting down unused node {node}")
+               node.shutdown()
 
         # Assign initial workload
         for node in self.nodes:
