@@ -188,19 +188,19 @@ class WorkerInteractor:
             "runtest_protocol_complete", item_index=self.item_index, duration=duration
         )
 
-    # def pytest_collection_modifyitems(self, session, config, items):
-    #     # add the group name to nodeid as suffix if --dist=loadgroup
-    #     if config.getvalue("loadgroup"):
-    #         for item in items:
-    #             mark = item.get_closest_marker("xdist_group")
-    #             if not mark:
-    #                 continue
-    #             gname = (
-    #                 mark.args[0]
-    #                 if len(mark.args) > 0
-    #                 else mark.kwargs.get("name", "default")
-    #             )
-    #             item._nodeid = f"{item.nodeid}@{gname}"
+    def pytest_collection_modifyitems(self, session, config, items):
+        # add the group name to nodeid as suffix if --dist=loadgroup
+        if config.getvalue("loadgroup"):
+            for item in items:
+                mark = item.get_closest_marker("xdist_group")
+                if not mark:
+                    continue
+                gname = (
+                    mark.args[0]
+                    if len(mark.args) > 0
+                    else mark.kwargs.get("name", "default")
+                )
+                item._nodeid = f"{item.nodeid}@{gname}"
 
     @pytest.hookimpl
     def pytest_collection_finish(self, session):
@@ -210,6 +210,9 @@ class WorkerInteractor:
             topdir = str(self.config.rootdir)
 
         self.log(f"Collected {len(session.items)} items")
+        self.log(f"{session.shouldstop}")
+        self.log(f"{session.shouldfail}")
+        self.log(f"{session.trace}")
 
         self.sendevent(
             "collectionfinish",
