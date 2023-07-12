@@ -65,14 +65,14 @@ class NodeManager:
         # ]
         paths = json.loads(open("bins.json").read())
 
-        # complete_tests = glob.glob("tests/**/*.py", recursive=True)
-        # complete_tests = [c for c in complete_tests if "__init__" not in c]
-        # complete_tests = [c for c in complete_tests if ".pyc" not in c]
-        # complete_tests = [c for c in complete_tests if "__pycache__" not in c]
-        # complete_tests = [c for c in complete_tests if "conftest.py" not in c]
-        # complete_tests = [c for c in complete_tests if "tests/incremental" not in c]
-        # complete_tests = [c for c in complete_tests if "factory.py" not in c]
-        # complete_tests = [c for c in complete_tests if "factories.py" not in c]
+        complete_tests = glob.glob("tests/**/*.py", recursive=True)
+        complete_tests = [c for c in complete_tests if "__init__" not in c]
+        complete_tests = [c for c in complete_tests if ".pyc" not in c]
+        complete_tests = [c for c in complete_tests if "__pycache__" not in c]
+        complete_tests = [c for c in complete_tests if "conftest.py" not in c]
+        complete_tests = [c for c in complete_tests if "tests/incremental" not in c]
+        complete_tests = [c for c in complete_tests if "factory.py" not in c]
+        complete_tests = [c for c in complete_tests if "factories.py" not in c]
 
         # new_tests = []
         # for test in complete_tests:
@@ -86,10 +86,11 @@ class NodeManager:
 
         # self.log("New tests: ", new_tests)
 
-        # for bucket in paths:
-        #     tests_to_remove = [test for test in bucket if test not in complete_tests]
-        #     self.log("Removing tests: ", tests_to_remove)
-        #     bucket = [test for test in bucket if test in complete_tests]
+        for i in range(len(paths)):
+            bucket = paths[i]
+            tests_to_remove = [test for test in bucket if test not in complete_tests]
+            self.log("Removing tests: ", tests_to_remove)
+            paths[i] = [test for test in bucket if test in complete_tests]
 
         # paths[0] += new_tests
 
