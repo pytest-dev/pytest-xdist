@@ -65,7 +65,7 @@ class NodeManager:
         #     ["tests/test_workflows"],
         #     ["tests/test_bill_pay/test_autofilling.py"],
         # ]
-        paths = json.loads(open(f"{os.environ('TEST_DIR')}/bins.json").read())
+        paths = json.loads(open(f"{os.environ['TEST_DIR']}/bins.json").read())
 
         complete_tests = glob.glob("tests/**/*.py", recursive=True)
         complete_tests = [c for c in complete_tests if "__init__" not in c]
