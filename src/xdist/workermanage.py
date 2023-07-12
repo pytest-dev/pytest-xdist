@@ -68,6 +68,8 @@ class NodeManager:
 
         complete_tests = glob.glob("tests/*.py")
 
+        self.log("Complete tests: ", complete_tests)
+
         new_tests = []
         for test in complete_tests:
             found = False
@@ -78,7 +80,11 @@ class NodeManager:
             if not found:
                 new_tests.append(test)
 
+        self.log("New tests: ", new_tests)
+
         for bucket in paths:
+            tests_to_remove = [test for test in bucket if test not in complete_tests]
+            self.log("Removing tests: ", tests_to_remove)
             bucket = [test for test in bucket if test in complete_tests]
 
         paths[0] += new_tests
