@@ -263,7 +263,7 @@ class LoadScopeScheduling:
             return
 
         # Avoid having more workers than work
-        #for node, values in self.registered_collections.items():
+        # for node, values in self.registered_collections.items():
         #    if len(values) == 0:
         #        self.log(f"Shutting down unused node {node}")
         #        node.shutdown()
