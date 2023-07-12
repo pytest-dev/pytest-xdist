@@ -67,11 +67,11 @@ class NodeManager:
         paths = json.loads(open("bins.json").read())
 
         complete_tests = glob.glob("tests/**/*.py", recursive=True)
-        complete_tests = [c for c in complete_tests if '__init__' not in c]
-        complete_tests = [c for c in complete_tests if '.pyc' not in c]
-        complete_tests = [c for c in complete_tests if '__pycache__' not in c]
-        complete_tests = [c for c in complete_tests if 'conftest.py' not in c]
-        complete_tests = [c for c in complete_tests if 'tests/incremental' not in c]
+        complete_tests = [c for c in complete_tests if "__init__" not in c]
+        complete_tests = [c for c in complete_tests if ".pyc" not in c]
+        complete_tests = [c for c in complete_tests if "__pycache__" not in c]
+        complete_tests = [c for c in complete_tests if "conftest.py" not in c]
+        complete_tests = [c for c in complete_tests if "tests/incremental" not in c]
 
         new_tests = []
         for test in complete_tests:
