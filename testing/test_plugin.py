@@ -48,6 +48,23 @@ def test_dist_options(pytester: pytest.Pytester) -> None:
     check_options(config)
     assert config.option.dist == "load"
 
+    config = pytester.parseconfigure("--numprocesses", "0")
+    check_options(config)
+    assert config.option.dist == "no"
+    assert config.option.tx == []
+
+    config = pytester.parseconfigure("--numprocesses", "0", "-d")
+    check_options(config)
+    assert config.option.dist == "no"
+    assert config.option.tx == []
+
+    config = pytester.parseconfigure(
+        "--numprocesses", "0", "--dist", "each", "--tx", "2*popen"
+    )
+    check_options(config)
+    assert config.option.dist == "no"
+    assert config.option.tx == []
+
 
 def test_auto_detect_cpus(
     pytester: pytest.Pytester, monkeypatch: pytest.MonkeyPatch
