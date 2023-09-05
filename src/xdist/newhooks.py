@@ -25,14 +25,18 @@ def pytest_xdist_newgateway(gateway):
 
 
 @pytest.hookspec(
-    warn_on_impl="rsync feature is deprecated and will be removed in pytest-xdist 4.0"
+    warn_on_impl=DeprecationWarning(
+        "rsync feature is deprecated and will be removed in pytest-xdist 4.0"
+    )
 )
 def pytest_xdist_rsyncstart(source, gateways):
     """called before rsyncing a directory to remote gateways takes place."""
 
 
 @pytest.hookspec(
-    warn_on_impl="rsync feature is deprecated and will be removed in pytest-xdist 4.0"
+    warn_on_impl=DeprecationWarning(
+        "rsync feature is deprecated and will be removed in pytest-xdist 4.0"
+    )
 )
 def pytest_xdist_rsyncfinish(source, gateways):
     """called after rsyncing a directory to remote gateways takes place."""
