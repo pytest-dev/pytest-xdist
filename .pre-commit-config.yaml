@@ -5,7 +5,7 @@ repos:
     -   id: autoflake
         args: ["--in-place", "--remove-unused-variables", "--remove-all-unused-imports"]
 -   repo: https://github.com/psf/black
-    rev: 23.7.0
+    rev: 23.9.1
     hooks:
     -   id: black
         args: [--safe, --quiet, --target-version, py35]
