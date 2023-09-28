@@ -374,7 +374,7 @@ def test_unserialize_warning_msg(w_cls):
         v1 = getattr(w_msg, k)
         v2 = getattr(w_msg2, k)
         if k == "message":
-            assert type(v1) == type(v2)
+            assert type(v1) is type(v2)
             assert v1.args == v2.args
         else:
             assert v1 == v2

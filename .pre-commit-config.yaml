@@ -1,16 +1,16 @@
 repos:
 -   repo: https://github.com/PyCQA/autoflake
-    rev: v2.2.0
+    rev: v2.2.1
     hooks:
     -   id: autoflake
         args: ["--in-place", "--remove-unused-variables", "--remove-all-unused-imports"]
 -   repo: https://github.com/psf/black
-    rev: 23.3.0
+    rev: 23.9.1
     hooks:
     -   id: black
         args: [--safe, --quiet, --target-version, py35]
 -   repo: https://github.com/asottile/blacken-docs
-    rev: 1.14.0
+    rev: 1.16.0
     hooks:
     -   id: blacken-docs
         additional_dependencies: [black==23.1.0]
@@ -22,11 +22,11 @@ repos:
     -   id: check-yaml
     -   id: debug-statements
 -   repo: https://github.com/PyCQA/flake8
-    rev: 6.0.0
+    rev: 6.1.0
     hooks:
     -   id: flake8
 -   repo: https://github.com/asottile/pyupgrade
-    rev: v3.8.0
+    rev: v3.13.0
     hooks:
     -   id: pyupgrade
         args: [--py3-plus]
@@ -39,7 +39,7 @@ repos:
         language: python
         additional_dependencies: [pygments, restructuredtext_lint]
 -   repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.4.1
+    rev: v1.5.1
     hooks:
     -   id: mypy
         files: ^(src/|testing/)
