@@ -68,6 +68,9 @@ class RemoteMessageHandler(logging.Handler):
 
     This code is new in Python 3.2, but this class can be copy pasted into
     user code for use with earlier Python versions.
+
+    Largely based on QueueHandler in handlers.py in cpython : 
+    Source: https://github.com/python/cpython/blob/8f324b7ecd2df3036fab098c4c8ac185ac07b277/Lib/logging/handlers.py#L1412
     """
 
     def __init__(self, queue):

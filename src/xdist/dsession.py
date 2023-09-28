@@ -287,10 +287,7 @@ class DSession:
     def worker_runtest_logmessage(self, node, record):
         record = pickle.loads(record)
         for handler in logging.getLogger().handlers:
-            if not True:  # self.respect_handler_level:
-                process = True
-            else:
-                process = record.levelno >= handler.level
+            process = record.levelno >= handler.level
             if process:
                 handler.handle(record)
 
