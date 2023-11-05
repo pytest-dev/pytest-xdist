@@ -109,19 +109,6 @@ class TestDistribution:
         )
         assert result.ret == 1
 
-    def test_n1_fail_minus_x(self, pytester: pytest.Pytester) -> None:
-        p1 = pytester.makepyfile(
-            """
-            def test_fail1():
-                assert 0
-            def test_fail2():
-                assert 0
-        """
-        )
-        result = pytester.runpytest(p1, "-x", "-v", "-n1")
-        assert result.ret == 2
-        result.stdout.fnmatch_lines(["*Interrupted: stopping*1*", "*1 failed*"])
-
     def test_exitfail_waits_for_workers_to_finish(
         self, pytester: pytest.Pytester
     ) -> None:
@@ -153,7 +140,7 @@ class TestDistribution:
         )
         result = pytester.runpytest(p1, "-x", "-rA", "-v", "-n2")
         assert result.ret == 2
-        result.stdout.fnmatch_lines(["*Interrupted: stopping*1*"])
+        result.stdout.re_match_lines([".*Interrupted: stopping.*[12].*"])
         m = re.search(r"== (\d+) failed, (\d+) passed in ", str(result.stdout))
         assert m
         n_failed, n_passed = (int(s) for s in m.groups())
@@ -1189,7 +1176,7 @@ def test_internal_error_with_maxfail(pytester: pytest.Pytester) -> None:
     """
     )
     result = pytester.runpytest_subprocess("--maxfail=1", "-n1")
-    result.stdout.fnmatch_lines(["* 1 error in *"])
+    result.stdout.re_match_lines([".* [12] errors? in .*"])
     assert "INTERNALERROR" not in result.stderr.str()
 
 

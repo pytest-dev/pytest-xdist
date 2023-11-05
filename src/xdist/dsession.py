@@ -121,8 +121,9 @@ class DSession:
         pending_exception = None
         while not self.session_finished:
             self.loop_once()
-            if self.shouldstop and not self.shuttingdown:
-                self.triggershutdown()
+            if self.shouldstop:
+                if not self.shuttingdown:
+                    self.triggershutdown()
                 pending_exception = Interrupted(str(self.shouldstop))
         if pending_exception:
             raise pending_exception
