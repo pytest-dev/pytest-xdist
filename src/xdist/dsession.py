@@ -118,11 +118,14 @@ class DSession:
         assert self.sched is not None
 
         self.shouldstop = False
+        pending_exception = None
         while not self.session_finished:
             self.loop_once()
-            if self.shouldstop:
+            if self.shouldstop and not self.shuttingdown:
                 self.triggershutdown()
-                raise Interrupted(str(self.shouldstop))
+                pending_exception = Interrupted(str(self.shouldstop))
+        if pending_exception:
+            raise pending_exception
         return True
 
     def loop_once(self):
@@ -351,7 +354,11 @@ class DSession:
     def _handlefailures(self, rep):
         if rep.failed:
             self.countfailures += 1
-            if self.maxfail and self.countfailures >= self.maxfail:
+            if (
+                self.maxfail
+                and self.countfailures >= self.maxfail
+                and not self.shouldstop
+            ):
                 self.shouldstop = f"stopping after {self.countfailures} failures"
 
     def triggershutdown(self):
