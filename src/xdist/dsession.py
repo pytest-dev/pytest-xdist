@@ -122,8 +122,7 @@ class DSession:
         while not self.session_finished:
             self.loop_once()
             if self.shouldstop:
-                if not self.shuttingdown:
-                    self.triggershutdown()
+                self.triggershutdown()
                 pending_exception = Interrupted(str(self.shouldstop))
         if pending_exception:
             raise pending_exception
@@ -363,10 +362,11 @@ class DSession:
                 self.shouldstop = f"stopping after {self.countfailures} failures"
 
     def triggershutdown(self):
-        self.log("triggering shutdown")
-        self.shuttingdown = True
-        for node in self.sched.nodes:
-            node.shutdown()
+        if not self.shuttingdown:
+            self.log("triggering shutdown")
+            self.shuttingdown = True
+            for node in self.sched.nodes:
+                node.shutdown()
 
     def handle_crashitem(self, nodeid, worker):
         # XXX get more reporting info by recording pytest_runtest_logstart?
