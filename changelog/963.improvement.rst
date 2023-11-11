@@ -1,5 +1,0 @@
-Wait for workers to finish reporting when test run stops early.
-
-This makes sure that the results of in-progress tests are displayed.
-Previously these reports were being discarded, losing information about the
-test run.
