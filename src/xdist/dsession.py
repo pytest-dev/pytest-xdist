@@ -118,11 +118,14 @@ class DSession:
         assert self.sched is not None
 
         self.shouldstop = False
+        pending_exception = None
         while not self.session_finished:
             self.loop_once()
             if self.shouldstop:
                 self.triggershutdown()
-                raise Interrupted(str(self.shouldstop))
+                pending_exception = Interrupted(str(self.shouldstop))
+        if pending_exception:
+            raise pending_exception
         return True
 
     def loop_once(self):
@@ -351,14 +354,19 @@ class DSession:
     def _handlefailures(self, rep):
         if rep.failed:
             self.countfailures += 1
-            if self.maxfail and self.countfailures >= self.maxfail:
+            if (
+                self.maxfail
+                and self.countfailures >= self.maxfail
+                and not self.shouldstop
+            ):
                 self.shouldstop = f"stopping after {self.countfailures} failures"
 
     def triggershutdown(self):
-        self.log("triggering shutdown")
-        self.shuttingdown = True
-        for node in self.sched.nodes:
-            node.shutdown()
+        if not self.shuttingdown:
+            self.log("triggering shutdown")
+            self.shuttingdown = True
+            for node in self.sched.nodes:
+                node.shutdown()
 
     def handle_crashitem(self, nodeid, worker):
         # XXX get more reporting info by recording pytest_runtest_logstart?

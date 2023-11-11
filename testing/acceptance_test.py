@@ -109,18 +109,44 @@ class TestDistribution:
         )
         assert result.ret == 1
 
-    def test_n1_fail_minus_x(self, pytester: pytest.Pytester) -> None:
+    def test_exitfail_waits_for_workers_to_finish(
+        self, pytester: pytest.Pytester
+    ) -> None:
+        """The DSession waits for workers before exiting early on failure.
+
+        When -x/--exitfail is set, the DSession wait for the workers to finish
+        before raising an Interrupt exception. This prevents reports from the
+        faiing test and other tests from being discarded.
+        """
         p1 = pytester.makepyfile(
             """
+            import time
+
             def test_fail1():
+                time.sleep(0.1)
                 assert 0
             def test_fail2():
+                time.sleep(0.2)
+            def test_fail3():
+                time.sleep(0.3)
                 assert 0
+            def test_fail4():
+                time.sleep(0.3)
+            def test_fail5():
+                time.sleep(0.3)
+            def test_fail6():
+                time.sleep(0.3)
         """
         )
-        result = pytester.runpytest(p1, "-x", "-v", "-n1")
+        result = pytester.runpytest(p1, "-x", "-rA", "-v", "-n2")
         assert result.ret == 2
-        result.stdout.fnmatch_lines(["*Interrupted: stopping*1*", "*1 failed*"])
+        result.stdout.re_match_lines([".*Interrupted: stopping.*[12].*"])
+        m = re.search(r"== (\d+) failed, (\d+) passed in ", str(result.stdout))
+        assert m
+        n_failed, n_passed = (int(s) for s in m.groups())
+        assert 1 <= n_failed <= 2
+        assert 1 <= n_passed <= 3
+        assert (n_passed + n_failed) < 6
 
     def test_basetemp_in_subprocesses(self, pytester: pytest.Pytester) -> None:
         p1 = pytester.makepyfile(
@@ -1150,7 +1176,7 @@ def test_internal_error_with_maxfail(pytester: pytest.Pytester) -> None:
     """
     )
     result = pytester.runpytest_subprocess("--maxfail=1", "-n1")
-    result.stdout.fnmatch_lines(["* 1 error in *"])
+    result.stdout.re_match_lines([".* [12] errors? in .*"])
     assert "INTERNALERROR" not in result.stderr.str()
 
 
