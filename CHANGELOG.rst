@@ -1,3 +1,18 @@
+pytest-xdist 3.4.0 (2023-11-11)
+===============================
+
+Features
+--------
+
+- `#963 <https://github.com/pytest-dev/pytest-xdist/issues/963>`_: Wait for workers to finish reporting when test run stops early.
+
+  This makes sure that the results of in-progress tests are displayed.
+  Previously these reports were being discarded, losing information about the
+  test run.
+
+- `#965 <https://github.com/pytest-dev/pytest-xdist/issues/965>`_: Added support for Python 3.12.
+
+
 pytest-xdist 3.3.1 (2023-05-19)
 ===============================
 
