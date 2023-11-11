@@ -34,6 +34,8 @@ To publish a new release ``X.Y.Z``, the steps are as follows:
 
 #. Commit and push the branch to ``upstream`` and open a PR.
 
-#. Once the PR is **green** and **approved**, start the ``deploy`` workflow manually from the branch ``release-VERSION``, passing ``VERSION`` as parameter.
+#. Once the PR is **green** and **approved**, start the ``deploy`` workflow manually from the branch ``release-VERSION``, passing ``VERSION`` as parameter, or execute::
+
+   gh workflow run deploy.yml -R pytest-dev/pytest-xdist --ref release-X.Y.Z --field version=X.Y.Z
 
 #. Merge the release PR to ``master``.
