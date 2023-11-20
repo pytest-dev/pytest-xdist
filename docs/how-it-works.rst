@@ -29,8 +29,8 @@ The execution flow is:
    corresponds to the position of that test in the original collection
    list. This works because all nodes have the same collection list, and
    saves bandwidth because the **controller** can now tell one of the
-   workers to just *execute test index 3* index of passing the full test
-   id.
+   workers to just *execute test index 3* instead of passing the full
+   test id.
 
 4. If **dist-mode** is **each**: the **controller** just sends the full
    list of test indexes to each node at this moment.
