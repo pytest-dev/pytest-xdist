@@ -139,8 +139,8 @@ class WorkerInteractor:
         self.log("sending", name, kwargs)
         self.channel.send((name, kwargs))
 
-    def send_log(self, record):
-        self.sendevent("runtest_logmessage", record=record)
+    def send_log(self, pickled_record):
+        self.sendevent("runtest_logmessage", pickled_record=pickled_record)
 
     @pytest.hookimpl
     def pytest_internalerror(self, excrepr):
