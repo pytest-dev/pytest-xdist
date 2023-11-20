@@ -47,3 +47,9 @@ jobs:
         git config user.email "pytestbot@gmail.com"
         git tag --annotate --message=v${{ github.event.inputs.version }} v${{ github.event.inputs.version }} ${{ github.sha }}
         git push origin v${{ github.event.inputs.version }}
+
+    - name: GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: dist/*
+        tag_name: v${{ github.event.inputs.version }}
