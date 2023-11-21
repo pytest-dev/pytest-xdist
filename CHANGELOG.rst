@@ -1,3 +1,12 @@
+pytest-xdist 3.5.0 (2023-11-21)
+===============================
+
+Features
+--------
+
+- `#632 <https://github.com/pytest-dev/pytest-xdist/issues/632>`_: ``--dist=loadscope`` now sorts scopes by number of tests to assign largest scopes early -- in many cases this should improve overall test session running time, as there is less chance of a large scope being left to be processed near the end of the session, leaving other workers idle.
+
+
 pytest-xdist 3.4.0 (2023-11-11)
 ===============================
 
