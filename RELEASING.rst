@@ -34,6 +34,8 @@ To publish a new release ``X.Y.Z``, the steps are as follows:
 
 #. Commit and push the branch to ``upstream`` and open a PR.
 
-#. Once the PR is **green** and **approved**, start the ``deploy`` workflow manually from the branch ``release-VERSION``, passing ``VERSION`` as parameter.
+#. Once the PR is **green** and **approved**, start the ``deploy`` workflow manually from the branch ``release-VERSION``, passing ``VERSION`` as parameter, or execute::
+
+    $ gh workflow run deploy.yml -r release-VERSION -f version=VERSION
 
 #. Merge the release PR to ``master``.
