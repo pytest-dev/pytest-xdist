@@ -356,7 +356,7 @@ class LoadScopeScheduling:
             work_unit = unsorted_workqueue.setdefault(scope, default=OrderedDict())
             work_unit[nodeid] = False
 
-        # Insert tests scopes into work queue ordered by number of tests
+        # Insert tests scopes into work queue ordered by number of tests.
         for scope, nodeids in sorted(
             unsorted_workqueue.items(), key=lambda item: -len(item[1])
         ):
