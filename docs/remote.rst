@@ -51,22 +51,6 @@ Those you cannot override using rsyncignore command-line or
 ini-file option(s).
 
 
-Sending tests to remote Socket Servers
---------------------------------------
-
-Download the single-module `socketserver.py`_ Python program
-and run it like this::
-
-    python socketserver.py
-
-It will tell you that it starts listening on the default
-port.  You can now on your home machine specify this
-new socket host with something like this::
-
-    pytest -d --tx socket=192.168.1.102:8888 --rsyncdir mypkg
-
-
-
 Running tests on many platforms at once
 ---------------------------------------
 
