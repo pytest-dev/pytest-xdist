@@ -83,4 +83,4 @@ at once. The specifications strings use the `xspec syntax`_.
 
 .. _`execnet`: https://codespeak.net/execnet
 
-.. _`socketserver.py`: https://raw.githubusercontent.com/pytest-dev/execnet/master/execnet/script/socketserver.py
+.. _`socketserver.py`: https://raw.githubusercontent.com/pytest-dev/execnet/master/src/execnet/script/socketserver.py
