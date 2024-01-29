@@ -11,6 +11,7 @@ must be taken in plugins in case ``xdist`` is not installed. Please see:
 
     http://pytest.org/en/latest/writing_plugins.html#optionally-using-hooks-from-3rd-party-plugins
 """
+
 import pytest
 
 
