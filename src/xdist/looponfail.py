@@ -6,6 +6,7 @@
     processes) otherwise changes to source code can crash
     the controlling process which should best never happen.
 """
+
 import os
 from pathlib import Path
 from typing import Dict, Sequence
