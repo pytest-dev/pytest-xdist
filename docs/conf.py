@@ -18,7 +18,7 @@
 # -- Project information -----------------------------------------------------
 
 project = "pytest-xdist"
-copyright = "2022, holger krekel and contributors"
+copyright = "2010, holger krekel and contributors"
 author = "holger krekel and contributors"
 
 master_doc = "index"
