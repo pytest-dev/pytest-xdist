@@ -16,10 +16,10 @@ jobs:
       SETUPTOOLS_SCM_PRETEND_VERSION: ${{ github.event.inputs.version }}
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Build and Check Package
-      uses: hynek/build-and-inspect-python-package@v1.5
+      uses: hynek/build-and-inspect-python-package@v2.0
 
   deploy:
     needs: package
@@ -30,16 +30,16 @@ jobs:
       contents: write  # For tag.
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Download Package
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: Packages
         path: dist
 
     - name: Publish package to PyPI
-      uses: pypa/gh-action-pypi-publish@v1.8.5
+      uses: pypa/gh-action-pypi-publish@v1.8.11
 
     - name: Push tag
       run: |
