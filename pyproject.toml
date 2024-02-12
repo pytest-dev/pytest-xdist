@@ -76,6 +76,28 @@ namespaces = false
 [tool.setuptools_scm]
 write_to = "src/xdist/_version.py"
 
+[tool.flake8]
+# Ignore any errors related to formatting, let black worry/fix them.
+ignore = ["E501", "W503", "E203"]
+max-line-length = 100
+
+[tool.mypy]
+mypy_path = ["src"]
+# TODO: Enable this & fix errors.
+# check_untyped_defs = true
+disallow_any_generics = true
+ignore_missing_imports = true
+no_implicit_optional = true
+show_error_codes = true
+strict_equality = true
+warn_redundant_casts = true
+warn_return_any = true
+warn_unreachable = true
+warn_unused_configs = true
+# TODO: Enable this & fix errors.
+# no_implicit_reexport = true
+
+
 [tool.towncrier]
 package = "xdist"
 filename = "CHANGELOG.rst"
