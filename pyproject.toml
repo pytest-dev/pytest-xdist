@@ -8,7 +8,8 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "pytest-xdist"
 description = "pytest xdist plugin for distributed testing, most importantly across multiple CPUs"
-license = {text = "MIT"}
+readme = "README.rst"
+license = {file="LICENSE"}
 authors = [{name = "holger krekel and contributors", email = "pytest-dev@python.org"}, {email = "holger@merlinux.eu"}]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -38,10 +39,6 @@ dependencies = [
 ]
 dynamic = ["version"]
 
-[project.readme]
-file = "README.rst"
-content-type = "text/x-rst"
-
 [project.urls]
 Homepage = "https://github.com/pytest-dev/pytest-xdist"
 Documentation = "https://pytest-xdist.readthedocs.io/en/latest"
@@ -59,19 +56,13 @@ psutil = ["psutil>=3.0"]
 setproctitle = ["setproctitle"]
 
 [tool.setuptools]
-package-dir = {"" = "src"}
 zip-safe = false
 platforms = [
     "linux",
     "osx",
     "win32",
 ]
-license-files = ["LICENSE"]
 include-package-data = false
-
-[tool.setuptools.packages.find]
-where = ["src"]
-namespaces = false
 
 [tool.setuptools_scm]
 write_to = "src/xdist/_version.py"
