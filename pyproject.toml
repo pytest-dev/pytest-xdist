@@ -1,10 +1,77 @@
 [build-system]
 requires = [
-  "setuptools>=45.0",
+  "setuptools>=61.2",
   "setuptools-scm[toml]>=6.2.3",
-  "wheel",
 ]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "pytest-xdist"
+description = "pytest xdist plugin for distributed testing, most importantly across multiple CPUs"
+license = {text = "MIT"}
+authors = [{name = "holger krekel and contributors", email = "pytest-dev@python.org"}, {email = "holger@merlinux.eu"}]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Framework :: Pytest",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: MacOS :: MacOS X",
+    "Topic :: Software Development :: Testing",
+    "Topic :: Software Development :: Quality Assurance",
+    "Topic :: Utilities",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+requires-python = ">=3.7"
+dependencies = [
+    "execnet>=1.1",
+    "pytest>=6.2.0",
+]
+dynamic = ["version"]
+
+[project.readme]
+file = "README.rst"
+content-type = "text/x-rst"
+
+[project.urls]
+Homepage = "https://github.com/pytest-dev/pytest-xdist"
+Documentation = "https://pytest-xdist.readthedocs.io/en/latest"
+Changelog = "https://pytest-xdist.readthedocs.io/en/latest/changelog.html"
+Source = "https://github.com/pytest-dev/pytest-xdist"
+Tracker = "https://github.com/pytest-dev/pytest-xdist/issues"
+
+[project.entry-points.pytest11]
+xdist = "xdist.plugin"
+"xdist.looponfail" = "xdist.looponfail"
+
+[project.optional-dependencies]
+testing = ["filelock"]
+psutil = ["psutil>=3.0"]
+setproctitle = ["setproctitle"]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+zip-safe = false
+platforms = [
+    "linux",
+    "osx",
+    "win32",
+]
+license-files = ["LICENSE"]
+include-package-data = false
+
+[tool.setuptools.packages.find]
+where = ["src"]
+namespaces = false
 
 [tool.setuptools_scm]
 write_to = "src/xdist/_version.py"
