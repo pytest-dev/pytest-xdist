@@ -29,8 +29,8 @@ def pytest_addoption(parser):
         action="store_true",
         dest="looponfail",
         default=False,
-        help="run tests in subprocess, wait for modified files "
-        "and re-run failing test set until all pass.",
+        help="Run tests in subprocess: wait for files to be modified, then "
+        "re-run failing test set until all pass.",
     )
 
 
