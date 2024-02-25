@@ -155,6 +155,8 @@ class WorkerInteractor:
         self.nextitem_index = self._get_next_item_index()
         while self.nextitem_index is not self.SHUTDOWN_MARK:
             self.run_one_test()
+            if session.shouldfail or session.shouldstop:
+                break
         return True
 
     def run_one_test(self):
