@@ -1,3 +1,1 @@
-Use the execnet main_thread_only execmodel so that code which expects to run in the main thread will just work.
-
-Also increase minimum python version to 3.8 since execnet dropped 3.7 support in pytest-dev/execnet#245.
+Use the ``execnet`` new ``main_thread_only`` "execmodel" so that code which expects to only run in the main thread will now work as expected.
