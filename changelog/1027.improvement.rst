@@ -1,0 +1,3 @@
+``pytest-xdist`` workers now always execute the tests in the main thread.
+
+Previously some tests might end up executing in a separate thread other than ``main`` in the workers, due to some internal `èxecnet`` details. This can cause problems specially with async frameworks where the event loop is running in the ``main`` thread (for example `#620 <https://github.com/pytest-dev/pytest-xdist/issues/620>`__).
