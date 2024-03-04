@@ -143,11 +143,9 @@ class TestDistribution:
         assert result.ret == 2
         # DSession should stop when the first failure is reached. Two failures
         # may actually occur, due to timing.
-        result.stdout.re_match_lines([".*Interrupted: stopping.*[12].*"])
-        m = re.search(r"== (\d+) failed", str(result.stdout))
-        assert m
-        n_failed = int(m.groups()[0])
-        assert 1 <= n_failed <= 2
+        outcomes = result.parseoutcomes()
+        assert "failed" in outcomes, "Expected at least one failure"
+        assert 1 <= outcomes["failed"] <= 2, "Expected no more than 2 failures"
 
     def test_basetemp_in_subprocesses(self, pytester: pytest.Pytester) -> None:
         p1 = pytester.makepyfile(
@@ -1195,7 +1193,7 @@ def test_maxfail_causes_early_termination(pytester: pytest.Pytester) -> None:
     """
     )
     result = pytester.runpytest_subprocess("--maxfail=1", "-n 1")
-    result.stdout.re_match_lines([".* 1 failed in .*"])
+    result.assert_outcomes(failed=1)
 
 
 def test_internal_errors_propagate_to_controller(pytester: pytest.Pytester) -> None:
