@@ -1,3 +1,5 @@
+import pathlib
+import tempfile
 import unittest.mock
 from typing import List
 
@@ -190,6 +192,43 @@ class TestRemoteControl:
         assert control.failures
         control.loop_once()
         assert control.failures
+
+    def test_ignore_sys_path_hook_entry(
+        self, pytester: pytest.Pytester, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Modifying sys.path as seen by the worker process is a bit tricky,
+        # because any changes made in the current process do not carry over.
+        # However, we can leverage the `sitecustomize` behavior to run arbitrary
+        # code when the subprocess interpreter is starting up. We just need to
+        # install our module in the search path, which we can accomplish by
+        # adding a temporary directory to PYTHONPATH.
+        tmpdir = tempfile.TemporaryDirectory()
+        with open(pathlib.Path(tmpdir.name) / "sitecustomize.py", "w") as custom:
+            print(
+                textwrap.dedent(
+                    """
+                    import sys
+                    sys.path.append('dummy.__path_hook__')
+                    """
+                ),
+                file=custom,
+            )
+
+        monkeypatch.setenv("PYTHONPATH", tmpdir.name, prepend=":")
+
+        item = pytester.getitem(
+            textwrap.dedent(
+                """
+                def test_func():
+                    import sys
+                    assert "dummy.__path_hook__" in sys.path
+                """
+            )
+        )
+        control = RemoteControl(item.config)
+        control.setup()
+        topdir, failures = control.runsession()[:2]
+        assert not failures
 
 
 class TestLooponFailing:

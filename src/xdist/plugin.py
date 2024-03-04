@@ -61,6 +61,10 @@ def parse_numprocesses(s):
 
 @pytest.hookimpl
 def pytest_addoption(parser):
+    # 'Help' formatting (same rules as pytest's):
+    # Start with capitalized letters.
+    # If a single phrase, do not end with period. If more than one phrase, all phrases end with periods.
+    # Use \n to separate logical lines.
     group = parser.getgroup("xdist", "distributed and subprocess testing")
     group._addoption(
         "-n",
@@ -69,10 +73,11 @@ def pytest_addoption(parser):
         metavar="numprocesses",
         action="store",
         type=parse_numprocesses,
-        help="Shortcut for '--dist=load --tx=NUM*popen'. With 'auto', attempt "
-        "to detect physical CPU count. With 'logical', detect logical CPU "
-        "count. If physical CPU count cannot be found, falls back to logical "
-        "count. This will be 0 when used with --pdb.",
+        help="Shortcut for '--dist=load --tx=NUM*popen'.\n"
+        "With 'logical', attempt to detect logical CPU count (requires psutil, falls back to 'auto').\n"
+        "With 'auto', attempt to detect physical CPU count. If physical CPU count cannot be determined, "
+        "falls back to 1.\n"
+        "Forced to 0 (disabled) when used with --pdb.",
     )
     group.addoption(
         "--maxprocesses",
@@ -80,14 +85,15 @@ def pytest_addoption(parser):
         metavar="maxprocesses",
         action="store",
         type=int,
-        help="limit the maximum number of workers to process the tests when using --numprocesses=auto",
+        help="Limit the maximum number of workers to process the tests when using --numprocesses "
+        "with 'auto' or 'logical'",
     )
     group.addoption(
         "--max-worker-restart",
         action="store",
         default=None,
         dest="maxworkerrestart",
-        help="maximum number of workers that can be restarted "
+        help="Maximum number of workers that can be restarted "
         "when crashed (set to zero to disable this feature)",
     )
     group.addoption(
@@ -106,18 +112,18 @@ def pytest_addoption(parser):
         dest="dist",
         default="no",
         help=(
-            "set mode for distributing tests to exec environments.\n\n"
-            "each: send each test to all available environments.\n\n"
-            "load: load balance by sending any pending test to any"
+            "Set mode for distributing tests to exec environments.\n\n"
+            "each: Send each test to all available environments.\n\n"
+            "load: Load balance by sending any pending test to any"
             " available environment.\n\n"
-            "loadscope: load balance by sending pending groups of tests in"
+            "loadscope: Load balance by sending pending groups of tests in"
             " the same scope to any available environment.\n\n"
-            "loadfile: load balance by sending test grouped by file"
+            "loadfile: Load balance by sending test grouped by file"
             " to any available environment.\n\n"
-            "loadgroup: like load, but sends tests marked with 'xdist_group' to the same worker.\n\n"
-            "worksteal: split the test suite between available environments,"
-            " then rebalance when any worker runs out of tests.\n\n"
-            "(default) no: run tests inprocess, don't distribute."
+            "loadgroup: Like 'load', but sends tests marked with 'xdist_group' to the same worker.\n\n"
+            "worksteal: Split the test suite between available environments,"
+            " then re-balance when any worker runs out of tests.\n\n"
+            "(default) no: Run tests inprocess, don't distribute."
         ),
     )
     group.addoption(
@@ -127,8 +133,8 @@ def pytest_addoption(parser):
         default=[],
         metavar="xspec",
         help=(
-            "add a test execution environment. some examples: "
-            "--tx popen//python=python2.5 --tx socket=192.168.1.102:8888 "
+            "Add a test execution environment. Some examples:\n"
+            "--tx popen//python=python2.5 --tx socket=192.168.1.102:8888\n"
             "--tx ssh=user@codespeak.net//chdir=testcache"
         ),
     )
@@ -137,29 +143,29 @@ def pytest_addoption(parser):
         action="store_true",
         dest="distload",
         default=False,
-        help="load-balance tests.  shortcut for '--dist=load'",
+        help="Load-balance tests. Shortcut for '--dist=load'.",
     )
     group.addoption(
         "--rsyncdir",
         action="append",
         default=[],
         metavar="DIR",
-        help="add directory for rsyncing to remote tx nodes.",
+        help="Add directory for rsyncing to remote tx nodes",
     )
     group.addoption(
         "--rsyncignore",
         action="append",
         default=[],
         metavar="GLOB",
-        help="add expression for ignores when rsyncing to remote tx nodes.",
+        help="Add expression for ignores when rsyncing to remote tx nodes",
     )
     group.addoption(
         "--testrunuid",
         action="store",
         help=(
-            "provide an identifier shared amongst all workers as the value of "
-            "the 'testrun_uid' fixture,\n\n,"
-            "if not provided, 'testrun_uid' is filled with a new unique string "
+            "Provide an identifier shared amongst all workers as the value of "
+            "the 'testrun_uid' fixture.\n"
+            "If not provided, 'testrun_uid' is filled with a new unique string "
             "on every test run."
         ),
     )
@@ -168,13 +174,13 @@ def pytest_addoption(parser):
         action="store",
         type=int,
         help=(
-            "Maximum number of tests scheduled in one step for --dist=load. "
+            "Maximum number of tests scheduled in one step for --dist=load.\n"
             "Setting it to 1 will force pytest to send tests to workers one by "
-            "one - might be useful for a small number of slow tests. "
+            "one - might be useful for a small number of slow tests.\n"
             "Larger numbers will allow the scheduler to submit consecutive "
-            "chunks of tests to workers - allows reusing fixtures. "
+            "chunks of tests to workers - allows reusing fixtures.\n"
             "Due to implementation reasons, at least 2 tests are scheduled per "
-            "worker at the start. Only later tests can be scheduled one by one. "
+            "worker at the start. Only later tests can be scheduled one by one.\n"
             "Unlimited if not set."
         ),
     )

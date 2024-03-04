@@ -29,8 +29,8 @@ def pytest_addoption(parser):
         action="store_true",
         dest="looponfail",
         default=False,
-        help="run tests in subprocess, wait for modified files "
-        "and re-run failing test set until all pass.",
+        help="Run tests in subprocess: wait for files to be modified, then "
+        "re-run failing test set until all pass.",
     )
 
 
@@ -160,7 +160,8 @@ def init_worker_session(channel, args, option_dict):
     newpaths = []
     for p in sys.path:
         if p:
-            if not os.path.isabs(p):
+            # Ignore path placeholders created for editable installs
+            if not os.path.isabs(p) and not p.endswith(".__path_hook__"):
                 p = os.path.abspath(p)
             newpaths.append(p)
     sys.path[:] = newpaths
