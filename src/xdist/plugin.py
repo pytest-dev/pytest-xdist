@@ -233,7 +233,7 @@ def pytest_configure(config):
 
     # Create the distributed session in case we have a valid distribution
     # mode and test environments.
-    if config.getoption("dist") != "no" and config.getoption("tx"):
+    if _is_distribution_mode(config):
         from xdist.dsession import DSession
 
         session = DSession(config)
@@ -258,8 +258,19 @@ def pytest_configure(config):
         config.issue_config_time_warning(warning, 2)
 
 
+def _is_distribution_mode(config):
+    """Return `True` if distribution mode is on, `False` otherwise.
+
+    :param config: the `pytest` `config` object
+    """
+    return config.getoption("dist") != "no" and config.getoption("tx")
+
+
 @pytest.hookimpl(tryfirst=True)
 def pytest_cmdline_main(config):
+    if config.option.distload:
+        config.option.dist = "load"
+
     usepdb = config.getoption("usepdb", False)  # a core option
     if config.option.numprocesses in ("auto", "logical"):
         if usepdb:
@@ -276,10 +287,13 @@ def pytest_cmdline_main(config):
         if config.option.maxprocesses:
             numprocesses = min(numprocesses, config.option.maxprocesses)
         config.option.tx = ["popen"] * numprocesses
-    if config.option.distload:
-        config.option.dist = "load"
+
+    if config.option.numprocesses == 0:
+        config.option.dist = "no"
+        config.option.tx = []
+
     val = config.getvalue
-    if not val("collectonly") and val("dist") != "no" and usepdb:
+    if not val("collectonly") and _is_distribution_mode(config) and usepdb:
         raise pytest.UsageError(
             "--pdb is incompatible with distributing tests; try using -n0 or -nauto."
         )  # noqa: E501

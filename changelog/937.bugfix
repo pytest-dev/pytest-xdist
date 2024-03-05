@@ -1,0 +1,1 @@
+Fix a bug where plugin would raise an incompatibility error with ``--pdb`` despite using ``-n0``.
