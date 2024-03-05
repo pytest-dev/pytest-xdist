@@ -94,17 +94,12 @@ def test_auto_detect_cpus(
     check_options(config)
     assert config.getoption("numprocesses") == 99
 
-    config = pytester.parseconfigure("-nauto", "--pdb")
-    check_options(config)
-    assert config.getoption("usepdb")
-    assert config.getoption("numprocesses") == 0
-    assert config.getoption("dist") == "no"
-
-    config = pytester.parseconfigure("-nlogical", "--pdb")
-    check_options(config)
-    assert config.getoption("usepdb")
-    assert config.getoption("numprocesses") == 0
-    assert config.getoption("dist") == "no"
+    for numprocesses in (0, "auto", "logical"):
+        config = pytester.parseconfigure(f"-n{numprocesses}", "--pdb")
+        check_options(config)
+        assert config.getoption("usepdb")
+        assert config.getoption("numprocesses") == 0
+        assert config.getoption("dist") == "no"
 
     monkeypatch.delattr(os, "sched_getaffinity", raising=False)
     monkeypatch.setenv("TRAVIS", "true")
