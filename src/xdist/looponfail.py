@@ -76,7 +76,7 @@ class RemoteControl:
             print("RemoteControl:", msg)
 
     def initgateway(self):
-        return execnet.makegateway("popen")
+        return execnet.makegateway("execmodel=main_thread_only//popen")
 
     def setup(self, out=None):
         if out is None:

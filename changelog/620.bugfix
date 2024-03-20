@@ -1,0 +1,1 @@
+Use the ``execnet`` new ``main_thread_only`` "execmodel" so that code which expects to only run in the main thread will now work as expected.
