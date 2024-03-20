@@ -362,6 +362,8 @@ class WorkerController:
                 self.notify_inproc(eventname, node=self, ids=kwargs["ids"])
             elif eventname == "runtest_protocol_complete":
                 self.notify_inproc(eventname, node=self, **kwargs)
+            elif eventname == "runtest_logmessage":
+                self.notify_inproc(eventname, node=self, **kwargs)
             elif eventname == "unscheduled":
                 self.notify_inproc(eventname, node=self, **kwargs)
             elif eventname == "logwarning":

@@ -15,7 +15,8 @@ from xdist.scheduler import (
     LoadGroupScheduling,
     WorkStealingScheduling,
 )
-
+import logging
+import pickle
 
 from queue import Empty, Queue
 
@@ -285,6 +286,13 @@ class DSession:
         rep.node = node
         self.config.hook.pytest_runtest_logreport(report=rep)
         self._handlefailures(rep)
+
+    def worker_runtest_logmessage(self, node, record):
+        record = pickle.loads(record)
+        for handler in logging.getLogger().handlers:
+            process = record.levelno >= handler.level
+            if process:
+                handler.handle(record)
 
     def worker_runtest_protocol_complete(self, node, item_index, duration):
         """
