@@ -15,7 +15,7 @@ from typing import Any
 import pytest
 from execnet.gateway_base import dumps, DumpError
 
-from _pytest.config import _prepareconfig, Config
+from _pytest.config import _prepareconfig
 
 try:
     from setproctitle import setproctitle
