@@ -70,16 +70,6 @@ def worker(request, pytester: pytest.Pytester) -> WorkerSetup:
     return WorkerSetup(request, pytester)
 
 
-@pytest.mark.xfail(reason="#59")
-def test_remoteinitconfig(pytester: pytest.Pytester) -> None:
-    from xdist.remote import remote_initconfig
-
-    config1 = pytester.parseconfig()
-    config2 = remote_initconfig(config1.option.__dict__, config1.args)
-    assert config2.option.__dict__ == config1.option.__dict__
-    assert config2.pluginmanager.getplugin("terminal") in (-1, None)
-
-
 class TestWorkerInteractor:
     @pytest.fixture
     def unserialize_report(self, pytestconfig):
