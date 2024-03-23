@@ -182,7 +182,7 @@ class DSession:
             self.shouldstop = f"{node} received keyboard-interrupt"
             self.worker_errordown(node, "keyboard-interrupt")
             return
-        if not self.shouldstop and node in self.sched.nodes:
+        if node in self.sched.nodes:
             crashitem = self.sched.remove_node(node)
             assert not crashitem, (crashitem, node)
         self._active_nodes.remove(node)

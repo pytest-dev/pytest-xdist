@@ -154,12 +154,10 @@ class WorkerInteractor:
         self.channel.setcallback(self.handle_command, endmarker=self.SHUTDOWN_MARK)
         self.nextitem_index = self._get_next_item_index()
         while self.nextitem_index is not self.SHUTDOWN_MARK:
-            self.run_one_test()
-            if session.shouldfail or session.shouldstop:
-                break
+            self.run_one_test(session.shouldfail or session.shouldstop)
         return True
 
-    def run_one_test(self):
+    def run_one_test(self, skip: bool):
         self.item_index = self.nextitem_index
         self.nextitem_index = self._get_next_item_index()
 
@@ -173,7 +171,10 @@ class WorkerInteractor:
         worker_title("[pytest-xdist running] %s" % item.nodeid)
 
         start = time.time()
-        self.config.hook.pytest_runtest_protocol(item=item, nextitem=nextitem)
+
+        if not skip:
+            self.config.hook.pytest_runtest_protocol(item=item, nextitem=nextitem)
+
         duration = time.time() - start
 
         worker_title("[pytest-xdist idle]")
