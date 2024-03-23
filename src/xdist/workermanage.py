@@ -258,12 +258,8 @@ class WorkerController:
     def setup(self):
         self.log("setting up worker session")
         spec = self.gateway.spec
-        if hasattr(self.config, "invocation_params"):
-            args = [str(x) for x in self.config.invocation_params.args or ()]
-            option_dict = {}
-        else:
-            args = self.config.args
-            option_dict = vars(self.config.option)
+        args = [str(x) for x in self.config.invocation_params.args or ()]
+        option_dict = {}
         if not spec.popen or spec.chdir:
             args = make_reltoroot(self.nodemanager.roots, args)
         if spec.popen:

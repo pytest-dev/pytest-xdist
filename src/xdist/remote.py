@@ -308,11 +308,6 @@ def getinfodict():
     )
 
 
-def remote_initconfig(option_dict, args):
-    option_dict["plugins"].append("no:terminal")
-    return Config.fromdictargs(option_dict, args)
-
-
 def setup_config(config, basetemp):
     config.option.loadgroup = config.getvalue("dist") == "loadgroup"
     config.option.looponfail = False
@@ -341,11 +336,7 @@ if __name__ == "__channelexec__":
     os.environ["PYTEST_XDIST_WORKER"] = workerinput["workerid"]
     os.environ["PYTEST_XDIST_WORKER_COUNT"] = str(workerinput["workercount"])
 
-    if hasattr(Config, "InvocationParams"):
-        config = _prepareconfig(args, None)
-    else:
-        config = remote_initconfig(option_dict, args)
-        config.args = args
+    config = _prepareconfig(args, None)
 
     setup_config(config, option_dict.get("basetemp"))
     config._parser.prog = os.path.basename(workerinput["mainargv"][0])
