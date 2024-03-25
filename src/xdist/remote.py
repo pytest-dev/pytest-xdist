@@ -103,6 +103,8 @@ class WorkerInteractor:
     def pytest_sessionfinish(self, exitstatus):
         # in pytest 5.0+, exitstatus is an IntEnum object
         self.config.workeroutput["exitstatus"] = int(exitstatus)
+        self.config.workeroutput["shouldfail"] = self.session.shouldfail
+        self.config.workeroutput["shouldstop"] = self.session.shouldstop
         yield
         self.sendevent("workerfinished", workeroutput=self.config.workeroutput)
 
@@ -155,6 +157,8 @@ class WorkerInteractor:
         self.nextitem_index = self._get_next_item_index()
         while self.nextitem_index is not self.SHUTDOWN_MARK:
             self.run_one_test()
+            if session.shouldfail or session.shouldstop:
+                break
         return True
 
     def run_one_test(self):

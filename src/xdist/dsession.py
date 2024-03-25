@@ -182,9 +182,17 @@ class DSession:
             self.shouldstop = f"{node} received keyboard-interrupt"
             self.worker_errordown(node, "keyboard-interrupt")
             return
-        if node in self.sched.nodes:
-            crashitem = self.sched.remove_node(node)
-            assert not crashitem, (crashitem, node)
+        shouldfail = node.workeroutput["shouldfail"]
+        shouldstop = node.workeroutput["shouldstop"]
+        for shouldx in [shouldfail, shouldstop]:
+            if shouldx:
+                if not self.shouldstop:
+                    self.shouldstop = shouldx
+                break
+        else:
+            if node in self.sched.nodes:
+                crashitem = self.sched.remove_node(node)
+                assert not crashitem, (crashitem, node)
         self._active_nodes.remove(node)
 
     def worker_internal_error(self, node, formatted_error):
