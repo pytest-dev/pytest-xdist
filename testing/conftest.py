@@ -1,7 +1,9 @@
-import execnet
-import pytest
 import shutil
 from typing import List
+
+import execnet
+import pytest
+
 
 pytest_plugins = "pytester"
 

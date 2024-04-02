@@ -1,7 +1,8 @@
-import os
 from itertools import chain
+import os
 from pathlib import Path
-from typing import Callable, Iterator
+from typing import Callable
+from typing import Iterator
 
 
 def visit_path(

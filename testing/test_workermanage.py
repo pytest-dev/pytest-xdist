@@ -1,14 +1,19 @@
-import execnet
-import pytest
+from pathlib import Path
 import shutil
 import textwrap
 import warnings
-from pathlib import Path
+
+import execnet
+import pytest
 from util import generate_warning
+
 from xdist import workermanage
 from xdist._path import visit_path
 from xdist.remote import serialize_warning_message
-from xdist.workermanage import HostRSync, NodeManager, unserialize_warning_message
+from xdist.workermanage import HostRSync
+from xdist.workermanage import NodeManager
+from xdist.workermanage import unserialize_warning_message
+
 
 pytest_plugins = "pytester"
 

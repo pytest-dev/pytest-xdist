@@ -1,13 +1,14 @@
+import marshal
 import pprint
-import pytest
+from queue import Queue
 import sys
 import uuid
 
-from xdist.workermanage import WorkerController
 import execnet
-import marshal
+import pytest
 
-from queue import Queue
+from xdist.workermanage import WorkerController
+
 
 WAIT_TIMEOUT = 10.0
 

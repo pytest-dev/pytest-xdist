@@ -1,5 +1,6 @@
-from .loadscope import LoadScopeScheduling
 from xdist.remote import Producer
+
+from .loadscope import LoadScopeScheduling
 
 
 class LoadFileScheduling(LoadScopeScheduling):

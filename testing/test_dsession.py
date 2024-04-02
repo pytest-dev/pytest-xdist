@@ -1,16 +1,18 @@
 from __future__ import annotations
-from xdist.dsession import (
-    DSession,
-    get_default_max_worker_restart,
-    get_workers_status_line,
-    WorkerStatus,
-)
-from xdist.report import report_collection_diff
-from xdist.scheduler import EachScheduling, LoadScheduling, WorkStealingScheduling
+
 from typing import Sequence
 
-import pytest
 import execnet
+import pytest
+
+from xdist.dsession import DSession
+from xdist.dsession import get_default_max_worker_restart
+from xdist.dsession import get_workers_status_line
+from xdist.dsession import WorkerStatus
+from xdist.report import report_collection_diff
+from xdist.scheduler import EachScheduling
+from xdist.scheduler import LoadScheduling
+from xdist.scheduler import WorkStealingScheduling
 
 
 class MockGateway:

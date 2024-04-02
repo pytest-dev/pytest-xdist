@@ -1,17 +1,23 @@
 import fnmatch
 import os
+from pathlib import Path
 import re
 import sys
+from typing import Any
+from typing import List
+from typing import Optional
+from typing import Sequence
+from typing import Set
+from typing import Tuple
+from typing import Union
 import uuid
-from pathlib import Path
-from typing import List, Union, Sequence, Optional, Any, Tuple, Set
 
-import pytest
 import execnet
+import pytest
 
+from xdist.plugin import _sys_path
 import xdist.remote
 from xdist.remote import Producer
-from xdist.plugin import _sys_path
 
 
 def parse_spec_config(config):
@@ -89,8 +95,8 @@ class NodeManager:
                 break
         else:
             return []
-        import pytest
         import _pytest
+        import pytest
 
         def get_dir(p):
             """Return the directory path if p is a package or the path to the .py file otherwise."""
@@ -405,8 +411,8 @@ class WorkerController:
 
 
 def unserialize_warning_message(data):
-    import warnings
     import importlib
+    import warnings
 
     if data["message_module"]:
         mod = importlib.import_module(data["message_module"])

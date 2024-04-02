@@ -9,13 +9,14 @@
 
 import os
 from pathlib import Path
-from typing import Dict, Sequence
-
-import pytest
 import sys
 import time
-import execnet
+from typing import Dict
+from typing import Sequence
+
 from _pytest._io import TerminalWriter
+import execnet
+import pytest
 
 from xdist._path import visit_path
 

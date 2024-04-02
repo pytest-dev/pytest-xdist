@@ -1,23 +1,22 @@
 from __future__ import annotations
+
+from enum import auto
+from enum import Enum
+from queue import Empty
+from queue import Queue
 import sys
-from enum import Enum, auto
 from typing import Sequence
 
 import pytest
 
 from xdist.remote import Producer
+from xdist.scheduler import EachScheduling
+from xdist.scheduler import LoadFileScheduling
+from xdist.scheduler import LoadGroupScheduling
+from xdist.scheduler import LoadScheduling
+from xdist.scheduler import LoadScopeScheduling
+from xdist.scheduler import WorkStealingScheduling
 from xdist.workermanage import NodeManager
-from xdist.scheduler import (
-    EachScheduling,
-    LoadScheduling,
-    LoadScopeScheduling,
-    LoadFileScheduling,
-    LoadGroupScheduling,
-    WorkStealingScheduling,
-)
-
-
-from queue import Empty, Queue
 
 
 class Interrupted(KeyboardInterrupt):

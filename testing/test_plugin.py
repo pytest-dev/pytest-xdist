@@ -1,12 +1,12 @@
 from contextlib import suppress
+import os
 from pathlib import Path
 import sys
-import os
 
 import execnet
-from xdist.workermanage import NodeManager
-
 import pytest
+
+from xdist.workermanage import NodeManager
 
 
 @pytest.fixture

@@ -7,15 +7,16 @@
 """
 
 import contextlib
-import sys
 import os
+import sys
 import time
 from typing import Any
 
-import pytest
-from execnet.gateway_base import dumps, DumpError
-
 from _pytest.config import _prepareconfig
+from execnet.gateway_base import DumpError
+from execnet.gateway_base import dumps
+import pytest
+
 
 try:
     from setproctitle import setproctitle

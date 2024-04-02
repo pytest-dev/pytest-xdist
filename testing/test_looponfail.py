@@ -1,12 +1,12 @@
 import pathlib
+from pathlib import Path
+import shutil
 import tempfile
-import unittest.mock
+import textwrap
 from typing import List
+import unittest.mock
 
 import pytest
-import shutil
-import textwrap
-from pathlib import Path
 
 from xdist.looponfail import RemoteControl
 from xdist.looponfail import StatRecorder

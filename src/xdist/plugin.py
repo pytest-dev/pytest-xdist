@@ -1,6 +1,6 @@
 import os
-import uuid
 import sys
+import uuid
 import warnings
 
 import pytest
