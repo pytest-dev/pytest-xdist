@@ -44,7 +44,10 @@ class LoadFileScheduling(LoadScopeScheduling):
         This function will group tests with the scope determined by splitting
         the first ``::`` from the left. That is, test will be grouped in a
         single work unit when they reside in the same file.
-         In the above example, scopes will be::
+
+        In the above example, scopes will be::
+
+        .. code-block:: text
 
             example/loadsuite/test/test_beta.py
             example/loadsuite/test/test_delta.py

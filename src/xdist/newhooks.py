@@ -17,12 +17,12 @@ import pytest
 
 @pytest.hookspec()
 def pytest_xdist_setupnodes(config, specs):
-    """called before any remote node is set up."""
+    """Called before any remote node is set up."""
 
 
 @pytest.hookspec()
 def pytest_xdist_newgateway(gateway):
-    """called on new raw gateway creation."""
+    """Called on new raw gateway creation."""
 
 
 @pytest.hookspec(
@@ -31,7 +31,7 @@ def pytest_xdist_newgateway(gateway):
     )
 )
 def pytest_xdist_rsyncstart(source, gateways):
-    """called before rsyncing a directory to remote gateways takes place."""
+    """Called before rsyncing a directory to remote gateways takes place."""
 
 
 @pytest.hookspec(
@@ -40,17 +40,17 @@ def pytest_xdist_rsyncstart(source, gateways):
     )
 )
 def pytest_xdist_rsyncfinish(source, gateways):
-    """called after rsyncing a directory to remote gateways takes place."""
+    """Called after rsyncing a directory to remote gateways takes place."""
 
 
 @pytest.hookspec(firstresult=True)
 def pytest_xdist_getremotemodule():
-    """called when creating remote node"""
+    """Called when creating remote node."""
 
 
 @pytest.hookspec()
 def pytest_configure_node(node):
-    """configure node information before it gets instantiated."""
+    """Configure node information before it gets instantiated."""
 
 
 @pytest.hookspec()
@@ -65,12 +65,12 @@ def pytest_testnodedown(node, error):
 
 @pytest.hookspec()
 def pytest_xdist_node_collection_finished(node, ids):
-    """called by the controller node when a worker node finishes collecting."""
+    """Called by the controller node when a worker node finishes collecting."""
 
 
 @pytest.hookspec(firstresult=True)
 def pytest_xdist_make_scheduler(config, log):
-    """return a node scheduler implementation"""
+    """Return a node scheduler implementation."""
 
 
 @pytest.hookspec(firstresult=True)

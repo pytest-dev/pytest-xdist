@@ -350,8 +350,7 @@ class MyWarning(UserWarning):
     ],
 )
 def test_unserialize_warning_msg(w_cls):
-    """Test that warning serialization process works well"""
-
+    """Test that warning serialization process works well."""
     # Create a test warning message
     with pytest.warns(UserWarning) as w:
         if not isinstance(w_cls, str):
@@ -392,8 +391,7 @@ class MyWarningUnknown(UserWarning):
 
 
 def test_warning_serialization_tweaked_module():
-    """Test for GH#404"""
-
+    """Test for GH#404."""
     # Create a test warning message
     with pytest.warns(UserWarning) as w:
         warnings.warn("hello", MyWarningUnknown)

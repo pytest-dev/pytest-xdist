@@ -166,7 +166,7 @@ class NodeManager:
 
 
 class HostRSync(execnet.RSync):
-    """RSyncer that filters out common files"""
+    """RSyncer that filters out common files."""
 
     PathLike = Union[str, "os.PathLike[str]"]
 
@@ -314,7 +314,7 @@ class WorkerController:
             self._shutdown_sent = True
 
     def sendcommand(self, name, **kwargs):
-        """send a named parametrized command to the other side."""
+        """Send a named parametrized command to the other side."""
         self.log(f"sending command {name}(**{kwargs})")
         self.channel.send((name, kwargs))
 

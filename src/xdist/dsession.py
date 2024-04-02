@@ -24,7 +24,7 @@ class Interrupted(KeyboardInterrupt):
 
 
 class DSession:
-    """A pytest plugin which runs a distributed test session
+    """A pytest plugin which runs a distributed test session.
 
     At the beginning of the test session this creates a NodeManager
     instance which creates and starts all nodes.  Nodes then emit
@@ -60,7 +60,7 @@ class DSession:
 
     @property
     def session_finished(self):
-        """Return True if the distributed session has finished
+        """Return True if the distributed session has finished.
 
         This means all nodes have executed all test items.  This is
         used by pytest_runtestloop to break out of its loop.
@@ -250,7 +250,7 @@ class DSession:
             terminalreporter.write_sep("=", f"xdist: {self._summary_report}")
 
     def worker_collectionfinish(self, node, ids):
-        """worker has finished test collection.
+        """Worker has finished test collection.
 
         This adds the collection for this node to the scheduler.  If
         the scheduler indicates collection is finished (i.e. all
@@ -490,7 +490,7 @@ class TerminalDistReporter:
 
 
 def get_default_max_worker_restart(config):
-    """gets the default value of --max-worker-restart option if it is not provided.
+    """Gets the default value of --max-worker-restart option if it is not provided.
 
     Use a reasonable default to avoid workers from restarting endlessly due to crashing collections (#226).
     """

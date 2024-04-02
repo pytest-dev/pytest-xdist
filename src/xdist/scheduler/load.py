@@ -23,7 +23,7 @@ class LoadScheduling:
     submit a collection. This is used to know when all nodes have
     finished collection or how large the chunks need to be created.
 
-    Attributes:
+    Attributes::
 
     :numnodes: The expected number of nodes taking part.  The actual
        number of nodes will vary during the scheduler's lifetime as
@@ -95,7 +95,7 @@ class LoadScheduling:
 
     @property
     def has_pending(self):
-        """Return True if there are pending test items
+        """Return True if there are pending test items.
 
         This indicates that collection has finished and nodes are
         still processing test items, so this can be thought of as
@@ -121,7 +121,7 @@ class LoadScheduling:
         self.node2pending[node] = []
 
     def add_node_collection(self, node, collection):
-        """Add the collected test items from a node
+        """Add the collected test items from a node.
 
         The collection is stored in the ``.node2collection`` map.
         Called by the ``DSession.worker_collectionfinish`` hook.
@@ -142,7 +142,7 @@ class LoadScheduling:
         self.node2collection[node] = list(collection)
 
     def mark_test_complete(self, node, item_index, duration=0):
-        """Mark test item as completed by node
+        """Mark test item as completed by node.
 
         The duration it took to execute the item is used as a hint to
         the scheduler.
@@ -161,7 +161,7 @@ class LoadScheduling:
             self.check_schedule(node)
 
     def check_schedule(self, node, duration=0):
-        """Maybe schedule new items on the node
+        """Maybe schedule new items on the node.
 
         If there are any globally pending nodes left then this will
         check if the given node should be given any more tests.  The
@@ -195,7 +195,7 @@ class LoadScheduling:
         self.log("num items waiting for node:", len(self.pending))
 
     def remove_node(self, node):
-        """Remove a node from the scheduler
+        """Remove a node from the scheduler.
 
         This should be called either when the node crashed or at
         shutdown time.  In the former case any pending items assigned
@@ -219,7 +219,7 @@ class LoadScheduling:
         return crashitem
 
     def schedule(self):
-        """Initiate distribution of the test collection
+        """Initiate distribution of the test collection.
 
         Initiate scheduling of the items across the nodes.  If this
         gets called again later it behaves the same as calling

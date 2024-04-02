@@ -1,9 +1,9 @@
 """
-    This module is executed in remote subprocesses and helps to
-    control a remote testing session and relay back information.
-    It assumes that 'py' is importable and does not have dependencies
-    on the rest of the xdist code.  This means that the xdist-plugin
-    needs not to be installed in remote environments.
+This module is executed in remote subprocesses and helps to
+control a remote testing session and relay back information.
+It assumes that 'py' is importable and does not have dependencies
+on the rest of the xdist code.  This means that the xdist-plugin
+needs not to be installed in remote environments.
 """
 
 import contextlib

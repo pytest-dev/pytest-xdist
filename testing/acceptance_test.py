@@ -482,7 +482,7 @@ class TestTerminalReporting:
         )
 
     def test_logfinish_hook(self, pytester: pytest.Pytester) -> None:
-        """Ensure the pytest_runtest_logfinish hook is being properly handled"""
+        """Ensure the pytest_runtest_logfinish hook is being properly handled."""
         pytester.makeconftest(
             """
             def pytest_runtest_logfinish():
@@ -613,7 +613,7 @@ def test_fixture_teardown_failure(pytester: pytest.Pytester) -> None:
 def test_config_initialization(
     pytester: pytest.Pytester, monkeypatch: pytest.MonkeyPatch, pytestconfig
 ) -> None:
-    """Ensure workers and controller are initialized consistently. Integration test for #445"""
+    """Ensure workers and controller are initialized consistently. Integration test for #445."""
     pytester.makepyfile(
         **{
             "dir_a/test_foo.py": """
@@ -637,7 +637,7 @@ def test_config_initialization(
 
 @pytest.mark.parametrize("when", ["setup", "call", "teardown"])
 def test_crashing_item(pytester, when) -> None:
-    """Ensure crashing item is correctly reported during all testing stages"""
+    """Ensure crashing item is correctly reported during all testing stages."""
     code = dict(setup="", call="", teardown="")
     code[when] = "os._exit(1)"
     p = pytester.makepyfile(
@@ -770,7 +770,7 @@ def test_tmpdir_disabled(pytester: pytest.Pytester) -> None:
 
 @pytest.mark.parametrize("plugin", ["xdist.looponfail"])
 def test_sub_plugins_disabled(pytester, plugin) -> None:
-    """Test that xdist doesn't break if we disable any of its sub-plugins. (#32)"""
+    """Test that xdist doesn't break if we disable any of its sub-plugins (#32)."""
     p1 = pytester.makepyfile(
         """
         def test_ok():
@@ -800,9 +800,7 @@ class TestWarnings:
     def test_warning_captured_deprecated_in_pytest_6(
         self, pytester: pytest.Pytester
     ) -> None:
-        """
-        Do not trigger the deprecated pytest_warning_captured hook in pytest 6+ (#562)
-        """
+        """Do not trigger the deprecated pytest_warning_captured hook in pytest 6+ (#562)."""
         from _pytest import hookspec
 
         if not hasattr(hookspec, "pytest_warning_captured"):
@@ -834,7 +832,7 @@ class TestWarnings:
     @pytest.mark.parametrize("n", ["-n0", "-n1"])
     def test_custom_subclass(self, pytester, n) -> None:
         """Check that warning subclasses that don't honor the args attribute don't break
-        pytest-xdist (#344)
+        pytest-xdist (#344).
         """
         pytester.makepyfile(
             """
@@ -1117,7 +1115,7 @@ def test_error_report_styles(pytester, tb) -> None:
 
 
 def test_color_yes_collection_on_non_atty(pytester, request) -> None:
-    """skip collect progress report when working on non-terminals.
+    """Skip collect progress report when working on non-terminals.
 
     Similar to pytest-dev/pytest#1397
     """
@@ -1142,9 +1140,7 @@ def test_color_yes_collection_on_non_atty(pytester, request) -> None:
 
 
 def test_without_terminal_plugin(pytester, request) -> None:
-    """
-    No output when terminal plugin is disabled
-    """
+    """No output when terminal plugin is disabled."""
     pytester.makepyfile(
         """
         def test_1():
@@ -1158,9 +1154,7 @@ def test_without_terminal_plugin(pytester, request) -> None:
 
 
 def test_internal_error_with_maxfail(pytester: pytest.Pytester) -> None:
-    """
-    Internal error when using --maxfail option (#62, #65).
-    """
+    """Internal error when using --maxfail option (#62, #65)."""
     pytester.makepyfile(
         """
         import pytest
@@ -1181,9 +1175,7 @@ def test_internal_error_with_maxfail(pytester: pytest.Pytester) -> None:
 
 
 def test_maxfail_causes_early_termination(pytester: pytest.Pytester) -> None:
-    """
-    Ensure subsequent tests on a worker aren't run when using --maxfail (#1024).
-    """
+    """Ensure subsequent tests on a worker aren't run when using --maxfail (#1024)."""
     pytester.makepyfile(
         """
         def test1():

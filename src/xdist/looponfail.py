@@ -1,10 +1,10 @@
 """
-    Implement -f aka looponfailing for pytest.
+Implement -f aka looponfailing for pytest.
 
-    NOTE that we try to avoid loading and depending on application modules
-    within the controlling process (the one that starts repeatedly test
-    processes) otherwise changes to source code can crash
-    the controlling process which should best never happen.
+NOTE that we try to avoid loading and depending on application modules
+within the controlling process (the one that starts repeatedly test
+processes) otherwise changes to source code can crash
+the controlling process which should best never happen.
 """
 
 import os

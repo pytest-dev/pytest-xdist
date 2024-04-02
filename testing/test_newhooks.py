@@ -14,9 +14,9 @@ class TestHooks:
         )
 
     def test_runtest_logreport(self, pytester: pytest.Pytester) -> None:
-        """Test that log reports from pytest_runtest_logreport when running
-        with xdist contain "node", "nodeid", "worker_id", and "testrun_uid" attributes. (#8)
-        """
+        """Test that log reports from pytest_runtest_logreport when running with
+        xdist contain "node", "nodeid", "worker_id", and "testrun_uid"
+        attributes (#8)."""
         pytester.makeconftest(
             """
             def pytest_runtest_logreport(report):

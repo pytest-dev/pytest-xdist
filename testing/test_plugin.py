@@ -11,7 +11,7 @@ from xdist.workermanage import NodeManager
 
 @pytest.fixture
 def monkeypatch_3_cpus(monkeypatch: pytest.MonkeyPatch):
-    """Make pytest-xdist believe the system has 3 CPUs"""
+    """Make pytest-xdist believe the system has 3 CPUs."""
     # block import
     monkeypatch.setitem(sys.modules, "psutil", None)  # type: ignore
     monkeypatch.delattr(os, "sched_getaffinity", raising=False)

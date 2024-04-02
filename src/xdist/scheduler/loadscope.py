@@ -22,7 +22,7 @@ class LoadScopeScheduling:
     When created, ``numnodes`` defines how many nodes are expected to submit a
     collection. This is used to know when all nodes have finished collection.
 
-    Attributes:
+    Attributes::
 
     :numnodes: The expected number of nodes taking part.  The actual number of
        nodes will vary during the scheduler's lifetime as nodes are added by
