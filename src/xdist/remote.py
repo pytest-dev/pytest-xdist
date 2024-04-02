@@ -325,7 +325,7 @@ def setup_config(config, basetemp):
 
 
 if __name__ == "__channelexec__":
-    channel = channel  # type: ignore[name-defined] # noqa: F821
+    channel = channel  # type: ignore[name-defined] # noqa: F821, PLW0127
     workerinput, args, option_dict, change_sys_path = channel.receive()  # type: ignore[name-defined]
 
     if change_sys_path is None:

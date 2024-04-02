@@ -296,7 +296,7 @@ def pytest_cmdline_main(config):
     if not val("collectonly") and _is_distribution_mode(config) and usepdb:
         raise pytest.UsageError(
             "--pdb is incompatible with distributing tests; try using -n0 or -nauto."
-        )  # noqa: E501
+        )
 
 
 # -------------------------------------------------------------------------

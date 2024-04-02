@@ -266,8 +266,8 @@ class TestDistribution:
             "-pfoobarplugin",
             "--foobar=123",
             "--dist=load",
-            "--rsyncdir=%(subdir)s" % locals(),
-            "--tx=popen//chdir=%(dest)s" % locals(),
+            f"--rsyncdir={subdir}",
+            f"--tx=popen//chdir={dest}",
             p,
         )
         assert result.ret == 0
@@ -657,9 +657,7 @@ def test_crashing_item(pytester, when) -> None:
 
         def test_ok():
             pass
-    """.format(
-            **code
-        )
+    """.format(**code)
     )
     passes = 2 if when == "teardown" else 1
     result = pytester.runpytest("-n2", p)
@@ -1513,9 +1511,7 @@ class TestLocking:
 
     FILE_LOCK = filelock.FileLock("test.lock")
 
-    """ + (
-        (_test_content * 4) % ("A", "B", "C", "D")
-    )
+    """ + ((_test_content * 4) % ("A", "B", "C", "D"))
 
     @pytest.mark.parametrize("scope", ["each", "load", "loadscope", "loadfile", "no"])
     def test_single_file(self, pytester, scope) -> None:

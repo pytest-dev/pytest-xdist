@@ -1,4 +1,7 @@
-from collections import namedtuple
+from __future__ import annotations
+
+from typing import Any
+from typing import NamedTuple
 
 from _pytest.runner import CollectReport
 
@@ -7,7 +10,10 @@ from xdist.report import report_collection_diff
 from xdist.workermanage import parse_spec_config
 
 
-NodePending = namedtuple("NodePending", ["node", "pending"])
+class NodePending(NamedTuple):
+    node: Any
+    pending: list[int]
+
 
 # Every worker needs at least 2 tests in queue - the current and the next one.
 MIN_PENDING = 2
@@ -285,7 +291,7 @@ class WorkStealingScheduling:
             return
 
         # Collections are identical, create the index of pending items.
-        self.collection = list(self.node2collection.values())[0]
+        self.collection = next(iter(self.node2collection.values()))
         self.pending[:] = range(len(self.collection))
         if not self.collection:
             return

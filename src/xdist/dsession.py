@@ -230,9 +230,7 @@ class DSession:
         )
         if maximum_reached:
             if self._max_worker_restart == 0:
-                msg = "worker {} crashed and worker restarting disabled".format(
-                    node.gateway.id
-                )
+                msg = f"worker {node.gateway.id} crashed and worker restarting disabled"
             else:
                 msg = "maximum crashed workers reached: %d" % self._max_worker_restart
             self._summary_report = msg
@@ -463,7 +461,7 @@ class TerminalDistReporter:
             rinfo = gateway._rinfo()
             different_interpreter = rinfo.executable != sys.executable
             if different_interpreter:
-                version = "%s.%s.%s" % rinfo.version_info[:3]
+                version = "{}.{}.{}".format(*rinfo.version_info[:3])
                 self.rewrite(
                     f"[{gateway.id}] {rinfo.platform} Python {version} cwd: {rinfo.cwd}",
                     newline=True,
@@ -504,7 +502,7 @@ def get_default_max_worker_restart(config):
 
 
 def get_workers_status_line(
-    status_and_items: Sequence[tuple[WorkerStatus, int]]
+    status_and_items: Sequence[tuple[WorkerStatus, int]],
 ) -> str:
     """
     Return the line to display during worker setup/collection based on the

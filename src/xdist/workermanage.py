@@ -175,7 +175,7 @@ class HostRSync(execnet.RSync):
         sourcedir: PathLike,
         *,
         ignores: Optional[Sequence[PathLike]] = None,
-        **kwargs: object
+        **kwargs: object,
     ) -> None:
         if ignores is None:
             ignores = []
@@ -322,8 +322,8 @@ class WorkerController:
         self.log(f"queuing {eventname}(**{kwargs})")
         self.putevent((eventname, kwargs))
 
-    def process_from_remote(self, eventcall):  # noqa too complex
-        """this gets called for each object we receive from
+    def process_from_remote(self, eventcall):
+        """This gets called for each object we receive from
         the other side and if the channel closes.
 
         Note that channel callbacks run in the receiver
@@ -400,7 +400,7 @@ class WorkerController:
         except KeyboardInterrupt:
             # should not land in receiver-thread
             raise
-        except:  # noqa
+        except BaseException:
             from _pytest._code import ExceptionInfo
 
             excinfo = ExceptionInfo.from_current()

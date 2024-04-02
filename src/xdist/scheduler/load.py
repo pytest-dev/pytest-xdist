@@ -243,7 +243,7 @@ class LoadScheduling:
             return
 
         # Collections are identical, create the index of pending items.
-        self.collection = list(self.node2collection.values())[0]
+        self.collection = next(iter(self.node2collection.values()))
         self.pending[:] = range(len(self.collection))
         if not self.collection:
             return
@@ -260,7 +260,7 @@ class LoadScheduling:
             # to each node - which is suboptimal when you have less than
             # 2 * len(nodes) tests.
             nodes = cycle(self.nodes)
-            for i in range(len(self.pending)):
+            for _ in range(len(self.pending)):
                 self._send_tests(next(nodes), 1)
         else:
             # Send batches of consecutive tests. By default, pytest sorts tests

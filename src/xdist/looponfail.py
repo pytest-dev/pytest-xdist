@@ -254,7 +254,7 @@ class StatRecorder:
                 return
             time.sleep(checkinterval)
 
-    def check(self, removepycfiles: bool = True) -> bool:  # noqa, too complex
+    def check(self, removepycfiles: bool = True) -> bool:
         changed = False
         newstat: Dict[Path, os.stat_result] = {}
         for rootdir in self.rootdirlist:

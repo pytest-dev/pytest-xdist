@@ -208,7 +208,6 @@ class LoadScopeScheduling:
 
         - ``DSession.worker_collectionfinish``.
         """
-
         # Check that add_node() was called on the node before
         assert node in self.assigned_work
 
@@ -301,7 +300,6 @@ class LoadScopeScheduling:
         If there are any globally pending work units left then this will check
         if the given node should be given any more tests.
         """
-
         # Do not add more work to a node shutting down
         if node.shutting_down:
             return
