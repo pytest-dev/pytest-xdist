@@ -101,12 +101,7 @@ class EachScheduling:
         self.node2pending[node].remove(item_index)
 
     def mark_test_pending(self, item):
-        self.pending.insert(
-            0,
-            self.collection.index(item),
-        )
-        for node in self.node2pending:
-            self.check_schedule(node)
+        raise NotImplementedError()
 
     def remove_node(self, node):
         # KeyError if we didn't get an add_node() yet
