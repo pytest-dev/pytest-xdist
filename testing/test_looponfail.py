@@ -122,7 +122,7 @@ class TestRemoteControl:
         item = pytester.getitem("def test_func():\n assert 0\n")
         control = RemoteControl(item.config)
         control.setup()
-        failures = control.runsession()
+        failures = control.runsession()[0]
         assert failures
         control.setup()
         item.path.write_text("def test_func():\n assert 1\n")
