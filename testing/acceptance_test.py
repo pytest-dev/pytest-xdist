@@ -1372,7 +1372,7 @@ class TestFileScope:
 
 
 class TestGroupScope:
-    def test_by_module(self, testdir):
+    def test_by_module(self, pytester: pytest.Pytester):
         test_file = """
             import pytest
             class TestA:
@@ -1381,8 +1381,8 @@ class TestGroupScope:
                 def test(self, i):
                     pass
         """
-        testdir.makepyfile(test_a=test_file, test_b=test_file)
-        result = testdir.runpytest("-n2", "--dist=loadgroup", "-v")
+        pytester.makepyfile(test_a=test_file, test_b=test_file)
+        result = pytester.runpytest("-n2", "--dist=loadgroup", "-v")
         test_a_workers_and_test_count = get_workers_and_test_count_by_prefix(
             "test_a.py::TestA", result.outlines
         )
@@ -1403,8 +1403,8 @@ class TestGroupScope:
             == test_b_workers_and_test_count.items()
         )
 
-    def test_by_class(self, testdir):
-        testdir.makepyfile(
+    def test_by_class(self, pytester: pytest.Pytester):
+        pytester.makepyfile(
             test_a="""
             import pytest
             class TestA:
@@ -1419,7 +1419,7 @@ class TestGroupScope:
                     pass
         """
         )
-        result = testdir.runpytest("-n2", "--dist=loadgroup", "-v")
+        result = pytester.runpytest("-n2", "--dist=loadgroup", "-v")
         test_a_workers_and_test_count = get_workers_and_test_count_by_prefix(
             "test_a.py::TestA", result.outlines
         )
@@ -1440,7 +1440,7 @@ class TestGroupScope:
             == test_b_workers_and_test_count.items()
         )
 
-    def test_module_single_start(self, testdir):
+    def test_module_single_start(self, pytester: pytest.Pytester):
         test_file1 = """
             import pytest
             @pytest.mark.xdist_group(name="xdist_group")
@@ -1455,15 +1455,15 @@ class TestGroupScope:
             def test_2():
                 pass
         """
-        testdir.makepyfile(test_a=test_file1, test_b=test_file1, test_c=test_file2)
-        result = testdir.runpytest("-n2", "--dist=loadgroup", "-v")
+        pytester.makepyfile(test_a=test_file1, test_b=test_file1, test_c=test_file2)
+        result = pytester.runpytest("-n2", "--dist=loadgroup", "-v")
         a = get_workers_and_test_count_by_prefix("test_a.py::test", result.outlines)
         b = get_workers_and_test_count_by_prefix("test_b.py::test", result.outlines)
         c = get_workers_and_test_count_by_prefix("test_c.py::test_2", result.outlines)
 
         assert a.keys() == b.keys() and b.keys() == c.keys()
 
-    def test_with_two_group_names(self, testdir):
+    def test_with_two_group_names(self, pytester: pytest.Pytester):
         test_file = """
             import pytest
             @pytest.mark.xdist_group(name="group1")
@@ -1473,8 +1473,8 @@ class TestGroupScope:
             def test_2():
                 pass
         """
-        testdir.makepyfile(test_a=test_file, test_b=test_file)
-        result = testdir.runpytest("-n2", "--dist=loadgroup", "-v")
+        pytester.makepyfile(test_a=test_file, test_b=test_file)
+        result = pytester.runpytest("-n2", "--dist=loadgroup", "-v")
         a_1 = get_workers_and_test_count_by_prefix("test_a.py::test_1", result.outlines)
         a_2 = get_workers_and_test_count_by_prefix("test_a.py::test_2", result.outlines)
         b_1 = get_workers_and_test_count_by_prefix("test_b.py::test_1", result.outlines)
@@ -1603,13 +1603,13 @@ class TestAPI:
         assert xdist.get_xdist_worker_id(fake_request) == "master"
 
 
-def test_collection_crash(testdir):
-    p1 = testdir.makepyfile(
+def test_collection_crash(pytester: pytest.Pytester):
+    p1 = pytester.makepyfile(
         """
         assert 0
     """
     )
-    result = testdir.runpytest(p1, "-n1")
+    result = pytester.runpytest(p1, "-n1")
     assert result.ret == 1
     result.stdout.fnmatch_lines(
         [
@@ -1622,19 +1622,19 @@ def test_collection_crash(testdir):
     )
 
 
-def test_dist_in_addopts(testdir):
+def test_dist_in_addopts(pytester: pytest.Pytester):
     """Users can set a default distribution in the configuration file (#789)."""
-    testdir.makepyfile(
+    pytester.makepyfile(
         """
         def test():
             pass
         """
     )
-    testdir.makeini(
+    pytester.makeini(
         """
         [pytest]
         addopts = --dist loadscope
         """
     )
-    result = testdir.runpytest()
+    result = pytester.runpytest()
     assert result.ret == 0
