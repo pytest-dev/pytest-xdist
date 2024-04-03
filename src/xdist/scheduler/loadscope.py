@@ -407,9 +407,6 @@ class LoadScopeScheduling:
             same_collection = False
             self.log(msg)
 
-            if self.config is None:
-                continue
-
             rep = pytest.CollectReport(
                 nodeid=node.gateway.id,
                 outcome="failed",
