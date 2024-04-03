@@ -34,7 +34,6 @@ jobs:
       fail-fast: false
       matrix:
         tox_env:
-          - "py37-pytestlatest"
           - "py38-pytestlatest"
           - "py39-pytestlatest"
           - "py310-pytestlatest"
@@ -46,8 +45,6 @@ jobs:
 
         os: [ubuntu-latest, windows-latest]
         include:
-          - tox_env: "py37-pytestlatest"
-            python: "3.7"
           - tox_env: "py38-pytestlatest"
             python: "3.8"
           - tox_env: "py39-pytestlatest"
