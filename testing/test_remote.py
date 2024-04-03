@@ -1,13 +1,14 @@
+import marshal
 import pprint
-import pytest
+from queue import Queue
 import sys
 import uuid
 
-from xdist.workermanage import WorkerController
 import execnet
-import marshal
+import pytest
 
-from queue import Queue
+from xdist.workermanage import WorkerController
+
 
 WAIT_TIMEOUT = 10.0
 
@@ -15,9 +16,9 @@ WAIT_TIMEOUT = 10.0
 def check_marshallable(d):
     try:
         marshal.dumps(d)
-    except ValueError:
+    except ValueError as e:
         pprint.pprint(d)
-        raise ValueError("not marshallable")
+        raise ValueError("not marshallable") from e
 
 
 class EventCall:
@@ -163,7 +164,7 @@ class TestWorkerInteractor:
         worker.sendcommand("runtests_all")
         worker.sendcommand("shutdown")
         for func in "::test_func", "::test_func2":
-            for i in range(3):  # setup/call/teardown
+            for _ in range(3):  # setup/call/teardown
                 ev = worker.popevent("testreport")
                 assert ev.name == "testreport"
                 rep = unserialize_report(ev.kwargs["data"])
@@ -328,12 +329,10 @@ def test_remote_mainargv(pytester: pytest.Pytester) -> None:
     outer_argv = sys.argv
 
     pytester.makepyfile(
-        """
+        f"""
         def test_mainargv(request):
-            assert request.config.workerinput["mainargv"] == {!r}
-        """.format(
-            outer_argv
-        )
+            assert request.config.workerinput["mainargv"] == {outer_argv!r}
+        """
     )
     result = pytester.runpytest("-n1")
     assert result.ret == 0

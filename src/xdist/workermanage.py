@@ -1,17 +1,23 @@
 import fnmatch
 import os
+from pathlib import Path
 import re
 import sys
+from typing import Any
+from typing import List
+from typing import Optional
+from typing import Sequence
+from typing import Set
+from typing import Tuple
+from typing import Union
 import uuid
-from pathlib import Path
-from typing import List, Union, Sequence, Optional, Any, Tuple, Set
 
-import pytest
 import execnet
+import pytest
 
+from xdist.plugin import _sys_path
 import xdist.remote
 from xdist.remote import Producer
-from xdist.plugin import _sys_path
 
 
 def parse_spec_config(config):
@@ -89,8 +95,8 @@ class NodeManager:
                 break
         else:
             return []
-        import pytest
         import _pytest
+        import pytest
 
         def get_dir(p):
             """Return the directory path if p is a package or the path to the .py file otherwise."""
@@ -160,7 +166,7 @@ class NodeManager:
 
 
 class HostRSync(execnet.RSync):
-    """RSyncer that filters out common files"""
+    """RSyncer that filters out common files."""
 
     PathLike = Union[str, "os.PathLike[str]"]
 
@@ -169,7 +175,7 @@ class HostRSync(execnet.RSync):
         sourcedir: PathLike,
         *,
         ignores: Optional[Sequence[PathLike]] = None,
-        **kwargs: object
+        **kwargs: object,
     ) -> None:
         if ignores is None:
             ignores = []
@@ -308,7 +314,7 @@ class WorkerController:
             self._shutdown_sent = True
 
     def sendcommand(self, name, **kwargs):
-        """send a named parametrized command to the other side."""
+        """Send a named parametrized command to the other side."""
         self.log(f"sending command {name}(**{kwargs})")
         self.channel.send((name, kwargs))
 
@@ -316,8 +322,8 @@ class WorkerController:
         self.log(f"queuing {eventname}(**{kwargs})")
         self.putevent((eventname, kwargs))
 
-    def process_from_remote(self, eventcall):  # noqa too complex
-        """this gets called for each object we receive from
+    def process_from_remote(self, eventcall):
+        """This gets called for each object we receive from
         the other side and if the channel closes.
 
         Note that channel callbacks run in the receiver
@@ -394,7 +400,7 @@ class WorkerController:
         except KeyboardInterrupt:
             # should not land in receiver-thread
             raise
-        except:  # noqa
+        except BaseException:
             from _pytest._code import ExceptionInfo
 
             excinfo = ExceptionInfo.from_current()
@@ -405,8 +411,8 @@ class WorkerController:
 
 
 def unserialize_warning_message(data):
-    import warnings
     import importlib
+    import warnings
 
     if data["message_module"]:
         mod = importlib.import_module(data["message_module"])

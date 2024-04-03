@@ -1,21 +1,22 @@
 """
-    Implement -f aka looponfailing for pytest.
+Implement -f aka looponfailing for pytest.
 
-    NOTE that we try to avoid loading and depending on application modules
-    within the controlling process (the one that starts repeatedly test
-    processes) otherwise changes to source code can crash
-    the controlling process which should best never happen.
+NOTE that we try to avoid loading and depending on application modules
+within the controlling process (the one that starts repeatedly test
+processes) otherwise changes to source code can crash
+the controlling process which should best never happen.
 """
 
 import os
 from pathlib import Path
-from typing import Dict, Sequence
-
-import pytest
 import sys
 import time
-import execnet
+from typing import Dict
+from typing import Sequence
+
 from _pytest._io import TerminalWriter
+import execnet
+import pytest
 
 from xdist._path import visit_path
 
@@ -253,7 +254,7 @@ class StatRecorder:
                 return
             time.sleep(checkinterval)
 
-    def check(self, removepycfiles: bool = True) -> bool:  # noqa, too complex
+    def check(self, removepycfiles: bool = True) -> bool:
         changed = False
         newstat: Dict[Path, os.stat_result] = {}
         for rootdir in self.rootdirlist:

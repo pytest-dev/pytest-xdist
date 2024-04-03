@@ -1,21 +1,22 @@
 """
-    This module is executed in remote subprocesses and helps to
-    control a remote testing session and relay back information.
-    It assumes that 'py' is importable and does not have dependencies
-    on the rest of the xdist code.  This means that the xdist-plugin
-    needs not to be installed in remote environments.
+This module is executed in remote subprocesses and helps to
+control a remote testing session and relay back information.
+It assumes that 'py' is importable and does not have dependencies
+on the rest of the xdist code.  This means that the xdist-plugin
+needs not to be installed in remote environments.
 """
 
 import contextlib
-import sys
 import os
+import sys
 import time
 from typing import Any
 
-import pytest
-from execnet.gateway_base import dumps, DumpError
-
 from _pytest.config import _prepareconfig
+from execnet.gateway_base import DumpError
+from execnet.gateway_base import dumps
+import pytest
+
 
 try:
     from setproctitle import setproctitle
@@ -324,7 +325,7 @@ def setup_config(config, basetemp):
 
 
 if __name__ == "__channelexec__":
-    channel = channel  # type: ignore[name-defined] # noqa: F821
+    channel = channel  # type: ignore[name-defined] # noqa: F821, PLW0127
     workerinput, args, option_dict, change_sys_path = channel.receive()  # type: ignore[name-defined]
 
     if change_sys_path is None:

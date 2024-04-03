@@ -1,23 +1,22 @@
 from __future__ import annotations
+
+from enum import auto
+from enum import Enum
+from queue import Empty
+from queue import Queue
 import sys
-from enum import Enum, auto
 from typing import Sequence
 
 import pytest
 
 from xdist.remote import Producer
+from xdist.scheduler import EachScheduling
+from xdist.scheduler import LoadFileScheduling
+from xdist.scheduler import LoadGroupScheduling
+from xdist.scheduler import LoadScheduling
+from xdist.scheduler import LoadScopeScheduling
+from xdist.scheduler import WorkStealingScheduling
 from xdist.workermanage import NodeManager
-from xdist.scheduler import (
-    EachScheduling,
-    LoadScheduling,
-    LoadScopeScheduling,
-    LoadFileScheduling,
-    LoadGroupScheduling,
-    WorkStealingScheduling,
-)
-
-
-from queue import Empty, Queue
 
 
 class Interrupted(KeyboardInterrupt):
@@ -25,7 +24,7 @@ class Interrupted(KeyboardInterrupt):
 
 
 class DSession:
-    """A pytest plugin which runs a distributed test session
+    """A pytest plugin which runs a distributed test session.
 
     At the beginning of the test session this creates a NodeManager
     instance which creates and starts all nodes.  Nodes then emit
@@ -61,7 +60,7 @@ class DSession:
 
     @property
     def session_finished(self):
-        """Return True if the distributed session has finished
+        """Return True if the distributed session has finished.
 
         This means all nodes have executed all test items.  This is
         used by pytest_runtestloop to break out of its loop.
@@ -231,9 +230,7 @@ class DSession:
         )
         if maximum_reached:
             if self._max_worker_restart == 0:
-                msg = "worker {} crashed and worker restarting disabled".format(
-                    node.gateway.id
-                )
+                msg = f"worker {node.gateway.id} crashed and worker restarting disabled"
             else:
                 msg = "maximum crashed workers reached: %d" % self._max_worker_restart
             self._summary_report = msg
@@ -251,7 +248,7 @@ class DSession:
             terminalreporter.write_sep("=", f"xdist: {self._summary_report}")
 
     def worker_collectionfinish(self, node, ids):
-        """worker has finished test collection.
+        """Worker has finished test collection.
 
         This adds the collection for this node to the scheduler.  If
         the scheduler indicates collection is finished (i.e. all
@@ -464,7 +461,7 @@ class TerminalDistReporter:
             rinfo = gateway._rinfo()
             different_interpreter = rinfo.executable != sys.executable
             if different_interpreter:
-                version = "%s.%s.%s" % rinfo.version_info[:3]
+                version = "{}.{}.{}".format(*rinfo.version_info[:3])
                 self.rewrite(
                     f"[{gateway.id}] {rinfo.platform} Python {version} cwd: {rinfo.cwd}",
                     newline=True,
@@ -491,7 +488,7 @@ class TerminalDistReporter:
 
 
 def get_default_max_worker_restart(config):
-    """gets the default value of --max-worker-restart option if it is not provided.
+    """Gets the default value of --max-worker-restart option if it is not provided.
 
     Use a reasonable default to avoid workers from restarting endlessly due to crashing collections (#226).
     """
@@ -505,7 +502,7 @@ def get_default_max_worker_restart(config):
 
 
 def get_workers_status_line(
-    status_and_items: Sequence[tuple[WorkerStatus, int]]
+    status_and_items: Sequence[tuple[WorkerStatus, int]],
 ) -> str:
     """
     Return the line to display during worker setup/collection based on the

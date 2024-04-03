@@ -1,14 +1,19 @@
-import execnet
-import pytest
+from pathlib import Path
 import shutil
 import textwrap
 import warnings
-from pathlib import Path
+
+import execnet
+import pytest
 from util import generate_warning
+
 from xdist import workermanage
 from xdist._path import visit_path
 from xdist.remote import serialize_warning_message
-from xdist.workermanage import HostRSync, NodeManager, unserialize_warning_message
+from xdist.workermanage import HostRSync
+from xdist.workermanage import NodeManager
+from xdist.workermanage import unserialize_warning_message
+
 
 pytest_plugins = "pytester"
 
@@ -345,8 +350,7 @@ class MyWarning(UserWarning):
     ],
 )
 def test_unserialize_warning_msg(w_cls):
-    """Test that warning serialization process works well"""
-
+    """Test that warning serialization process works well."""
     # Create a test warning message
     with pytest.warns(UserWarning) as w:
         if not isinstance(w_cls, str):
@@ -387,8 +391,7 @@ class MyWarningUnknown(UserWarning):
 
 
 def test_warning_serialization_tweaked_module():
-    """Test for GH#404"""
-
+    """Test for GH#404."""
     # Create a test warning message
     with pytest.warns(UserWarning) as w:
         warnings.warn("hello", MyWarningUnknown)

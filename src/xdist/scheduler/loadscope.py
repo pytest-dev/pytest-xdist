@@ -1,6 +1,7 @@
 from collections import OrderedDict
 
 from _pytest.runner import CollectReport
+
 from xdist.remote import Producer
 from xdist.report import report_collection_diff
 from xdist.workermanage import parse_spec_config
@@ -21,7 +22,7 @@ class LoadScopeScheduling:
     When created, ``numnodes`` defines how many nodes are expected to submit a
     collection. This is used to know when all nodes have finished collection.
 
-    Attributes:
+    Attributes::
 
     :numnodes: The expected number of nodes taking part.  The actual number of
        nodes will vary during the scheduler's lifetime as nodes are added by
@@ -207,7 +208,6 @@ class LoadScopeScheduling:
 
         - ``DSession.worker_collectionfinish``.
         """
-
         # Check that add_node() was called on the node before
         assert node in self.assigned_work
 
@@ -300,7 +300,6 @@ class LoadScopeScheduling:
         If there are any globally pending work units left then this will check
         if the given node should be given any more tests.
         """
-
         # Do not add more work to a node shutting down
         if node.shutting_down:
             return

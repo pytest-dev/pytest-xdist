@@ -1,19 +1,19 @@
 from contextlib import suppress
+import os
 from pathlib import Path
 import sys
-import os
 
 import execnet
-from xdist.workermanage import NodeManager
-
 import pytest
+
+from xdist.workermanage import NodeManager
 
 
 @pytest.fixture
 def monkeypatch_3_cpus(monkeypatch: pytest.MonkeyPatch):
-    """Make pytest-xdist believe the system has 3 CPUs"""
+    """Make pytest-xdist believe the system has 3 CPUs."""
     # block import
-    monkeypatch.setitem(sys.modules, "psutil", None)  # type: ignore
+    monkeypatch.setitem(sys.modules, "psutil", None)
     monkeypatch.delattr(os, "sched_getaffinity", raising=False)
     monkeypatch.setattr(os, "cpu_count", lambda: 3)
 

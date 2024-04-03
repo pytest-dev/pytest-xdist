@@ -1,6 +1,6 @@
 import os
-import uuid
 import sys
+import uuid
 import warnings
 
 import pytest
@@ -296,7 +296,7 @@ def pytest_cmdline_main(config):
     if not val("collectonly") and _is_distribution_mode(config) and usepdb:
         raise pytest.UsageError(
             "--pdb is incompatible with distributing tests; try using -n0 or -nauto."
-        )  # noqa: E501
+        )
 
 
 # -------------------------------------------------------------------------
@@ -305,7 +305,7 @@ def pytest_cmdline_main(config):
 
 
 def is_xdist_worker(request_or_session) -> bool:
-    """Return `True` if this is an xdist worker, `False` otherwise
+    """Return `True` if this is an xdist worker, `False` otherwise.
 
     :param request_or_session: the `pytest` `request` or `session` object
     """
@@ -313,7 +313,7 @@ def is_xdist_worker(request_or_session) -> bool:
 
 
 def is_xdist_controller(request_or_session) -> bool:
-    """Return `True` if this is the xdist controller, `False` otherwise
+    """Return `True` if this is the xdist controller, `False` otherwise.
 
     Note: this method also returns `False` when distribution has not been
     activated at all.

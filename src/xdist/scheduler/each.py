@@ -1,10 +1,10 @@
 from xdist.remote import Producer
-from xdist.workermanage import parse_spec_config
 from xdist.report import report_collection_diff
+from xdist.workermanage import parse_spec_config
 
 
 class EachScheduling:
-    """Implement scheduling of test items on all nodes
+    """Implement scheduling of test items on all nodes.
 
     If a node gets added after the test run is started then it is
     assumed to replace a node which got removed before it finished
@@ -48,7 +48,7 @@ class EachScheduling:
 
     @property
     def has_pending(self):
-        """Return True if there are pending test items
+        """Return True if there are pending test items.
 
         This indicates that collection has finished and nodes are
         still processing test items, so this can be thought of as
@@ -64,7 +64,7 @@ class EachScheduling:
         self.node2pending[node] = []
 
     def add_node_collection(self, node, collection):
-        """Add the collected test items from a node
+        """Add the collected test items from a node.
 
         Collection is complete once all nodes have submitted their
         collection.  In this case its pending list is set to an empty
@@ -119,7 +119,7 @@ class EachScheduling:
         return crashitem
 
     def schedule(self):
-        """Schedule the test items on the nodes
+        """Schedule the test items on the nodes.
 
         If the node's pending list is empty it is a new node which
         needs to run all the tests.  If the pending list is already

@@ -1,16 +1,18 @@
 from __future__ import annotations
-from xdist.dsession import (
-    DSession,
-    get_default_max_worker_restart,
-    get_workers_status_line,
-    WorkerStatus,
-)
-from xdist.report import report_collection_diff
-from xdist.scheduler import EachScheduling, LoadScheduling, WorkStealingScheduling
+
 from typing import Sequence
 
-import pytest
 import execnet
+import pytest
+
+from xdist.dsession import DSession
+from xdist.dsession import get_default_max_worker_restart
+from xdist.dsession import get_workers_status_line
+from xdist.dsession import WorkerStatus
+from xdist.report import report_collection_diff
+from xdist.scheduler import EachScheduling
+from xdist.scheduler import LoadScheduling
+from xdist.scheduler import WorkStealingScheduling
 
 
 class MockGateway:
@@ -163,7 +165,7 @@ class TestLoadScheduling:
 
         for i in range(7, 16):
             sched.mark_test_complete(node1, i - 3)
-            assert node1.sent == [0, 1] + list(range(4, i))
+            assert node1.sent == [0, 1, *range(4, i)]
             assert node2.sent == [2, 3]
             assert sched.pending == list(range(i, 16))
 
@@ -185,7 +187,7 @@ class TestLoadScheduling:
 
         for complete_index, first_pending in enumerate(range(5, 16)):
             sched.mark_test_complete(node1, node1.sent[complete_index])
-            assert node1.sent == [0, 1] + list(range(4, first_pending))
+            assert node1.sent == [0, 1, *range(4, first_pending)]
             assert node2.sent == [2, 3]
             assert sched.pending == list(range(first_pending, 16))
 
@@ -249,9 +251,7 @@ class TestLoadScheduling:
         """
 
         class CollectHook:
-            """
-            Dummy hook that stores collection reports.
-            """
+            """Dummy hook that stores collection reports."""
 
             def __init__(self):
                 self.reports = []
@@ -293,7 +293,7 @@ class TestWorkStealingScheduling:
         sched.schedule()
         assert not sched.pending
         assert not sched.tests_finished
-        assert node1.sent == list(range(0, 8))
+        assert node1.sent == list(range(8))
         assert node2.sent == list(range(8, 16))
         for i in range(8):
             sched.mark_test_complete(node1, node1.sent[i])
@@ -313,7 +313,7 @@ class TestWorkStealingScheduling:
         sched.add_node_collection(node2, collection)
         assert sched.collection_is_completed
         sched.schedule()
-        assert node1.sent == list(range(0, 8))
+        assert node1.sent == list(range(8))
         assert node2.sent == list(range(8, 16))
         for i in range(8):
             sched.mark_test_complete(node1, node1.sent[i])

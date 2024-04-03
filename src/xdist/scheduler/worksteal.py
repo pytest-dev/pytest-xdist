@@ -1,13 +1,19 @@
-from collections import namedtuple
+from __future__ import annotations
+
+from typing import Any
+from typing import NamedTuple
 
 from _pytest.runner import CollectReport
 
 from xdist.remote import Producer
-from xdist.workermanage import parse_spec_config
 from xdist.report import report_collection_diff
+from xdist.workermanage import parse_spec_config
 
 
-NodePending = namedtuple("NodePending", ["node", "pending"])
+class NodePending(NamedTuple):
+    node: Any
+    pending: list[int]
+
 
 # Every worker needs at least 2 tests in queue - the current and the next one.
 MIN_PENDING = 2
@@ -22,7 +28,7 @@ class WorkStealingScheduling:
     test remains), an attempt is made to reassign ("steal") some tests from
     other nodes to this node.
 
-    Attributes:
+    Attributes::
 
     :numnodes: The expected number of nodes taking part.  The actual
        number of nodes will vary during the scheduler's lifetime as
@@ -101,7 +107,7 @@ class WorkStealingScheduling:
 
     @property
     def has_pending(self):
-        """Return True if there are pending test items
+        """Return True if there are pending test items.
 
         This indicates that collection has finished and nodes are
         still processing test items, so this can be thought of as
@@ -127,7 +133,7 @@ class WorkStealingScheduling:
         self.node2pending[node] = []
 
     def add_node_collection(self, node, collection):
-        """Add the collected test items from a node
+        """Add the collected test items from a node.
 
         The collection is stored in the ``.node2collection`` map.
         Called by the ``DSession.worker_collectionfinish`` hook.
@@ -148,7 +154,7 @@ class WorkStealingScheduling:
         self.node2collection[node] = list(collection)
 
     def mark_test_complete(self, node, item_index, duration=None):
-        """Mark test item as completed by node
+        """Mark test item as completed by node.
 
         This is called by the ``DSession.worker_testreport`` hook.
         """
@@ -233,7 +239,7 @@ class WorkStealingScheduling:
         self.steal_requested_from_node = steal_from.node
 
     def remove_node(self, node):
-        """Remove a node from the scheduler
+        """Remove a node from the scheduler.
 
         This should be called either when the node crashed or at
         shutdown time.  In the former case any pending items assigned
@@ -263,7 +269,7 @@ class WorkStealingScheduling:
         return crashitem
 
     def schedule(self):
-        """Initiate distribution of the test collection
+        """Initiate distribution of the test collection.
 
         Initiate scheduling of the items across the nodes.  If this
         gets called again later it behaves the same as calling
@@ -285,7 +291,7 @@ class WorkStealingScheduling:
             return
 
         # Collections are identical, create the index of pending items.
-        self.collection = list(self.node2collection.values())[0]
+        self.collection = next(iter(self.node2collection.values()))
         self.pending[:] = range(len(self.collection))
         if not self.collection:
             return
