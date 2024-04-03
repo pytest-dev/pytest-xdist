@@ -374,10 +374,9 @@ class DSession:
     def handle_crashitem(self, nodeid, worker):
         # XXX get more reporting info by recording pytest_runtest_logstart?
         # XXX count no of failures and retry N times
-        runner = self.config.pluginmanager.getplugin("runner")
         fspath = nodeid.split("::")[0]
         msg = f"worker {worker.gateway.id!r} crashed while running {nodeid!r}"
-        rep = runner.TestReport(
+        rep = pytest.TestReport(
             nodeid, (fspath, None, fspath), (), "failed", msg, "???"
         )
         rep.node = worker
