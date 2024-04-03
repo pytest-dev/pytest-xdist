@@ -85,6 +85,7 @@ select = [
     "W",        # pycodestyle
     "T10",      # flake8-debugger
     "PIE",      # flake8-pie
+    "FA",       # flake8-future-annotations
     "PGH",      # pygrep-hooks
     "PLE",      # pylint error
     "PLW",      # pylint warning

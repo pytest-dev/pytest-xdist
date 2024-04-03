@@ -7,11 +7,7 @@ from pathlib import Path
 import re
 import sys
 from typing import Any
-from typing import List
-from typing import Optional
 from typing import Sequence
-from typing import Set
-from typing import Tuple
 from typing import Union
 import uuid
 
@@ -63,7 +59,7 @@ class NodeManager:
             self.specs.append(spec)
         self.roots = self._getrsyncdirs()
         self.rsyncoptions = self._getrsyncoptions()
-        self._rsynced_specs: Set[Tuple[Any, Any]] = set()
+        self._rsynced_specs: set[tuple[Any, Any]] = set()
 
     def rsync_roots(self, gateway):
         """Rsync the set of roots to the node's gateway cwd."""
@@ -92,7 +88,7 @@ class NodeManager:
     def _getxspecs(self):
         return [execnet.XSpec(x) for x in parse_spec_config(self.config)]
 
-    def _getrsyncdirs(self) -> List[Path]:
+    def _getrsyncdirs(self) -> list[Path]:
         for spec in self.specs:
             if not spec.popen or spec.chdir:
                 break
@@ -177,7 +173,7 @@ class HostRSync(execnet.RSync):
         self,
         sourcedir: PathLike,
         *,
-        ignores: Optional[Sequence[PathLike]] = None,
+        ignores: Sequence[PathLike] | None = None,
         verbose: bool = True,
     ) -> None:
         if ignores is None:
@@ -204,7 +200,7 @@ class HostRSync(execnet.RSync):
             print(f"{gateway.spec}:{remotepath} <= {path}")
 
 
-def make_reltoroot(roots: Sequence[Path], args: List[str]) -> List[str]:
+def make_reltoroot(roots: Sequence[Path], args: list[str]) -> list[str]:
     # XXX introduce/use public API for splitting pytest args
     splitcode = "::"
     result = []
@@ -219,7 +215,7 @@ def make_reltoroot(roots: Sequence[Path], args: List[str]) -> List[str]:
             result.append(arg)
             continue
         for root in roots:
-            x: Optional[Path]
+            x: Path | None
             try:
                 x = fspath.relative_to(root)
             except ValueError:

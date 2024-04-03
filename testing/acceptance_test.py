@@ -1,9 +1,8 @@
+from __future__ import annotations
+
 import os
 import re
 import shutil
-from typing import Dict
-from typing import List
-from typing import Tuple
 
 import pytest
 
@@ -1528,7 +1527,7 @@ class TestLocking:
         result.assert_outcomes(passed=(48 if scope != "each" else 48 * 2))
 
 
-def parse_tests_and_workers_from_output(lines: List[str]) -> List[Tuple[str, str, str]]:
+def parse_tests_and_workers_from_output(lines: list[str]) -> list[tuple[str, str, str]]:
     result = []
     for line in lines:
         # example match: "[gw0] PASSED test_a.py::test[7]"
@@ -1550,9 +1549,9 @@ def parse_tests_and_workers_from_output(lines: List[str]) -> List[Tuple[str, str
 
 
 def get_workers_and_test_count_by_prefix(
-    prefix: str, lines: List[str], expected_status: str = "PASSED"
-) -> Dict[str, int]:
-    result: Dict[str, int] = {}
+    prefix: str, lines: list[str], expected_status: str = "PASSED"
+) -> dict[str, int]:
+    result: dict[str, int] = {}
     for worker, status, nodeid in parse_tests_and_workers_from_output(lines):
         if expected_status == status and nodeid.startswith(prefix):
             result[worker] = result.get(worker, 0) + 1

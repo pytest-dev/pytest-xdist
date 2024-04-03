@@ -1,9 +1,10 @@
+from __future__ import annotations
+
 import pathlib
 from pathlib import Path
 import shutil
 import tempfile
 import textwrap
-from typing import List
 import unittest.mock
 
 import pytest
@@ -75,7 +76,7 @@ class TestStatRecorder:
         # make check()'s visit() call return our just removed
         # path as if we were in a race condition
         dirname = str(tmp)
-        dirnames: List[str] = []
+        dirnames: list[str] = []
         filenames = [str(p)]
         with unittest.mock.patch(
             "os.walk", return_value=[(dirname, dirnames, filenames)], autospec=True
