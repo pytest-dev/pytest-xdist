@@ -317,13 +317,6 @@ class DSession:
         assert not rep.passed
         self._failed_worker_collectreport(node, rep)
 
-    def worker_warning_captured(self, warning_message, when, item):
-        """Emitted when a node calls the pytest_warning_captured hook (deprecated in 6.0)."""
-        # This hook as been removed in pytest 7.1, and we can remove support once we only
-        # support pytest >=7.1.
-        kwargs = dict(warning_message=warning_message, when=when, item=item)
-        self.config.hook.pytest_warning_captured.call_historic(kwargs=kwargs)
-
     def worker_warning_recorded(self, warning_message, when, nodeid, location):
         """Emitted when a node calls the pytest_warning_recorded hook."""
         kwargs = dict(
