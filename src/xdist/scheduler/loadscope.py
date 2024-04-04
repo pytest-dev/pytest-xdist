@@ -1,6 +1,6 @@
 from collections import OrderedDict
 
-from _pytest.runner import CollectReport
+import pytest
 
 from xdist.remote import Producer
 from xdist.report import report_collection_diff
@@ -410,7 +410,12 @@ class LoadScopeScheduling:
             if self.config is None:
                 continue
 
-            rep = CollectReport(node.gateway.id, "failed", longrepr=msg, result=[])
+            rep = pytest.CollectReport(
+                nodeid=node.gateway.id,
+                outcome="failed",
+                longrepr=msg,
+                result=[],
+            )
             self.config.hook.pytest_collectreport(report=rep)
 
         return same_collection

@@ -206,9 +206,7 @@ class DSession:
         try:
             assert False, formatted_error
         except AssertionError:
-            from _pytest._code import ExceptionInfo
-
-            excinfo = ExceptionInfo.from_current()
+            excinfo = pytest.ExceptionInfo.from_current()
             excrepr = excinfo.getrepr()
             self.config.hook.pytest_internalerror(excrepr=excrepr, excinfo=excinfo)
 

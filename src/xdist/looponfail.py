@@ -168,7 +168,7 @@ def init_worker_session(channel, args, option_dict):
     sys.path[:] = newpaths
 
     # fullwidth, hasmarkup = channel.receive()
-    from _pytest.config import Config
+    from pytest import Config
 
     config = Config.fromdictargs(option_dict, list(args))
     config.args = args

@@ -1112,14 +1112,11 @@ def test_error_report_styles(pytester, tb) -> None:
     result.assert_outcomes(failed=1)
 
 
-def test_color_yes_collection_on_non_atty(pytester, request) -> None:
+def test_color_yes_collection_on_non_atty(pytester) -> None:
     """Skip collect progress report when working on non-terminals.
 
     Similar to pytest-dev/pytest#1397
     """
-    tr = request.config.pluginmanager.getplugin("terminalreporter")
-    if not hasattr(tr, "isatty"):
-        pytest.skip("only valid for newer pytest versions")
     pytester.makepyfile(
         """
         import pytest
