@@ -175,9 +175,9 @@ class WorkerInteractor:
 
         worker_title("[pytest-xdist running] %s" % item.nodeid)
 
-        start = time.time()
+        start = time.perf_counter()
         self.config.hook.pytest_runtest_protocol(item=item, nextitem=nextitem)
-        duration = time.time() - start
+        duration = time.perf_counter() - start
 
         worker_title("[pytest-xdist idle]")
 
