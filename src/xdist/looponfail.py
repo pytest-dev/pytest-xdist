@@ -79,9 +79,7 @@ class RemoteControl:
     def initgateway(self):
         return execnet.makegateway("popen")
 
-    def setup(self, out=None):
-        if out is None:
-            out = TerminalWriter()
+    def setup(self):
         if hasattr(self, "gateway"):
             raise ValueError("already have gateway %r" % self.gateway)
         self.trace("setting up worker session")
@@ -92,6 +90,8 @@ class RemoteControl:
             option_dict=vars(self.config.option),
         )
         remote_outchannel = channel.receive()
+
+        out = TerminalWriter()
 
         def write(s):
             out._file.write(s)
