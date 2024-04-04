@@ -442,7 +442,7 @@ class TestDistReporter:
     @pytest.mark.xfail
     def test_rsync_printing(self, pytester: pytest.Pytester, linecomp) -> None:
         config = pytester.parseconfig()
-        from _pytest.pytest_terminal import TerminalReporter
+        from _pytest.terminal import TerminalReporter
 
         rep = TerminalReporter(config, file=linecomp.stringio)
         config.pluginmanager.register(rep, "terminalreporter")
