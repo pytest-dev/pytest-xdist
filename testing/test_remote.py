@@ -338,9 +338,7 @@ def test_remote_mainargv(pytester: pytest.Pytester) -> None:
     assert result.ret == 0
 
 
-def test_remote_usage_prog(pytester: pytest.Pytester, request) -> None:
-    if not hasattr(request.config._parser, "prog"):
-        pytest.skip("prog not available in config parser")
+def test_remote_usage_prog(pytester: pytest.Pytester) -> None:
     pytester.makeconftest(
         """
         import pytest

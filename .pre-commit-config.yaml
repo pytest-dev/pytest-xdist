@@ -29,5 +29,5 @@ repos:
         files: ^(src/|testing/)
         args: []
         additional_dependencies:
-          - pytest>=6.2.0
+          - pytest>=7.0.0
           - py>=1.10.0

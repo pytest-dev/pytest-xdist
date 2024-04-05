@@ -401,9 +401,7 @@ class WorkerController:
             # should not land in receiver-thread
             raise
         except BaseException:
-            from _pytest._code import ExceptionInfo
-
-            excinfo = ExceptionInfo.from_current()
+            excinfo = pytest.ExceptionInfo.from_current()
             print("!" * 20, excinfo)
             self.config.notify_exception(excinfo)
             self.shutdown()

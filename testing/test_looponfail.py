@@ -12,9 +12,6 @@ from xdist.looponfail import RemoteControl
 from xdist.looponfail import StatRecorder
 
 
-PYTEST_GTE_7 = hasattr(pytest, "version_tuple") and pytest.version_tuple >= (7, 0)  # type: ignore[attr-defined]
-
-
 class TestStatRecorder:
     def test_filechange(self, tmp_path: Path) -> None:
         tmp = tmp_path
@@ -128,9 +125,8 @@ class TestRemoteControl:
         failures = control.runsession()
         assert failures
         control.setup()
-        item_path = item.path if PYTEST_GTE_7 else Path(str(item.fspath))  # type: ignore[attr-defined]
-        item_path.write_text("def test_func():\n assert 1\n")
-        removepyc(item_path)
+        item.path.write_text("def test_func():\n assert 1\n")
+        removepyc(item.path)
         topdir, failures = control.runsession()[:2]
         assert not failures
 
@@ -146,10 +142,7 @@ class TestRemoteControl:
         control = RemoteControl(modcol.config)
         control.loop_once()
         assert control.failures
-        if PYTEST_GTE_7:
-            modcol_path = modcol.path  # type:ignore[attr-defined]
-        else:
-            modcol_path = Path(str(modcol.fspath))
+        modcol_path = modcol.path  # type:ignore[attr-defined]
 
         modcol_path.write_text(
             textwrap.dedent(
@@ -179,10 +172,7 @@ class TestRemoteControl:
                 """
             )
         )
-        if PYTEST_GTE_7:
-            parent = modcol.path.parent.parent  # type: ignore[attr-defined]
-        else:
-            parent = Path(modcol.fspath.dirpath().dirpath())
+        parent = modcol.path.parent.parent  # type: ignore[attr-defined]
         monkeypatch.chdir(parent)
         modcol.config.args = [
             str(Path(x).relative_to(parent)) for x in modcol.config.args
@@ -248,8 +238,7 @@ class TestLooponFailing:
         remotecontrol.loop_once()
         assert len(remotecontrol.failures) == 1
 
-        modcol_path = modcol.path if PYTEST_GTE_7 else Path(modcol.fspath)
-        modcol_path.write_text(
+        modcol.path.write_text(
             textwrap.dedent(
                 """
                 def test_one():
@@ -259,7 +248,7 @@ class TestLooponFailing:
                 """
             )
         )
-        removepyc(modcol_path)
+        removepyc(modcol.path)
         remotecontrol.loop_once()
         assert not remotecontrol.failures
 
@@ -277,8 +266,7 @@ class TestLooponFailing:
         assert len(remotecontrol.failures) == 1
         assert "test_one" in remotecontrol.failures[0]
 
-        modcol_path = modcol.path if PYTEST_GTE_7 else Path(modcol.fspath)
-        modcol_path.write_text(
+        modcol.path.write_text(
             textwrap.dedent(
                 """
                 def test_one():
@@ -288,7 +276,7 @@ class TestLooponFailing:
                 """
             )
         )
-        removepyc(modcol_path)
+        removepyc(modcol.path)
         remotecontrol.loop_once()
         assert len(remotecontrol.failures) == 0
         remotecontrol.loop_once()

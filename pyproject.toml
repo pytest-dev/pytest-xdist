@@ -34,7 +34,7 @@ classifiers = [
 requires-python = ">=3.8"
 dependencies = [
     "execnet>=1.1",
-    "pytest>=6.2.0",
+    "pytest>=7.0.0",
 ]
 dynamic = ["version"]
 

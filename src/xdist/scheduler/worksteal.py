@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 from typing import NamedTuple
 
-from _pytest.runner import CollectReport
+import pytest
 
 from xdist.remote import Producer
 from xdist.report import report_collection_diff
@@ -323,8 +323,11 @@ class WorkStealingScheduling:
                 same_collection = False
                 self.log(msg)
                 if self.config is not None:
-                    rep = CollectReport(
-                        node.gateway.id, "failed", longrepr=msg, result=[]
+                    rep = pytest.CollectReport(
+                        nodeid=node.gateway.id,
+                        outcome="failed",
+                        longrepr=msg,
+                        result=[],
                     )
                     self.config.hook.pytest_collectreport(report=rep)
 

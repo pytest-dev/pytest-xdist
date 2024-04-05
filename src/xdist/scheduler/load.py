@@ -1,6 +1,6 @@
 from itertools import cycle
 
-from _pytest.runner import CollectReport
+import pytest
 
 from xdist.remote import Producer
 from xdist.report import report_collection_diff
@@ -307,8 +307,11 @@ class LoadScheduling:
                 same_collection = False
                 self.log(msg)
                 if self.config is not None:
-                    rep = CollectReport(
-                        node.gateway.id, "failed", longrepr=msg, result=[]
+                    rep = pytest.CollectReport(
+                        nodeid=node.gateway.id,
+                        outcome="failed",
+                        longrepr=msg,
+                        result=[],
                     )
                     self.config.hook.pytest_collectreport(report=rep)
 
