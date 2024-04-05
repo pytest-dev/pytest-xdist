@@ -31,4 +31,4 @@ repos:
         additional_dependencies:
           - pytest>=7.0.0
           - execnet>=2.1.0
-          - py>=1.10.0
+          - types-psutil
