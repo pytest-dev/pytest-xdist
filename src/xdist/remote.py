@@ -7,6 +7,7 @@ needs not to be installed in remote environments.
 """
 
 import contextlib
+import enum
 import os
 import sys
 import time
@@ -57,10 +58,12 @@ def worker_title(title):
         pass
 
 
-class WorkerInteractor:
-    SHUTDOWN_MARK = object()
-    QUEUE_REPLACED_MARK = object()
+class Marker(enum.Enum):
+    SHUTDOWN = 0
+    QUEUE_REPLACED = 1
 
+
+class WorkerInteractor:
     def __init__(self, config, channel):
         self.config = config
         self.workerid = config.workerinput.get("workerid", "?")
@@ -79,7 +82,7 @@ class WorkerInteractor:
         is replaced concurrently in another thread.
         """
         result = self.torun.get()
-        while result is self.QUEUE_REPLACED_MARK:
+        while result is Marker.QUEUE_REPLACED:
             result = self.torun.get()
         return result
 
@@ -114,8 +117,8 @@ class WorkerInteractor:
         self.sendevent("collectionstart")
 
     def handle_command(self, command):
-        if command is self.SHUTDOWN_MARK:
-            self.torun.put(self.SHUTDOWN_MARK)
+        if command is Marker.SHUTDOWN:
+            self.torun.put(Marker.SHUTDOWN)
             return
 
         name, kwargs = command
@@ -128,7 +131,7 @@ class WorkerInteractor:
             for i in range(len(self.session.items)):
                 self.torun.put(i)
         elif name == "shutdown":
-            self.torun.put(self.SHUTDOWN_MARK)
+            self.torun.put(Marker.SHUTDOWN)
         elif name == "steal":
             self.steal(kwargs["indices"])
 
@@ -149,14 +152,14 @@ class WorkerInteractor:
                 self.torun.put(i)
 
         self.sendevent("unscheduled", indices=stolen)
-        old_queue.put(self.QUEUE_REPLACED_MARK)
+        old_queue.put(Marker.QUEUE_REPLACED)
 
     @pytest.hookimpl
     def pytest_runtestloop(self, session):
         self.log("entering main loop")
-        self.channel.setcallback(self.handle_command, endmarker=self.SHUTDOWN_MARK)
+        self.channel.setcallback(self.handle_command, endmarker=Marker.SHUTDOWN)
         self.nextitem_index = self._get_next_item_index()
-        while self.nextitem_index is not self.SHUTDOWN_MARK:
+        while self.nextitem_index is not Marker.SHUTDOWN:
             self.run_one_test()
             if session.shouldfail or session.shouldstop:
                 break
@@ -168,7 +171,7 @@ class WorkerInteractor:
 
         items = self.session.items
         item = items[self.item_index]
-        if self.nextitem_index is self.SHUTDOWN_MARK:
+        if self.nextitem_index is Marker.SHUTDOWN:
             nextitem = None
         else:
             nextitem = items[self.nextitem_index]

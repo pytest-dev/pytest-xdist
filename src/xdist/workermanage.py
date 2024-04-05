@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+import enum
 import fnmatch
 import os
 from pathlib import Path
@@ -230,9 +233,11 @@ def make_reltoroot(roots: Sequence[Path], args: List[str]) -> List[str]:
     return result
 
 
-class WorkerController:
-    ENDMARK = -1
+class Marker(enum.Enum):
+    END = -1
 
+
+class WorkerController:
     class RemoteHook:
         @pytest.hookimpl(trylast=True)
         def pytest_xdist_getremotemodule(self):
@@ -283,7 +288,7 @@ class WorkerController:
         self.channel.send((self.workerinput, args, option_dict, change_sys_path))
 
         if self.putevent:
-            self.channel.setcallback(self.process_from_remote, endmarker=self.ENDMARK)
+            self.channel.setcallback(self.process_from_remote, endmarker=Marker.END)
 
     def ensure_teardown(self):
         if hasattr(self, "channel"):
@@ -331,7 +336,7 @@ class WorkerController:
         avoid raising exceptions or doing heavy work.
         """
         try:
-            if eventcall == self.ENDMARK:
+            if eventcall is Marker.END:
                 err = self.channel._getremoteerror()
                 if not self._down:
                     if not err or isinstance(err, EOFError):
