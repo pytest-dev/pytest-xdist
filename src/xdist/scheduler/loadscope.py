@@ -90,8 +90,8 @@ class LoadScopeScheduling:
         self.collection = None
 
         self.workqueue = OrderedDict()
-        self.assigned_work = OrderedDict()
-        self.registered_collections = OrderedDict()
+        self.assigned_work = {}
+        self.registered_collections = {}
 
         if log is None:
             self.log = Producer("loadscopesched")
@@ -156,7 +156,7 @@ class LoadScopeScheduling:
         bootstraps a new node.
         """
         assert node not in self.assigned_work
-        self.assigned_work[node] = OrderedDict()
+        self.assigned_work[node] = {}
 
     def remove_node(self, node):
         """Remove a node from the scheduler.
@@ -252,7 +252,7 @@ class LoadScopeScheduling:
         scope, work_unit = self.workqueue.popitem(last=False)
 
         # Keep track of the assigned work
-        assigned_to_node = self.assigned_work.setdefault(node, default=OrderedDict())
+        assigned_to_node = self.assigned_work.setdefault(node, {})
         assigned_to_node[scope] = work_unit
 
         # Ask the node to execute the workload
@@ -349,10 +349,10 @@ class LoadScopeScheduling:
             return
 
         # Determine chunks of work (scopes)
-        unsorted_workqueue = OrderedDict()
+        unsorted_workqueue = {}
         for nodeid in self.collection:
             scope = self._split_scope(nodeid)
-            work_unit = unsorted_workqueue.setdefault(scope, default=OrderedDict())
+            work_unit = unsorted_workqueue.setdefault(scope, {})
             work_unit[nodeid] = False
 
         # Insert tests scopes into work queue ordered by number of tests.
@@ -368,7 +368,7 @@ class LoadScopeScheduling:
             self.log(f"Shutting down {extra_nodes} nodes")
 
             for _ in range(extra_nodes):
-                unused_node, assigned = self.assigned_work.popitem(last=True)
+                unused_node, assigned = self.assigned_work.popitem()
 
                 self.log(f"Shutting down unused node {unused_node}")
                 unused_node.shutdown()
