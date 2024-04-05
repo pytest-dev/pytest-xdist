@@ -102,14 +102,14 @@ class TestNodeManagerPopen:
                 def waitclose(self):
                     pass
 
-            gw.remote_exec = pseudoexec
+            gw.remote_exec = pseudoexec  # type: ignore[assignment]
         notifications = []
         for gw in hm.group:
             hm.rsync(gw, source, notify=lambda *args: notifications.append(args))
         assert not notifications
         hm.teardown_nodes()
         assert not len(hm.group)
-        assert "sys.path.insert" in gw.remote_exec.args[0]
+        assert "sys.path.insert" in gw.remote_exec.args[0]  # type: ignore[attr-defined]
 
     def test_rsync_popen_with_path(
         self, config, source: Path, dest: Path, workercontroller

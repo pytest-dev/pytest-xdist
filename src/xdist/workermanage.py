@@ -139,7 +139,7 @@ class NodeManager:
         # XXX This changes the calling behaviour of
         #     pytest_xdist_rsyncstart and pytest_xdist_rsyncfinish to
         #     be called once per rsync target.
-        rsync = HostRSync(source, verbose=verbose, ignores=ignores)
+        rsync = HostRSync(source, verbose=verbose > 0, ignores=ignores)
         spec = gateway.spec
         if spec.popen and not spec.chdir:
             # XXX This assumes that sources are python-packages
@@ -175,12 +175,12 @@ class HostRSync(execnet.RSync):
         sourcedir: PathLike,
         *,
         ignores: Optional[Sequence[PathLike]] = None,
-        **kwargs: object,
+        verbose: bool = True,
     ) -> None:
         if ignores is None:
             ignores = []
         self._ignores = [re.compile(fnmatch.translate(os.fspath(x))) for x in ignores]
-        super().__init__(sourcedir=Path(sourcedir), **kwargs)
+        super().__init__(sourcedir=Path(sourcedir), verbose=verbose)
 
     def filter(self, path: PathLike) -> bool:
         path = Path(path)
