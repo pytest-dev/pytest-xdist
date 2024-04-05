@@ -1509,13 +1509,17 @@ class TestLocking:
 
     """ + ((_test_content * 4) % ("A", "B", "C", "D"))
 
-    @pytest.mark.parametrize("scope", ["each", "load", "loadscope", "loadfile", "no"])
+    @pytest.mark.parametrize(
+        "scope", ["each", "load", "loadscope", "loadfile", "worksteal", "no"]
+    )
     def test_single_file(self, pytester, scope) -> None:
         pytester.makepyfile(test_a=self.test_file1)
         result = pytester.runpytest("-n2", "--dist=%s" % scope, "-v")
         result.assert_outcomes(passed=(12 if scope != "each" else 12 * 2))
 
-    @pytest.mark.parametrize("scope", ["each", "load", "loadscope", "loadfile", "no"])
+    @pytest.mark.parametrize(
+        "scope", ["each", "load", "loadscope", "loadfile", "worksteal", "no"]
+    )
     def test_multi_file(self, pytester, scope) -> None:
         pytester.makepyfile(
             test_a=self.test_file1,
