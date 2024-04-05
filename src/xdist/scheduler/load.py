@@ -160,6 +160,9 @@ class LoadScheduling:
         for node in self.node2pending:
             self.check_schedule(node)
 
+    def remove_pending_tests_from_node(self, node, indices):
+        raise NotImplementedError()
+
     def check_schedule(self, node, duration=0):
         """Maybe schedule new items on the node.
 

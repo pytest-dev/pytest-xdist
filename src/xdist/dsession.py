@@ -15,6 +15,7 @@ from xdist.scheduler import LoadFileScheduling
 from xdist.scheduler import LoadGroupScheduling
 from xdist.scheduler import LoadScheduling
 from xdist.scheduler import LoadScopeScheduling
+from xdist.scheduler import Scheduling
 from xdist.scheduler import WorkStealingScheduling
 from xdist.workermanage import NodeManager
 
@@ -97,17 +98,21 @@ class DSession:
         return True
 
     @pytest.hookimpl(trylast=True)
-    def pytest_xdist_make_scheduler(self, config, log):
+    def pytest_xdist_make_scheduler(self, config, log) -> Scheduling | None:
         dist = config.getvalue("dist")
-        schedulers = {
-            "each": EachScheduling,
-            "load": LoadScheduling,
-            "loadscope": LoadScopeScheduling,
-            "loadfile": LoadFileScheduling,
-            "loadgroup": LoadGroupScheduling,
-            "worksteal": WorkStealingScheduling,
-        }
-        return schedulers[dist](config, log)
+        if dist == "each":
+            return EachScheduling(config, log)
+        if dist == "load":
+            return LoadScheduling(config, log)
+        if dist == "loadscope":
+            return LoadScopeScheduling(config, log)
+        if dist == "loadfile":
+            return LoadFileScheduling(config, log)
+        if dist == "loadgroup":
+            return LoadGroupScheduling(config, log)
+        if dist == "worksteal":
+            return WorkStealingScheduling(config, log)
+        return None
 
     @pytest.hookimpl
     def pytest_runtestloop(self):
