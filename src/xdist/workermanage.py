@@ -1,14 +1,13 @@
+from __future__ import annotations
+
+import enum
 import fnmatch
 import os
 from pathlib import Path
 import re
 import sys
 from typing import Any
-from typing import List
-from typing import Optional
 from typing import Sequence
-from typing import Set
-from typing import Tuple
 from typing import Union
 import uuid
 
@@ -60,7 +59,7 @@ class NodeManager:
             self.specs.append(spec)
         self.roots = self._getrsyncdirs()
         self.rsyncoptions = self._getrsyncoptions()
-        self._rsynced_specs: Set[Tuple[Any, Any]] = set()
+        self._rsynced_specs: set[tuple[Any, Any]] = set()
 
     def rsync_roots(self, gateway):
         """Rsync the set of roots to the node's gateway cwd."""
@@ -89,7 +88,7 @@ class NodeManager:
     def _getxspecs(self):
         return [execnet.XSpec(x) for x in parse_spec_config(self.config)]
 
-    def _getrsyncdirs(self) -> List[Path]:
+    def _getrsyncdirs(self) -> list[Path]:
         for spec in self.specs:
             if not spec.popen or spec.chdir:
                 break
@@ -174,7 +173,7 @@ class HostRSync(execnet.RSync):
         self,
         sourcedir: PathLike,
         *,
-        ignores: Optional[Sequence[PathLike]] = None,
+        ignores: Sequence[PathLike] | None = None,
         verbose: bool = True,
     ) -> None:
         if ignores is None:
@@ -201,7 +200,7 @@ class HostRSync(execnet.RSync):
             print(f"{gateway.spec}:{remotepath} <= {path}")
 
 
-def make_reltoroot(roots: Sequence[Path], args: List[str]) -> List[str]:
+def make_reltoroot(roots: Sequence[Path], args: list[str]) -> list[str]:
     # XXX introduce/use public API for splitting pytest args
     splitcode = "::"
     result = []
@@ -216,7 +215,7 @@ def make_reltoroot(roots: Sequence[Path], args: List[str]) -> List[str]:
             result.append(arg)
             continue
         for root in roots:
-            x: Optional[Path]
+            x: Path | None
             try:
                 x = fspath.relative_to(root)
             except ValueError:
@@ -230,9 +229,11 @@ def make_reltoroot(roots: Sequence[Path], args: List[str]) -> List[str]:
     return result
 
 
-class WorkerController:
-    ENDMARK = -1
+class Marker(enum.Enum):
+    END = -1
 
+
+class WorkerController:
     class RemoteHook:
         @pytest.hookimpl(trylast=True)
         def pytest_xdist_getremotemodule(self):
@@ -283,7 +284,7 @@ class WorkerController:
         self.channel.send((self.workerinput, args, option_dict, change_sys_path))
 
         if self.putevent:
-            self.channel.setcallback(self.process_from_remote, endmarker=self.ENDMARK)
+            self.channel.setcallback(self.process_from_remote, endmarker=Marker.END)
 
     def ensure_teardown(self):
         if hasattr(self, "channel"):
@@ -331,7 +332,7 @@ class WorkerController:
         avoid raising exceptions or doing heavy work.
         """
         try:
-            if eventcall == self.ENDMARK:
+            if eventcall is Marker.END:
                 err = self.channel._getremoteerror()
                 if not self._down:
                     if not err or isinstance(err, EOFError):
@@ -373,16 +374,6 @@ class WorkerController:
                     code=kwargs["code"],
                     nodeid=kwargs["nodeid"],
                     fslocation=kwargs["nodeid"],
-                )
-            elif eventname == "warning_captured":
-                warning_message = unserialize_warning_message(
-                    kwargs["warning_message_data"]
-                )
-                self.notify_inproc(
-                    eventname,
-                    warning_message=warning_message,
-                    when=kwargs["when"],
-                    item=kwargs["item"],
                 )
             elif eventname == "warning_recorded":
                 warning_message = unserialize_warning_message(

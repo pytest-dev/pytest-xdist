@@ -85,6 +85,7 @@ select = [
     "W",        # pycodestyle
     "T10",      # flake8-debugger
     "PIE",      # flake8-pie
+    "FA",       # flake8-future-annotations
     "PGH",      # pygrep-hooks
     "PLE",      # pylint error
     "PLW",      # pylint warning
@@ -135,6 +136,7 @@ lines-after-imports = 2
 
 [tool.mypy]
 mypy_path = ["src"]
+files = ["src", "testing"]
 # TODO: Enable this & fix errors.
 # check_untyped_defs = true
 disallow_any_generics = true

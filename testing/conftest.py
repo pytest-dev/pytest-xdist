@@ -1,5 +1,6 @@
+from __future__ import annotations
+
 import shutil
-from typing import List
 
 import execnet
 import pytest
@@ -41,7 +42,7 @@ def specssh(request) -> str:
 
 
 # configuration information for tests
-def getgspecs(config) -> List[execnet.XSpec]:
+def getgspecs(config) -> list[execnet.XSpec]:
     return [execnet.XSpec(spec) for spec in config.getvalueorskip("gspecs")]
 
 

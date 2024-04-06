@@ -7,11 +7,12 @@ processes) otherwise changes to source code can crash
 the controlling process which should best never happen.
 """
 
+from __future__ import annotations
+
 import os
 from pathlib import Path
 import sys
 import time
-from typing import Dict
 from typing import Sequence
 
 from _pytest._io import TerminalWriter
@@ -45,7 +46,7 @@ def pytest_cmdline_main(config):
         return 2  # looponfail only can get stop with ctrl-C anyway
 
 
-def looponfail_main(config: "pytest.Config") -> None:
+def looponfail_main(config: pytest.Config) -> None:
     remotecontrol = RemoteControl(config)
     config_roots = config.getini("looponfailroots")
     if not config_roots:
@@ -79,9 +80,7 @@ class RemoteControl:
     def initgateway(self):
         return execnet.makegateway("popen")
 
-    def setup(self, out=None):
-        if out is None:
-            out = TerminalWriter()
+    def setup(self):
         if hasattr(self, "gateway"):
             raise ValueError("already have gateway %r" % self.gateway)
         self.trace("setting up worker session")
@@ -92,6 +91,8 @@ class RemoteControl:
             option_dict=vars(self.config.option),
         )
         remote_outchannel = channel.receive()
+
+        out = TerminalWriter()
 
         def write(s):
             out._file.write(s)
@@ -238,7 +239,7 @@ class WorkerFailSession:
 class StatRecorder:
     def __init__(self, rootdirlist: Sequence[Path]) -> None:
         self.rootdirlist = rootdirlist
-        self.statcache: Dict[Path, os.stat_result] = {}
+        self.statcache: dict[Path, os.stat_result] = {}
         self.check()  # snapshot state
 
     def fil(self, p: Path) -> bool:
@@ -256,7 +257,7 @@ class StatRecorder:
 
     def check(self, removepycfiles: bool = True) -> bool:
         changed = False
-        newstat: Dict[Path, os.stat_result] = {}
+        newstat: dict[Path, os.stat_result] = {}
         for rootdir in self.rootdirlist:
             for path in visit_path(rootdir, filter=self.fil, recurse=self.rec):
                 oldstat = self.statcache.pop(path, None)
