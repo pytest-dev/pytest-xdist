@@ -103,6 +103,9 @@ class EachScheduling:
     def mark_test_pending(self, item):
         raise NotImplementedError()
 
+    def remove_pending_tests_from_node(self, node, indices):
+        raise NotImplementedError()
+
     def remove_node(self, node):
         # KeyError if we didn't get an add_node() yet
         pending = self.node2pending.pop(node)

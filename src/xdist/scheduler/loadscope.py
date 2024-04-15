@@ -244,6 +244,9 @@ class LoadScopeScheduling:
     def mark_test_pending(self, item):
         raise NotImplementedError()
 
+    def remove_pending_tests_from_node(self, node, indices):
+        raise NotImplementedError()
+
     def _assign_work_unit(self, node):
         """Assign a work unit to a node."""
         assert self.workqueue
