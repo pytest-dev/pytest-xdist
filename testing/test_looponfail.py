@@ -143,7 +143,7 @@ class TestRemoteControl:
         control = RemoteControl(modcol.config)
         control.loop_once()
         assert control.failures
-        modcol_path = modcol.path  # type:ignore[attr-defined]
+        modcol_path = modcol.path
 
         modcol_path.write_text(
             textwrap.dedent(
@@ -173,7 +173,7 @@ class TestRemoteControl:
                 """
             )
         )
-        parent = modcol.path.parent.parent  # type: ignore[attr-defined]
+        parent = modcol.path.parent.parent
         monkeypatch.chdir(parent)
         modcol.config.args = [
             str(Path(x).relative_to(parent)) for x in modcol.config.args
@@ -332,7 +332,7 @@ class TestLooponFailing:
         remotecontrol = RemoteControl(modcol.config)
         orig_runsession = remotecontrol.runsession
 
-        def runsession_dups():
+        def runsession_dups() -> tuple[list[str], list[str], bool]:
             # twisted.trial test cases may report multiple errors.
             failures, reports, collection_failed = orig_runsession()
             print(failures)

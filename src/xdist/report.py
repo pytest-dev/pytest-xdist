@@ -1,7 +1,15 @@
+from __future__ import annotations
+
 from difflib import unified_diff
+from typing import Sequence
 
 
-def report_collection_diff(from_collection, to_collection, from_id, to_id):
+def report_collection_diff(
+    from_collection: Sequence[str],
+    to_collection: Sequence[str],
+    from_id: str,
+    to_id: str,
+) -> str | None:
     """Report the collected test difference between two nodes.
 
     :returns: detailed message describing the difference between the given

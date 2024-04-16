@@ -1,10 +1,15 @@
+from __future__ import annotations
+
 from collections import OrderedDict
+from typing import NoReturn
+from typing import Sequence
 
 import pytest
 
 from xdist.remote import Producer
 from xdist.report import report_collection_diff
 from xdist.workermanage import parse_spec_config
+from xdist.workermanage import WorkerController
 
 
 class LoadScopeScheduling:
@@ -85,13 +90,13 @@ class LoadScopeScheduling:
     :config: Config object, used for handling hooks.
     """
 
-    def __init__(self, config, log=None):
+    def __init__(self, config: pytest.Config, log: Producer | None = None) -> None:
         self.numnodes = len(parse_spec_config(config))
-        self.collection = None
+        self.collection: list[str] | None = None
 
-        self.workqueue = OrderedDict()
-        self.assigned_work = {}
-        self.registered_collections = {}
+        self.workqueue: OrderedDict[str, dict[str, bool]] = OrderedDict()
+        self.assigned_work: dict[WorkerController, dict[str, dict[str, bool]]] = {}
+        self.registered_collections: dict[WorkerController, list[str]] = {}
 
         if log is None:
             self.log = Producer("loadscopesched")
@@ -101,12 +106,12 @@ class LoadScopeScheduling:
         self.config = config
 
     @property
-    def nodes(self):
+    def nodes(self) -> list[WorkerController]:
         """A list of all active nodes in the scheduler."""
         return list(self.assigned_work.keys())
 
     @property
-    def collection_is_completed(self):
+    def collection_is_completed(self) -> bool:
         """Boolean indication initial test collection is complete.
 
         This is a boolean indicating all initial participating nodes have
@@ -116,7 +121,7 @@ class LoadScopeScheduling:
         return len(self.registered_collections) >= self.numnodes
 
     @property
-    def tests_finished(self):
+    def tests_finished(self) -> bool:
         """Return True if all tests have been executed by the nodes."""
         if not self.collection_is_completed:
             return False
@@ -131,7 +136,7 @@ class LoadScopeScheduling:
         return True
 
     @property
-    def has_pending(self):
+    def has_pending(self) -> bool:
         """Return True if there are pending test items.
 
         This indicates that collection has finished and nodes are still
@@ -147,7 +152,7 @@ class LoadScopeScheduling:
 
         return False
 
-    def add_node(self, node):
+    def add_node(self, node: WorkerController) -> None:
         """Add a new node to the scheduler.
 
         From now on the node will be assigned work units to be executed.
@@ -158,7 +163,7 @@ class LoadScopeScheduling:
         assert node not in self.assigned_work
         self.assigned_work[node] = {}
 
-    def remove_node(self, node):
+    def remove_node(self, node: WorkerController) -> str | None:
         """Remove a node from the scheduler.
 
         This should be called either when the node crashed or at shutdown time.
@@ -199,7 +204,9 @@ class LoadScopeScheduling:
 
         return crashitem
 
-    def add_node_collection(self, node, collection):
+    def add_node_collection(
+        self, node: WorkerController, collection: Sequence[str]
+    ) -> None:
         """Add the collected test items from a node.
 
         The collection is stored in the ``.registered_collections`` dictionary.
@@ -228,7 +235,9 @@ class LoadScopeScheduling:
 
         self.registered_collections[node] = list(collection)
 
-    def mark_test_complete(self, node, item_index, duration=0):
+    def mark_test_complete(
+        self, node: WorkerController, item_index: int, duration: float = 0
+    ) -> None:
         """Mark test item as completed by node.
 
         Called by the hook:
@@ -241,13 +250,17 @@ class LoadScopeScheduling:
         self.assigned_work[node][scope][nodeid] = True
         self._reschedule(node)
 
-    def mark_test_pending(self, item):
+    def mark_test_pending(self, item: str) -> NoReturn:
         raise NotImplementedError()
 
-    def remove_pending_tests_from_node(self, node, indices):
+    def remove_pending_tests_from_node(
+        self,
+        node: WorkerController,
+        indices: Sequence[int],
+    ) -> None:
         raise NotImplementedError()
 
-    def _assign_work_unit(self, node):
+    def _assign_work_unit(self, node: WorkerController) -> None:
         """Assign a work unit to a node."""
         assert self.workqueue
 
@@ -268,7 +281,7 @@ class LoadScopeScheduling:
 
         node.send_runtest_some(nodeids_indexes)
 
-    def _split_scope(self, nodeid):
+    def _split_scope(self, nodeid: str) -> str:
         """Determine the scope (grouping) of a nodeid.
 
         There are usually 3 cases for a nodeid::
@@ -292,12 +305,12 @@ class LoadScopeScheduling:
         """
         return nodeid.rsplit("::", 1)[0]
 
-    def _pending_of(self, workload):
+    def _pending_of(self, workload: dict[str, dict[str, bool]]) -> int:
         """Return the number of pending tests in a workload."""
         pending = sum(list(scope.values()).count(False) for scope in workload.values())
         return pending
 
-    def _reschedule(self, node):
+    def _reschedule(self, node: WorkerController) -> None:
         """Maybe schedule new items on the node.
 
         If there are any globally pending work units left then this will check
@@ -322,7 +335,7 @@ class LoadScopeScheduling:
         # Pop one unit of work and assign it
         self._assign_work_unit(node)
 
-    def schedule(self):
+    def schedule(self) -> None:
         """Initiate distribution of the test collection.
 
         Initiate scheduling of the items across the nodes.  If this gets called
@@ -352,7 +365,7 @@ class LoadScopeScheduling:
             return
 
         # Determine chunks of work (scopes)
-        unsorted_workqueue = {}
+        unsorted_workqueue: dict[str, dict[str, bool]] = {}
         for nodeid in self.collection:
             scope = self._split_scope(nodeid)
             work_unit = unsorted_workqueue.setdefault(scope, {})
@@ -389,7 +402,7 @@ class LoadScopeScheduling:
             for node in self.nodes:
                 node.shutdown()
 
-    def _check_nodes_have_same_collection(self):
+    def _check_nodes_have_same_collection(self) -> bool:
         """Return True if all nodes have collected the same items.
 
         If collections differ, this method returns False while logging

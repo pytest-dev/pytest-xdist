@@ -1,6 +1,13 @@
+from __future__ import annotations
+
+from typing import Sequence
+
+import pytest
+
 from xdist.remote import Producer
 from xdist.report import report_collection_diff
 from xdist.workermanage import parse_spec_config
+from xdist.workermanage import WorkerController
 
 
 class EachScheduling:
@@ -17,13 +24,13 @@ class EachScheduling:
     assigned the remaining items from the removed node.
     """
 
-    def __init__(self, config, log=None):
+    def __init__(self, config: pytest.Config, log: Producer | None = None) -> None:
         self.config = config
         self.numnodes = len(parse_spec_config(config))
-        self.node2collection = {}
-        self.node2pending = {}
-        self._started = []
-        self._removed2pending = {}
+        self.node2collection: dict[WorkerController, list[str]] = {}
+        self.node2pending: dict[WorkerController, list[int]] = {}
+        self._started: list[WorkerController] = []
+        self._removed2pending: dict[WorkerController, list[int]] = {}
         if log is None:
             self.log = Producer("eachsched")
         else:
@@ -31,12 +38,12 @@ class EachScheduling:
         self.collection_is_completed = False
 
     @property
-    def nodes(self):
+    def nodes(self) -> list[WorkerController]:
         """A list of all nodes in the scheduler."""
         return list(self.node2pending.keys())
 
     @property
-    def tests_finished(self):
+    def tests_finished(self) -> bool:
         if not self.collection_is_completed:
             return False
         if self._removed2pending:
@@ -47,7 +54,7 @@ class EachScheduling:
         return True
 
     @property
-    def has_pending(self):
+    def has_pending(self) -> bool:
         """Return True if there are pending test items.
 
         This indicates that collection has finished and nodes are
@@ -59,11 +66,13 @@ class EachScheduling:
                 return True
         return False
 
-    def add_node(self, node):
+    def add_node(self, node: WorkerController) -> None:
         assert node not in self.node2pending
         self.node2pending[node] = []
 
-    def add_node_collection(self, node, collection):
+    def add_node_collection(
+        self, node: WorkerController, collection: Sequence[str]
+    ) -> None:
         """Add the collected test items from a node.
 
         Collection is complete once all nodes have submitted their
@@ -97,26 +106,32 @@ class EachScheduling:
                     self.node2pending[node] = pending
                     break
 
-    def mark_test_complete(self, node, item_index, duration=0):
+    def mark_test_complete(
+        self, node: WorkerController, item_index: int, duration: float = 0
+    ) -> None:
         self.node2pending[node].remove(item_index)
 
-    def mark_test_pending(self, item):
+    def mark_test_pending(self, item: str) -> None:
         raise NotImplementedError()
 
-    def remove_pending_tests_from_node(self, node, indices):
+    def remove_pending_tests_from_node(
+        self,
+        node: WorkerController,
+        indices: Sequence[int],
+    ) -> None:
         raise NotImplementedError()
 
-    def remove_node(self, node):
+    def remove_node(self, node: WorkerController) -> str | None:
         # KeyError if we didn't get an add_node() yet
         pending = self.node2pending.pop(node)
         if not pending:
-            return
+            return None
         crashitem = self.node2collection[node][pending.pop(0)]
         if pending:
             self._removed2pending[node] = pending
         return crashitem
 
-    def schedule(self):
+    def schedule(self) -> None:
         """Schedule the test items on the nodes.
 
         If the node's pending list is empty it is a new node which

@@ -1,17 +1,18 @@
 from __future__ import annotations
 
-from typing import Any
 from typing import NamedTuple
+from typing import Sequence
 
 import pytest
 
 from xdist.remote import Producer
 from xdist.report import report_collection_diff
 from xdist.workermanage import parse_spec_config
+from xdist.workermanage import WorkerController
 
 
 class NodePending(NamedTuple):
-    node: Any
+    node: WorkerController
     pending: list[int]
 
 
@@ -63,26 +64,26 @@ class WorkStealingScheduling:
        simultaneous requests.
     """
 
-    def __init__(self, config, log=None):
+    def __init__(self, config: pytest.Config, log: Producer | None = None) -> None:
         self.numnodes = len(parse_spec_config(config))
-        self.node2collection = {}
-        self.node2pending = {}
-        self.pending = []
-        self.collection = None
+        self.node2collection: dict[WorkerController, list[str]] = {}
+        self.node2pending: dict[WorkerController, list[int]] = {}
+        self.pending: list[int] = []
+        self.collection: list[str] | None = None
         if log is None:
             self.log = Producer("workstealsched")
         else:
             self.log = log.workstealsched
         self.config = config
-        self.steal_requested_from_node = None
+        self.steal_requested_from_node: WorkerController | None = None
 
     @property
-    def nodes(self):
+    def nodes(self) -> list[WorkerController]:
         """A list of all nodes in the scheduler."""
         return list(self.node2pending.keys())
 
     @property
-    def collection_is_completed(self):
+    def collection_is_completed(self) -> bool:
         """Boolean indication initial test collection is complete.
 
         This is a boolean indicating all initial participating nodes
@@ -92,7 +93,7 @@ class WorkStealingScheduling:
         return len(self.node2collection) >= self.numnodes
 
     @property
-    def tests_finished(self):
+    def tests_finished(self) -> bool:
         """Return True if all tests have been executed by the nodes."""
         if not self.collection_is_completed:
             return False
@@ -106,7 +107,7 @@ class WorkStealingScheduling:
         return True
 
     @property
-    def has_pending(self):
+    def has_pending(self) -> bool:
         """Return True if there are pending test items.
 
         This indicates that collection has finished and nodes are
@@ -120,7 +121,7 @@ class WorkStealingScheduling:
                 return True
         return False
 
-    def add_node(self, node):
+    def add_node(self, node: WorkerController) -> None:
         """Add a new node to the scheduler.
 
         From now on the node will be allocated chunks of tests to
@@ -132,7 +133,9 @@ class WorkStealingScheduling:
         assert node not in self.node2pending
         self.node2pending[node] = []
 
-    def add_node_collection(self, node, collection):
+    def add_node_collection(
+        self, node: WorkerController, collection: Sequence[str]
+    ) -> None:
         """Add the collected test items from a node.
 
         The collection is stored in the ``.node2collection`` map.
@@ -153,7 +156,9 @@ class WorkStealingScheduling:
                 return
         self.node2collection[node] = list(collection)
 
-    def mark_test_complete(self, node, item_index, duration=None):
+    def mark_test_complete(
+        self, node: WorkerController, item_index: int, duration: float | None = None
+    ) -> None:
         """Mark test item as completed by node.
 
         This is called by the ``DSession.worker_testreport`` hook.
@@ -161,14 +166,19 @@ class WorkStealingScheduling:
         self.node2pending[node].remove(item_index)
         self.check_schedule()
 
-    def mark_test_pending(self, item):
+    def mark_test_pending(self, item: str) -> None:
+        assert self.collection is not None
         self.pending.insert(
             0,
             self.collection.index(item),
         )
         self.check_schedule()
 
-    def remove_pending_tests_from_node(self, node, indices):
+    def remove_pending_tests_from_node(
+        self,
+        node: WorkerController,
+        indices: Sequence[int],
+    ) -> None:
         """Node returned some test indices back in response to 'steal' command.
 
         This is called by ``DSession.worker_unscheduled``.
@@ -183,7 +193,7 @@ class WorkStealingScheduling:
         self.pending.extend(indices)
         self.check_schedule()
 
-    def check_schedule(self):
+    def check_schedule(self) -> None:
         """Reschedule tests/perform load balancing."""
         nodes_up = [
             NodePending(node, pending)
@@ -191,7 +201,7 @@ class WorkStealingScheduling:
             if not node.shutting_down
         ]
 
-        def get_idle_nodes():
+        def get_idle_nodes() -> list[WorkerController]:
             return [node for node, pending in nodes_up if len(pending) < MIN_PENDING]
 
         idle_nodes = get_idle_nodes()
@@ -235,10 +245,11 @@ class WorkStealingScheduling:
                 node.shutdown()
             return
 
+        assert steal_from is not None
         steal_from.node.send_steal(steal_from.pending[-num_steal:])
         self.steal_requested_from_node = steal_from.node
 
-    def remove_node(self, node):
+    def remove_node(self, node: WorkerController) -> str | None:
         """Remove a node from the scheduler.
 
         This should be called either when the node crashed or at
@@ -249,12 +260,12 @@ class WorkStealingScheduling:
 
         Return the item which was being executing while the node
         crashed or None if the node has no more pending items.
-
         """
         pending = self.node2pending.pop(node)
 
         # If node was removed without completing its assigned tests - it crashed
         if pending:
+            assert self.collection is not None
             crashitem = self.collection[pending.pop(0)]
         else:
             crashitem = None
@@ -268,7 +279,7 @@ class WorkStealingScheduling:
         self.check_schedule()
         return crashitem
 
-    def schedule(self):
+    def schedule(self) -> None:
         """Initiate distribution of the test collection.
 
         Initiate scheduling of the items across the nodes.  If this
@@ -298,14 +309,14 @@ class WorkStealingScheduling:
 
         self.check_schedule()
 
-    def _send_tests(self, node, num):
+    def _send_tests(self, node: WorkerController, num: int) -> None:
         tests_per_node = self.pending[:num]
         if tests_per_node:
             del self.pending[:num]
             self.node2pending[node].extend(tests_per_node)
             node.send_runtest_some(tests_per_node)
 
-    def _check_nodes_have_same_collection(self):
+    def _check_nodes_have_same_collection(self) -> bool:
         """Return True if all nodes have collected the same items.
 
         If collections differ, this method returns False while logging
