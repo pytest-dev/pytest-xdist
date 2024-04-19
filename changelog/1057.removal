@@ -1,3 +1,0 @@
-pytest>=7.0.0 is now required.
-
-execnet>=2.1.0 is now required.
