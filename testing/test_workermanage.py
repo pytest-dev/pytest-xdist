@@ -83,7 +83,7 @@ class TestNodeManagerPopen:
         assert len(call.specs) == 2
 
         call = hookrecorder.popcall("pytest_xdist_newgateway")
-        assert call.gateway.spec == execnet.XSpec("popen")
+        assert call.gateway.spec == execnet.XSpec("execmodel=main_thread_only//popen")
         assert call.gateway.id == "gw0"
         call = hookrecorder.popcall("pytest_xdist_newgateway")
         assert call.gateway.id == "gw1"
@@ -177,7 +177,7 @@ class TestHRSync:
         assert names == {"dir", "file.txt", "somedir"}
 
     def test_hrsync_one_host(self, source: Path, dest: Path) -> None:
-        gw = execnet.makegateway("popen//chdir=%s" % dest)
+        gw = execnet.makegateway("execmodel=main_thread_only//popen//chdir=%s" % dest)
         finished = []
         rsync = HostRSync(source)
         rsync.add_target_host(gw, finished=lambda: finished.append(1))

@@ -56,13 +56,15 @@ class NodeManager:
         self.testrunuid = self.config.getoption("testrunuid")
         if self.testrunuid is None:
             self.testrunuid = uuid.uuid4().hex
-        self.group = execnet.Group()
+        self.group = execnet.Group(execmodel="main_thread_only")
         if specs is None:
             specs = self._getxspecs()
         self.specs: list[execnet.XSpec] = []
         for spec in specs:
             if not isinstance(spec, execnet.XSpec):
                 spec = execnet.XSpec(spec)
+            if getattr(spec, "execmodel", None) != "main_thread_only":
+                spec = execnet.XSpec(f"execmodel=main_thread_only//{spec}")
             if not spec.chdir and not spec.popen:
                 spec.chdir = defaultchdir
             self.group.allocate_id(spec)
@@ -90,6 +92,8 @@ class NodeManager:
         spec: execnet.XSpec,
         putevent: Callable[[tuple[str, dict[str, Any]]], None],
     ) -> WorkerController:
+        if getattr(spec, "execmodel", None) != "main_thread_only":
+            spec = execnet.XSpec(f"execmodel=main_thread_only//{spec}")
         gw = self.group.makegateway(spec)
         self.config.hook.pytest_xdist_newgateway(gateway=gw)
         self.rsync_roots(gw)

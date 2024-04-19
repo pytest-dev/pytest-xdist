@@ -49,7 +49,7 @@ class WorkerSetup:
     def setup(self) -> None:
         self.pytester.chdir()
         # import os ; os.environ['EXECNET_DEBUG'] = "2"
-        self.gateway = execnet.makegateway()
+        self.gateway = execnet.makegateway("execmodel=main_thread_only//popen")
         self.config = config = self.pytester.parseconfigure()
         putevent = self.events.put if self.use_callback else None
 
