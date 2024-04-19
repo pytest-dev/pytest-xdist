@@ -1,1 +1,0 @@
-The internals of pytest-xdist are now fully typed. The typing is not exposed yet.

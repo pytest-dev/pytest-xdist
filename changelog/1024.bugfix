@@ -1,2 +1,0 @@
-Added proper handling of ``shouldstop`` (such as set by ``--max-fail``) and ``shouldfail`` conditions in workers.
-Previously, a worker might have continued executing further tests before the controller could terminate the session.
