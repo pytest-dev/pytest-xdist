@@ -312,6 +312,11 @@ class WorkerController:
 
     def setup(self) -> None:
         self.log("setting up worker session")
+        # Cache rinfo for backward compatibility, since pytest-cov
+        # accesses rinfo while the main thread is busy executing our
+        # remote_exec call, which triggers a deadlock error for the
+        # main_thread_only execmodel if the rinfo has not been cached.
+        self.gateway._rinfo()
         spec = self.gateway.spec
         args = [str(x) for x in self.config.invocation_params.args or ()]
         option_dict = {}
