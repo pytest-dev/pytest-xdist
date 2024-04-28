@@ -1,5 +1,15 @@
+pytest-xdist 3.6.1 (2024-04-28)
+===============================
+
+Bug Fixes
+---------
+
+- `#1071 <https://github.com/pytest-dev/pytest-xdist/issues/1071>`_: Add backward compatibility for deadlock issue with the ``execnet`` new ``main_thread_only`` "execmodel" triggered when pytest-cov accesses rinfo.
+
 pytest-xdist 3.6.0 (2024-04-19)
 ===============================
+
+This release was YANKED due to a regression fixed in 3.6.1.
 
 Features
 --------
