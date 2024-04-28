@@ -54,9 +54,6 @@ testing = ["filelock"]
 psutil = ["psutil>=3.0"]
 setproctitle = ["setproctitle"]
 
-[tool.setuptools]
-include-package-data = false
-
 [tool.setuptools_scm]
 write_to = "src/xdist/_version.py"
 
