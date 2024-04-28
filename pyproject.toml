@@ -56,11 +56,6 @@ setproctitle = ["setproctitle"]
 
 [tool.setuptools]
 zip-safe = false
-platforms = [
-    "linux",
-    "osx",
-    "win32",
-]
 include-package-data = false
 
 [tool.setuptools_scm]
