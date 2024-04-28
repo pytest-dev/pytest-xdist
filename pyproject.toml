@@ -55,7 +55,6 @@ psutil = ["psutil>=3.0"]
 setproctitle = ["setproctitle"]
 
 [tool.setuptools]
-zip-safe = false
 include-package-data = false
 
 [tool.setuptools_scm]
