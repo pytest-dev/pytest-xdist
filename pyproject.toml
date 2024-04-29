@@ -54,17 +54,14 @@ testing = ["filelock"]
 psutil = ["psutil>=3.0"]
 setproctitle = ["setproctitle"]
 
-[tool.setuptools]
-zip-safe = false
-platforms = [
-    "linux",
-    "osx",
-    "win32",
-]
-include-package-data = false
-
 [tool.setuptools_scm]
 write_to = "src/xdist/_version.py"
+
+[tool.pytest.ini_options]
+# pytest-services also defines a worker_id fixture, disable
+# it so they don't conflict with each other (#611).
+addopts = "-ra -p no:pytest-services"
+testpaths = ["testing"]
 
 [tool.ruff]
 src = ["src"]
