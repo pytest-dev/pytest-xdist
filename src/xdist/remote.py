@@ -67,6 +67,7 @@ def worker_title(title: str) -> None:
 class Marker(enum.Enum):
     SHUTDOWN = 0
     QUEUE_REPLACED = 1
+    EMPTY = 2
 
 
 class WorkerInteractor:
@@ -144,6 +145,8 @@ class WorkerInteractor:
             self.torun.put(Marker.SHUTDOWN)
         elif name == "steal":
             self.steal(kwargs["indices"])
+        elif name == "empty":
+            self.torun.put(Marker.EMPTY)
 
     def steal(self, indices: Sequence[int]) -> None:
         indices_set = set(indices)
@@ -171,6 +174,8 @@ class WorkerInteractor:
         self.channel.setcallback(self.handle_command, endmarker=Marker.SHUTDOWN)
         self.nextitem_index = self._get_next_item_index()
         while self.nextitem_index is not Marker.SHUTDOWN:
+            while self.nextitem_index is Marker.EMPTY:
+                self.nextitem_index = self._get_next_item_index()
             self.run_one_test()
             if session.shouldfail or session.shouldstop:
                 break
@@ -183,7 +188,7 @@ class WorkerInteractor:
 
         items = self.session.items
         item = items[self.item_index]
-        if self.nextitem_index is Marker.SHUTDOWN:
+        if self.nextitem_index in [Marker.SHUTDOWN, Marker.EMPTY]:
             nextitem = None
         else:
             assert self.nextitem_index is not None
