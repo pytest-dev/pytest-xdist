@@ -183,7 +183,7 @@ class WorkerInteractor:
 
         items = self.session.items
         item = items[self.item_index]
-        if self.nextitem_index is Marker.SHUTDOWN:
+        if self.nextitem_index is Marker.SHUTDOWN or self.item_index == self.nextitem_index:
             nextitem = None
         else:
             assert self.nextitem_index is not None
