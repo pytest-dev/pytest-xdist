@@ -23,7 +23,8 @@ def report_collection_diff(
         "Different tests were collected between {from_id} and {to_id}. "
         "The difference is:\n"
         "{diff}\n"
-        "To see why this happens see Known limitations in documentation"
+        "To see why this happens see 'Known limitations' in documentation "
+        "for pytest-xdist"
     ).format(from_id=from_id, to_id=to_id, diff="\n".join(diff))
     msg = "\n".join(x.rstrip() for x in error_message.split("\n"))
     return msg
