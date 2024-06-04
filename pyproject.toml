@@ -112,6 +112,7 @@ ignore = [
     "PLW0120",  # remove the else and dedent its contents
     "PLW2901",  # for loop variable overwritten by assignment target
     "PLR5501",  # Use `elif` instead of `else` then `if`
+    "UP031",  # Use format specifiers instead of percent format
 ]
 
 [tool.ruff.lint.pycodestyle]
