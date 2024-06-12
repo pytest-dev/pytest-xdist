@@ -136,7 +136,7 @@ def pytest_addoption(parser: pytest.Parser) -> None:
             "Reorders tests when used in conjunction with loadscope.\n"
             "Will order tests by number of tests per scope as a best-effort"
             " attempt to evenly distribute scopes across all workers."
-        )
+        ),
     )
     group.addoption(
         "--tx",
