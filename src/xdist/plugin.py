@@ -128,6 +128,17 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         ),
     )
     group.addoption(
+        "--no-loadscope-reorder",
+        action="store_true",
+        dest="noloadscopenoreorder",
+        default=False,
+        help=(
+            "Reorders tests when used in conjunction with loadscope.\n"
+            "Will order tests by number of tests per scope as a best-effort"
+            " attempt to evenly distribute scopes across all workers."
+        )
+    )
+    group.addoption(
         "--tx",
         dest="tx",
         action="append",
