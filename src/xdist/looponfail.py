@@ -166,7 +166,7 @@ def init_worker_session(
     import sys
 
     outchannel = channel.gateway.newchannel()
-    sys.stdout = sys.stderr = outchannel.makefile("w")  # type: ignore[assignment]
+    sys.stdout = sys.stderr = outchannel.makefile("w")
     channel.send(outchannel)
     # prune sys.path to not contain relative paths
     newpaths = []
