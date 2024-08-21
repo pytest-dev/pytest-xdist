@@ -207,7 +207,7 @@ class WorkerInteractor:
         items: list[pytest.Item],
     ) -> None:
         # add the group name to nodeid as suffix if --dist=loadgroup
-        if config.getvalue("loadgroup"):
+        if config.getoption("dist") == "loadgroup":
             for item in items:
                 mark = item.get_closest_marker("xdist_group")
                 if not mark:
@@ -356,7 +356,6 @@ def getinfodict() -> WorkerInfo:
 
 
 def setup_config(config: pytest.Config, basetemp: str | None) -> None:
-    config.option.loadgroup = config.getvalue("dist") == "loadgroup"
     config.option.looponfail = False
     config.option.usepdb = False
     config.option.dist = "no"
