@@ -272,7 +272,10 @@ class DSession:
             terminalreporter.write_sep("=", f"xdist: {self._summary_report}")
 
     def worker_collectionfinish(
-        self, node: WorkerController, ids: Sequence[str]
+        self,
+        node: WorkerController,
+        ids: Sequence[str],
+        loadgroup_scopes: dict[str, str],
     ) -> None:
         """Worker has finished test collection.
 
@@ -290,6 +293,7 @@ class DSession:
         assert self._session is not None
         self._session.testscollected = len(ids)
         assert self.sched is not None
+        self.sched.loadgroup_scopes = loadgroup_scopes
         self.sched.add_node_collection(node, ids)
         if self.terminal:
             self.trdist.setstatus(

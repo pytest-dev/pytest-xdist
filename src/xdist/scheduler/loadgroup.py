@@ -52,8 +52,7 @@ class LoadGroupScheduling(LoadScopeScheduling):
             gname
             gname
         """
-        if nodeid.rfind("@") > nodeid.rfind("]"):
-            # check the index of ']' to avoid the case: parametrize mark value has '@'
-            return nodeid.split("@")[-1]
+        if nodeid in self.loadgroup_scopes:
+            return self.loadgroup_scopes[nodeid]
         else:
-            return nodeid
+            return super()._split_scope(nodeid)

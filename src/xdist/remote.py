@@ -201,30 +201,25 @@ class WorkerInteractor:
             "runtest_protocol_complete", item_index=self.item_index, duration=duration
         )
 
-    def pytest_collection_modifyitems(
-        self,
-        config: pytest.Config,
-        items: list[pytest.Item],
-    ) -> None:
-        # add the group name to nodeid as suffix if --dist=loadgroup
-        if config.getvalue("loadgroup"):
-            for item in items:
-                mark = item.get_closest_marker("xdist_group")
-                if not mark:
-                    continue
-                gname = (
-                    mark.args[0]
-                    if len(mark.args) > 0
-                    else mark.kwargs.get("name", "default")
-                )
-                item._nodeid = f"{item.nodeid}@{gname}"
-
     @pytest.hookimpl
     def pytest_collection_finish(self, session: pytest.Session) -> None:
+        # collect the scope for each node for --dist=loadgroup
+        loadgroup_scopes = {}
+        for item in session.items:
+            mark = item.get_closest_marker("xdist_group")
+            if not mark:
+                continue
+            gname = (
+                mark.args[0]
+                if len(mark.args) > 0
+                else mark.kwargs.get("name", "default")
+            )
+            loadgroup_scopes[item.nodeid] = gname
         self.sendevent(
             "collectionfinish",
             topdir=str(self.config.rootpath),
             ids=[item.nodeid for item in session.items],
+            loadgroup_scopes=loadgroup_scopes,
         )
 
     @pytest.hookimpl
@@ -356,7 +351,6 @@ def getinfodict() -> WorkerInfo:
 
 
 def setup_config(config: pytest.Config, basetemp: str | None) -> None:
-    config.option.loadgroup = config.getvalue("dist") == "loadgroup"
     config.option.looponfail = False
     config.option.usepdb = False
     config.option.dist = "no"
