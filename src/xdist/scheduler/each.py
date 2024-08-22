@@ -31,11 +31,16 @@ class EachScheduling:
         self.node2pending: dict[WorkerController, list[int]] = {}
         self._started: list[WorkerController] = []
         self._removed2pending: dict[WorkerController, list[int]] = {}
+        self.group_markers: dict[str, str] = {}
+
         if log is None:
             self.log = Producer("eachsched")
         else:
             self.log = log.eachsched
         self.collection_is_completed = False
+
+    def set_group_markers(self, group_markers: dict[str, str]) -> None:
+        self.group_markers = group_markers
 
     @property
     def nodes(self) -> list[WorkerController]:

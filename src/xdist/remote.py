@@ -204,7 +204,7 @@ class WorkerInteractor:
     @pytest.hookimpl
     def pytest_collection_finish(self, session: pytest.Session) -> None:
         # collect the scope for each node for --dist=loadgroup
-        loadgroup_scopes = {}
+        group_markers = {}
         for item in session.items:
             mark = item.get_closest_marker("xdist_group")
             if not mark:
@@ -214,12 +214,12 @@ class WorkerInteractor:
                 if len(mark.args) > 0
                 else mark.kwargs.get("name", "default")
             )
-            loadgroup_scopes[item.nodeid] = gname
+            group_markers[item.nodeid] = gname
         self.sendevent(
             "collectionfinish",
             topdir=str(self.config.rootpath),
             ids=[item.nodeid for item in session.items],
-            loadgroup_scopes=loadgroup_scopes,
+            group_markers=group_markers,
         )
 
     @pytest.hookimpl

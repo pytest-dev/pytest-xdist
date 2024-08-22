@@ -63,12 +63,16 @@ class LoadScheduling:
         self.node2pending: dict[WorkerController, list[int]] = {}
         self.pending: list[int] = []
         self.collection: list[str] | None = None
+        self.group_markers: dict[str, str] = {}
         if log is None:
             self.log = Producer("loadsched")
         else:
             self.log = log.loadsched
         self.config = config
         self.maxschedchunk = self.config.getoption("maxschedchunk")
+
+    def set_group_markers(self, group_markers: dict[str, str]) -> None:
+        self.group_markers = group_markers
 
     @property
     def nodes(self) -> list[WorkerController]:

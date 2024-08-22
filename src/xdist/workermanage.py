@@ -422,7 +422,7 @@ class WorkerController:
                     eventname,
                     node=self,
                     ids=kwargs["ids"],
-                    loadgroup_scopes=kwargs["loadgroup_scopes"],
+                    group_markers=kwargs["group_markers"],
                 )
             elif eventname == "runtest_protocol_complete":
                 self.notify_inproc(eventname, node=self, **kwargs)
