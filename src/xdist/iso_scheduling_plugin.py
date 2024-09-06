@@ -22,9 +22,9 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-"""Pytest Fixtures for supporting the PARALLEL_MONO_SCOPE Test Distribution Mode.
+"""Pytest Fixtures for supporting users of isoscope scheduling.
 
-NOTE: These fixtures are NOT compatible with any other Test Distribution Modes.
+NOTE: These fixtures are NOT compatible with any other xdist schedulers.
 
 NOTE: DO NOT IMPORT this module. It needs to be loaded via pytest's
 `conftest.pytest_plugins` mechanism. Pytest doc discourages importing fixtures
@@ -46,8 +46,8 @@ from typing import TYPE_CHECKING
 import filelock
 import pytest
 
-from utils.common.parallel_mono_scope_utils import (
-    ParallelMonoScopeFixture,
+from xdist.iso_scheduling_utils import (
+    IsoSchedulingFixture,
     DistributedSetupCoordinator,
     DistributedSetupContext,
     DistributedTeardownContext,
@@ -63,16 +63,24 @@ _LOGGER = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope='session')
-def parallel_mono_scope(
-        tmp_path_factory: pytest.TempPathFactory,
-        testrun_uid: str,
-        worker_id: str
-        ) -> ParallelMonoScopeFixture:
+def iso_scheduling(
+    tmp_path_factory: pytest.TempPathFactory,
+    testrun_uid: str,
+    worker_id: str
+) -> IsoSchedulingFixture:
     """A session-scoped pytest fixture for coordinating setup/teardown of test
-    scope/class which is executing in the parallel_mono_scope Test Distribution
-    Mode.
+    scope/class which is executing under isoscope scheduling.
 
-    NOTE: Each XDist remote worker is running its own Pytest Session.
+    Based on the filelock idea described in section
+    "Making session-scoped fixtures execute only once" of
+    https://pytest-xdist.readthedocs.io/en/stable/how-to.html.
+
+    NOTE: Each XDist remote worker is running its own Pytest Session, so we want
+    only the worker that starts its session first to execute the setup logic and
+    only the worker that finishes its session last to execute the teardown logic
+    using a form of distributed coordination. This way, setup is executed exactly
+    once before any worker executes any of the scope's tests, and teardown is
+    executed only after the last worker finishes test execution.
 
     USAGE EXAMPLE:
 
@@ -82,24 +90,23 @@ def parallel_mono_scope(
         import pytest
 
         if TYPE_CHECKING:
-            from utils.common.parallel_mono_scope_utils import (
-                ParallelMonoScopeFixture,
+            from xdist.iso_scheduling_utils import (
+                IsoSchedulingFixture,
                 DistributedSetupContext,
                 DistributedTeardownContext
             )
 
-        @pytest.mark.parallel_mono_scope
-        class TestDeng12345ParallelMonoScope:
+        class TestSomething:
 
             @classmethod
             @pytest.fixture(scope='class', autouse=True)
             def distributed_setup_and_teardown(
                     cls,
-                    parallel_mono_scope: ParallelMonoScopeFixture:
+                    iso_scheduling: IsoSchedulingFixture:
                     request: pytest.FixtureRequest):
 
                 # Distributed Setup and Teardown
-                with parallel_mono_scope.coordinate_setup_teardown(
+                with iso_scheduling.coordinate_setup_teardown(
                         setup_request=request) as coordinator:
                     # Distributed Setup
                     coordinator.maybe_call_setup(cls.patch_system_under_test)
@@ -126,12 +133,13 @@ def parallel_mono_scope(
                 # Fetch state from `teardown_context.client_dir` and revert
                 # changes made by `patch_system_under_test()`.
 
-            perms, tc_ids = generate_tests(
-                os.path.realpath(__file__),
-                TestDistributionModeEnum.PARALLEL_MONO_SCOPE)
+            def test_case1(self)
+                ...
 
-            @pytest.mark.parametrize('test_data', perms, ids=tc_ids)
-            def test_case(self, test_data: dict[str, dict])
+            def test_case2(self)
+                ...
+
+            def test_case3(self)
                 ...
         ```
 
@@ -146,17 +154,17 @@ def parallel_mono_scope(
         yields an instance of `DistributedSetupCoordinator` for the current
         Pytest Session.
     """
-    return _ParallelMonoScopeFixtureImpl(tmp_path_factory=tmp_path_factory,
-                                         testrun_uid=testrun_uid,
-                                         worker_id=worker_id)
+    return _IsoSchedulingFixtureImpl(tmp_path_factory=tmp_path_factory,
+                                     testrun_uid=testrun_uid,
+                                     worker_id=worker_id)
 
 
-class _ParallelMonoScopeFixtureImpl(ParallelMonoScopeFixture):
+class _IsoSchedulingFixtureImpl(IsoSchedulingFixture):
     """Context manager yielding a new instance of the implementation of the
     `DistributedSetupCoordinator` interface.
 
-    An instance of _ParallelMonoScopeFixtureImpl is returned by our pytest
-    fixture `parallel_mono_scope`.
+    An instance of _IsoSchedulingFixtureImpl is returned by our pytest
+    fixture `iso_scheduling`.
     """
     # pylint: disable=too-few-public-methods
 
@@ -178,9 +186,9 @@ class _ParallelMonoScopeFixtureImpl(ParallelMonoScopeFixture):
 
     @contextlib.contextmanager
     def coordinate_setup_teardown(
-            self,
-            setup_request: pytest.FixtureRequest
-            ) -> Generator[DistributedSetupCoordinator, None, None]:
+        self,
+        setup_request: pytest.FixtureRequest
+    ) -> Generator[DistributedSetupCoordinator, None, None]:
         """Context manager that yields an instance of
         `DistributedSetupCoordinator` for distributed coordination of Setup
         and Teardown.
@@ -206,11 +214,11 @@ class _ParallelMonoScopeFixtureImpl(ParallelMonoScopeFixture):
 
 
 class _DistributedSetupCoordinatorImpl(DistributedSetupCoordinator):
-    """Distributed scope/class setup/teardown coordination for the
-    `parallel_mono_scope` Test Distribution Mode.
+    """Distributed scope/class setup/teardown coordination for isoscope
+    scheduling.
 
     NOTE: do not instantiate this class directly. Use the
-    `parallel_mono_scope` fixture instead!
+    `iso_scheduling` fixture instead!
 
     """
     _DISTRIBUTED_SETUP_ROOT_DIR_LINK_NAME = 'distributed_setup'
@@ -248,16 +256,16 @@ class _DistributedSetupCoordinatorImpl(DistributedSetupCoordinator):
         self._teardown_context: Optional[DistributedTeardownContext] = None
 
     def maybe_call_setup(
-            self,
-            setup_callback: Callable[[DistributedSetupContext], None],
-            timeout: float = DistributedSetupCoordinator.DEFAULT_TIMEOUT_SEC
-            ) -> None:
+        self,
+        setup_callback: Callable[[DistributedSetupContext], None],
+        timeout: float = DistributedSetupCoordinator.DEFAULT_TIMEOUT_SEC
+    ) -> None:
         """Invoke the Setup callback only if distributed setup has not been
         performed yet from any other XDist worker for your test scope.
         Process-safe.
 
         Call `maybe_call_setup` from the pytest setup-teardown fixture of your
-        `PARALLEL_MONO_SCOPE` test (typically test class) if it needs to
+        isoscope-scheduled test (typically test class) if it needs to
         initialize a resource which is common to all of its test cases which may
         be executing in different XDist worker processes (such as a subnet in
         `subnet.xml`).
@@ -272,8 +280,7 @@ class _DistributedSetupCoordinatorImpl(DistributedSetupCoordinator):
         :return: An instance of `DistributedSetupContext` which MUST be passed
             in the corresponding call to `maybe_call_teardown`.
 
-        :raise parallel_mono_scope.CoordinationTimeoutError: If attempt to
-            acquire the lock times out.
+        :raise CoordinationTimeoutError: If attempt to acquire the lock times out.
         """
         # `maybe_call_setup()` may be called only once per instance of
         # `_SetupCoordinator`
@@ -298,16 +305,16 @@ class _DistributedSetupCoordinatorImpl(DistributedSetupCoordinator):
                 setup_callback(self._setup_context)
 
     def maybe_call_teardown(
-            self,
-            teardown_callback: Callable[[DistributedTeardownContext], None],
-            timeout: float = DistributedSetupCoordinator.DEFAULT_TIMEOUT_SEC
-            ) -> None:
+        self,
+        teardown_callback: Callable[[DistributedTeardownContext], None],
+        timeout: float = DistributedSetupCoordinator.DEFAULT_TIMEOUT_SEC
+    ) -> None:
         """Invoke the Teardown callback only in when called in the context of
         the final XDist Worker process to have finished the execution of the
         tests for your test scope. Process-safe.
 
         Call `maybe_call_teardown` from the pytest setup-teardown fixture of
-        your `PARALLEL_MONO_SCOPE` test (typically test class) if it needs to
+        your isoscope-scheduled test (typically test class) if it needs to
         initialize a resource which is common to all of its test cases which may
         be executing in different XDist worker processes (such as a subnet in
         `subnet.xml`).
@@ -320,8 +327,7 @@ class _DistributedSetupCoordinatorImpl(DistributedSetupCoordinator):
             invoked.
         :param timeout: Lock acquisition timeout in seconds
 
-        :raise parallel_mono_scope.CoordinationTimeoutError: If attempt to
-            acquire the lock times out.
+        :raise CoordinationTimeoutError: If attempt to acquire the lock times out.
         """
         # Make sure `maybe_call_setup()` was already called on this instance
         # of `_SetupCoordinator`
@@ -359,8 +365,7 @@ def _map_file_lock_exception(f: Callable):
 
 class _DistributedSetupCoordinationImpl:
     """Low-level implementation of Context Managers for Coordinating
-    Distributed Setup and Teardown for the `parallel_mono_scope`
-    Test Distribution Mode.
+    Distributed Setup and Teardown for users of isoscope scheduling.
     """
     _ROOT_STATE_FILE_NAME = 'root_state.json'
     _ROOT_LOCK_FILE_NAME = 'lock'
@@ -379,9 +384,9 @@ class _DistributedSetupCoordinationImpl:
 
         @classmethod
         def load_from_file_path(
-                cls,
-                state_file_path: pathlib.Path
-                ) -> _DistributedSetupCoordinationImpl.DistributedState:
+            cls,
+            state_file_path: pathlib.Path
+        ) -> _DistributedSetupCoordinationImpl.DistributedState:
             """Load the state instance from the given file path.
 
             :param state_file_path:
@@ -407,7 +412,7 @@ class _DistributedSetupCoordinationImpl:
                 'teardown_count': self.teardown_count
             }
 
-        def save_to_file_path(self, state_file_path: pathlib.Path):
+        def save_to_file_path(self, state_file_path: pathlib.Path) -> None:
             """Save this state instance to the given file path.
 
             :param state_file_path:
@@ -419,14 +424,14 @@ class _DistributedSetupCoordinationImpl:
     @contextlib.contextmanager
     @_map_file_lock_exception
     def acquire_distributed_setup(
-            cls,
-            root_context_dir: pathlib.Path,
-            worker_id: str,
-            setup_request: pytest.FixtureRequest,
-            timeout: float
-            ) -> Generator[DistributedSetupContext, None, None]:
+        cls,
+        root_context_dir: pathlib.Path,
+        worker_id: str,
+        setup_request: pytest.FixtureRequest,
+        timeout: float
+    ) -> Generator[DistributedSetupContext, None, None]:
         """Low-level implementation of Context Manager for Coordinating
-        Distributed Setup for the `parallel_mono_scope` Test Distribution Mode.
+        Distributed Setup for isoscope scheduling.
 
         :param root_context_dir: Scope/class-specific root directory for
             saving this context manager's state. This directory is common to
@@ -436,8 +441,7 @@ class _DistributedSetupCoordinationImpl:
             directly by the calling setup-teardown fixture.
         :param timeout: Lock acquisition timeout in seconds
 
-        :raise parallel_mono_scope.CoordinationTimeoutError: If attempt to
-            acquire the lock times out.
+        :raise CoordinationTimeoutError: If attempt to acquire the lock times out.
         """
         #
         # Before control passes to the managed code block
@@ -497,21 +501,19 @@ class _DistributedSetupCoordinationImpl:
     @contextlib.contextmanager
     @_map_file_lock_exception
     def acquire_distributed_teardown(
-            cls,
-            setup_context: DistributedSetupContext,
-            timeout: float
-            ) -> Generator[DistributedTeardownContext, None, None]:
+        cls,
+        setup_context: DistributedSetupContext,
+        timeout: float
+    ) -> Generator[DistributedTeardownContext, None, None]:
         """Low-level implementation of Context Manager for Coordinating
-        Distributed Teardown for the `parallel_mono_scope` Test Distribution
-        Mode.
+        Distributed Teardown for the isoscope scheduling.
 
         :param setup_context: The instance of `DistributedSetupContext` that was
             yielded by the corresponding use of the
             `_distributed_setup_permission` context manager.
         :param timeout: Lock acquisition timeout in seconds
 
-        :raise parallel_mono_scope.CoordinationTimeoutError: If attempt to
-            acquire the lock times out.
+        :raise CoordinationTimeoutError: If attempt to acquire the lock times out.
         """
         #
         # Before control passes to the managed code block
@@ -571,8 +573,9 @@ class _DistributedSetupCoordinationImpl:
 
     @classmethod
     def _get_root_state_file_path(
-            cls,
-            root_state_dir: pathlib.Path) -> pathlib.Path:
+        cls,
+        root_state_dir: pathlib.Path
+    ) -> pathlib.Path:
         """Return the path of the file for storing the root state, creating all
         parent directories if they don't exist yet.
 
@@ -584,8 +587,9 @@ class _DistributedSetupCoordinationImpl:
 
     @classmethod
     def _get_root_lock_file_path(
-            cls,
-            root_lock_dir: pathlib.Path) -> pathlib.Path:
+        cls,
+        root_lock_dir: pathlib.Path
+    ) -> pathlib.Path:
         """Return the path of the lock file, creating all parent directories if
         they don't exist yet.
 

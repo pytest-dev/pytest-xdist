@@ -1,4 +1,5 @@
 from xdist.scheduler.each import EachScheduling as EachScheduling
+from xdist.scheduler.isoscope import IsoScopeScheduling as IsoScopeScheduling
 from xdist.scheduler.load import LoadScheduling as LoadScheduling
 from xdist.scheduler.loadfile import LoadFileScheduling as LoadFileScheduling
 from xdist.scheduler.loadgroup import LoadGroupScheduling as LoadGroupScheduling

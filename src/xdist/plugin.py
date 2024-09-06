@@ -103,6 +103,7 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         action="store",
         choices=[
             "each",
+            "isoscope",
             "load",
             "loadscope",
             "loadfile",
@@ -115,6 +116,14 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         help=(
             "Set mode for distributing tests to exec environments.\n\n"
             "each: Send each test to all available environments.\n\n"
+            "isoscope: Scope Isolation Scheduler."
+            " Tests are grouped by module for test functions and by class for test methods."
+            " Tests are executed one group at a time, distributed across available workers. This "
+            " groupwise isolation guarantees that all tests in one group complete execution before"
+            " running another group of tests. This can be useful when module-level or class-level"
+            " fixtures of one group could create undesirable side-effects for tests in other test groups,"
+            " while taking advantage of distributed execution of tests within each group. Grouping by"
+            " class takes priority over grouping by module.\n\n"
             "load: Load balance by sending any pending test to any"
             " available environment.\n\n"
             "loadscope: Load balance by sending pending groups of tests in"

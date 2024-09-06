@@ -35,6 +35,7 @@ classifiers = [
 requires-python = ">=3.8"
 dependencies = [
     "execnet>=2.1",
+    "filelock>=3.13.1",
     "pytest>=7.0.0",
 ]
 dynamic = ["version"]
@@ -48,6 +49,7 @@ Tracker = "https://github.com/pytest-dev/pytest-xdist/issues"
 
 [project.entry-points.pytest11]
 xdist = "xdist.plugin"
+"xdist.iso_scheduling_plugin" = "xdist.iso_scheduling_plugin"
 "xdist.looponfail" = "xdist.looponfail"
 
 [project.optional-dependencies]

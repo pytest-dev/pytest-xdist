@@ -37,8 +37,7 @@ Properties of this scheduler:
        next test scope/class.
 
 Credits:
-* Implementation of `_split_scope()` and public method documentation in
-  DistScopeIsoScheduling:
+* Implementation of `_split_scope()` and public method documentation:
     - borrowed from the builtin `loadscope` scheduler
 """  # pylint: disable=too-many-lines
 from __future__ import annotations
@@ -56,13 +55,13 @@ from xdist.workermanage import parse_spec_config
 
 
 if TYPE_CHECKING:
-    from typing import Optional
+    from typing import NoReturn, Optional, Sequence
     from collections.abc import Generator, Iterable, ValuesView
     import xdist.remote
     from xdist.workermanage import WorkerController
 
 
-class DistScopeIsoScheduling:  # pylint: disable=too-many-instance-attributes
+class IsoScopeScheduling:  # pylint: disable=too-many-instance-attributes
     """Distributed Scope Isolation Scheduling: Implement scheduling across
     remote workers, distributing and executing one scope at a time, such that
     each scope is executed in isolation from tests in other scopes.
@@ -111,13 +110,15 @@ class DistScopeIsoScheduling:  # pylint: disable=too-many-instance-attributes
         # `WAIT_READY_TO_ACTIVATE_SCOPE`.
         FENCE = 'FENCE'
 
-    def __init__(self, config: pytest.Config,
-                 log: xdist.remote.Producer):
+    def __init__(
+            self,
+            config: pytest.Config,
+            log: xdist.remote.Producer):
         self._config = config
         self._log: xdist.remote.Producer = log.distscopeisosched
 
         # Current scheduling state
-        self._state: DistScopeIsoScheduling._State = \
+        self._state: IsoScopeScheduling._State = \
             self._State.WAIT_READY_TO_ACTIVATE_SCOPE
 
         # Scope ID of tests that are currently executing; `None` prior to the
@@ -229,7 +230,7 @@ class DistScopeIsoScheduling:  # pylint: disable=too-many-instance-attributes
 
         return False
 
-    def add_node(self, node: WorkerController):
+    def add_node(self, node: WorkerController) -> None:
         """Add a new node to the scheduler's pending worker collection.
 
         The node will be activated and assigned tests to be executed only after
@@ -316,8 +317,11 @@ class DistScopeIsoScheduling:  # pylint: disable=too-many-instance-attributes
 
         return crashed_test_id
 
-    def add_node_collection(self, node: WorkerController,
-                            collection: list[str]):
+    def add_node_collection(
+        self,
+        node: WorkerController,
+        collection: Sequence[str]
+    ) -> None:
         """Register the collected test items from a Remote Worker node.
 
         If the official test collection has been established already, validate
@@ -421,8 +425,12 @@ class DistScopeIsoScheduling:  # pylint: disable=too-many-instance-attributes
         for test in shuffled_test_collection:
             self._workset_queue.add_test(test)
 
-    def mark_test_complete(self, node: WorkerController, item_index: int,
-                           duration):
+    def mark_test_complete(
+        self,
+        node: WorkerController,
+        item_index: int,
+        duration: float
+    ) -> None:
         """Mark test item as completed by node and remove from pending tests
         in the worker and reschedule.
 
@@ -444,11 +452,18 @@ class DistScopeIsoScheduling:  # pylint: disable=too-many-instance-attributes
 
         self._reschedule_workers()
 
-    def mark_test_pending(self, item):
+    def mark_test_pending(self, item: str) -> NoReturn:
         """Not supported"""
         raise NotImplementedError()
 
-    def schedule(self):
+    def remove_pending_tests_from_node(
+        self,
+        node: WorkerController,
+        indices: Sequence[int],
+    ) -> NoReturn:
+        raise NotImplementedError()
+
+    def schedule(self) -> None:
         """Initiate distribution of the test collection.
 
         Initiate scheduling of the items across the nodes.  If this gets called
@@ -497,7 +512,7 @@ class DistScopeIsoScheduling:  # pylint: disable=too-many-instance-attributes
         """
         return self._worker_by_node.values()
 
-    def _reschedule_workers(self):
+    def _reschedule_workers(self) -> None:
         """Distribute work to workers if needed at this time.
         """
         assert self._state is not None
@@ -526,7 +541,7 @@ class DistScopeIsoScheduling:  # pylint: disable=too-many-instance-attributes
             else:
                 raise RuntimeError(f'Unhandled state: {self._state}')
 
-    def _handle_state_wait_ready_to_activate_scope(self):
+    def _handle_state_wait_ready_to_activate_scope(self) -> None:
         """Handle the `WAIT_READY_TO_ACTIVATE_SCOPE` state.
 
         Waiting for scheduler to be ready to distribute the next Scope. When
@@ -576,7 +591,7 @@ class DistScopeIsoScheduling:  # pylint: disable=too-many-instance-attributes
         self._log(f'Transitioned from {str(previous_state)} to '
                   f'{str(self._state)}')
 
-    def _handle_state_activate_scope(self):
+    def _handle_state_activate_scope(self) -> None:
         """Handle the `ACTIVATE_SCOPE` state.
 
         Activate (i.e., distribute) tests from the next Scope, if any. If we
@@ -620,7 +635,7 @@ class DistScopeIsoScheduling:  # pylint: disable=too-many-instance-attributes
                   f'{str(self._state)}. '
                   f'Activated scope={self._active_scope_id}')
 
-    def _handle_state_wait_ready_to_fence(self):
+    def _handle_state_wait_ready_to_fence(self) -> None:
         """Handle the `WAIT_READY_TO_FENCE` state.
 
         Waiting for scheduler to be ready to fence the active (i.e.,
@@ -663,7 +678,7 @@ class DistScopeIsoScheduling:  # pylint: disable=too-many-instance-attributes
         self._log(f'Transitioned from {str(previous_state)} to '
                   f'{str(self._state)}')
 
-    def _handle_state_fence(self):
+    def _handle_state_fence(self) -> None:
         """Handle the `FENCE` state.
 
         Fence the workers containing the final active-Scope tests in
@@ -715,8 +730,11 @@ class DistScopeIsoScheduling:  # pylint: disable=too-many-instance-attributes
         self._log(f'Transitioned from {str(previous_state)} to '
                   f'{str(self._state)}')
 
-    def _distribute_workset(self, workset: _ScopeWorkset,
-                            workers: list[_WorkerProxy]):
+    def _distribute_workset(
+        self,
+        workset: _ScopeWorkset,
+        workers: list[_WorkerProxy]
+    ) -> None:
         """Distribute the tests in the given workset to the given workers.
 
         Adhere to the "at least two active-Scope tests per worker" Rule.
@@ -817,8 +835,10 @@ class DistScopeIsoScheduling:  # pylint: disable=too-many-instance-attributes
             f'workers: {workers[:num_workers_to_use]}.'
 
     @classmethod
-    def _generate_fence_items(cls, source_worksets: Iterable[_ScopeWorkset]
-                              ) -> Generator[Optional[_TestProxy], None, None]:
+    def _generate_fence_items(
+        cls,
+        source_worksets: Iterable[_ScopeWorkset]
+    ) -> Generator[Optional[_TestProxy], None, None]:
         """Generator that withdraws (i.e., dequeues) Fence test items from the
         given ordered Scope Worksets and yields them until it runs out of the
         fence items per limits described below, and will thereafter yield
@@ -921,7 +941,9 @@ class DistScopeIsoScheduling:  # pylint: disable=too-many-instance-attributes
         return num_tests // 2
 
     def _get_workers_available_for_distribution(
-            self, scope_id: str) -> list[_WorkerProxy]:
+        self,
+        scope_id: str
+    ) -> list[_WorkerProxy]:
         """Return workers available for distribution of the given Scope.
 
         Available workers are non-shutting-down workers that either
@@ -943,8 +965,10 @@ class DistScopeIsoScheduling:  # pylint: disable=too-many-instance-attributes
                      or worker.tail_pending_test.scope_id == scope_id))
         ]
 
-    def _get_workers_ready_for_fencing(self, scope_id: str
-                                       ) -> list[_WorkerProxy]:
+    def _get_workers_ready_for_fencing(
+        self,
+        scope_id: str
+    ) -> list[_WorkerProxy]:
         """Return workers that are ready to be Fenced for the given test Scope.
 
         A worker that needs to be Fenced satisfies all the following conditions:
@@ -964,11 +988,12 @@ class DistScopeIsoScheduling:  # pylint: disable=too-many-instance-attributes
         ]
 
     def _do_two_nodes_have_same_collection(
-            self,
-            reference_node: WorkerController,
-            reference_collection: tuple[str],
-            node: WorkerController,
-            collection: tuple[str]) -> bool:
+        self,
+        reference_node: WorkerController,
+        reference_collection: tuple[str],
+        node: WorkerController,
+        collection: tuple[str, ...]
+    ) -> bool:
         """
         If collections differ, this method returns False while logging
         the collection differences and posting collection errors to
@@ -1128,7 +1153,7 @@ class _WorkerProxy:
 
         return ' '.join(items)
 
-    def run_some_tests(self, tests: Iterable[_TestProxy]):
+    def run_some_tests(self, tests: Iterable[_TestProxy]) -> None:
         """
         Add given tests to the pending queue and
         send their indexes to the remote worker
@@ -1136,7 +1161,7 @@ class _WorkerProxy:
         self._node.send_runtest_some([test.test_index for test in tests])
         self._pending_test_by_index.update((t.test_index, t) for t in tests)
 
-    def handle_test_completion(self, test_index: int):
+    def handle_test_completion(self, test_index: int) -> None:
         """Remove completed test from the worker's pending tests.
 
         :param test_index: The stable index of the corresponding test.
@@ -1162,7 +1187,7 @@ class _WorkerProxy:
         self._pending_test_by_index.clear()
         return pending_tests
 
-    def shutdown(self):
+    def shutdown(self) -> None:
         """
         Send the "shutdown" message to the remote worker. This
         will cause the remote worker to shut down after executing
@@ -1199,7 +1224,7 @@ class _TestProxy:
     def scope_id(self) -> str:
         """Scope ID to which this test belongs.
         """
-        return DistScopeIsoScheduling.split_scope(self.test_id)
+        return IsoScopeScheduling.split_scope(self.test_id)
 
 
 class _ScopeWorkset:
@@ -1241,7 +1266,7 @@ class _ScopeWorkset:
         """Number of tests in this workset"""
         return len(self._test_by_index)
 
-    def enqueue_test(self, test: _TestProxy):
+    def enqueue_test(self, test: _TestProxy) -> None:
         """Append given test to ordered test collection"""
         assert test.scope_id == self.scope_id, \
             f'Wrong {test.scope_id=} for {self}'
@@ -1310,7 +1335,7 @@ class _WorksetQueue:
         """
         return self._workset_by_scope.values()
 
-    def add_test(self, test: _TestProxy):
+    def add_test(self, test: _TestProxy) -> None:
         """Adds given test to its Scope Workset, creating the corresponding
         workset as needed. Newly-created Worksets are always added at
         the end of the Workset Queue(appended).

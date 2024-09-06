@@ -22,12 +22,11 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-"""Utilities for supporting the `PARALLEL_MONO_SCOPE` Test Distribution Mode.
+"""Utilities for supporting isoscope scheduling.
 
-NOTE: These utilities are NOT compatible with any other Test Distribution Modes.
+NOTE: These utilities are NOT compatible with any other xdist schedulers.
 
-See also `plugins_common/parallel_mono_scope_plugin.py` for fixtures specific to
-the `PARALLEL_MONO_SCOPE` Test Distribution Mode.
+See also `iso_scheduling_plugin.py` for fixtures specific to isoscope scheduling.
 """
 from __future__ import annotations
 
@@ -44,9 +43,9 @@ class CoordinationTimeoutError(Exception):
     """When attempt to acquire the distributed lock times out."""
 
 
-class ParallelMonoScopeFixture(abc.ABC):
+class IsoSchedulingFixture(abc.ABC):
     """Interface of the context manager which is returned by our pytest fixture
-    `parallel_mono_scope`.
+    `iso_scheduling`.
 
     An instance of the implementation of this interface is a context manager
     which yields an instance of  the implementation of the
@@ -56,9 +55,9 @@ class ParallelMonoScopeFixture(abc.ABC):
 
     @abc.abstractmethod
     def coordinate_setup_teardown(
-            self,
-            setup_request: pytest.FixtureRequest
-            ) -> Generator[DistributedSetupCoordinator, None, None]:
+        self,
+        setup_request: pytest.FixtureRequest
+    ) -> Generator[DistributedSetupCoordinator, None, None]:
         """Context manager that yields an instance of
         `DistributedSetupCoordinator` for distributed coordination of Setup
         and Teardown.
@@ -72,39 +71,46 @@ class ParallelMonoScopeFixture(abc.ABC):
 
 
 class DistributedSetupCoordinator(abc.ABC):
-    """Interface for use with the `parallel_mono_scope` fixture for
+    """Interface for use with the `iso_scheduling` fixture for
     distributed coordination of Setup and Teardown workflows. For example,
     inserting a subnet into `subnet.xml` and reverting it upon Teardown.
 
-    The `parallel_mono_scope` fixture returns an implementation of this
-    interface. See the `parallel_mono_scope` fixture in
-    `plugins_common/parallel_mono_scope_plugin.py` for additional information.
+    The `iso_scheduling` fixture returns an implementation of this
+    interface. See the `iso_scheduling` fixture in
+    `iso_scheduling_plugin.py` for additional information.
+
+    NOTE: Each XDist remote worker is running its own Pytest Session, so we want
+    only the worker that starts its session first to execute the setup logic and
+    only the worker that finishes its session last to execute the teardown logic
+    using a form of distributed coordination. This way, setup is executed exactly
+    once before any worker executes any of the scope's tests, and teardown is
+    executed only after the last worker finishes test execution.
 
     USAGE EXAMPLE:
+
         ```
         from __future__ import annotations
         from typing import TYPE_CHECKING
         import pytest
 
         if TYPE_CHECKING:
-            from utils.common.parallel_mono_scope_utils import (
-                ParallelMonoScopeFixture,
+            from xdist.iso_scheduling_utils import (
+                IsoSchedulingFixture,
                 DistributedSetupContext,
                 DistributedTeardownContext
             )
 
-        @pytest.mark.parallel_mono_scope
-        class TestDeng12345ParallelMonoScope:
+        class TestSomething:
 
             @classmethod
             @pytest.fixture(scope='class', autouse=True)
             def distributed_setup_and_teardown(
                     cls,
-                    parallel_mono_scope: ParallelMonoScopeFixture:
+                    iso_scheduling: IsoSchedulingFixture:
                     request: pytest.FixtureRequest):
 
                 # Distributed Setup and Teardown
-                with parallel_mono_scope.coordinate_setup_teardown(
+                with iso_scheduling.coordinate_setup_teardown(
                         setup_request=request) as coordinator:
                     # Distributed Setup
                     coordinator.maybe_call_setup(cls.patch_system_under_test)
@@ -131,12 +137,13 @@ class DistributedSetupCoordinator(abc.ABC):
                 # Fetch state from `teardown_context.client_dir` and revert
                 # changes made by `patch_system_under_test()`.
 
-            perms, tc_ids = generate_tests(
-                os.path.realpath(__file__),
-                TestDistributionModeEnum.PARALLEL_MONO_SCOPE)
+            def test_case1(self)
+                ...
 
-            @pytest.mark.parametrize('test_data', perms, ids=tc_ids)
-            def test_case(self, test_data: dict[str, dict])
+            def test_case2(self)
+                ...
+
+            def test_case3(self)
                 ...
         ```
     """
@@ -146,15 +153,16 @@ class DistributedSetupCoordinator(abc.ABC):
 
     @abc.abstractmethod
     def maybe_call_setup(
-            self,
-            setup_callback: Callable[[DistributedSetupContext], None],
-            timeout: float = DEFAULT_TIMEOUT_SEC) -> None:
+        self,
+        setup_callback: Callable[[DistributedSetupContext], None],
+        timeout: float = DEFAULT_TIMEOUT_SEC
+    ) -> None:
         """Invoke the Setup callback only if distributed setup has not been
         performed yet from any other XDist worker for your test scope.
         Process-safe.
 
         Call `maybe_call_setup` from the pytest setup-teardown fixture of your
-        `PARALLEL_MONO_SCOPE` test (typically test class) if it needs to
+        isoscope-scheduled test (typically test class) if it needs to
         initialize a resource which is common to all of its test cases which may
         be executing in different XDist worker processes (such as a subnet in
         `subnet.xml`).
@@ -175,16 +183,16 @@ class DistributedSetupCoordinator(abc.ABC):
 
     @abc.abstractmethod
     def maybe_call_teardown(
-            self,
-            teardown_callback: Callable[[DistributedTeardownContext], None],
-            timeout: float = DEFAULT_TIMEOUT_SEC
-            ) -> None:
+        self,
+        teardown_callback: Callable[[DistributedTeardownContext], None],
+        timeout: float = DEFAULT_TIMEOUT_SEC
+    ) -> None:
         """Invoke the Teardown callback only in when called in the context of
         the final XDist Worker process to have finished the execution of the
         tests for your test scope. Process-safe.
 
         Call `maybe_call_teardown` from the pytest setup-teardown fixture of
-        your `PARALLEL_MONO_SCOPE` test (typically test class) if it needs to
+        your isoscope-scheduled test (typically test class) if it needs to
         initialize a resource which is common to all of its test cases which may
         be executing in different XDist worker processes (such as a subnet in
         `subnet.xml`).
@@ -293,13 +301,13 @@ class DistributedTeardownContext(_DistributedSetupTeardownContextMixin):
         self.distributed_teardown_allowed = teardown_allowed
 
         # NOTE: Friend-of-class protected member access
-        self._root_context_dir = setup_context._root_context_dir
+        self._root_context_dir = setup_context._root_context_dir  # pylint: disable=protected-access
 
         # XDist worker ID which is executing tests in the current process
         self.worker_id = setup_context.worker_id
 
         # NOTE: Friend-of-class protected member access
-        self._setup_node_name = setup_context._setup_node_name
+        self._setup_node_name = setup_context._setup_node_name  # pylint: disable=protected-access
 
     def __repr__(self) -> str:
         return (
