@@ -34,39 +34,38 @@ https://docs.pytest.org/en/7.1.x/how-to/fixtures.html:
 is not recommended: importing fixtures into a module will register them in
 pytest as defined in that module".
 """
+
 from __future__ import annotations
 
 import contextlib
 import functools
-import logging
 import json
+import logging
 import pathlib
 from typing import TYPE_CHECKING
 
 import filelock
 import pytest
 
-from xdist.iso_scheduling_utils import (
-    IsoSchedulingFixture,
-    DistributedSetupCoordinator,
-    DistributedSetupContext,
-    DistributedTeardownContext,
-    CoordinationTimeoutError
-)
+from xdist.iso_scheduling_utils import CoordinationTimeoutError
+from xdist.iso_scheduling_utils import DistributedSetupContext
+from xdist.iso_scheduling_utils import DistributedSetupCoordinator
+from xdist.iso_scheduling_utils import DistributedTeardownContext
+from xdist.iso_scheduling_utils import IsoSchedulingFixture
+
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Generator
+    from collections.abc import Callable
+    from collections.abc import Generator
     from typing import Optional
 
 
 _LOGGER = logging.getLogger(__name__)
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope="session")
 def iso_scheduling(
-    tmp_path_factory: pytest.TempPathFactory,
-    testrun_uid: str,
-    worker_id: str
+    tmp_path_factory: pytest.TempPathFactory, testrun_uid: str, worker_id: str
 ) -> IsoSchedulingFixture:
     """A session-scoped pytest fixture for coordinating setup/teardown of test
     scope/class which is executing under isoscope scheduling.
@@ -154,9 +153,9 @@ def iso_scheduling(
         yields an instance of `DistributedSetupCoordinator` for the current
         Pytest Session.
     """
-    return _IsoSchedulingFixtureImpl(tmp_path_factory=tmp_path_factory,
-                                     testrun_uid=testrun_uid,
-                                     worker_id=worker_id)
+    return _IsoSchedulingFixtureImpl(
+        tmp_path_factory=tmp_path_factory, testrun_uid=testrun_uid, worker_id=worker_id
+    )
 
 
 class _IsoSchedulingFixtureImpl(IsoSchedulingFixture):
@@ -166,12 +165,12 @@ class _IsoSchedulingFixtureImpl(IsoSchedulingFixture):
     An instance of _IsoSchedulingFixtureImpl is returned by our pytest
     fixture `iso_scheduling`.
     """
+
     # pylint: disable=too-few-public-methods
 
-    def __init__(self,
-                 tmp_path_factory: pytest.TempPathFactory,
-                 testrun_uid: str,
-                 worker_id: str):
+    def __init__(
+        self, tmp_path_factory: pytest.TempPathFactory, testrun_uid: str, worker_id: str
+    ):
         """
         :param tmp_path_factory: pytest interface for temporary directories.
         :param testrun_uid: Unique id of the current test run. This value is
@@ -186,8 +185,7 @@ class _IsoSchedulingFixtureImpl(IsoSchedulingFixture):
 
     @contextlib.contextmanager
     def coordinate_setup_teardown(
-        self,
-        setup_request: pytest.FixtureRequest
+        self, setup_request: pytest.FixtureRequest
     ) -> Generator[DistributedSetupCoordinator, None, None]:
         """Context manager that yields an instance of
         `DistributedSetupCoordinator` for distributed coordination of Setup
@@ -204,7 +202,8 @@ class _IsoSchedulingFixtureImpl(IsoSchedulingFixture):
             setup_request=setup_request,
             tmp_path_factory=self._tmp_path_factory,
             testrun_uid=self._testrun_uid,
-            worker_id=self._worker_id)
+            worker_id=self._worker_id,
+        )
 
         # Yield control to the managed code block
         yield coordinator
@@ -221,13 +220,16 @@ class _DistributedSetupCoordinatorImpl(DistributedSetupCoordinator):
     `iso_scheduling` fixture instead!
 
     """
-    _DISTRIBUTED_SETUP_ROOT_DIR_LINK_NAME = 'distributed_setup'
 
-    def __init__(self,
-                 setup_request: pytest.FixtureRequest,
-                 tmp_path_factory: pytest.TempPathFactory,
-                 testrun_uid: str,
-                 worker_id: str):
+    _DISTRIBUTED_SETUP_ROOT_DIR_LINK_NAME = "distributed_setup"
+
+    def __init__(
+        self,
+        setup_request: pytest.FixtureRequest,
+        tmp_path_factory: pytest.TempPathFactory,
+        testrun_uid: str,
+        worker_id: str,
+    ):
         """
         :param setup_request: Value of the pytest `request` fixture obtained
             directly by the calling setup-teardown fixture.
@@ -246,9 +248,10 @@ class _DistributedSetupCoordinatorImpl(DistributedSetupCoordinator):
         # directory. `tmp_path_factory.getbasetemp().parent` is common to all
         # workers in the current PyTest test run.
         self._root_context_base_dir: pathlib.Path = (
-                tmp_path_factory.getbasetemp().parent
-                / self._DISTRIBUTED_SETUP_ROOT_DIR_LINK_NAME
-                / testrun_uid)
+            tmp_path_factory.getbasetemp().parent
+            / self._DISTRIBUTED_SETUP_ROOT_DIR_LINK_NAME
+            / testrun_uid
+        )
 
         self._worker_id: str = worker_id
 
@@ -258,7 +261,7 @@ class _DistributedSetupCoordinatorImpl(DistributedSetupCoordinator):
     def maybe_call_setup(
         self,
         setup_callback: Callable[[DistributedSetupContext], None],
-        timeout: float = DistributedSetupCoordinator.DEFAULT_TIMEOUT_SEC
+        timeout: float = DistributedSetupCoordinator.DEFAULT_TIMEOUT_SEC,
     ) -> None:
         """Invoke the Setup callback only if distributed setup has not been
         performed yet from any other XDist worker for your test scope.
@@ -284,8 +287,9 @@ class _DistributedSetupCoordinatorImpl(DistributedSetupCoordinator):
         """
         # `maybe_call_setup()` may be called only once per instance of
         # `_SetupCoordinator`
-        assert self._setup_context is None, \
-            f'maybe_call_setup()` already called {self._setup_context=}'
+        assert (
+            self._setup_context is None
+        ), f"maybe_call_setup()` already called {self._setup_context=}"
 
         node_path = self._setup_request.node.path
 
@@ -296,10 +300,11 @@ class _DistributedSetupCoordinatorImpl(DistributedSetupCoordinator):
         )
 
         with _DistributedSetupCoordinationImpl.acquire_distributed_setup(
-                root_context_dir=root_context_dir,
-                worker_id=self._worker_id,
-                setup_request=self._setup_request,
-                timeout=timeout) as setup_context:
+            root_context_dir=root_context_dir,
+            worker_id=self._worker_id,
+            setup_request=self._setup_request,
+            timeout=timeout,
+        ) as setup_context:
             self._setup_context = setup_context
             if self._setup_context.distributed_setup_allowed:
                 setup_callback(self._setup_context)
@@ -307,7 +312,7 @@ class _DistributedSetupCoordinatorImpl(DistributedSetupCoordinator):
     def maybe_call_teardown(
         self,
         teardown_callback: Callable[[DistributedTeardownContext], None],
-        timeout: float = DistributedSetupCoordinator.DEFAULT_TIMEOUT_SEC
+        timeout: float = DistributedSetupCoordinator.DEFAULT_TIMEOUT_SEC,
     ) -> None:
         """Invoke the Teardown callback only in when called in the context of
         the final XDist Worker process to have finished the execution of the
@@ -331,34 +336,36 @@ class _DistributedSetupCoordinatorImpl(DistributedSetupCoordinator):
         """
         # Make sure `maybe_call_setup()` was already called on this instance
         # of `_SetupCoordinator`
-        assert self._setup_context is not None, \
-            f'maybe_call_setup() not called yet {self._setup_context=}'
+        assert (
+            self._setup_context is not None
+        ), f"maybe_call_setup() not called yet {self._setup_context=}"
 
         # Make sure `maybe_call_teardown()` hasn't been called on this instance
         # of `_SetupCoordinator` yet
-        assert self._teardown_context is None, \
-            f'maybe_call_teardown() already called {self._teardown_context=}'
+        assert (
+            self._teardown_context is None
+        ), f"maybe_call_teardown() already called {self._teardown_context=}"
 
         with _DistributedSetupCoordinationImpl.acquire_distributed_teardown(
-                setup_context=self._setup_context,
-                timeout=timeout) as teardown_context:
+            setup_context=self._setup_context, timeout=timeout
+        ) as teardown_context:
             self._teardown_context = teardown_context
             if self._teardown_context.distributed_teardown_allowed:
                 teardown_callback(self._teardown_context)
 
 
 def _map_file_lock_exception(f: Callable):
-    """Decorator: map `FileLock` exceptions of interest to our own exceptions.
-    """
+    """Decorator: map `FileLock` exceptions of interest to our own exceptions."""
+
     @functools.wraps(f)
     def wrapper(*args, **kwargs):
         try:
             return f(*args, **kwargs)
         except filelock.Timeout as err:
             raise CoordinationTimeoutError(
-                f'Another instance of this test scope/class is holding the '
-                f'lock too long or timeout value is too short: {err}') \
-                from err
+                f"Another instance of this test scope/class is holding the "
+                f"lock too long or timeout value is too short: {err}"
+            ) from err
 
     return wrapper
 
@@ -367,25 +374,27 @@ class _DistributedSetupCoordinationImpl:
     """Low-level implementation of Context Managers for Coordinating
     Distributed Setup and Teardown for users of isoscope scheduling.
     """
-    _ROOT_STATE_FILE_NAME = 'root_state.json'
-    _ROOT_LOCK_FILE_NAME = 'lock'
+
+    _ROOT_STATE_FILE_NAME = "root_state.json"
+    _ROOT_LOCK_FILE_NAME = "lock"
 
     class DistributedState:
-        """State of the Distributed Setup-Teardown Coordination.
-        """
+        """State of the Distributed Setup-Teardown Coordination."""
+
         def __init__(self, setup_count, teardown_count):
             self.setup_count = setup_count
             self.teardown_count = teardown_count
 
         def __repr__(self):
-            return f'<{self.__class__.__qualname__}: ' \
-                   f'setup_count={self.setup_count}; ' \
-                   f'teardown_count={self.teardown_count}>'
+            return (
+                f"<{self.__class__.__qualname__}: "
+                f"setup_count={self.setup_count}; "
+                f"teardown_count={self.teardown_count}>"
+            )
 
         @classmethod
         def load_from_file_path(
-            cls,
-            state_file_path: pathlib.Path
+            cls, state_file_path: pathlib.Path
         ) -> _DistributedSetupCoordinationImpl.DistributedState:
             """Load the state instance from the given file path.
 
@@ -408,8 +417,8 @@ class _DistributedSetupCoordinationImpl:
                 ```
             """
             return {
-                'setup_count': self.setup_count,
-                'teardown_count': self.teardown_count
+                "setup_count": self.setup_count,
+                "teardown_count": self.teardown_count,
             }
 
         def save_to_file_path(self, state_file_path: pathlib.Path) -> None:
@@ -428,7 +437,7 @@ class _DistributedSetupCoordinationImpl:
         root_context_dir: pathlib.Path,
         worker_id: str,
         setup_request: pytest.FixtureRequest,
-        timeout: float
+        timeout: float,
     ) -> Generator[DistributedSetupContext, None, None]:
         """Low-level implementation of Context Manager for Coordinating
         Distributed Setup for isoscope scheduling.
@@ -450,32 +459,33 @@ class _DistributedSetupCoordinationImpl:
             setup_allowed=False,
             root_context_dir=root_context_dir,
             worker_id=worker_id,
-            setup_request=setup_request)
+            setup_request=setup_request,
+        )
 
         state_file_path = cls._get_root_state_file_path(root_context_dir)
 
         # Acquire resource
         with filelock.FileLock(
-                str(cls._get_root_lock_file_path(root_context_dir)),
-                timeout=timeout):
+            str(cls._get_root_lock_file_path(root_context_dir)), timeout=timeout
+        ):
             if state_file_path.is_file():
-                state = cls.DistributedState.load_from_file_path(
-                    state_file_path)
+                state = cls.DistributedState.load_from_file_path(state_file_path)
                 # We never save state with setup_count <= 0
-                assert state.setup_count > 0, \
-                    f'acquire_distributed_setup: non-positive setup ' \
-                    f'count read from state file - {state_file_path=}; ' \
-                    f'{worker_id=}; {state}'
+                assert state.setup_count > 0, (
+                    f"acquire_distributed_setup: non-positive setup "
+                    f"count read from state file - {state_file_path=}; "
+                    f"{worker_id=}; {state}"
+                )
                 # No Teardowns should be executing before all Setups
                 # complete
-                assert state.teardown_count == 0, \
-                    f'acquire_distributed_setup: non-zero teardown ' \
-                    f'count read from state file - {state_file_path=}; ' \
-                    f'{worker_id=}; {state}'
+                assert state.teardown_count == 0, (
+                    f"acquire_distributed_setup: non-zero teardown "
+                    f"count read from state file - {state_file_path=}; "
+                    f"{worker_id=}; {state}"
+                )
             else:
                 # State file not created yet
-                state = cls.DistributedState(setup_count=0,
-                                             teardown_count=0)
+                state = cls.DistributedState(setup_count=0, teardown_count=0)
 
             state.setup_count += 1
 
@@ -485,8 +495,9 @@ class _DistributedSetupCoordinationImpl:
             # Yield control to the managed code block
             #
             _LOGGER.info(  # pylint: disable=logging-fstring-interpolation
-                f'acquire_distributed_setup: yielding control to '
-                f'managed block - {worker_id=}; {setup_context=}')
+                f"acquire_distributed_setup: yielding control to "
+                f"managed block - {worker_id=}; {setup_context=}"
+            )
             yield setup_context
 
             #
@@ -501,9 +512,7 @@ class _DistributedSetupCoordinationImpl:
     @contextlib.contextmanager
     @_map_file_lock_exception
     def acquire_distributed_teardown(
-        cls,
-        setup_context: DistributedSetupContext,
-        timeout: float
+        cls, setup_context: DistributedSetupContext, timeout: float
     ) -> Generator[DistributedTeardownContext, None, None]:
         """Low-level implementation of Context Manager for Coordinating
         Distributed Teardown for the isoscope scheduling.
@@ -519,8 +528,8 @@ class _DistributedSetupCoordinationImpl:
         # Before control passes to the managed code block
         #
         teardown_context = DistributedTeardownContext(
-            teardown_allowed=False,
-            setup_context=setup_context)
+            teardown_allowed=False, setup_context=setup_context
+        )
 
         # NOTE: Friend-of-class protected member access
         root_context_dir = teardown_context._root_context_dir  # pylint: disable=protected-access
@@ -531,36 +540,40 @@ class _DistributedSetupCoordinationImpl:
 
         # Acquire resource
         with filelock.FileLock(
-                str(cls._get_root_lock_file_path(root_context_dir)),
-                timeout=timeout):
+            str(cls._get_root_lock_file_path(root_context_dir)), timeout=timeout
+        ):
             if state_file_path.is_file():
-                state = cls.DistributedState.load_from_file_path(
-                    state_file_path)
+                state = cls.DistributedState.load_from_file_path(state_file_path)
                 assert state.setup_count > 0, (
-                    f'acquire_distributed_teardown: non-positive '
-                    f'setup_count read from state file - {state_file_path=}; '
-                    f'{worker_id=}; {state.setup_count=} <= 0; {state}')
+                    f"acquire_distributed_teardown: non-positive "
+                    f"setup_count read from state file - {state_file_path=}; "
+                    f"{worker_id=}; {state.setup_count=} <= 0; {state}"
+                )
                 assert state.teardown_count < state.setup_count, (
-                    f'acquire_distributed_teardown: teardown_count '
-                    f'already >= setup_count read from state file - '
-                    f'{state_file_path=}; {worker_id=}; '
-                    f'{state.teardown_count=} >= {state.setup_count=}')
+                    f"acquire_distributed_teardown: teardown_count "
+                    f"already >= setup_count read from state file - "
+                    f"{state_file_path=}; {worker_id=}; "
+                    f"{state.teardown_count=} >= {state.setup_count=}"
+                )
             else:
                 raise RuntimeError(
-                    f'acquire_distributed_teardown: state file not found: '
-                    f'{state_file_path=}; {worker_id=}')
+                    f"acquire_distributed_teardown: state file not found: "
+                    f"{state_file_path=}; {worker_id=}"
+                )
 
             state.teardown_count += 1
 
             teardown_context.distributed_teardown_allowed = (
-                    state.teardown_count == state.setup_count)
+                state.teardown_count == state.setup_count
+            )
 
             #
             # Yield control to the managed code block
             #
             _LOGGER.info(  # pylint: disable=logging-fstring-interpolation
-                f'acquire_distributed_teardown: yielding control to '
-                f'managed block - {worker_id=}; {teardown_context=}')
+                f"acquire_distributed_teardown: yielding control to "
+                f"managed block - {worker_id=}; {teardown_context=}"
+            )
             yield teardown_context
 
             #
@@ -572,10 +585,7 @@ class _DistributedSetupCoordinationImpl:
             state.save_to_file_path(state_file_path)
 
     @classmethod
-    def _get_root_state_file_path(
-        cls,
-        root_state_dir: pathlib.Path
-    ) -> pathlib.Path:
+    def _get_root_state_file_path(cls, root_state_dir: pathlib.Path) -> pathlib.Path:
         """Return the path of the file for storing the root state, creating all
         parent directories if they don't exist yet.
 
@@ -586,10 +596,7 @@ class _DistributedSetupCoordinationImpl:
         return root_state_dir / cls._ROOT_STATE_FILE_NAME
 
     @classmethod
-    def _get_root_lock_file_path(
-        cls,
-        root_lock_dir: pathlib.Path
-    ) -> pathlib.Path:
+    def _get_root_lock_file_path(cls, root_lock_dir: pathlib.Path) -> pathlib.Path:
         """Return the path of the lock file, creating all parent directories if
         they don't exist yet.
 

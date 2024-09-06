@@ -28,14 +28,18 @@ NOTE: These utilities are NOT compatible with any other xdist schedulers.
 
 See also `iso_scheduling_plugin.py` for fixtures specific to isoscope scheduling.
 """
+
 from __future__ import annotations
 
 import abc
 import pathlib
 from typing import TYPE_CHECKING
 
+
 if TYPE_CHECKING:
-    from collections.abc import Callable, Generator
+    from collections.abc import Callable
+    from collections.abc import Generator
+
     import pytest
 
 
@@ -51,12 +55,12 @@ class IsoSchedulingFixture(abc.ABC):
     which yields an instance of  the implementation of the
     `DistributedSetupCoordinator` interface.
     """
+
     # pylint: disable=too-few-public-methods
 
     @abc.abstractmethod
     def coordinate_setup_teardown(
-        self,
-        setup_request: pytest.FixtureRequest
+        self, setup_request: pytest.FixtureRequest
     ) -> Generator[DistributedSetupCoordinator, None, None]:
         """Context manager that yields an instance of
         `DistributedSetupCoordinator` for distributed coordination of Setup
@@ -155,7 +159,7 @@ class DistributedSetupCoordinator(abc.ABC):
     def maybe_call_setup(
         self,
         setup_callback: Callable[[DistributedSetupContext], None],
-        timeout: float = DEFAULT_TIMEOUT_SEC
+        timeout: float = DEFAULT_TIMEOUT_SEC,
     ) -> None:
         """Invoke the Setup callback only if distributed setup has not been
         performed yet from any other XDist worker for your test scope.
@@ -185,7 +189,7 @@ class DistributedSetupCoordinator(abc.ABC):
     def maybe_call_teardown(
         self,
         teardown_callback: Callable[[DistributedTeardownContext], None],
-        timeout: float = DEFAULT_TIMEOUT_SEC
+        timeout: float = DEFAULT_TIMEOUT_SEC,
     ) -> None:
         """Invoke the Teardown callback only in when called in the context of
         the final XDist Worker process to have finished the execution of the
@@ -211,13 +215,13 @@ class DistributedSetupCoordinator(abc.ABC):
 
 
 class _DistributedSetupTeardownContextMixin:  # pylint: disable=too-few-public-methods
-    """Mixin for `DistributedSetupContext` and DistributedTeardownContext`.
-    """
+    """Mixin for `DistributedSetupContext` and DistributedTeardownContext`."""
+
     # Expected instance members in derived class
     _root_context_dir: pathlib.Path
     _setup_node_name: str
 
-    _CLIENT_SUBDIRECTORY_LINK = 'client-workspace'
+    _CLIENT_SUBDIRECTORY_LINK = "client-workspace"
 
     @property
     def client_dir(self) -> pathlib.Path:
@@ -226,8 +230,7 @@ class _DistributedSetupTeardownContextMixin:  # pylint: disable=too-few-public-m
             client-specific state, creating the directory if not already
             created.
         """
-        client_dir_path = (self._root_context_dir
-                           / self._CLIENT_SUBDIRECTORY_LINK)
+        client_dir_path = self._root_context_dir / self._CLIENT_SUBDIRECTORY_LINK
         client_dir_path.mkdir(parents=True, exist_ok=True)
 
         return client_dir_path
@@ -238,11 +241,13 @@ class DistributedSetupContext(_DistributedSetupTeardownContextMixin):
     manager.
     """
 
-    def __init__(self,
-                 setup_allowed: bool,
-                 root_context_dir: pathlib.Path,
-                 worker_id: str,
-                 setup_request: pytest.FixtureRequest):
+    def __init__(
+        self,
+        setup_allowed: bool,
+        root_context_dir: pathlib.Path,
+        worker_id: str,
+        setup_request: pytest.FixtureRequest,
+    ):
         """
         :param setup_allowed: Whether distributed setup may be performed by the
             current process.
@@ -272,11 +277,12 @@ class DistributedSetupContext(_DistributedSetupTeardownContextMixin):
 
     def __repr__(self) -> str:
         return (
-            f'< {self.__class__.__name__}: '
-            f'node_name={self._setup_node_name}; '
-            f'setup_allowed={self.distributed_setup_allowed}; '
-            f'worker_id={self.worker_id}; '
-            f'client_dir={self.client_dir} >')
+            f"< {self.__class__.__name__}: "
+            f"node_name={self._setup_node_name}; "
+            f"setup_allowed={self.distributed_setup_allowed}; "
+            f"worker_id={self.worker_id}; "
+            f"client_dir={self.client_dir} >"
+        )
 
 
 class DistributedTeardownContext(_DistributedSetupTeardownContextMixin):
@@ -284,9 +290,7 @@ class DistributedTeardownContext(_DistributedSetupTeardownContextMixin):
     manager.
     """
 
-    def __init__(self,
-                 teardown_allowed: bool,
-                 setup_context: DistributedSetupContext):
+    def __init__(self, teardown_allowed: bool, setup_context: DistributedSetupContext):
         """
         :param teardown_allowed: Whether Distributed Teardown may be performed
             by the current process.
@@ -311,8 +315,9 @@ class DistributedTeardownContext(_DistributedSetupTeardownContextMixin):
 
     def __repr__(self) -> str:
         return (
-            f'< {self.__class__.__name__}: '
-            f'node_name={self._setup_node_name}; '
-            f'teardown_allowed={self.distributed_teardown_allowed}; '
-            f'worker_id={self.worker_id}; '
-            f'client_dir={self.client_dir} >')
+            f"< {self.__class__.__name__}: "
+            f"node_name={self._setup_node_name}; "
+            f"teardown_allowed={self.distributed_teardown_allowed}; "
+            f"worker_id={self.worker_id}; "
+            f"client_dir={self.client_dir} >"
+        )
