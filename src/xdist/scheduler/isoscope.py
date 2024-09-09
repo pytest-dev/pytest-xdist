@@ -61,7 +61,6 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
     from collections.abc import ValuesView
     from typing import NoReturn
-    from typing import Optional
     from typing import Sequence
 
     import xdist.remote
@@ -129,7 +128,7 @@ class IsoScopeScheduling:  # pylint: disable=too-many-instance-attributes
 
         # Scope ID of tests that are currently executing; `None` prior to the
         # initial distribution
-        self._active_scope_id: Optional[str] = None
+        self._active_scope_id: str | None = None
 
         # The initial expected number of remote workers taking part.
         # The actual number of workers will vary during the scheduler's
@@ -143,10 +142,10 @@ class IsoScopeScheduling:  # pylint: disable=too-many-instance-attributes
         # is performed once the number of registered node collections reaches
         # `_expected_num_workers`. It is initialized to None and then updated
         # after validation succeeds.
-        self._official_test_collection: Optional[tuple[str]] = None
+        self._official_test_collection: tuple[str] | None = None
         # Remote worker node having `_official_test_collection` as its test
         # collection (for reporting failed collection validations)
-        self._official_test_collection_node: Optional[WorkerController] = None
+        self._official_test_collection_node: WorkerController | None = None
 
         # Ordered collection of Scope Worksets. Each Scope Workset is an ordered
         # collection of tests belonging to the given scope. Initially empty,
@@ -257,7 +256,7 @@ class IsoScopeScheduling:  # pylint: disable=too-many-instance-attributes
 
         self._pending_worker_by_node[node] = _WorkerProxy(node)
 
-    def remove_node(self, node: WorkerController) -> Optional[str]:
+    def remove_node(self, node: WorkerController) -> str | None:
         """Remove a Remote Worker node from the scheduler.
 
         This should be called either when the node crashed or at node shutdown
@@ -386,7 +385,7 @@ class IsoScopeScheduling:  # pylint: disable=too-many-instance-attributes
         # Check if we now have enough collections to establish a final one
 
         # Get all pending workers with registered test collection
-        w: _WorkerProxy
+        # ZZZ remove line w: _WorkerProxy
         workers_with_collection = [
             w for w in self._pending_worker_by_node.values() if w.collection is not None
         ]
@@ -472,6 +471,7 @@ class IsoScopeScheduling:  # pylint: disable=too-many-instance-attributes
         node: WorkerController,
         indices: Sequence[int],
     ) -> NoReturn:
+        """Not supported"""
         raise NotImplementedError()
 
     def schedule(self) -> None:
@@ -868,7 +868,7 @@ class IsoScopeScheduling:  # pylint: disable=too-many-instance-attributes
     @classmethod
     def _generate_fence_items(
         cls, source_worksets: Iterable[_ScopeWorkset]
-    ) -> Generator[Optional[_TestProxy], None, None]:
+    ) -> Generator[_TestProxy | None, None, None]:
         """Generator that withdraws (i.e., dequeues) Fence test items from the
         given ordered Scope Worksets and yields them until it runs out of the
         fence items per limits described below, and will thereafter yield
@@ -1065,16 +1065,14 @@ class _WorkerProxy:
     """
 
     def __init__(self, node: WorkerController):
-        """
-        :param node: The corresponding xdist worker node.
-        """
+        """:param node: The corresponding xdist worker node."""
         # node: node instance for communication with remote worker,
         #       provided by pytest-xdist controller
         self._node: WorkerController = node
 
         # An ordered collection of test IDs collected by the remote worker.
         # Initially None, until assigned by the Scheduler
-        self._collection: Optional[tuple[str]] = None
+        self._collection: tuple[str] | None = None
 
         self._pending_test_by_index: OrderedDict[int, _TestProxy] = OrderedDict()
 
@@ -1083,13 +1081,11 @@ class _WorkerProxy:
 
     @property
     def node(self) -> WorkerController:
-        """
-        :return: The corresponding xdist worker node.
-        """
+        """:return: The corresponding xdist worker node."""
         return self._node
 
     @property
-    def collection(self) -> Optional[tuple[str]]:
+    def collection(self) -> tuple[str] | None:
         """
         :return: An ordered collection of test IDs collected by the remote
             worker; `None` if the collection is not available yet.
@@ -1260,9 +1256,7 @@ class _TestProxy:
 
 
 class _ScopeWorkset:
-    """
-    Ordered collection of Tests for the given scope
-    """
+    """Ordered collection of Tests for the given scope."""
 
     __slots__ = (
         "scope_id",
@@ -1271,9 +1265,7 @@ class _ScopeWorkset:
     )
 
     def __init__(self, scope_id: str):
-        """
-        :param scope_id: Test Scope to which the tests in this workset belong;
-        """
+        """:param scope_id: Test Scope to which the tests in this workset belong;"""
         self.scope_id = scope_id
 
         # High watermark for number of tests in the workset
@@ -1294,9 +1286,7 @@ class _ScopeWorkset:
 
     @property
     def high_water(self) -> int:
-        """
-        :return: High Watermark of the number of tests in the workset.
-        """
+        """:return: High Watermark of the number of tests in the workset."""
         return self._high_water
 
     @property
@@ -1315,9 +1305,7 @@ class _ScopeWorkset:
         self._test_by_index[test.test_index] = test
 
         # Update high watermark
-        new_num_tests = len(self._test_by_index)
-        if new_num_tests > self._high_water:
-            self._high_water = new_num_tests
+        self._high_water = max(self._high_water, len(self._test_by_index))
 
     def dequeue_tests(self, num_tests: int) -> list[_TestProxy]:
         """

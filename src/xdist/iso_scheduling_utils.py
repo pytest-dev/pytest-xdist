@@ -39,6 +39,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from collections.abc import Callable
     from collections.abc import Generator
+    from contextlib import AbstractContextManager
 
     import pytest
 
@@ -61,7 +62,7 @@ class IsoSchedulingFixture(abc.ABC):
     @abc.abstractmethod
     def coordinate_setup_teardown(
         self, setup_request: pytest.FixtureRequest
-    ) -> Generator[DistributedSetupCoordinator, None, None]:
+    ) -> AbstractContextManager[DistributedSetupCoordinator]:
         """Context manager that yields an instance of
         `DistributedSetupCoordinator` for distributed coordination of Setup
         and Teardown.

@@ -57,7 +57,6 @@ from xdist.iso_scheduling_utils import IsoSchedulingFixture
 if TYPE_CHECKING:
     from collections.abc import Callable
     from collections.abc import Generator
-    from typing import Optional
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -255,8 +254,8 @@ class _DistributedSetupCoordinatorImpl(DistributedSetupCoordinator):
 
         self._worker_id: str = worker_id
 
-        self._setup_context: Optional[DistributedSetupContext] = None
-        self._teardown_context: Optional[DistributedTeardownContext] = None
+        self._setup_context: DistributedSetupContext | None = None
+        self._teardown_context: DistributedTeardownContext | None = None
 
     def maybe_call_setup(
         self,
