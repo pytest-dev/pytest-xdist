@@ -47,6 +47,7 @@ from collections import OrderedDict
 import enum
 from math import ceil
 import random
+from typing import cast
 from typing import TYPE_CHECKING
 
 import pytest
@@ -366,8 +367,8 @@ class IsoScopeScheduling:  # pylint: disable=too-many-instance-attributes
 
             # Check that the new collection matches the official collection
             if self._do_two_nodes_have_same_collection(
-                reference_node=self._official_test_collection_node,  # type: ignore[arg-type]
-                reference_collection=self._official_test_collection,
+                reference_node=cast(WorkerController, self._official_test_collection_node),
+                reference_collection=cast(tuple[str, ...], self._official_test_collection),
                 node=node,
                 collection=collection,
             ):
@@ -399,9 +400,9 @@ class IsoScopeScheduling:  # pylint: disable=too-many-instance-attributes
         for pending_worker in workers_with_collection[1:]:
             if not self._do_two_nodes_have_same_collection(
                 reference_node=reference_worker.node,
-                reference_collection=reference_worker.collection,
+                reference_collection=cast(tuple[str, ...], reference_worker.collection),
                 node=pending_worker.node,
-                collection=pending_worker.collection,
+                collection=cast(tuple[str, ...],pending_worker.collection),
             ):
                 same_collection = False
 
@@ -427,7 +428,8 @@ class IsoScopeScheduling:  # pylint: disable=too-many-instance-attributes
         # particularly slow)
         all_tests = [
             _TestProxy(test_id=test_id, test_index=test_index)
-            for test_index, test_id in enumerate(self._official_test_collection)
+            for test_index, test_id in enumerate(
+                cast(tuple[str, ...], self._official_test_collection))
         ]
         shuffled_test_collection = random.sample(all_tests, k=len(all_tests))
 
@@ -453,7 +455,7 @@ class IsoScopeScheduling:  # pylint: disable=too-many-instance-attributes
         if self._log.enabled:
             self._log(
                 f"Marking test complete: "
-                f"test_id={self._official_test_collection[item_index]}; "
+                f"test_id={cast(tuple[str, ...], self._official_test_collection)[item_index]}; "
                 f"{item_index=}; {worker}"
             )
 
@@ -714,7 +716,7 @@ class IsoScopeScheduling:  # pylint: disable=too-many-instance-attributes
         ), f"{self._state=} is not {self._State.FENCE}"
 
         workers_to_fence = self._get_workers_ready_for_fencing(
-            scope_id=self._active_scope_id
+            scope_id=cast(str, self._active_scope_id)
         )
 
         # The prior state should have ensured that there is at least one worker
@@ -1093,7 +1095,7 @@ class _WorkerProxy:
         return self._collection
 
     @collection.setter
-    def collection(self, collection: tuple[str, ...]):
+    def collection(self, collection: tuple[str, ...]) -> None:
         """
         :param collection: An ordered collection of test IDs collected by the
             remote worker. Must not be `None`. Also, MUST NOT be set already.
