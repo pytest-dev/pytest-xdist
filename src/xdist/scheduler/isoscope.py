@@ -367,8 +367,12 @@ class IsoScopeScheduling:  # pylint: disable=too-many-instance-attributes
 
             # Check that the new collection matches the official collection
             if self._do_two_nodes_have_same_collection(
-                reference_node=cast(WorkerController, self._official_test_collection_node),
-                reference_collection=cast(tuple[str, ...], self._official_test_collection),
+                reference_node=cast(
+                    WorkerController, self._official_test_collection_node
+                ),
+                reference_collection=cast(
+                    tuple[str, ...], self._official_test_collection
+                ),
                 node=node,
                 collection=collection,
             ):
@@ -402,7 +406,7 @@ class IsoScopeScheduling:  # pylint: disable=too-many-instance-attributes
                 reference_node=reference_worker.node,
                 reference_collection=cast(tuple[str, ...], reference_worker.collection),
                 node=pending_worker.node,
-                collection=cast(tuple[str, ...],pending_worker.collection),
+                collection=cast(tuple[str, ...], pending_worker.collection),
             ):
                 same_collection = False
 
@@ -429,7 +433,8 @@ class IsoScopeScheduling:  # pylint: disable=too-many-instance-attributes
         all_tests = [
             _TestProxy(test_id=test_id, test_index=test_index)
             for test_index, test_id in enumerate(
-                cast(tuple[str, ...], self._official_test_collection))
+                cast(tuple[str, ...], self._official_test_collection)
+            )
         ]
         shuffled_test_collection = random.sample(all_tests, k=len(all_tests))
 
