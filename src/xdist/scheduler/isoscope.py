@@ -330,9 +330,7 @@ class IsoScopeScheduling:  # pylint: disable=too-many-instance-attributes
         return crashed_test_id
 
     def add_node_collection(
-        self,
-        node: WorkerController,
-        collection: Sequence[str]
+        self, node: WorkerController, collection: Sequence[str]
     ) -> None:
         """Register the collected test items from a Remote Worker node.
 
@@ -445,10 +443,7 @@ class IsoScopeScheduling:  # pylint: disable=too-many-instance-attributes
             self._workset_queue.add_test(test)
 
     def mark_test_complete(
-        self,
-        node: WorkerController,
-        item_index: int,
-        duration: float = 0
+        self, node: WorkerController, item_index: int, duration: float = 0
     ) -> None:
         """Mark test item as completed by node and remove from pending tests
         in the worker and reschedule.
