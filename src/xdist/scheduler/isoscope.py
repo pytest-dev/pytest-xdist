@@ -1048,7 +1048,9 @@ class IsoScopeScheduling:  # pylint: disable=too-many-instance-attributes
             # NOTE: Not sure why/when `_config` would be `None`. Copied check
             # from the `loadscope` scheduler.
 
-            report = pytest.CollectReport(node.gateway.id, "failed", longrepr=msg, result=[])
+            report = pytest.CollectReport(
+                node.gateway.id, "failed", longrepr=msg, result=[]
+            )
             self._config.hook.pytest_collectreport(report=report)
 
         return False
