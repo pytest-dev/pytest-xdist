@@ -353,11 +353,11 @@ class _DistributedSetupCoordinatorImpl(DistributedSetupCoordinator):
                 teardown_callback(self._teardown_context)
 
 
-def _map_file_lock_exception(f: Callable):
+def _map_file_lock_exception(f: Callable):  # type: ignore[no-untyped-def, type-arg]
     """Decorator: map `FileLock` exceptions of interest to our own exceptions."""
 
     @functools.wraps(f)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args, **kwargs):  # type: ignore[no-untyped-def]
         try:
             return f(*args, **kwargs)
         except filelock.Timeout as err:
@@ -380,11 +380,11 @@ class _DistributedSetupCoordinationImpl:
     class DistributedState:
         """State of the Distributed Setup-Teardown Coordination."""
 
-        def __init__(self, setup_count, teardown_count):
+        def __init__(self, setup_count: int, teardown_count: int) -> None:
             self.setup_count = setup_count
             self.teardown_count = teardown_count
 
-        def __repr__(self):
+        def __repr__(self) -> str:
             return (
                 f"<{self.__class__.__qualname__}: "
                 f"setup_count={self.setup_count}; "
@@ -404,7 +404,7 @@ class _DistributedSetupCoordinationImpl:
             return cls(**json.loads(state_file_path.read_text()))
 
         @property
-        def as_json_kwargs_dict(self) -> dict:
+        def as_json_kwargs_dict(self) -> dict[str, int]:
             """
             :return: JSON-compatible representation of the instance that is also
                 suitable for constructing the instance after fetching from file.

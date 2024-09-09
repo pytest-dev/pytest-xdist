@@ -49,7 +49,6 @@ from math import ceil
 import random
 from typing import TYPE_CHECKING
 
-from _pytest.runner import CollectReport
 import pytest
 
 from xdist.report import report_collection_diff
@@ -142,7 +141,7 @@ class IsoScopeScheduling:  # pylint: disable=too-many-instance-attributes
         # is performed once the number of registered node collections reaches
         # `_expected_num_workers`. It is initialized to None and then updated
         # after validation succeeds.
-        self._official_test_collection: tuple[str] | None = None
+        self._official_test_collection: tuple[str, ...] | None = None
         # Remote worker node having `_official_test_collection` as its test
         # collection (for reporting failed collection validations)
         self._official_test_collection_node: WorkerController | None = None
@@ -367,7 +366,7 @@ class IsoScopeScheduling:  # pylint: disable=too-many-instance-attributes
 
             # Check that the new collection matches the official collection
             if self._do_two_nodes_have_same_collection(
-                reference_node=self._official_test_collection_node,
+                reference_node=self._official_test_collection_node,  # type: ignore[arg-type]
                 reference_collection=self._official_test_collection,
                 node=node,
                 collection=collection,
@@ -528,7 +527,7 @@ class IsoScopeScheduling:  # pylint: disable=too-many-instance-attributes
         """Distribute work to workers if needed at this time."""
         assert self._state is not None
 
-        traversed_states = []
+        traversed_states: list[IsoScopeScheduling._State] = []
         previous_state = None
         while self._state != previous_state:
             # NOTE: This loop will terminate because completion of tests and
@@ -815,12 +814,11 @@ class IsoScopeScheduling:  # pylint: disable=too-many-instance-attributes
         )
 
         num_tests_remaining = workset.high_water
+        worker: _WorkerProxy
+        num_available_workers: int
         for worker, num_available_workers in zip(
             workers, range(num_workers_to_use, 0, -1)
         ):
-            worker: _WorkerProxy
-            num_available_workers: int
-
             # Workers ready for distribution must have no more than one pending
             # test
             assert (
@@ -1021,7 +1019,7 @@ class IsoScopeScheduling:  # pylint: disable=too-many-instance-attributes
     def _do_two_nodes_have_same_collection(
         self,
         reference_node: WorkerController,
-        reference_collection: tuple[str],
+        reference_collection: tuple[str, ...],
         node: WorkerController,
         collection: tuple[str, ...],
     ) -> bool:
@@ -1050,7 +1048,7 @@ class IsoScopeScheduling:  # pylint: disable=too-many-instance-attributes
             # NOTE: Not sure why/when `_config` would be `None`. Copied check
             # from the `loadscope` scheduler.
 
-            report = CollectReport(node.gateway.id, "failed", longrepr=msg, result=[])
+            report = pytest.CollectReport(node.gateway.id, "failed", longrepr=msg, result=[])
             self._config.hook.pytest_collectreport(report=report)
 
         return False
@@ -1072,11 +1070,11 @@ class _WorkerProxy:
 
         # An ordered collection of test IDs collected by the remote worker.
         # Initially None, until assigned by the Scheduler
-        self._collection: tuple[str] | None = None
+        self._collection: tuple[str, ...] | None = None
 
         self._pending_test_by_index: OrderedDict[int, _TestProxy] = OrderedDict()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.verbose_repr(verbose=False)
 
     @property
@@ -1085,7 +1083,7 @@ class _WorkerProxy:
         return self._node
 
     @property
-    def collection(self) -> tuple[str] | None:
+    def collection(self) -> tuple[str, ...] | None:
         """
         :return: An ordered collection of test IDs collected by the remote
             worker; `None` if the collection is not available yet.
@@ -1093,7 +1091,7 @@ class _WorkerProxy:
         return self._collection
 
     @collection.setter
-    def collection(self, collection: tuple[str]):
+    def collection(self, collection: tuple[str, ...]):
         """
         :param collection: An ordered collection of test IDs collected by the
             remote worker. Must not be `None`. Also, MUST NOT be set already.
@@ -1243,7 +1241,7 @@ class _TestProxy:
         self.test_id: str = test_id
         self.test_index: int = test_index
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             f"<{self.__class__.__name__}: test_index={self.test_index} "
             f"scope_id={self.scope_id} test_id={self.test_id}>"
@@ -1273,7 +1271,7 @@ class _ScopeWorkset:
 
         self._test_by_index: OrderedDict[int, _TestProxy] = OrderedDict()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             f"<{self.__class__.__name__}: scope_id={self.scope_id} "
             f"num_tests={self.num_tests} high_water={self.high_water}>"
@@ -1333,10 +1331,10 @@ class _ScopeWorkset:
 class _WorksetQueue:
     """Ordered collection of Scope Worksets grouped by scope id."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._workset_by_scope: OrderedDict[str, _ScopeWorkset] = OrderedDict()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             f"<{self.__class__.__name__}: "
             f"num_worksets={len(self._workset_by_scope)}>"
