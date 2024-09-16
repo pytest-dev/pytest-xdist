@@ -201,15 +201,17 @@ class WorkerInteractor:
             "runtest_protocol_complete", item_index=self.item_index, duration=duration
         )
 
+    @pytest.mark.trylast
     def pytest_collection_modifyitems(
         self,
         config: pytest.Config,
         items: list[pytest.Item],
     ) -> None:
         # add the group name to nodeid as suffix if --dist=loadgroup
-        if config.getvalue("loadgroup"):
+        if config.getvalue("loadgroup") or config.getvalue("customgroup"):
+            functional_mark = "xdist_group" if config.getvalue("loadgroup") else "xdist_custom"
             for item in items:
-                mark = item.get_closest_marker("xdist_group")
+                mark = item.get_closest_marker(functional_mark)
                 if not mark:
                     continue
                 gname = (
@@ -357,6 +359,7 @@ def getinfodict() -> WorkerInfo:
 
 def setup_config(config: pytest.Config, basetemp: str | None) -> None:
     config.option.loadgroup = config.getvalue("dist") == "loadgroup"
+    config.option.customgroup = config.getvalue("dist") == "customgroup"
     config.option.looponfail = False
     config.option.usepdb = False
     config.option.dist = "no"
