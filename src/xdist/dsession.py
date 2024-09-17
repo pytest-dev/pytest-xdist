@@ -402,14 +402,17 @@ class DSession:
                 self.terminal.write_line("")
                 if self.config.option.verbose > 0:
                     self.report_line(f"[-] [dse] scheduling tests via {self.sched.__class__.__name__}")
-            if isinstance(self.sched, CustomGroup) and self.ready_to_run_tests and self.are_all_active_nodes_collected():
-                # we're coming back here after finishing a batch of tests - so start the next batch
-                self.reschedule()
-                self.reset_nodes_if_needed()
+            if isinstance(self.sched, CustomGroup):
+                if self.ready_to_run_tests and self.are_all_active_nodes_collected():
+                    # we're coming back here after finishing a batch of tests - so start the next batch
+                    self.reschedule()
+                    self.reset_nodes_if_needed()
+                else:
+                    self.ready_to_run_tests = True
+                    self.sched.schedule()
+                    self.reset_nodes_if_needed()
             else:
-                self.ready_to_run_tests = True
                 self.sched.schedule()
-                self.reset_nodes_if_needed()
 
     def worker_logstart(
         self,
