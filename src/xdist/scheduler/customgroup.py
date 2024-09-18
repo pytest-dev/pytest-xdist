@@ -1,43 +1,82 @@
-"""Run tests across a variable number of nodes based on custom groups.
-
-# TODO: This is more of a spec/description, update docs/remove this section document within the class
-Example:
-    - 10 test cases exist
-    - 4 test cases are marked with @pytest.mark.low
-    - 4 test cases are marked with @pytest.mark.medium
-    - 2 test cases are marked with @pytest.mark.high
-    - A pytest.ini file contains the following lines:
-[pytest]
-
-markers=
-    low: 4
-    medium: 2
-    high: 1
-
-Then the 4 low test cases will be ran on 4 workers (distributed evenly amongst the 4, as the load.py scheduler functions)
-Then the 4 medium test cases will be ran on 2 workers (again, distributed evenly), only after the low test cases are complete (or before they start).
-Then the 2 high test cases will be ran on 1 worker (distributed evenly), only after the low and medium test cases are complete (or before they start).
-
-This allows a pytest user more custom control over processing tests.
-One potential application would be measuring the resource utilization of all test cases. Test cases that are not
-resource intensive can be ran on many workers, and more resource intensive test cases can be ran once the low
-resource consuming tests are done on fewer workers, such that resource consumption does not exceed available resources.
-"""
 from __future__ import annotations
 
 from itertools import cycle
-from typing import Sequence
+from typing import Sequence, Any
 
 import pytest
 
-from xdist.remote import Producer, WorkerInteractor
+from xdist.remote import Producer
 from xdist.report import report_collection_diff
 from xdist.workermanage import parse_spec_config
 from xdist.workermanage import WorkerController
 
 class CustomGroup:
-    """
-    # TODO: update docs here
+    """Implement grouped load scheduling across a variable number of nodes.
+
+    This distributes tests into groups based on the presence of xdist_custom pytest marks.
+    Groups are ran sequentially with tests within each group running in parallel.
+    The number of workers assigned to each group is based on the xdist_custom pytest mark.
+    Tests without the xdist_custom pytest mark are assigned to a "default" group and run
+    using all available workers.
+
+    Example:
+        Consider 12 pytest test cases.
+            - 4 test cases are marked with @pytest.mark.xdist_custom(name="low_4")
+            - 2 test cases are marked with @pytest.mark.xdist_custom(name="med_2")
+            - 2 test cases are marked with @pytest.mark.xdist_custom(name="high_1")
+            - 4 test cases are not marked with a xdist_custom mark.
+        Consider the pytest run was initiated with 4 workers (-n 4)
+            - The 4 test cases marked with "low_4" would run in a group using 4 workers
+            - The 2 test cases marked with "med_2" would run in a group using 2 workers
+            - The 2 test cases marked with "high_1" would run in a group with 1 worker
+            - The 4 unmarked test cases would run in a group using 4 workers.
+        Only one group would run at any given time. For example, while the "high_1" tests are executing,
+        the other pending test groups would not be scheduled or excuting. The order in which groups
+        are executed is variable. For example, "high_1" may execute first, or it may execute second, etc.
+        If a group pytest mark specifies more workers than the pytest run is initialized with the
+        number of workers the run was initialized with will be used instead (-n argument is a maximum).
+
+    Attributes::
+
+    :terminal: Terminal reporter for writing terminal output
+
+    :numnodes: The expected number of nodes taking part.  The actual
+       number of nodes will vary during the scheduler's lifetime as
+       nodes are added by the DSession as they are brought up and
+       removed either because of a dead node or normal shutdown.  This
+       number is primarily used to know when the initial collection is
+       completed.
+
+    :node2collection: Map of nodes and their test collection.  All
+       collections should always be identical.
+
+    :node2pending: Map of nodes and the indices of their pending
+       tests.  The indices are an index into ``.pending`` (which is
+       identical to their own collection stored in
+       ``.node2collection``).
+
+    :pending: List of indices of globally pending tests.  These are
+       tests which have not yet been allocated to a chunk for a node
+       to process.
+
+    :collection: The one collection once it is validated to be
+       identical between all the nodes.  It is initialised to None
+       until ``.schedule()`` is called.
+
+    :log: A py.log.Producer instance.
+
+    :config: Config object, used for handling hooks.
+
+    :dist_groups: Execution groups. Updated based on xdist_custom pytest marks.
+        Maps group names to tests, test indices, pending indices, and stores the number of workers to use
+        for that test execution group.
+
+    :pending_groups: List of dist_group keys that are pending
+
+    :is_first_time: Boolean to track whether we have called schedule() before or not
+
+    :do_resched: Boolean to track whether we should schedule another distribution group.
+        Accessed in dsession.py
     """
 
     def __init__(self, config: pytest.Config, log: Producer | None = None) -> None:
@@ -52,12 +91,10 @@ class CustomGroup:
         else:
             self.log = log.loadsched
         self.config = config
-        self.maxschedchunk = self.config.getoption("maxschedchunk")
-        # TODO: Type annotation incorrect
-        self.dist_groups: dict[str, str] = {}
+        self.dist_groups: dict[str, Any] = {}
         self.pending_groups: list[str] = []
-        self.is_first_time = True
-        self.do_resched = False
+        self.is_first_time: bool = True
+        self.do_resched: bool = False
 
     @property
     def nodes(self) -> list[WorkerController]:
@@ -263,9 +300,6 @@ class CustomGroup:
         self.pending[:] = range(len(self.collection))
         if not self.collection:
             return
-
-        if self.maxschedchunk is None:
-            self.maxschedchunk = len(self.collection)
 
         dist_groups = {}
 
