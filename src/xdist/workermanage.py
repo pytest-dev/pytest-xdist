@@ -82,9 +82,12 @@ class NodeManager:
     def setup_nodes(
         self,
         putevent: Callable[[tuple[str, dict[str, Any]]], None],
+        max_nodes: int | None = None,
     ) -> list[WorkerController]:
         self.config.hook.pytest_xdist_setupnodes(config=self.config, specs=self.specs)
         self.trace("setting up nodes")
+        if max_nodes:
+            return [self.setup_node(spec, putevent) for spec in self.specs[0:max_nodes]]
         return [self.setup_node(spec, putevent) for spec in self.specs]
 
     def setup_node(
