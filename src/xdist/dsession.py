@@ -5,16 +5,18 @@ from enum import Enum
 from queue import Empty
 from queue import Queue
 import sys
+import traceback
 from typing import Any
+from typing import Callable
 from typing import Sequence
 import warnings
-import traceback
 
 import execnet
 import pytest
 
 from xdist.remote import Producer
 from xdist.remote import WorkerInfo
+from xdist.scheduler import CustomGroup
 from xdist.scheduler import EachScheduling
 from xdist.scheduler import LoadFileScheduling
 from xdist.scheduler import LoadGroupScheduling
@@ -22,7 +24,6 @@ from xdist.scheduler import LoadScheduling
 from xdist.scheduler import LoadScopeScheduling
 from xdist.scheduler import Scheduling
 from xdist.scheduler import WorkStealingScheduling
-from xdist.scheduler import CustomGroup
 from xdist.workermanage import NodeManager
 from xdist.workermanage import WorkerController
 
@@ -60,14 +61,14 @@ class DSession:
         self._failed_collection_errors: dict[object, bool] = {}
         self._active_nodes: set[WorkerController] = set()
         self._failed_nodes_count = 0
-        self.saved_put = None
+        self.saved_put: Callable[[tuple[str, dict[str, Any]]], None]
         self.remake_nodes = False
         self.ready_to_run_tests = False
         self._max_worker_restart = get_default_max_worker_restart(self.config)
         # summary message to print at the end of the session
         self._summary_report: str | None = None
         self.terminal = config.pluginmanager.getplugin("terminalreporter")
-        self.worker_status: dict[WorkerController, str] = {}
+        self.worker_status: dict[str, str] = {}
         if self.terminal:
             self.trdist = TerminalDistReporter(config)
             config.pluginmanager.register(self.trdist, "terminaldistreporter")
@@ -180,45 +181,46 @@ class DSession:
             self.triggershutdown()
 
 
-    def is_node_finishing(self, node: WorkerController):
+    def is_node_finishing(self, node: WorkerController) -> bool:
         """Check if a test worker is considered to be finishing.
 
         Evaluate whether it's on its last test, or if no tests are pending.
         """
+        assert self.sched is not None
+        assert type(self.sched) is CustomGroup
         pending = self.sched.node2pending.get(node)
         return pending is not None and len(pending) < 2
 
 
-    def is_node_clear(self, node: WorkerController):
-        """Check if a test worker has no pending tests."""
-        pending = self.sched.node2pending.get(node)
-        return pending is None or len(pending) == 0
-
-
-    def are_all_nodes_finishing(self):
+    def are_all_nodes_finishing(self) -> bool:
         """Check if all workers are finishing (See 'is_node_finishing' above)."""
+        assert self.sched is not None
         return all(self.is_node_finishing(node) for node in self.sched.nodes)
 
 
-    def are_all_nodes_done(self):
+    def are_all_nodes_done(self) -> bool:
         """Check if all nodes have reported to finish."""
         return all(s == "finished" for s in self.worker_status.values())
 
 
-    def are_all_active_nodes_collected(self):
+    def are_all_active_nodes_collected(self) -> bool:
         """Check if all nodes have reported collection to be complete."""
         if not all(n.gateway.id in self.worker_status for n in self._active_nodes):
             return False
         return all(self.worker_status[n.gateway.id] == "collected" for n in self._active_nodes)
 
 
-    def reset_nodes_if_needed(self):
+    def reset_nodes_if_needed(self) -> None:
+        assert self.sched is not None
+        assert type(self.sched) is CustomGroup
         if self.are_all_nodes_finishing() and self.ready_to_run_tests and not self.sched.do_resched:
             self.reset_nodes()
 
 
-    def reset_nodes(self):
+    def reset_nodes(self) -> None:
         """Issue shutdown notices to workers for rescheduling purposes."""
+        assert self.sched is not None
+        assert type(self.sched) is CustomGroup
         if len(self.sched.pending) != 0:
             self.remake_nodes = True
         for node in self.sched.nodes:
@@ -226,22 +228,28 @@ class DSession:
                 node.shutdown()
 
 
-    def reschedule(self):
+    def reschedule(self) -> None:
         """Reschedule tests."""
+        assert self.sched is not None
+        assert type(self.sched) is CustomGroup
         self.sched.do_resched = False
         self.sched.check_schedule(self.sched.nodes[0], 1.0, True)
 
 
-    def prepare_for_reschedule(self):
+    def prepare_for_reschedule(self) -> None:
         """Update test workers and their status tracking so rescheduling is ready."""
+        assert type(self.sched) is CustomGroup
+        assert self.sched is not None
         self.remake_nodes = False
         num_workers = self.sched.dist_groups[self.sched.pending_groups[0]]['group_workers']
         self.trdist._status = {}
+        assert self.nodemanager is not None
         new_nodes = self.nodemanager.setup_nodes(self.saved_put, num_workers)
         self.worker_status = {}
         self._active_nodes = set()
         self._active_nodes.update(new_nodes)
         self.sched.node2pending = {}
+        assert type(self.sched) is CustomGroup
         self.sched.do_resched = True
 
     #
@@ -287,7 +295,9 @@ class DSession:
                 try:
                     self.prepare_for_reschedule()
                 except Exception as e:
-                    self.shouldstop = f"Exception caught during preparation for rescheduling. Giving up.\n{''.join(traceback.format_exception(e))}"
+                    msg = ("Exception caught during preparation for rescheduling. Giving up."
+                           f"\n{''.join(traceback.format_exception(e))}")
+                    self.shouldstop = msg
             return
         self.config.hook.pytest_testnodedown(node=node, error=None)
         if node.workeroutput["exitstatus"] == 2:  # keyboard-interrupt
@@ -308,10 +318,11 @@ class DSession:
                 assert not crashitem, (crashitem, node)
         self._active_nodes.remove(node)
 
-    def update_worker_status(self, node, status):
+    def update_worker_status(self, node: WorkerController, status: str) -> None:
         """Track the worker status.
 
-        Can be used at callbacks like 'worker_workerfinished' so we remember wchic event was reported last by each worker.
+        Can be used at callbacks like 'worker_workerfinished' so we remember wchic event
+        was reported last by each worker.
         """
         self.worker_status[node.workerinfo["id"]] = status
 

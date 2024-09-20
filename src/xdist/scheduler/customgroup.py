@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from itertools import cycle
-from typing import Sequence, Any
+from typing import Any
+from typing import Sequence
 
 import pytest
 
@@ -9,6 +10,7 @@ from xdist.remote import Producer
 from xdist.report import report_collection_diff
 from xdist.workermanage import parse_spec_config
 from xdist.workermanage import WorkerController
+
 
 class CustomGroup:
     """Implement grouped load scheduling across a variable number of nodes.
@@ -203,7 +205,7 @@ class CustomGroup:
     ) -> None:
         raise NotImplementedError()
 
-    def check_schedule(self, node: WorkerController, duration: float = 0, from_dsession=False) -> None:
+    def check_schedule(self, node: WorkerController, duration: float = 0, from_dsession: bool = False) -> None:
         """Maybe schedule new items on the node.
 
         If there are any globally pending nodes left then this will
@@ -226,7 +228,7 @@ class CustomGroup:
                     dist_group_key = self.pending_groups.pop(0)
                     dist_group = self.dist_groups[dist_group_key]
                     nodes = cycle(self.nodes[0:dist_group['group_workers']])
-                    schedule_log = {n.gateway.id:[] for n in self.nodes[0:dist_group['group_workers']]}
+                    schedule_log: dict[str, Any] = {n.gateway.id:[] for n in self.nodes[0:dist_group['group_workers']]}
                     for _ in range(len(dist_group['test_indices'])):
                         n = next(nodes)
                         #needs cleaner way to be identified
@@ -235,13 +237,16 @@ class CustomGroup:
 
                         self._send_tests_group(n, 1, dist_group_key)
                     del self.dist_groups[dist_group_key]
-                    message = f"\n[-] [csg] check_schedule: processed scheduling for {dist_group_key}: {' '.join([f'{nid} ({len(nt)})' for nid,nt in schedule_log.items()])}"
+                    message = (f"\n[-] [csg] check_schedule: processed scheduling for {dist_group_key}:"
+                               f" {' '.join([f'{nid} ({len(nt)})' for nid,nt in schedule_log.items()])}")
                     self.report_line(message)
 
         else:
-            pending = self.node2pending.get(node)
+            pending = self.node2pending.get(node, [])
             if len(pending) < 2:
-                self.report_line(f"[-] [csg] Shutting down {node.workerinput['workerid']} because only one case is pending")
+                self.report_line(
+                    f"[-] [csg] Shutting down {node.workerinput['workerid']} because only one case is pending"
+                )
                 node.shutdown()
 
         self.log("num items waiting for node:", len(self.pending))
@@ -301,7 +306,7 @@ class CustomGroup:
         if not self.collection:
             return
 
-        dist_groups = {}
+        dist_groups: dict[str, dict[Any, Any]] = {}
 
         if self.is_first_time:
             for i, test in enumerate(self.collection):
@@ -338,7 +343,7 @@ class CustomGroup:
         dist_group_key = self.pending_groups.pop(0)
         dist_group = self.dist_groups[dist_group_key]
         nodes = cycle(self.nodes[0:dist_group['group_workers']])
-        schedule_log = {n.gateway.id: [] for n in self.nodes[0:dist_group['group_workers']]}
+        schedule_log: dict[str, Any] = {n.gateway.id: [] for n in self.nodes[0:dist_group['group_workers']]}
         for _ in range(len(dist_group['test_indices'])):
             n = next(nodes)
             # needs cleaner way to be identified
@@ -346,7 +351,8 @@ class CustomGroup:
             schedule_log[n.gateway.id].extend(tests_per_node)
             self._send_tests_group(n, 1, dist_group_key)
         del self.dist_groups[dist_group_key]
-        message = f"\n[-] [csg] schedule: processed scheduling for {dist_group_key}: {' '.join([f'{nid} ({len(nt)})' for nid, nt in schedule_log.items()])}"
+        message = ("\n[-] [csg] schedule: processed scheduling for "
+        f"{dist_group_key}: {' '.join([f'{nid} ({len(nt)})' for nid, nt in schedule_log.items()])}")
         self.report_line(message)
 
     def _send_tests(self, node: WorkerController, num: int) -> None:
@@ -356,7 +362,7 @@ class CustomGroup:
             self.node2pending[node].extend(tests_per_node)
             node.send_runtest_some(tests_per_node)
 
-    def _send_tests_group(self, node: WorkerController, num: int, dist_group_key) -> None:
+    def _send_tests_group(self, node: WorkerController, num: int, dist_group_key: str) -> None:
         tests_per_node = self.dist_groups[dist_group_key]['pending_indices'][:num]
         if tests_per_node:
             del self.dist_groups[dist_group_key]['pending_indices'][:num]

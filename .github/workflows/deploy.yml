@@ -19,7 +19,7 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Build and Check Package
-      uses: hynek/build-and-inspect-python-package@v2.8
+      uses: hynek/build-and-inspect-python-package@v2.9
 
   deploy:
     needs: package
@@ -39,7 +39,9 @@ jobs:
         path: dist
 
     - name: Publish package to PyPI
-      uses: pypa/gh-action-pypi-publish@v1.9.0
+      uses: pypa/gh-action-pypi-publish@v1.10.1
+      with:
+        attestations: true
 
     - name: Push tag
       run: |
