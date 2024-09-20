@@ -209,7 +209,9 @@ class WorkerInteractor:
     ) -> None:
         # add the group name to nodeid as suffix if --dist=loadgroup
         if config.getvalue("loadgroup") or config.getvalue("customgroup"):
-            functional_mark = "xdist_group" if config.getvalue("loadgroup") else "xdist_custom"
+            functional_mark = (
+                "xdist_group" if config.getvalue("loadgroup") else "xdist_custom"
+            )
             for item in items:
                 mark = item.get_closest_marker(functional_mark)
                 if not mark:

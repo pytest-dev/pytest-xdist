@@ -180,7 +180,6 @@ class DSession:
         if self.sched.tests_finished:
             self.triggershutdown()
 
-
     def is_node_finishing(self, node: WorkerController) -> bool:
         """Check if a test worker is considered to be finishing.
 
@@ -191,31 +190,32 @@ class DSession:
         pending = self.sched.node2pending.get(node)
         return pending is not None and len(pending) < 2
 
-
     def are_all_nodes_finishing(self) -> bool:
         """Check if all workers are finishing (See 'is_node_finishing' above)."""
         assert self.sched is not None
         return all(self.is_node_finishing(node) for node in self.sched.nodes)
 
-
     def are_all_nodes_done(self) -> bool:
         """Check if all nodes have reported to finish."""
         return all(s == "finished" for s in self.worker_status.values())
-
 
     def are_all_active_nodes_collected(self) -> bool:
         """Check if all nodes have reported collection to be complete."""
         if not all(n.gateway.id in self.worker_status for n in self._active_nodes):
             return False
-        return all(self.worker_status[n.gateway.id] == "collected" for n in self._active_nodes)
-
+        return all(
+            self.worker_status[n.gateway.id] == "collected" for n in self._active_nodes
+        )
 
     def reset_nodes_if_needed(self) -> None:
         assert self.sched is not None
         assert type(self.sched) is CustomGroup
-        if self.are_all_nodes_finishing() and self.ready_to_run_tests and not self.sched.do_resched:
+        if (
+            self.are_all_nodes_finishing()
+            and self.ready_to_run_tests
+            and not self.sched.do_resched
+        ):
             self.reset_nodes()
-
 
     def reset_nodes(self) -> None:
         """Issue shutdown notices to workers for rescheduling purposes."""
@@ -227,7 +227,6 @@ class DSession:
             if self.is_node_finishing(node):
                 node.shutdown()
 
-
     def reschedule(self) -> None:
         """Reschedule tests."""
         assert self.sched is not None
@@ -235,13 +234,14 @@ class DSession:
         self.sched.do_resched = False
         self.sched.check_schedule(self.sched.nodes[0], 1.0, True)
 
-
     def prepare_for_reschedule(self) -> None:
         """Update test workers and their status tracking so rescheduling is ready."""
         assert type(self.sched) is CustomGroup
         assert self.sched is not None
         self.remake_nodes = False
-        num_workers = self.sched.dist_groups[self.sched.pending_groups[0]]['group_workers']
+        num_workers = self.sched.dist_groups[self.sched.pending_groups[0]][
+            "group_workers"
+        ]
         self.trdist._status = {}
         assert self.nodemanager is not None
         new_nodes = self.nodemanager.setup_nodes(self.saved_put, num_workers)
@@ -295,8 +295,10 @@ class DSession:
                 try:
                     self.prepare_for_reschedule()
                 except Exception as e:
-                    msg = ("Exception caught during preparation for rescheduling. Giving up."
-                           f"\n{''.join(traceback.format_exception(e))}")
+                    msg = (
+                        "Exception caught during preparation for rescheduling. Giving up."
+                        f"\n{''.join(traceback.format_exception(e))}"
+                    )
                     self.shouldstop = msg
             return
         self.config.hook.pytest_testnodedown(node=node, error=None)
@@ -392,7 +394,9 @@ class DSession:
         scheduling the first time it logs which scheduler is in use.
         """
         if self.shuttingdown:
-            self.report_line(f"[-] [dse] collectionfinish while closing {node.gateway.id}")
+            self.report_line(
+                f"[-] [dse] collectionfinish while closing {node.gateway.id}"
+            )
             return
         self.update_worker_status(node, "collected")
 
@@ -412,7 +416,9 @@ class DSession:
                 self.trdist.ensure_show_status()
                 self.terminal.write_line("")
                 if self.config.option.verbose > 0:
-                    self.report_line(f"[-] [dse] scheduling tests via {self.sched.__class__.__name__}")
+                    self.report_line(
+                        f"[-] [dse] scheduling tests via {self.sched.__class__.__name__}"
+                    )
             if isinstance(self.sched, CustomGroup):
                 if self.ready_to_run_tests and self.are_all_active_nodes_collected():
                     # we're coming back here after finishing a batch of tests - so start the next batch
