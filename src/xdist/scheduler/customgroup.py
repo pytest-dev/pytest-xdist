@@ -189,7 +189,6 @@ class CustomGroup:
         self.check_schedule(node, duration=duration)
 
     def mark_test_pending(self, item: str) -> None:
-
         assert self.collection is not None
         self.pending.insert(
             0,
@@ -205,7 +204,9 @@ class CustomGroup:
     ) -> None:
         raise NotImplementedError()
 
-    def check_schedule(self, node: WorkerController, duration: float = 0, from_dsession: bool = False) -> None:
+    def check_schedule(
+        self, node: WorkerController, duration: float = 0, from_dsession: bool = False
+    ) -> None:
         """Maybe schedule new items on the node.
 
         If there are any globally pending nodes left then this will
@@ -214,7 +215,9 @@ class CustomGroup:
         heuristic to influence how many tests the node is assigned.
         """
         if node.shutting_down:
-            self.report_line(f"[-] [csg] {node.workerinput['workerid']} is already shutting down")
+            self.report_line(
+                f"[-] [csg] {node.workerinput['workerid']} is already shutting down"
+            )
             return
 
         if self.pending:
@@ -227,18 +230,25 @@ class CustomGroup:
                 if self.pending_groups:
                     dist_group_key = self.pending_groups.pop(0)
                     dist_group = self.dist_groups[dist_group_key]
-                    nodes = cycle(self.nodes[0:dist_group['group_workers']])
-                    schedule_log: dict[str, Any] = {n.gateway.id:[] for n in self.nodes[0:dist_group['group_workers']]}
-                    for _ in range(len(dist_group['test_indices'])):
+                    nodes = cycle(self.nodes[0 : dist_group["group_workers"]])
+                    schedule_log: dict[str, Any] = {
+                        n.gateway.id: []
+                        for n in self.nodes[0 : dist_group["group_workers"]]
+                    }
+                    for _ in range(len(dist_group["test_indices"])):
                         n = next(nodes)
-                        #needs cleaner way to be identified
-                        tests_per_node = self.dist_groups[dist_group_key]['pending_indices'][:1]
+                        # needs cleaner way to be identified
+                        tests_per_node = self.dist_groups[dist_group_key][
+                            "pending_indices"
+                        ][:1]
                         schedule_log[n.gateway.id].extend(tests_per_node)
 
                         self._send_tests_group(n, 1, dist_group_key)
                     del self.dist_groups[dist_group_key]
-                    message = (f"\n[-] [csg] check_schedule: processed scheduling for {dist_group_key}:"
-                               f" {' '.join([f'{nid} ({len(nt)})' for nid,nt in schedule_log.items()])}")
+                    message = (
+                        f"\n[-] [csg] check_schedule: processed scheduling for {dist_group_key}:"
+                        f" {' '.join([f'{nid} ({len(nt)})' for nid,nt in schedule_log.items()])}"
+                    )
                     self.report_line(message)
 
         else:
@@ -310,26 +320,28 @@ class CustomGroup:
 
         if self.is_first_time:
             for i, test in enumerate(self.collection):
-                if '@' in test:
-                    group_mark = test.split('@')[-1]
-                    group_workers = int(group_mark.split('_')[-1])
+                if "@" in test:
+                    group_mark = test.split("@")[-1]
+                    group_workers = int(group_mark.split("_")[-1])
                     if group_workers > len(self.nodes):
                         # We can only distribute across as many nodes as we have available
                         # If a group requests more, we fallback to our actual max
                         group_workers = len(self.nodes)
                 else:
-                    group_mark = 'default'
+                    group_mark = "default"
                     group_workers = len(self.nodes)
-                existing_tests = dist_groups.get(group_mark, {}).get('tests', [])
+                existing_tests = dist_groups.get(group_mark, {}).get("tests", [])
                 existing_tests.append(test)
-                existing_indices = dist_groups.get(group_mark, {}).get('test_indices', [])
+                existing_indices = dist_groups.get(group_mark, {}).get(
+                    "test_indices", []
+                )
                 existing_indices.append(i)
 
                 dist_groups[group_mark] = {
-                    'tests': existing_tests,
-                    'group_workers': group_workers,
-                    'test_indices': existing_indices,
-                    'pending_indices': existing_indices
+                    "tests": existing_tests,
+                    "group_workers": group_workers,
+                    "test_indices": existing_indices,
+                    "pending_indices": existing_indices,
                 }
             self.dist_groups = dist_groups
             self.pending_groups = list(dist_groups.keys())
@@ -342,17 +354,21 @@ class CustomGroup:
             return
         dist_group_key = self.pending_groups.pop(0)
         dist_group = self.dist_groups[dist_group_key]
-        nodes = cycle(self.nodes[0:dist_group['group_workers']])
-        schedule_log: dict[str, Any] = {n.gateway.id: [] for n in self.nodes[0:dist_group['group_workers']]}
-        for _ in range(len(dist_group['test_indices'])):
+        nodes = cycle(self.nodes[0 : dist_group["group_workers"]])
+        schedule_log: dict[str, Any] = {
+            n.gateway.id: [] for n in self.nodes[0 : dist_group["group_workers"]]
+        }
+        for _ in range(len(dist_group["test_indices"])):
             n = next(nodes)
             # needs cleaner way to be identified
-            tests_per_node = self.dist_groups[dist_group_key]['pending_indices'][:1]
+            tests_per_node = self.dist_groups[dist_group_key]["pending_indices"][:1]
             schedule_log[n.gateway.id].extend(tests_per_node)
             self._send_tests_group(n, 1, dist_group_key)
         del self.dist_groups[dist_group_key]
-        message = ("\n[-] [csg] schedule: processed scheduling for "
-        f"{dist_group_key}: {' '.join([f'{nid} ({len(nt)})' for nid, nt in schedule_log.items()])}")
+        message = (
+            "\n[-] [csg] schedule: processed scheduling for "
+            f"{dist_group_key}: {' '.join([f'{nid} ({len(nt)})' for nid, nt in schedule_log.items()])}"
+        )
         self.report_line(message)
 
     def _send_tests(self, node: WorkerController, num: int) -> None:
@@ -362,15 +378,16 @@ class CustomGroup:
             self.node2pending[node].extend(tests_per_node)
             node.send_runtest_some(tests_per_node)
 
-    def _send_tests_group(self, node: WorkerController, num: int, dist_group_key: str) -> None:
-        tests_per_node = self.dist_groups[dist_group_key]['pending_indices'][:num]
+    def _send_tests_group(
+        self, node: WorkerController, num: int, dist_group_key: str
+    ) -> None:
+        tests_per_node = self.dist_groups[dist_group_key]["pending_indices"][:num]
         if tests_per_node:
-            del self.dist_groups[dist_group_key]['pending_indices'][:num]
+            del self.dist_groups[dist_group_key]["pending_indices"][:num]
             for test_index in tests_per_node:
                 self.pending.remove(test_index)
             self.node2pending[node].extend(tests_per_node)
             node.send_runtest_some(tests_per_node)
-
 
     def _check_nodes_have_same_collection(self) -> bool:
         """Return True if all nodes have collected the same items.
