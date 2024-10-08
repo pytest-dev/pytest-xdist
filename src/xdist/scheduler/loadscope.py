@@ -97,6 +97,7 @@ class LoadScopeScheduling:
         self.workqueue: OrderedDict[str, dict[str, bool]] = OrderedDict()
         self.assigned_work: dict[WorkerController, dict[str, dict[str, bool]]] = {}
         self.registered_collections: dict[WorkerController, list[str]] = {}
+        self.group_markers: dict[str, str] = {}
 
         if log is None:
             self.log = Producer("loadscopesched")
@@ -104,6 +105,9 @@ class LoadScopeScheduling:
             self.log = log.loadscopesched
 
         self.config = config
+
+    def set_group_markers(self, group_markers: dict[str, str]) -> None:
+        self.group_markers = group_markers
 
     @property
     def nodes(self) -> list[WorkerController]:
