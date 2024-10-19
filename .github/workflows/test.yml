@@ -41,6 +41,7 @@ jobs:
           - "py311-pytestlatest"
           - "py311-pytestmain"
           - "py312-pytestlatest"
+          - "py313-pytestlatest"
           - "py310-psutil"
           - "py310-setproctitle"
 
@@ -60,6 +61,8 @@ jobs:
             python: "3.11"
           - tox_env: "py312-pytestlatest"
             python: "3.12"
+          - tox_env: "py313-pytestlatest"
+            python: "3.13"
           - tox_env: "py310-psutil"
             python: "3.10"
           - tox_env: "py310-setproctitle"
