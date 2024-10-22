@@ -47,7 +47,9 @@ from collections import OrderedDict
 import enum
 from math import ceil
 import random
-from typing import cast, List, Tuple
+from typing import cast
+from typing import List
+from typing import Tuple
 from typing import TYPE_CHECKING
 
 import pytest
