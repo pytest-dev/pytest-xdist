@@ -1308,7 +1308,7 @@ class TestIsoScope:
         )
         assert counts_by_worker.setdefault("gw0", 0) in (0, num_tests)
         assert counts_by_worker.setdefault("gw1", 0) in (0, num_tests)
-        assert counts_by_worker["gw0"] + counts_by_worker.setdefault["gw1"] == num_tests
+        assert counts_by_worker["gw0"] + counts_by_worker["gw1"] == num_tests
 
 
 class TestLoadScope:
