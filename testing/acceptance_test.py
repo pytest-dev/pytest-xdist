@@ -1263,6 +1263,26 @@ class TestIsoScope:
         assert a.items() == b.items()
         assert c1 == c2
 
+    def test_single_scope_all_workers_utilized(self, pytester: pytest.Pytester) -> None:
+        """
+        With single scope, there are no fence tests from another scope, so
+        this scheduler resorts to shutting down the workers in order to execute
+        the final tests in each worker. isoscope allocates at least two tests
+        per worker from the active scope, unless the scope has only one test.
+        """
+        test_file = """
+            import pytest
+            @pytest.mark.parametrize('i', range(5))
+            def test(i):
+                pass
+        """
+        pytester.makepyfile(test_a=test_file)
+        result = pytester.runpytest("-n2", "--dist=isoscope", "-v")
+        counts_by_worker = get_workers_and_test_count_by_prefix("test_a.py::test", result.outlines)
+        assert counts_by_worker["gw0"] in (2, 3)
+        assert counts_by_worker["gw1"] in (2, 3)
+        assert counts_by_worker["gw0"] + counts_by_worker["gw1"] == 5
+
 
 class TestLoadScope:
     def test_by_module(self, pytester: pytest.Pytester) -> None:
