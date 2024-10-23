@@ -1285,10 +1285,10 @@ class TestIsoScope:
         assert counts_by_worker["gw1"] in (2, 3)
         assert counts_by_worker["gw0"] + counts_by_worker["gw1"] == 5
 
-    @pytest.mark.parametrize('num_tests', [1, 2, 3])
-    def test_single_scope_subset_of_workers_utilized(self,
-                                                     num_tests: int,
-                                                     pytester: pytest.Pytester) -> None:
+    @pytest.mark.parametrize("num_tests", [1, 2, 3])
+    def test_single_scope_subset_of_workers_utilized(
+        self, num_tests: int, pytester: pytest.Pytester
+    ) -> None:
         """
         With single scope, there are no fence tests from another scope, so
         this scheduler resorts to shutting down the workers in order to execute
@@ -1303,7 +1303,9 @@ class TestIsoScope:
         """
         pytester.makepyfile(test_a=test_file)
         result = pytester.runpytest("-n2", "--dist=isoscope", "-v")
-        counts_by_worker = get_workers_and_test_count_by_prefix("test_a.py::test", result.outlines)
+        counts_by_worker = get_workers_and_test_count_by_prefix(
+            "test_a.py::test", result.outlines
+        )
         assert counts_by_worker["gw0"] in (0, num_tests)
         assert counts_by_worker["gw1"] in (0, num_tests)
         assert counts_by_worker["gw0"] + counts_by_worker["gw1"] == num_tests
