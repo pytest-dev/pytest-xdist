@@ -1,3 +1,4 @@
+from xdist.scheduler.customgroup import CustomGroup as CustomGroup
 from xdist.scheduler.each import EachScheduling as EachScheduling
 from xdist.scheduler.load import LoadScheduling as LoadScheduling
 from xdist.scheduler.loadfile import LoadFileScheduling as LoadFileScheduling

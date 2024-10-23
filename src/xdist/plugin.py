@@ -108,6 +108,7 @@ def pytest_addoption(parser: pytest.Parser) -> None:
             "loadfile",
             "loadgroup",
             "worksteal",
+            "customgroup",
             "no",
         ],
         dest="dist",
@@ -124,6 +125,8 @@ def pytest_addoption(parser: pytest.Parser) -> None:
             "loadgroup: Like 'load', but sends tests marked with 'xdist_group' to the same worker.\n\n"
             "worksteal: Split the test suite between available environments,"
             " then re-balance when any worker runs out of tests.\n\n"
+            # TODO: Update docstring
+            "customgroup: TODO: add docs here"
             "(default) no: Run tests inprocess, don't distribute."
         ),
     )
