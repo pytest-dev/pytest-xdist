@@ -1308,11 +1308,11 @@ class TestIsoScope:
         )
         assert counts_by_worker.setdefault("gw0", None) in (None, num_tests)
         assert counts_by_worker.setdefault("gw1", None) in (None, num_tests)
-        assert counts_by_worker.setdefault(
-            "gw0", 0
-        ) + counts_by_worker.setdefault(
-            "gw1", 0
-        ) == num_tests
+        assert (
+            counts_by_worker.setdefault("gw0", 0)
+            + counts_by_worker.setdefault("gw1", 0)
+            == num_tests
+        )
 
 
 class TestLoadScope:
