@@ -1210,10 +1210,10 @@ class TestIsoScope:
         result = pytester.runpytest("-n2", "--dist=isoscope", "-v")
         assert get_workers_and_test_count_by_prefix(
             "test_a.py::test", result.outlines
-        ) in ({"gw0": 10}, {"gw1": 10})
+        ) == {"gw0": 5, "gw1": 5}
         assert get_workers_and_test_count_by_prefix(
             "test_b.py::test", result.outlines
-        ) in ({"gw0": 10}, {"gw1": 10})
+        ) == {"gw0": 5, "gw1": 5}
 
     def test_by_class(self, pytester: pytest.Pytester) -> None:
         pytester.makepyfile(
@@ -1233,13 +1233,13 @@ class TestIsoScope:
         result = pytester.runpytest("-n2", "--dist=isoscope", "-v")
         assert get_workers_and_test_count_by_prefix(
             "test_a.py::TestA", result.outlines
-        ) in ({"gw0": 10}, {"gw1": 10})
+        ) == {"gw0": 5, "gw1": 5}
         assert get_workers_and_test_count_by_prefix(
             "test_a.py::TestB", result.outlines
-        ) in ({"gw0": 10}, {"gw1": 10})
+        ) == {"gw0": 5, "gw1": 5}
 
     def test_module_single_start(self, pytester: pytest.Pytester) -> None:
-        """Ensure test suite finishing in case all workers start with a single test (#277)."""
+        """Ensure test suite is finishing in case all workers start with a single test (#277)."""
         test_file1 = """
             import pytest
             def test():
@@ -1260,7 +1260,7 @@ class TestIsoScope:
         c2 = get_workers_and_test_count_by_prefix("test_c.py::test_2", result.outlines)
         assert a in ({"gw0": 1}, {"gw1": 1})
         assert b in ({"gw0": 1}, {"gw1": 1})
-        assert a.items() != b.items()
+        assert a.items() == b.items()
         assert c1 == c2
 
 
