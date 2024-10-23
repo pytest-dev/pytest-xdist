@@ -1278,7 +1278,9 @@ class TestIsoScope:
         """
         pytester.makepyfile(test_a=test_file)
         result = pytester.runpytest("-n2", "--dist=isoscope", "-v")
-        counts_by_worker = get_workers_and_test_count_by_prefix("test_a.py::test", result.outlines)
+        counts_by_worker = get_workers_and_test_count_by_prefix(
+            "test_a.py::test", result.outlines
+        )
         assert counts_by_worker["gw0"] in (2, 3)
         assert counts_by_worker["gw1"] in (2, 3)
         assert counts_by_worker["gw0"] + counts_by_worker["gw1"] == 5
