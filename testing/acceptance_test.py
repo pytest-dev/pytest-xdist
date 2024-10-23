@@ -1198,6 +1198,72 @@ def test_internal_errors_propagate_to_controller(pytester: pytest.Pytester) -> N
     result.stdout.fnmatch_lines(["*RuntimeError: Some runtime error*"])
 
 
+class TestIsoScope:
+    def test_by_module(self, pytester: pytest.Pytester) -> None:
+        test_file = """
+            import pytest
+            @pytest.mark.parametrize('i', range(10))
+            def test(i):
+                pass
+        """
+        pytester.makepyfile(test_a=test_file, test_b=test_file)
+        result = pytester.runpytest("-n2", "--dist=isoscope", "-v")
+        assert get_workers_and_test_count_by_prefix(
+            "test_a.py::test", result.outlines
+        ) in ({"gw0": 10}, {"gw1": 10})
+        assert get_workers_and_test_count_by_prefix(
+            "test_b.py::test", result.outlines
+        ) in ({"gw0": 10}, {"gw1": 10})
+
+    def test_by_class(self, pytester: pytest.Pytester) -> None:
+        pytester.makepyfile(
+            test_a="""
+            import pytest
+            class TestA:
+                @pytest.mark.parametrize('i', range(10))
+                def test(self, i):
+                    pass
+
+            class TestB:
+                @pytest.mark.parametrize('i', range(10))
+                def test(self, i):
+                    pass
+        """
+        )
+        result = pytester.runpytest("-n2", "--dist=isoscope", "-v")
+        assert get_workers_and_test_count_by_prefix(
+            "test_a.py::TestA", result.outlines
+        ) in ({"gw0": 10}, {"gw1": 10})
+        assert get_workers_and_test_count_by_prefix(
+            "test_a.py::TestB", result.outlines
+        ) in ({"gw0": 10}, {"gw1": 10})
+
+    def test_module_single_start(self, pytester: pytest.Pytester) -> None:
+        """Ensure test suite finishing in case all workers start with a single test (#277)."""
+        test_file1 = """
+            import pytest
+            def test():
+                pass
+        """
+        test_file2 = """
+            import pytest
+            def test_1():
+                pass
+            def test_2():
+                pass
+        """
+        pytester.makepyfile(test_a=test_file1, test_b=test_file1, test_c=test_file2)
+        result = pytester.runpytest("-n2", "--dist=isoscope", "-v")
+        a = get_workers_and_test_count_by_prefix("test_a.py::test", result.outlines)
+        b = get_workers_and_test_count_by_prefix("test_b.py::test", result.outlines)
+        c1 = get_workers_and_test_count_by_prefix("test_c.py::test_1", result.outlines)
+        c2 = get_workers_and_test_count_by_prefix("test_c.py::test_2", result.outlines)
+        assert a in ({"gw0": 1}, {"gw1": 1})
+        assert b in ({"gw0": 1}, {"gw1": 1})
+        assert a.items() != b.items()
+        assert c1 == c2
+
+
 class TestLoadScope:
     def test_by_module(self, pytester: pytest.Pytester) -> None:
         test_file = """
