@@ -1342,7 +1342,7 @@ class TestIsoScope:
                 def test2(self):
                     pass
         """
-        pytester.makepyfile(test_a=test_file1, fence_tests=test_file2)
+        pytester.makepyfile(test_a=test_file1, test_fence_scopes=test_file2)
         result = pytester.runpytest("-n3", "--dist=isoscope", "-v")
 
         counts_by_worker_a = get_workers_and_test_count_by_prefix(
@@ -1355,10 +1355,10 @@ class TestIsoScope:
             assert counts_by_worker_a[worker] == 2
 
         counts_by_worker_fence_a = get_workers_and_test_count_by_prefix(
-            "fence_tests.py::TestFenceA", result.outlines
+            "test_fence_scopes.py::TestFenceA", result.outlines
         )
         counts_by_worker_fence_b = get_workers_and_test_count_by_prefix(
-            "fence_tests.py::TestFenceB", result.outlines
+            "test_fence_scopes.py::TestFenceB", result.outlines
         )
 
         assert len(counts_by_worker_fence_a) == 1
