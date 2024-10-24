@@ -1367,6 +1367,52 @@ class TestIsoScope:
         assert len(counts_by_worker_fence_b) == 1
         assert next(iter(counts_by_worker_fence_b.values())) == 2
 
+    @pytest.mark.parametrize('num_tests', [1, 2, 3, 4, 5, 7])
+    def test_two_tests_min_per_worker_rule_with_two_workers(
+        self, num_tests: int, pytester: pytest.Pytester
+    ) -> None:
+        """
+        isoscope allocates at least two tests per worker from the active scope,
+        unless the scope has only one test.
+        """
+        test_file1 = f"""
+            import pytest
+            # 6 tests should distribute 2 per worker for 3 workers due to the
+            # min-2 scope tests per worker rule.
+            @pytest.mark.parametrize('i', range({num_tests}))
+            def test(i):
+                pass
+        """
+        pytester.makepyfile(test_a=test_file1)
+        result = pytester.runpytest("-n2", "--dist=isoscope", "-v")
+
+        if num_tests == 1:
+            expected_worker_a_test_count = 1
+        elif num_tests == 2:
+            expected_worker_a_test_count = 2
+        elif num_tests == 3:
+            expected_worker_a_test_count = 3
+        elif num_tests == 4:
+            expected_worker_a_test_count = 2
+        elif num_tests == 5:
+            expected_worker_a_test_count = 3
+        elif num_tests == 7:
+            expected_worker_a_test_count = 4
+        else:
+            assert False, f"Unexpected {num_tests=}"
+
+        counts_by_worker_a = get_workers_and_test_count_by_prefix(
+            "test_a.py::test", result.outlines
+        )
+
+        counts_by_worker_a.setdefault("gw0", 0)
+        counts_by_worker_a.setdefault("gw1", 0)
+
+        assert set(counts_by_worker_a.values()) == {
+            expected_worker_a_test_count,
+            num_tests - expected_worker_a_test_count
+        }
+
 
 class TestLoadScope:
     def test_by_module(self, pytester: pytest.Pytester) -> None:
