@@ -1330,16 +1330,16 @@ class TestIsoScope:
         """
         test_file2 = """
             import pytest
-            class FenceA:
+            class TestFenceA:
                 def test(self):
                     pass
 
-            class FenceB:
-                # Two tests are only enough for one fence due to min-2 scope 
+            class TestFenceB:
+                # Two tests are only enough for one fence due to min-2 scope
                 # tests per worker rule
                 def test1(self):
                     pass
-                def test1(self):
+                def test2(self):
                     pass
         """
         pytester.makepyfile(test_a=test_file1, fence_tests=test_file2)
@@ -1362,10 +1362,10 @@ class TestIsoScope:
         )
 
         assert len(counts_by_worker_fence_a) == 1
-        assert list(counts_by_worker_fence_a.values())[0] == 1
+        assert next(iter(counts_by_worker_fence_a.values())) == 1
 
         assert len(counts_by_worker_fence_b) == 1
-        assert list(counts_by_worker_fence_b.values())[0] == 2
+        assert next(iter(counts_by_worker_fence_b.values())) == 2
 
 
 class TestLoadScope:
