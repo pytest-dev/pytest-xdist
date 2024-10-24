@@ -1311,7 +1311,7 @@ class TestIsoScope:
         assert counts_by_worker["gw0"] + counts_by_worker["gw1"] == num_tests
 
     def test_multi_scope_with_insufficient_fence(
-        self,  pytester: pytest.Pytester
+        self, pytester: pytest.Pytester
     ) -> None:
         """
         When there are not enough fence tests from subsequent scope(s),
@@ -1320,7 +1320,7 @@ class TestIsoScope:
         tests per worker from the active scope, unless the scope has only one
         test.
         """
-        test_file1 = f"""
+        test_file1 = """
             import pytest
             # 6 tests should distribute 2 per worker for 3 workers due to the
             # min-2 scope tests per worker rule.
@@ -1328,7 +1328,7 @@ class TestIsoScope:
             def test(i):
                 pass
         """
-        test_file2 = f"""
+        test_file2 = """
             import pytest
             class FenceA:
                 def test(self):
@@ -1351,7 +1351,7 @@ class TestIsoScope:
         # 6 tests should distribute 2 per worker for 3 workers due to the
         # min-2 scope tests per worker rule.
         assert sum(counts_by_worker_a.values()) == 6
-        for worker in ['gw0', 'gw1', 'gw2']:
+        for worker in ["gw0", "gw1", "gw2"]:
             assert counts_by_worker_a[worker] == 2
 
         counts_by_worker_fence_a = get_workers_and_test_count_by_prefix(
