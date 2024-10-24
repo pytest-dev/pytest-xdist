@@ -1355,10 +1355,10 @@ class TestIsoScope:
             assert counts_by_worker_a[worker] == 2
 
         counts_by_worker_fence_a = get_workers_and_test_count_by_prefix(
-            "fence_tests.py::FenceA", result.outlines
+            "fence_tests.py::TestFenceA", result.outlines
         )
         counts_by_worker_fence_b = get_workers_and_test_count_by_prefix(
-            "fence_tests.py::FenceB", result.outlines
+            "fence_tests.py::TestFenceB", result.outlines
         )
 
         assert len(counts_by_worker_fence_a) == 1
