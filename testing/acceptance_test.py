@@ -1367,7 +1367,7 @@ class TestIsoScope:
         assert len(counts_by_worker_fence_b) == 1
         assert next(iter(counts_by_worker_fence_b.values())) == 2
 
-    @pytest.mark.parametrize('num_tests', [1, 2, 3, 4, 5, 7])
+    @pytest.mark.parametrize("num_tests", [1, 2, 3, 4, 5, 7])
     def test_two_tests_min_per_worker_rule_with_two_workers(
         self, num_tests: int, pytester: pytest.Pytester
     ) -> None:
@@ -1410,7 +1410,7 @@ class TestIsoScope:
 
         assert set(counts_by_worker_a.values()) == {
             expected_worker_a_test_count,
-            num_tests - expected_worker_a_test_count
+            num_tests - expected_worker_a_test_count,
         }
 
 
