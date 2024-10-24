@@ -1310,6 +1310,63 @@ class TestIsoScope:
         assert counts_by_worker.setdefault("gw1", 0) in (0, num_tests)
         assert counts_by_worker["gw0"] + counts_by_worker["gw1"] == num_tests
 
+    def test_multi_scope_with_insufficient_fence(
+        self,  pytester: pytest.Pytester
+    ) -> None:
+        """
+        When there are not enough fence tests from subsequent scope(s),
+        this scheduler resorts to shutting down the excess workers in order to
+        execute the final tests in each worker. isoscope allocates at least two
+        tests per worker from the active scope, unless the scope has only one
+        test.
+        """
+        test_file1 = f"""
+            import pytest
+            # 6 tests should distribute 2 per worker for 3 workers due to the
+            # min-2 scope tests per worker rule.
+            @pytest.mark.parametrize('i', range(6))
+            def test(i):
+                pass
+        """
+        test_file2 = f"""
+            import pytest
+            class FenceA:
+                def test(self):
+                    pass
+
+            class FenceB:
+                # Two tests are only enough for one fence due to min-2 scope 
+                # tests per worker rule
+                def test1(self):
+                    pass
+                def test1(self):
+                    pass
+        """
+        pytester.makepyfile(test_a=test_file1, fence_tests=test_file2)
+        result = pytester.runpytest("-n3", "--dist=isoscope", "-v")
+
+        counts_by_worker_a = get_workers_and_test_count_by_prefix(
+            "test_a.py::test", result.outlines
+        )
+        # 6 tests should distribute 2 per worker for 3 workers due to the
+        # min-2 scope tests per worker rule.
+        assert sum(counts_by_worker_a.values()) == 6
+        for worker in ['gw0', 'gw1', 'gw2']:
+            assert counts_by_worker_a[worker] == 2
+
+        counts_by_worker_fence_a = get_workers_and_test_count_by_prefix(
+            "fence_tests.py::FenceA", result.outlines
+        )
+        counts_by_worker_fence_b = get_workers_and_test_count_by_prefix(
+            "fence_tests.py::FenceB", result.outlines
+        )
+
+        assert len(counts_by_worker_fence_a) == 1
+        assert list(counts_by_worker_fence_a.values())[0] == 1
+
+        assert len(counts_by_worker_fence_b) == 1
+        assert list(counts_by_worker_fence_b.values())[0] == 2
+
 
 class TestLoadScope:
     def test_by_module(self, pytester: pytest.Pytester) -> None:
