@@ -1218,13 +1218,20 @@ class TestIsoScope:
         test_file = """
             import pathlib
             from uuid import uuid1
+            from typing import TYPE_CHECKING
             import pytest
+            if TYPE_CHECKING:
+                from xdist.iso_scheduling_utils import (
+                    IsoSchedulingFixture,
+                    DistributedSetupContext,
+                    DistributedTeardownContext
+                )
             class TestScopeA:
                 @classmethod
                 @pytest.fixture(scope='class', autouse=True)
                 def distributed_setup_and_teardown(
                         cls,
-                        iso_scheduling:
+                        iso_scheduling: IsoSchedulingFixture
                         request: pytest.FixtureRequest):
                     with iso_scheduling.coordinate_setup_teardown(
                             setup_request=request) as coordinator:
