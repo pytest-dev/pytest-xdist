@@ -1242,7 +1242,7 @@ class TestIsoScope:
             )
 
         _SHARED_SCOPE_SETUP_STATUS_PATH = pathlib.Path(
-            {shared_scope_setup_status_path!s})
+            "{shared_scope_setup_status_path!s}")
 
         class TestScopeA:
             @classmethod
@@ -1287,7 +1287,7 @@ class TestIsoScope:
         class TestScopeB(TestScopeA):
             pass
         """
-        pytester.makepyfile(test_a=test_file, test_b=test_file)
+        pytester.makepyfile(test_a=test_file)
         result = pytester.runpytest("-n2", "--dist=isoscope", "-v")
 
         assert (
