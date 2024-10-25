@@ -1288,6 +1288,7 @@ class TestIsoScope:
             pass
         """
         # Initialize the status file used by underlying test
+        shared_scope_setup_status_path.parent.mkdir(parents=True, exist_ok=True)
         shared_scope_setup_status_path.write_text("TEARDOWN_COMPLETE")
 
         pytester.makepyfile(test_a=test_file)
