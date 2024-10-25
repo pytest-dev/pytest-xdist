@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import os
+import pathlib
 import pprint
 import re
 import shutil
 from typing import cast
+from uuid import uuid1
 
 import pytest
 
@@ -1199,9 +1201,23 @@ def test_internal_errors_propagate_to_controller(pytester: pytest.Pytester) -> N
     result.stdout.fnmatch_lines(["*RuntimeError: Some runtime error*"])
 
 
+@pytest.fixture(scope="session")
+def shared_scope_setup_status_path(
+    tmp_path_factory: pytest.TempPathFactory, testrun_uid: str
+) -> pathlib.Path:
+    return (
+        tmp_path_factory.getbasetemp().parent
+        / "test_distributed_setup_teardown_coordination"
+        / testrun_uid
+        / uuid1().hex
+        / "scope_setup_status.txt"
+    )
+
+
 class TestIsoScope:
     def test_distributed_setup_teardown_coordination(
-        self, pytester: pytest.Pytester
+        self, pytester: pytest.Pytester,
+            shared_scope_setup_status_path: pathlib.Path
     ) -> None:
         """
         The isoscope scheduler provides a distributed coordination mechanism
@@ -1215,58 +1231,63 @@ class TestIsoScope:
             5. Resource Setup of the next test Scope begins after completion of
                 the previous test Scope's Resource Teardown.
         """
-        test_file = """
-            from __future__ import annotations
-            import pathlib
-            from uuid import uuid1
-            from typing import TYPE_CHECKING
-            import pytest
-            if TYPE_CHECKING:
-                from xdist.iso_scheduling_utils import (
-                    IsoSchedulingFixture,
-                    DistributedSetupContext,
-                    DistributedTeardownContext
-                )
-            class TestScopeA:
-                @classmethod
-                @pytest.fixture(scope='class', autouse=True)
-                def distributed_setup_and_teardown(
-                        cls,
-                        iso_scheduling: IsoSchedulingFixture,
-                        request: pytest.FixtureRequest):
-                    with iso_scheduling.coordinate_setup_teardown(
-                            setup_request=request) as coordinator:
-                        # Distributed Setup
-                        coordinator.maybe_call_setup(cls.patch_system_under_test)
-                        try:
-                            # Yield control back to the XDist Worker to allow the
-                            # test cases to run
-                            yield
-                        finally:
-                            # Distributed Teardown
-                            coordinator.maybe_call_teardown(cls.revert_system_under_test)
-                @classmethod
-                def patch_system_under_test(
-                        cls,
-                        setup_context: DistributedSetupContext) -> None:
-                    # Initialize the System Under Test for all the test cases in
-                    # this test class and store state in `setup_context.client_dir`.
-                    pass
+        test_file = f"""
+        from __future__ import annotations
+        import pathlib
+        from typing import TYPE_CHECKING
+        import pytest
+        if TYPE_CHECKING:
+            from xdist.iso_scheduling_utils import (
+                IsoSchedulingFixture,
+                DistributedSetupContext,
+                DistributedTeardownContext
+            )
 
-                @classmethod
-                def revert_system_under_test(
-                        cls,
-                        teardown_context: DistributedTeardownContext):
-                    # Fetch state from `teardown_context.client_dir` and revert
-                    # changes made by `patch_system_under_test()`.
-                    pass
+        _SHARED_SCOPE_SETUP_STATUS_PATH = pathlib.Path(
+            {str(shared_scope_setup_status_path)})
 
-                @pytest.mark.parametrize('i', range(5))
-                def test(self, i):
-                    pass
-
-            class TestScopeB(TestScopeA):
-                pass
+        class TestScopeA:
+            @classmethod
+            @pytest.fixture(scope='class', autouse=True)
+            def distributed_setup_and_teardown(
+                    cls,
+                    iso_scheduling: IsoSchedulingFixture,
+                    request: pytest.FixtureRequest):
+                with iso_scheduling.coordinate_setup_teardown(
+                        setup_request=request) as coordinator:
+                    # Distributed Setup
+                    coordinator.maybe_call_setup(cls.patch_system_under_test)
+                    try:
+                        # Yield control back to the XDist Worker to allow the
+                        # test cases to run
+                        yield
+                    finally:
+                        # Distributed Teardown
+                        coordinator.maybe_call_teardown(cls.revert_system_under_test)
+            @classmethod
+            def patch_system_under_test(
+                    cls,
+                    setup_context: DistributedSetupContext) -> None:
+                # Initialize the System Under Test for all the test cases in
+                # this test class and store state in `setup_context.client_dir`.
+                assert _SHARED_SCOPE_SETUP_STATUS_PATH.read_text() == "TEARDOWN_COMPLETE"
+                _SHARED_SCOPE_SETUP_STATUS_PATH.write_text("SETUP_COMPLETE")
+        
+            @classmethod
+            def revert_system_under_test(
+                    cls,
+                    teardown_context: DistributedTeardownContext):
+                # Fetch state from `teardown_context.client_dir` and revert
+                # changes made by `patch_system_under_test()`.
+                assert _SHARED_SCOPE_SETUP_STATUS_PATH.read_text() == "SETUP_COMPLETE"
+                _SHARED_SCOPE_SETUP_STATUS_PATH.write_text("TEARDOWN_COMPLETE")
+        
+            @pytest.mark.parametrize('i', range(5))
+            def test(self, i):
+                assert _SHARED_SCOPE_SETUP_STATUS_PATH.read_text() == "SETUP_COMPLETE"
+        
+        class TestScopeB(TestScopeA):
+            pass
         """
         pytester.makepyfile(test_a=test_file, test_b=test_file)
         result = pytester.runpytest("-n2", "--dist=isoscope", "-v")
