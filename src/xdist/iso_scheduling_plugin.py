@@ -290,11 +290,11 @@ class _DistributedSetupCoordinatorImpl(DistributedSetupCoordinator):
             self._setup_context is None
         ), f"maybe_call_setup()` already called {self._setup_context=}"
 
-        node_path = self._setup_request.node.path
+        node_path: pathlib.Path = self._setup_request.node.path
 
         root_context_dir: pathlib.Path = (
             self._root_context_base_dir
-            / node_path.relative_to(node_path.root)
+            / node_path.relative_to(node_path.parts[0])
             / self._setup_request.node.name
         )
 
