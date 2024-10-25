@@ -1216,8 +1216,7 @@ def shared_scope_setup_status_path(
 
 class TestIsoScope:
     def test_distributed_setup_teardown_coordination(
-        self, pytester: pytest.Pytester,
-            shared_scope_setup_status_path: pathlib.Path
+        self, pytester: pytest.Pytester, shared_scope_setup_status_path: pathlib.Path
     ) -> None:
         """
         The isoscope scheduler provides a distributed coordination mechanism
@@ -1244,7 +1243,7 @@ class TestIsoScope:
             )
 
         _SHARED_SCOPE_SETUP_STATUS_PATH = pathlib.Path(
-            {str(shared_scope_setup_status_path)})
+            {shared_scope_setup_status_path!s})
 
         class TestScopeA:
             @classmethod
