@@ -1270,7 +1270,7 @@ class TestIsoScope:
                 # this test class and store state in `setup_context.client_dir`.
                 assert _SHARED_SCOPE_SETUP_STATUS_PATH.read_text() == "TEARDOWN_COMPLETE"
                 _SHARED_SCOPE_SETUP_STATUS_PATH.write_text("SETUP_COMPLETE")
-        
+
             @classmethod
             def revert_system_under_test(
                     cls,
@@ -1279,11 +1279,11 @@ class TestIsoScope:
                 # changes made by `patch_system_under_test()`.
                 assert _SHARED_SCOPE_SETUP_STATUS_PATH.read_text() == "SETUP_COMPLETE"
                 _SHARED_SCOPE_SETUP_STATUS_PATH.write_text("TEARDOWN_COMPLETE")
-        
+
             @pytest.mark.parametrize('i', range(5))
             def test(self, i):
                 assert _SHARED_SCOPE_SETUP_STATUS_PATH.read_text() == "SETUP_COMPLETE"
-        
+
         class TestScopeB(TestScopeA):
             pass
         """
