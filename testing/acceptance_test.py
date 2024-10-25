@@ -1231,7 +1231,7 @@ class TestIsoScope:
                 @pytest.fixture(scope='class', autouse=True)
                 def distributed_setup_and_teardown(
                         cls,
-                        iso_scheduling: IsoSchedulingFixture
+                        iso_scheduling: IsoSchedulingFixture,
                         request: pytest.FixtureRequest):
                     with iso_scheduling.coordinate_setup_teardown(
                             setup_request=request) as coordinator:
