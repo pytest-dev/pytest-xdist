@@ -1250,13 +1250,15 @@ class TestIsoScope:
                         setup_context: DistributedSetupContext) -> None:
                     # Initialize the System Under Test for all the test cases in
                     # this test class and store state in `setup_context.client_dir`.
-    
+                    pass
+
                 @classmethod
                 def revert_system_under_test(
                         cls,
-                        teardown_context: DistributedTeardownContext)
+                        teardown_context: DistributedTeardownContext):
                     # Fetch state from `teardown_context.client_dir` and revert
                     # changes made by `patch_system_under_test()`.
+                    pass
 
                 @pytest.mark.parametrize('i', range(5))
                 def test(self, i):

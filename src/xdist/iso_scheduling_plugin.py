@@ -127,7 +127,7 @@ def iso_scheduling(
             @classmethod
             def revert_system_under_test(
                     cls,
-                    teardown_context: DistributedTeardownContext)
+                    teardown_context: DistributedTeardownContext):
                 # Fetch state from `teardown_context.client_dir` and revert
                 # changes made by `patch_system_under_test()`.
 
