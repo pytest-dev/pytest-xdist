@@ -1242,7 +1242,7 @@ class TestIsoScope:
             )
 
         _SHARED_SCOPE_SETUP_STATUS_PATH = pathlib.Path(
-            "{shared_scope_setup_status_path!s}")
+            r"{shared_scope_setup_status_path!s}")
 
         class TestScopeA:
             @classmethod
