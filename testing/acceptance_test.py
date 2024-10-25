@@ -1291,11 +1291,14 @@ class TestIsoScope:
         pytester.makepyfile(test_a=test_file, test_b=test_file)
         result = pytester.runpytest("-n2", "--dist=isoscope", "-v")
 
-        print("ZZZ outlines")
-        pprint.pprint(result.outlines, indent=4)
-        print("ZZZ errlines")
-        pprint.pprint(result.errlines, indent=4)
-        assert False
+        assert sum(
+            get_workers_and_test_count_by_prefix(
+            "test_a.py::TestScopeA", result.outlines).values()
+        ) == 5
+        assert sum(
+            get_workers_and_test_count_by_prefix(
+            "test_a.py::TestScopeB", result.outlines).values()
+        ) == 5
 
     def test_by_module(self, pytester: pytest.Pytester) -> None:
         test_file = """
