@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pprint
 import os
 import re
 import shutil
@@ -1199,6 +1200,73 @@ def test_internal_errors_propagate_to_controller(pytester: pytest.Pytester) -> N
 
 
 class TestIsoScope:
+    def test_distributed_setup_teardown_coordination(
+        self, pytester: pytest.Pytester
+    ) -> None:
+        """
+        The isoscope scheduler provides a distributed coordination mechanism
+        for Scope-level Resource Setup/Teardown with the following guarantees:
+            1. Resource Setup is performed exactly once per test Scope.
+            2. Resource Teardown is performed exactly once per test Scope.
+            3. Resource Setup of the executing test Scope completes BEFORE
+                execution of the Scope's tests.
+            4. Resource Teardown phase of the executing test Scope begins after
+                completion of all tests of the Scope.
+            5. Resource Setup of the next test Scope begins after completion of
+                the previous test Scope's Resource Teardown.
+        """
+        test_file = """
+            import pathlib
+            from uuid import uuid1
+            import pytest
+            class TestScopeA:
+                @classmethod
+                @pytest.fixture(scope='class', autouse=True)
+                def distributed_setup_and_teardown(
+                        cls,
+                        iso_scheduling:
+                        request: pytest.FixtureRequest):
+                    with iso_scheduling.coordinate_setup_teardown(
+                            setup_request=request) as coordinator:
+                        # Distributed Setup
+                        coordinator.maybe_call_setup(cls.patch_system_under_test)
+                        try:
+                            # Yield control back to the XDist Worker to allow the
+                            # test cases to run
+                            yield
+                        finally:
+                            # Distributed Teardown
+                            coordinator.maybe_call_teardown(cls.revert_system_under_test)
+                @classmethod
+                def patch_system_under_test(
+                        cls,
+                        setup_context: DistributedSetupContext) -> None:
+                    # Initialize the System Under Test for all the test cases in
+                    # this test class and store state in `setup_context.client_dir`.
+    
+                @classmethod
+                def revert_system_under_test(
+                        cls,
+                        teardown_context: DistributedTeardownContext)
+                    # Fetch state from `teardown_context.client_dir` and revert
+                    # changes made by `patch_system_under_test()`.
+
+                @pytest.mark.parametrize('i', range(5))
+                def test(self, i):
+                    pass
+
+            class TestScopeB(TestScopeA):
+                pass
+        """
+        pytester.makepyfile(test_a=test_file, test_b=test_file)
+        result = pytester.runpytest("-n2", "--dist=isoscope", "-v")
+
+        print("ZZZ outlines")
+        print(pprint.pprint(result.outlines, indent=4))
+        print("ZZZ errlines")
+        print(pprint.pprint(result.errlines, indent=4))
+        assert False
+
     def test_by_module(self, pytester: pytest.Pytester) -> None:
         test_file = """
             import pytest
@@ -1367,8 +1435,8 @@ class TestIsoScope:
         assert len(counts_by_worker_fence_b) == 1
         assert next(iter(counts_by_worker_fence_b.values())) == 2
 
-    @pytest.mark.parametrize("num_tests", [1, 2, 3, 4, 5, 7])
-    def test_two_tests_min_per_worker_rule_with_two_workers(
+    @pytest.mark.parametrize('num_tests', [1, 2, 3, 4, 5, 7])
+    def test_two_tests_min_per_worker_rule(
         self, num_tests: int, pytester: pytest.Pytester
     ) -> None:
         """
@@ -1377,8 +1445,6 @@ class TestIsoScope:
         """
         test_file1 = f"""
             import pytest
-            # 6 tests should distribute 2 per worker for 3 workers due to the
-            # min-2 scope tests per worker rule.
             @pytest.mark.parametrize('i', range({num_tests}))
             def test(i):
                 pass
