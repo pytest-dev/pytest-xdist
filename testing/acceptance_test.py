@@ -1271,9 +1271,9 @@ class TestIsoScope:
         result = pytester.runpytest("-n2", "--dist=isoscope", "-v")
 
         print("ZZZ outlines")
-        print(pprint.pprint(result.outlines, indent=4))
+        pprint.pprint(result.outlines, indent=4)
         print("ZZZ errlines")
-        print(pprint.pprint(result.errlines, indent=4))
+        pprint.pprint(result.errlines, indent=4)
         assert False
 
     def test_by_module(self, pytester: pytest.Pytester) -> None:
