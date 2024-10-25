@@ -1216,6 +1216,7 @@ class TestIsoScope:
                 the previous test Scope's Resource Teardown.
         """
         test_file = """
+            from __future__ import annotations
             import pathlib
             from uuid import uuid1
             from typing import TYPE_CHECKING
