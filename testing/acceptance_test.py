@@ -1287,6 +1287,9 @@ class TestIsoScope:
         class TestScopeB(TestScopeA):
             pass
         """
+        # Initialize the status file used by underlying test
+        shared_scope_setup_status_path.write_text("TEARDOWN_COMPLETE")
+
         pytester.makepyfile(test_a=test_file)
         result = pytester.runpytest("-n2", "--dist=isoscope", "-v")
 
