@@ -70,12 +70,16 @@ class WorkStealingScheduling:
         self.node2pending: dict[WorkerController, list[int]] = {}
         self.pending: list[int] = []
         self.collection: list[str] | None = None
+        self.group_markers: dict[str, str] = {}
         if log is None:
             self.log = Producer("workstealsched")
         else:
             self.log = log.workstealsched
         self.config = config
         self.steal_requested_from_node: WorkerController | None = None
+
+    def set_group_markers(self, group_markers: dict[str, str]) -> None:
+        self.group_markers = group_markers
 
     @property
     def nodes(self) -> list[WorkerController]:
