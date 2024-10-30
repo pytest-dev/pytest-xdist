@@ -15,6 +15,7 @@ import pytest
 from xdist.remote import Producer
 from xdist.remote import WorkerInfo
 from xdist.scheduler import EachScheduling
+from xdist.scheduler import IsoScopeScheduling
 from xdist.scheduler import LoadFileScheduling
 from xdist.scheduler import LoadGroupScheduling
 from xdist.scheduler import LoadScheduling
@@ -113,6 +114,8 @@ class DSession:
         dist = config.getvalue("dist")
         if dist == "each":
             return EachScheduling(config, log)
+        if dist == "isoscope":
+            return IsoScopeScheduling(config, log)
         if dist == "load":
             return LoadScheduling(config, log)
         if dist == "loadscope":
