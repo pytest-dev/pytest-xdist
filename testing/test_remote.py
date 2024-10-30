@@ -267,6 +267,12 @@ class TestWorkerInteractor:
 
         worker.sendcommand("steal", indices=[1, 2])
         ev = worker.popevent("unscheduled")
+        # Cannot steal index 1 because it is completed already, so do not steal any.
+        assert ev.kwargs["indices"] == []
+
+        # Index 2 can be stolen, as it is still pending.
+        worker.sendcommand("steal", indices=[2])
+        ev = worker.popevent("unscheduled")
         assert ev.kwargs["indices"] == [2]
 
         reports = [
