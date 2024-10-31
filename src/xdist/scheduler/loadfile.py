@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 from xdist.remote import Producer
+from xdist.scheduler.protocol import Scheduling
 
 from .loadscope import LoadScopeScheduling
 
@@ -58,3 +59,14 @@ class LoadFileScheduling(LoadScopeScheduling):
             example/loadsuite/epsilon/__init__.py
         """
         return nodeid.split("::", 1)[0]
+
+
+@pytest.hookimpl(trylast=True)
+def pytest_xdist_make_scheduler(
+    config: pytest.Config,
+    log: Producer,
+) -> Scheduling | None:
+    if config.getoption("dist") == "loadfile":
+        return LoadFileScheduling(config, log)
+    else:
+        return None

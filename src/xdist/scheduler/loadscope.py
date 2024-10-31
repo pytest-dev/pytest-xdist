@@ -8,6 +8,7 @@ import pytest
 
 from xdist.remote import Producer
 from xdist.report import report_collection_diff
+from xdist.scheduler.protocol import Scheduling
 from xdist.workermanage import parse_spec_config
 from xdist.workermanage import WorkerController
 
@@ -432,3 +433,14 @@ class LoadScopeScheduling:
             self.config.hook.pytest_collectreport(report=rep)
 
         return same_collection
+
+
+@pytest.hookimpl(trylast=True)
+def pytest_xdist_make_scheduler(
+    config: pytest.Config,
+    log: Producer,
+) -> Scheduling | None:
+    if config.getoption("dist") == "loadscope":
+        return LoadScopeScheduling(config, log)
+    else:
+        return None

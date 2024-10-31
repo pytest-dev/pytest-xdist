@@ -1641,3 +1641,15 @@ def test_dist_in_addopts(pytester: pytest.Pytester) -> None:
     )
     result = pytester.runpytest()
     assert result.ret == 0
+
+
+def test_dist_validation(pytester: pytest.Pytester) -> None:
+    """Should exit early if incorrect --dist value is specified."""
+    f = pytester.makepyfile(
+        """
+        assert 0
+        """
+    )
+    result = pytester.runpytest(f, "-n1", "--dist=invalid")
+    assert result.ret == pytest.ExitCode.USAGE_ERROR
+    result.stderr.fnmatch_lines(["ERROR: pytest-xdist: scheduler 'invalid' not found"])
