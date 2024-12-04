@@ -6,6 +6,7 @@ import pytest
 
 from xdist.remote import Producer
 from xdist.report import report_collection_diff
+from xdist.scheduler.protocol import Scheduling
 from xdist.workermanage import parse_spec_config
 from xdist.workermanage import WorkerController
 
@@ -150,3 +151,14 @@ class EachScheduling:
             else:
                 node.send_runtest_some(pending)
             self._started.append(node)
+
+
+@pytest.hookimpl(trylast=True)
+def pytest_xdist_make_scheduler(
+    config: pytest.Config,
+    log: Producer,
+) -> Scheduling | None:
+    if config.getoption("dist") == "each":
+        return EachScheduling(config, log)
+    else:
+        return None
