@@ -158,9 +158,9 @@ def repr_pytest_looponfailinfo(
 
 
 def init_worker_session(
-    channel: execnet.Channel,
+    channel: "execnet.Channel",  # noqa: UP037
     args: list[str],
-    option_dict: dict[str, Any],
+    option_dict: dict[str, "Any"],  # noqa: UP037
 ) -> None:
     import os
     import sys
