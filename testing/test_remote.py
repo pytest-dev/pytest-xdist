@@ -7,7 +7,6 @@ import sys
 from typing import Any
 from typing import Callable
 from typing import cast
-from typing import Dict
 from typing import Union
 import uuid
 
@@ -90,7 +89,7 @@ def worker(request: pytest.FixtureRequest, pytester: pytest.Pytester) -> WorkerS
 
 class TestWorkerInteractor:
     UnserializerReport = Callable[
-        [Dict[str, Any]], Union[pytest.CollectReport, pytest.TestReport]
+        [dict[str, Any]], Union[pytest.CollectReport, pytest.TestReport]
     ]
 
     @pytest.fixture

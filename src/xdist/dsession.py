@@ -1,12 +1,12 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from enum import auto
 from enum import Enum
 from queue import Empty
 from queue import Queue
 import sys
 from typing import Any
-from typing import Sequence
 import warnings
 
 import execnet

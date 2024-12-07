@@ -9,12 +9,12 @@ the controlling process which should best never happen.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 import os
 from pathlib import Path
 import sys
 import time
 from typing import Any
-from typing import Sequence
 
 from _pytest._io import TerminalWriter
 import execnet

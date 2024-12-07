@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from collections import OrderedDict
+from collections.abc import Sequence
 from typing import NoReturn
-from typing import Sequence
 
 import pytest
 

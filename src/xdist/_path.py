@@ -1,8 +1,8 @@
+from collections.abc import Iterator
 from itertools import chain
 import os
 from pathlib import Path
 from typing import Callable
-from typing import Iterator
 
 
 def visit_path(

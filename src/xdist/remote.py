@@ -9,16 +9,16 @@ needs not to be installed in remote environments.
 from __future__ import annotations
 
 import collections
+from collections.abc import Generator
+from collections.abc import Iterable
+from collections.abc import Sequence
 import contextlib
 import enum
 import os
 import sys
 import time
 from typing import Any
-from typing import Generator
-from typing import Iterable
 from typing import Literal
-from typing import Sequence
 from typing import TypedDict
 from typing import Union
 import warnings
@@ -98,7 +98,7 @@ class TestQueue:
             self._items = collections.deque(iterable)
 
     @contextlib.contextmanager
-    def lock(self) -> Generator[collections.deque[Item], None, None]:
+    def lock(self) -> Generator[collections.deque[Item]]:
         with self._lock:
             try:
                 yield self._items

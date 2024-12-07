@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 import enum
 import fnmatch
 import os
@@ -9,7 +10,6 @@ import sys
 from typing import Any
 from typing import Callable
 from typing import Literal
-from typing import Sequence
 from typing import Union
 import uuid
 import warnings
