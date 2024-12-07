@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Generator
 import shutil
 from typing import Callable
-from typing import Generator
 
 import execnet
 import pytest
@@ -12,7 +12,7 @@ pytest_plugins = "pytester"
 
 
 @pytest.fixture(autouse=True)
-def _divert_atexit(monkeypatch: pytest.MonkeyPatch) -> Generator[None, None, None]:
+def _divert_atexit(monkeypatch: pytest.MonkeyPatch) -> Generator[None]:
     import atexit
 
     finalizers = []

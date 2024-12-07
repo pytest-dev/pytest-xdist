@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Protocol
-from typing import Sequence
 
 from xdist.workermanage import WorkerController
 

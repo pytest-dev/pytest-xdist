@@ -9,12 +9,12 @@ the controlling process which should best never happen.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 import os
 from pathlib import Path
 import sys
 import time
 from typing import Any
-from typing import Sequence
 
 from _pytest._io import TerminalWriter
 import execnet
@@ -158,9 +158,9 @@ def repr_pytest_looponfailinfo(
 
 
 def init_worker_session(
-    channel: "execnet.Channel",  # noqa: UP037
+    channel: execnet.Channel,
     args: list[str],
-    option_dict: dict[str, "Any"],  # noqa: UP037
+    option_dict: dict[str, Any],
 ) -> None:
     import os
     import sys

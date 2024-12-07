@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from itertools import cycle
-from typing import Sequence
 
 import pytest
 

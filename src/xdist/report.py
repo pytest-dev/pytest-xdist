@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from difflib import unified_diff
-from typing import Sequence
 
 
 def report_collection_diff(

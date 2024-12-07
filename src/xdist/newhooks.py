@@ -14,9 +14,9 @@ must be taken in plugins in case ``xdist`` is not installed. Please see:
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 import os
 from typing import Any
-from typing import Sequence
 from typing import TYPE_CHECKING
 
 import execnet
