@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 from xdist.remote import Producer
+from xdist.scheduler.protocol import Scheduling
 
 from .loadscope import LoadScopeScheduling
 
@@ -57,3 +58,14 @@ class LoadGroupScheduling(LoadScopeScheduling):
             return nodeid.split("@")[-1]
         else:
             return nodeid
+
+
+@pytest.hookimpl(trylast=True)
+def pytest_xdist_make_scheduler(
+    config: pytest.Config,
+    log: Producer,
+) -> Scheduling | None:
+    if config.getoption("dist") == "loadgroup":
+        return LoadGroupScheduling(config, log)
+    else:
+        return None

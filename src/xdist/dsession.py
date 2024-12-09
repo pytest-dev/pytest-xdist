@@ -14,13 +14,7 @@ import pytest
 
 from xdist.remote import Producer
 from xdist.remote import WorkerInfo
-from xdist.scheduler import EachScheduling
-from xdist.scheduler import LoadFileScheduling
-from xdist.scheduler import LoadGroupScheduling
-from xdist.scheduler import LoadScheduling
-from xdist.scheduler import LoadScopeScheduling
 from xdist.scheduler import Scheduling
-from xdist.scheduler import WorkStealingScheduling
 from xdist.workermanage import NodeManager
 from xdist.workermanage import WorkerController
 
@@ -81,11 +75,18 @@ class DSession:
 
     @pytest.hookimpl(trylast=True)
     def pytest_sessionstart(self, session: pytest.Session) -> None:
-        """Creates and starts the nodes.
+        """Initializes the scheduler, creates and starts the nodes.
 
         The nodes are setup to put their events onto self.queue.  As
         soon as nodes start they will emit the worker_workerready event.
         """
+        self.sched = self.config.hook.pytest_xdist_make_scheduler(
+            config=self.config, log=self.log
+        )
+        if self.sched is None:
+            dist = self.config.getoption("dist")
+            raise pytest.UsageError(f"pytest-xdist: scheduler {dist!r} not found")
+
         self.nodemanager = NodeManager(self.config)
         nodes = self.nodemanager.setup_nodes(putevent=self.queue.put)
         self._active_nodes.update(nodes)
@@ -104,34 +105,8 @@ class DSession:
         # prohibit collection of test items in controller process
         return True
 
-    @pytest.hookimpl(trylast=True)
-    def pytest_xdist_make_scheduler(
-        self,
-        config: pytest.Config,
-        log: Producer,
-    ) -> Scheduling | None:
-        dist = config.getvalue("dist")
-        if dist == "each":
-            return EachScheduling(config, log)
-        if dist == "load":
-            return LoadScheduling(config, log)
-        if dist == "loadscope":
-            return LoadScopeScheduling(config, log)
-        if dist == "loadfile":
-            return LoadFileScheduling(config, log)
-        if dist == "loadgroup":
-            return LoadGroupScheduling(config, log)
-        if dist == "worksteal":
-            return WorkStealingScheduling(config, log)
-        return None
-
     @pytest.hookimpl
     def pytest_runtestloop(self) -> bool:
-        self.sched = self.config.hook.pytest_xdist_make_scheduler(
-            config=self.config, log=self.log
-        )
-        assert self.sched is not None
-
         self.shouldstop = False
         pending_exception = None
         while not self.session_finished:
