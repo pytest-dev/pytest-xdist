@@ -1,0 +1,1 @@
+With `--no-loadscope-reorder`, retain input ordering in loadscope for tests where relative ordering matters. i.e. guarantee that, given [input_1, input_2],input_2 never runs before input_1. On any given worker, either input_1 has ran before input_2, or input_1 has never and will never run on this worker. This only applies when using `loadscope`.
