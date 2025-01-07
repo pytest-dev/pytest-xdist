@@ -101,15 +101,6 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         "--dist",
         metavar="distmode",
         action="store",
-        choices=[
-            "each",
-            "load",
-            "loadscope",
-            "loadfile",
-            "loadgroup",
-            "worksteal",
-            "no",
-        ],
         dest="dist",
         default="no",
         help=(
@@ -235,6 +226,13 @@ def pytest_configure(config: pytest.Config) -> None:
     # Create the distributed session in case we have a valid distribution
     # mode and test environments.
     if _is_distribution_mode(config):
+        config.pluginmanager.import_plugin("xdist.scheduler.each")
+        config.pluginmanager.import_plugin("xdist.scheduler.load")
+        config.pluginmanager.import_plugin("xdist.scheduler.loadfile")
+        config.pluginmanager.import_plugin("xdist.scheduler.loadgroup")
+        config.pluginmanager.import_plugin("xdist.scheduler.loadscope")
+        config.pluginmanager.import_plugin("xdist.scheduler.worksteal")
+
         from xdist.dsession import DSession
 
         session = DSession(config)
