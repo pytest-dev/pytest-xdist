@@ -65,6 +65,14 @@ class NodeManager:
                 spec = execnet.XSpec(spec)
             if getattr(spec, "execmodel", None) != "main_thread_only":
                 spec = execnet.XSpec(f"execmodel=main_thread_only//{spec}")
+            if getattr(spec, "proxy", False):
+                # Proxy gateways do not run workers, and are meant to be passed with the `via` attribute
+                # to additional gateways.
+                # They are useful for running multiple workers on remote machines.
+                if getattr(spec, "id", None) is None:
+                    raise pytest.UsageError(f"Proxy gateway {spec} must include an id")
+                self.group.makegateway(spec)
+                continue
             if not spec.chdir and not spec.popen:
                 spec.chdir = defaultchdir
             self.group.allocate_id(spec)
