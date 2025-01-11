@@ -23,7 +23,7 @@ from xdist.remote import Producer
 from xdist.remote import WorkerInfo
 
 
-def parse_spec_config(config: pytest.Config) -> list[str]:
+def parse_tx_spec_config(config: pytest.Config) -> list[str]:
     xspeclist = []
     tx: list[str] = config.getvalue("tx")
     for xspec in tx:
@@ -57,8 +57,15 @@ class NodeManager:
         if self.testrunuid is None:
             self.testrunuid = uuid.uuid4().hex
         self.group = execnet.Group(execmodel="main_thread_only")
+        for proxy_spec in self._getpxspecs():
+            # Proxy gateways do not run workers, and are meant to be passed with the `via` attribute
+            # to additional gateways.
+            # They are useful for running multiple workers on remote machines.
+            if getattr(proxy_spec, "id", None) is None:
+                raise pytest.UsageError(f"Proxy gateway {proxy_spec} must include an id")
+            self.group.makegateway(proxy_spec)
         if specs is None:
-            specs = self._getxspecs()
+            specs = self._gettxspecs()
         self.specs: list[execnet.XSpec] = []
         for spec in specs:
             if not isinstance(spec, execnet.XSpec):
@@ -107,8 +114,11 @@ class NodeManager:
     def teardown_nodes(self) -> None:
         self.group.terminate(self.EXIT_TIMEOUT)
 
-    def _getxspecs(self) -> list[execnet.XSpec]:
-        return [execnet.XSpec(x) for x in parse_spec_config(self.config)]
+    def _gettxspecs(self) -> list[execnet.XSpec]:
+        return [execnet.XSpec(x) for x in parse_tx_spec_config(self.config)]
+
+    def _getpxspecs(self) -> list[execnet.XSpec]:
+        return [execnet.XSpec(x) for x in self.config.getoption("px")]
 
     def _getrsyncdirs(self) -> list[Path]:
         for spec in self.specs:

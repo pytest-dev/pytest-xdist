@@ -139,6 +139,17 @@ def pytest_addoption(parser: pytest.Parser) -> None:
             "--tx ssh=user@codespeak.net//chdir=testcache"
         ),
     )
+    group.addoption(
+        "--px",
+        dest="px",
+        action="append",
+        default=[],
+        metavar="xspec",
+        help=(
+            "Add a proxy gateway to pass to test execution environments using `via`. Example:\n"
+            "--px id=my_proxy//socket=192.168.1.102:8888 --tx 5*popen//via=my_proxy"
+        ),
+    )
     group._addoption(
         "-d",
         action="store_true",

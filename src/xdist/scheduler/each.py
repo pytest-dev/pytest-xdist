@@ -6,7 +6,7 @@ import pytest
 
 from xdist.remote import Producer
 from xdist.report import report_collection_diff
-from xdist.workermanage import parse_spec_config
+from xdist.workermanage import parse_tx_spec_config
 from xdist.workermanage import WorkerController
 
 
@@ -26,7 +26,7 @@ class EachScheduling:
 
     def __init__(self, config: pytest.Config, log: Producer | None = None) -> None:
         self.config = config
-        self.numnodes = len(parse_spec_config(config))
+        self.numnodes = len(parse_tx_spec_config(config))
         self.node2collection: dict[WorkerController, list[str]] = {}
         self.node2pending: dict[WorkerController, list[int]] = {}
         self._started: list[WorkerController] = []
