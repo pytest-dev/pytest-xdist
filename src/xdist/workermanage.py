@@ -62,7 +62,9 @@ class NodeManager:
             # to additional gateways.
             # They are useful for running multiple workers on remote machines.
             if getattr(proxy_spec, "id", None) is None:
-                raise pytest.UsageError(f"Proxy gateway {proxy_spec} must include an id")
+                raise pytest.UsageError(
+                    f"Proxy gateway {proxy_spec} must include an id"
+                )
             self.group.makegateway(proxy_spec)
         if specs is None:
             specs = self._gettxspecs()
