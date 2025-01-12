@@ -397,7 +397,6 @@ class TestNodeManager:
         assert rep[1].passed
 
 
-
 class MyWarning(UserWarning):
     pass
 
