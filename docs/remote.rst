@@ -66,6 +66,20 @@ new socket host with something like this::
     pytest -d --tx socket=192.168.1.102:8888 --rsyncdir mypkg
 
 
+Using proxies to run multiple workers on remote machines
+---------------------------------------
+
+In case you want to run multiple workers on a remote machine,
+you can create a proxy gateway for the machine, and run multiple
+workers using the `via` attribute.::
+
+    pytest -d --px id=my_proxy//socket=192.168.1.102:8888 --tx 5*popen//via=my_proxy
+
+Here we declare a proxy gateway using the `--px` arg, and
+create 5 workers that run on the remote server using the proxy.
+Note that the proxy gateway does not run a worker, thus only 5
+workers are created.
+
 
 Running tests on many platforms at once
 ---------------------------------------

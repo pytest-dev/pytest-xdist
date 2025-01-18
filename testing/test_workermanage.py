@@ -368,6 +368,34 @@ class TestNodeManager:
         (rep,) = reprec.getreports("pytest_runtest_logreport")
         assert rep.passed
 
+    def test_proxy_gateway_setup_nodes(self, pytester: pytest.Pytester) -> None:
+        nodemanager = NodeManager(
+            pytester.parseconfig(
+                "--px", "popen//id=my_proxy", "--tx", "popen//via=my_proxy"
+            )
+        )
+        nodes = nodemanager.setup_nodes(None)  # type: ignore[arg-type]
+
+        # Proxy gateways are considered as an execnet gateway
+        assert len(nodemanager.group) == 2
+
+        # Proxy gateways do not run workers
+        assert len(nodes) == 1
+
+    def test_proxy_gateway(self, pytester: pytest.Pytester) -> None:
+        pytester.makepyfile(
+            __init__="",
+            test_x="""
+            def test_one():
+                pass
+        """,
+        )
+        reprec = pytester.inline_run(
+            "-d", "--px", "popen//id=my_proxy", "--tx", "popen//via=my_proxy"
+        )
+        rep = reprec.getreports("pytest_runtest_logreport")
+        assert rep[1].passed
+
 
 class MyWarning(UserWarning):
     pass
