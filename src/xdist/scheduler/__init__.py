@@ -4,4 +4,5 @@ from xdist.scheduler.loadfile import LoadFileScheduling as LoadFileScheduling
 from xdist.scheduler.loadgroup import LoadGroupScheduling as LoadGroupScheduling
 from xdist.scheduler.loadscope import LoadScopeScheduling as LoadScopeScheduling
 from xdist.scheduler.protocol import Scheduling as Scheduling
+from xdist.scheduler.singlecollect import SingleCollectScheduling as SingleCollectScheduling
 from xdist.scheduler.worksteal import WorkStealingScheduling as WorkStealingScheduling
