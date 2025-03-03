@@ -33,3 +33,4 @@ repos:
           - execnet>=2.1.0
           - types-psutil
           - setproctitle
+          - filelock>=3.13.1
