@@ -544,7 +544,7 @@ class TestSingleCollectScheduling:
         sched.mark_test_complete(node1, test_idx)
         
         # Now remove node2 (simulating failure)
-        crashitem = sched.remove_node(node2)
+        sched.remove_node(node2)
         
         # Tests assigned to node2 should go back to pending
         assert len(sched.pending) > 0
@@ -590,6 +590,7 @@ class TestSingleCollectScheduling:
         # Add a new node, it should become the collector
         node3 = MockNode()
         sched.add_node(node3)
+        # Verify the new node became the collector
         assert sched.first_node == node3
         
         # Complete collection with node3

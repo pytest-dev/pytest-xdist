@@ -12,12 +12,12 @@ from xdist.workermanage import WorkerController
 
 class SingleCollectScheduling:
     """Implement scheduling with a single test collection phase.
-    
+
     This differs from LoadScheduling by:
     1. Only collecting tests on the first node
     2. Skipping collection on other nodes
     3. Not checking for collection equality
-    
+
     This can significantly improve startup time by avoiding redundant collection
     and collection verification across multiple worker processes.
     """
@@ -72,7 +72,7 @@ class SingleCollectScheduling:
         """Add a new node to the scheduler."""
         assert node not in self.node2pending
         self.node2pending[node] = []
-        
+
         # Remember the first node as our collector
         if self.first_node is None:
             self.first_node = node
@@ -92,10 +92,10 @@ class SingleCollectScheduling:
             self.log(f"Ignoring collection from node {node.gateway.id}")
 
     def mark_test_complete(
-        self, node: WorkerController, item_index: int, duration: float = 0
+        self, node: WorkerController, item_index: int | str, duration: float = 0
     ) -> None:
         """Mark test item as completed by node."""
-        self.node2pending[node].remove(item_index)
+        self.node2pending[node].remove(int(item_index) if isinstance(item_index, str) else item_index)
         self.check_schedule(node, duration=duration)
 
     def mark_test_pending(self, item: str) -> None:
@@ -145,11 +145,11 @@ class SingleCollectScheduling:
     def remove_node(self, node: WorkerController) -> str | None:
         """Remove a node from the scheduler."""
         pending = self.node2pending.pop(node)
-        
+
         # If this is the first node (collector), reset it
         if node == self.first_node:
             self.first_node = None
-            
+
         if not pending:
             return None
 

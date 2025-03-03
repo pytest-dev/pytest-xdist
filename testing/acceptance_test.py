@@ -60,11 +60,10 @@ class TestSingleCollectScheduling:
         pytester.makepyfile(
             """
             import pytest
-            
+
             @pytest.fixture
             def my_fixture():
                 return 42
-                
             def test_with_fixture(my_fixture):
                 assert my_fixture == 42
             """
