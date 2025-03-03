@@ -25,7 +25,7 @@ class TestSingleCollectScheduling:
         result.stdout.fnmatch_lines(["*1 passed*"])
         # Make sure the tests are correctly distributed
         result.stdout.fnmatch_lines(["*scheduling tests via SingleCollectScheduling*"])
-    
+
     def test_singlecollect_many_tests(self, pytester: pytest.Pytester) -> None:
         """Test that the singlecollect mode correctly distributes many tests."""
         # Create test file with multiple tests
@@ -42,7 +42,7 @@ class TestSingleCollectScheduling:
         result.stdout.fnmatch_lines(["*passed*"])
         # Make sure the tests are correctly distributed
         result.stdout.fnmatch_lines(["*scheduling tests via SingleCollectScheduling*"])
-    
+
     def test_singlecollect_failure(self, pytester: pytest.Pytester) -> None:
         """Test that failures are correctly reported with singlecollect mode."""
         p1 = pytester.makepyfile(
@@ -54,7 +54,7 @@ class TestSingleCollectScheduling:
         result = pytester.runpytest(p1, "-n2", "--dist=singlecollect", "-v")
         assert result.ret == 1
         result.stdout.fnmatch_lines(["*1 failed*"])
-        
+
     def test_singlecollect_handles_fixtures(self, pytester: pytest.Pytester) -> None:
         """Test that fixtures work correctly with singlecollect mode."""
         pytester.makepyfile(

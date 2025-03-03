@@ -95,7 +95,9 @@ class SingleCollectScheduling:
         self, node: WorkerController, item_index: int | str, duration: float = 0
     ) -> None:
         """Mark test item as completed by node."""
-        self.node2pending[node].remove(int(item_index) if isinstance(item_index, str) else item_index)
+        self.node2pending[node].remove(
+            int(item_index) if isinstance(item_index, str) else item_index
+        )
         self.check_schedule(node, duration=duration)
 
     def mark_test_pending(self, item: str) -> None:
