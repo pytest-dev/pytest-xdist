@@ -583,7 +583,7 @@ class TestSingleCollectScheduling:
 
         # First node fails before collection
         sched.remove_node(node1)
-        
+
         # Now first_node should be reset after removal
         # Add a new node, it should become the collector
         node3 = MockNode()
