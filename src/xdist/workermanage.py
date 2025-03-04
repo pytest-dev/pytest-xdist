@@ -430,7 +430,12 @@ class WorkerController:
                     rep.item_index = item_index
                 self.notify_inproc(eventname, node=self, rep=rep)
             elif eventname == "collectionfinish":
-                self.notify_inproc(eventname, node=self, ids=kwargs["ids"])
+                self.notify_inproc(
+                    eventname,
+                    node=self,
+                    ids=kwargs["ids"],
+                    group_markers=kwargs["group_markers"],
+                )
             elif eventname == "runtest_protocol_complete":
                 self.notify_inproc(eventname, node=self, **kwargs)
             elif eventname == "unscheduled":
