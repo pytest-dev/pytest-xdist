@@ -1,6 +1,6 @@
 [build-system]
 requires = [
-  "setuptools>=61.2",
+  "setuptools>=77.0",
   "setuptools-scm[toml]>=6.2.3",
 ]
 build-backend = "setuptools.build_meta"
@@ -9,13 +9,12 @@ build-backend = "setuptools.build_meta"
 name = "pytest-xdist"
 description = "pytest xdist plugin for distributed testing, most importantly across multiple CPUs"
 readme = "README.rst"
-license = {file="LICENSE"}
+license = "MIT"
 authors = [{name = "holger krekel and contributors", email = "pytest-dev@python.org"}, {email = "holger@merlinux.eu"}]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Framework :: Pytest",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: POSIX",
     "Operating System :: Microsoft :: Windows",
     "Operating System :: MacOS :: MacOS X",
