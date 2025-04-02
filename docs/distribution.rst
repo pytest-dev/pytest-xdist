@@ -19,6 +19,8 @@ if it is not or if it fails to determine the number of logical CPUs, fall back t
 
 Pass a number, e.g. ``-n 8``, to specify the number of processes explicitly.
 
+Use ``-n 0`` to disable xdist and run all tests in the main process.
+
 To specify a different meaning for ``-n auto`` and ``-n logical`` for your
 tests, you can:
 
