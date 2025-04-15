@@ -51,6 +51,19 @@ The test distribution algorithm is configured with the ``--dist`` command-line o
 
 .. _distribution modes:
 
+* ``--dist isoscope``: Scope Isolation Scheduler. Tests are grouped by module for
+  test functions and by class for test methods. Tests are executed one group at a
+  time, distributed across available workers. This groupwise isolation guarantees
+  that all tests in one group complete execution before running another group of
+  tests. This can be useful when module-level or class-level fixtures of one group
+  could create undesirable side-effects for tests in other test groups, while
+  taking advantage of distributed execution of tests within each group. Grouping
+  by class takes priority over grouping by module. NOTE: the use of this scheduler
+  requires distributed coordination for setup and teardown such as provided by
+  the ``iso_scheduling`` fixture or an alternate implementation of distributed
+  coordination - see the ``iso_scheduling.coordinate_setup_teardown`` usage example
+  in iso_scheduling_plugin.py.
+
 * ``--dist load`` **(default)**: Sends pending tests to any worker that is
   available, without any guaranteed order. Scheduling can be fine-tuned with
   the `--maxschedchunk` option, see output of `pytest --help`.
