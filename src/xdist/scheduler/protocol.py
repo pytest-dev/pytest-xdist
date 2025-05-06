@@ -27,6 +27,8 @@ class Scheduling(Protocol):
         collection: Sequence[str],
     ) -> None: ...
 
+    def set_group_markers(self, group_markers: dict[str, str]) -> None: ...
+
     def mark_test_complete(
         self,
         node: WorkerController,
