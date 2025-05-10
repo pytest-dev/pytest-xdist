@@ -68,7 +68,10 @@ The test distribution algorithm is configured with the ``--dist`` command-line o
 
 * ``--dist loadgroup``: Tests are grouped by the ``xdist_group`` mark. Groups are
   distributed to available workers as whole units. This guarantees that all
-  tests with same ``xdist_group`` name run in the same worker.
+  tests with same ``xdist_group`` name run in the same worker. If a test has
+  multiple groups, they will be joined together into a new group,
+  the order of the marks doesn't matter. This works along with marks from fixtures
+  and from the pytestmark global variable.
 
   .. code-block:: python
 
@@ -83,6 +86,35 @@ The test distribution algorithm is configured with the ``--dist`` command-line o
               pass
 
   This will make sure ``test1`` and ``TestA::test2`` will run in the same worker.
+
+  .. code-block:: python
+
+      @pytest.fixture(
+          scope="session",
+          params=[
+              pytest.param(
+                  "chrome",
+                  marks=pytest.mark.xdist_group("chrome"),
+              ),
+              pytest.param(
+                  "firefox",
+                  marks=pytest.mark.xdist_group("firefox"),
+              ),
+              pytest.param(
+                  "edge",
+                  marks=pytest.mark.xdist_group("edge"),
+              ),
+          ],
+      )
+      def setup_container(...):
+          ...
+
+      @pytest.mark.xdist_group(name="UIstuff")
+      def test1(setup_container):
+          pass
+
+  This will generate 3 new groups: ``chrome_UIstuff``, ``firefox_UIstuff`` and ``edge_UIstuff``.
+
   Tests without the ``xdist_group`` mark are distributed normally as in the ``--dist=load`` mode.
 
 * ``--dist worksteal``: Initially, tests are distributed evenly among all

@@ -1481,6 +1481,98 @@ class TestGroupScope:
 
         assert a_1.keys() == b_1.keys() and a_2.keys() == b_2.keys()
 
+    def test_multiple_group_marks(self, pytester: pytest.Pytester) -> None:
+        test_file = """
+            import pytest
+            @pytest.mark.xdist_group(name="group1")
+            @pytest.mark.xdist_group(name="group2")
+            def test_1():
+                pass
+        """
+        pytester.makepyfile(test_a=test_file, test_b=test_file)
+        result = pytester.runpytest("-n2", "--dist=loadgroup", "-v")
+        res = parse_tests_and_workers_from_output(result.outlines)
+        assert len(res) == 2
+        # get test names
+        a_1 = next(t[2] for t in res if "test_a.py::test_1" in t[2])
+        b_1 = next(t[2] for t in res if "test_b.py::test_1" in t[2])
+        # check groups
+        assert a_1.split("@")[1] == b_1.split("@")[1] == "group1_group2"
+
+    def test_multiple_group_order(self, pytester: pytest.Pytester) -> None:
+        test_file = """
+            import pytest
+            @pytest.mark.xdist_group(name="b")
+            @pytest.mark.xdist_group(name="d")
+            @pytest.mark.xdist_group(name="c")
+            @pytest.mark.xdist_group(name="c2")
+            @pytest.mark.xdist_group(name="a")
+            @pytest.mark.xdist_group(name="aa")
+            def test_1():
+                pass
+        """
+        pytester.makepyfile(test_a=test_file, test_b=test_file)
+        result = pytester.runpytest("-n2", "--dist=loadgroup", "-v")
+        res = parse_tests_and_workers_from_output(result.outlines)
+        assert len(res) == 2
+        # get test names
+        a_1 = next(t[2] for t in res if "test_a.py::test_1" in t[2])
+        b_1 = next(t[2] for t in res if "test_b.py::test_1" in t[2])
+        # check groups, order should be sorted
+        assert a_1.split("@")[1] == b_1.split("@")[1] == "a_aa_b_c_c2_d"
+
+    def test_multiple_group_module_mark(self, pytester: pytest.Pytester) -> None:
+        test_file = """
+            import pytest
+            pytestmark = pytest.mark.xdist_group(name="group1")
+            @pytest.mark.xdist_group(name="group2")
+            def test_1():
+                pass
+        """
+        pytester.makepyfile(test_a=test_file, test_b=test_file)
+        result = pytester.runpytest("-n2", "--dist=loadgroup", "-v")
+        res = parse_tests_and_workers_from_output(result.outlines)
+        assert len(res) == 2
+        # get test names
+        a_1 = next(t[2] for t in res if "test_a.py::test_1" in t[2])
+        b_1 = next(t[2] for t in res if "test_b.py::test_1" in t[2])
+        # check groups
+        assert a_1.split("@")[1] == b_1.split("@")[1] == "group1_group2"
+
+    def test_multiple_groups_with_fixture(self, pytester: pytest.Pytester) -> None:
+        test_file = """
+            import pytest
+            @pytest.fixture(
+                params=[
+                    pytest.param(
+                        "group1",
+                        marks=pytest.mark.xdist_group("group1"),
+                    ),
+                    pytest.param(
+                        "group2",
+                        marks=pytest.mark.xdist_group("group2"),
+                    ),
+                ],
+            )
+            def setup():
+                pass
+            @pytest.mark.xdist_group(name="group3")
+            def test_1(setup):
+                pass
+        """
+        pytester.makepyfile(test_a=test_file, test_b=test_file)
+        result = pytester.runpytest("-n2", "--dist=loadgroup", "-v")
+        res = parse_tests_and_workers_from_output(result.outlines)
+        assert len(res) == 4
+        # get test names
+        a_1 = next(t[2] for t in res if "test_a.py::test_1[group1]" in t[2])
+        a_2 = next(t[2] for t in res if "test_a.py::test_1[group2]" in t[2])
+        b_1 = next(t[2] for t in res if "test_b.py::test_1[group1]" in t[2])
+        b_2 = next(t[2] for t in res if "test_b.py::test_1[group2]" in t[2])
+        # check groups
+        assert a_1.split("@")[1] == b_1.split("@")[1] == "group1_group3"
+        assert a_2.split("@")[1] == b_2.split("@")[1] =="group2_group3"
+
 
 class TestLocking:
     _test_content = """
