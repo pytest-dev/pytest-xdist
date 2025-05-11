@@ -1571,7 +1571,7 @@ class TestGroupScope:
         b_2 = next(t[2] for t in res if "test_b.py::test_1[group2]" in t[2])
         # check groups
         assert a_1.split("@")[1] == b_1.split("@")[1] == "group1_group3"
-        assert a_2.split("@")[1] == b_2.split("@")[1] =="group2_group3"
+        assert a_2.split("@")[1] == b_2.split("@")[1] == "group2_group3"
 
 
 class TestLocking:
