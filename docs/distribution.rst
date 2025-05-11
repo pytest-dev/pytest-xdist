@@ -106,8 +106,8 @@ The test distribution algorithm is configured with the ``--dist`` command-line o
               ),
           ],
       )
-      def setup_container(...):
-          ...
+      def setup_container():
+          pass
 
       @pytest.mark.xdist_group(name="UIstuff")
       def test1(setup_container):
