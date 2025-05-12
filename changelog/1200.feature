@@ -1,3 +1,3 @@
-Join multiple xdist_group.
+Now multiple ``xdist_group`` markers are considered when assigning tests to groups (order does not matter).
 
-If a test has more than one xdist_group marker, they will be joined together into a new group. This includes markers from pytestmark and from fixtures. The order does NOT matter.
+Previously, only the last marker would assign a test to a group, but now if a test has multiple ``xdist_group`` marks applied (for example via parametrization or via fixtures), they are merged to make a new group.
