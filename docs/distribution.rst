@@ -110,11 +110,11 @@ The test distribution algorithm is configured with the ``--dist`` command-line o
           pass
 
 
-      @pytest.mark.xdist_group(name="UIstuff")
-      def test1(setup_container):
-          pass
+      @pytest.mark.xdist_group(name="data-store")
+      def test_data_store(setup_container):
+          ...
 
-  This will generate 3 new groups: ``chrome_UIstuff``, ``firefox_UIstuff`` and ``edge_UIstuff``.
+  This will generate 3 new groups: ``chrome_data-store``, ``data-store_firefox`` and ``data-store_edge`` (the markers are lexically sorted before being merged together).
 
   Tests without the ``xdist_group`` mark are distributed normally as in the ``--dist=load`` mode.
 
