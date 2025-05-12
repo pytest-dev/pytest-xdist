@@ -1522,7 +1522,6 @@ class TestGroupScope:
         assert a_1.split("@")[1] == b_1.split("@")[1] == "a_aa_b_c_c2_d"
 
 
-
 class TestLocking:
     _test_content = """
     class TestClassName%s(object):
