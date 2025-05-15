@@ -241,15 +241,17 @@ class WorkerInteractor:
         # add the group name to nodeid as suffix if --dist=loadgroup
         if config.getvalue("loadgroup"):
             for item in items:
-                mark = item.get_closest_marker("xdist_group")
-                if not mark:
+                gnames: set[str] = set()
+                for mark in item.iter_markers("xdist_group"):
+                    name = (
+                        mark.args[0]
+                        if len(mark.args) > 0
+                        else mark.kwargs.get("name", "default")
+                    )
+                    gnames.add(name)
+                if not gnames:
                     continue
-                gname = (
-                    mark.args[0]
-                    if len(mark.args) > 0
-                    else mark.kwargs.get("name", "default")
-                )
-                item._nodeid = f"{item.nodeid}@{gname}"
+                item._nodeid = f"{item.nodeid}@{'_'.join(sorted(gnames))}"
 
     @pytest.hookimpl
     def pytest_collection_finish(self, session: pytest.Session) -> None:

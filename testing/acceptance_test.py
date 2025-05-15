@@ -1481,6 +1481,46 @@ class TestGroupScope:
 
         assert a_1.keys() == b_1.keys() and a_2.keys() == b_2.keys()
 
+    def test_multiple_group_marks(self, pytester: pytest.Pytester) -> None:
+        test_file = """
+            import pytest
+            @pytest.mark.xdist_group(name="group1")
+            @pytest.mark.xdist_group(name="group2")
+            def test_1():
+                pass
+        """
+        pytester.makepyfile(test_a=test_file, test_b=test_file)
+        result = pytester.runpytest("-n2", "--dist=loadgroup", "-v")
+        res = parse_tests_and_workers_from_output(result.outlines)
+        assert len(res) == 2
+        # get test names
+        a_1 = next(t[2] for t in res if "test_a.py::test_1" in t[2])
+        b_1 = next(t[2] for t in res if "test_b.py::test_1" in t[2])
+        # check groups
+        assert a_1.split("@")[1] == b_1.split("@")[1] == "group1_group2"
+
+    def test_multiple_group_order(self, pytester: pytest.Pytester) -> None:
+        test_file = """
+            import pytest
+            @pytest.mark.xdist_group(name="b")
+            @pytest.mark.xdist_group(name="d")
+            @pytest.mark.xdist_group(name="c")
+            @pytest.mark.xdist_group(name="c2")
+            @pytest.mark.xdist_group(name="a")
+            @pytest.mark.xdist_group(name="aa")
+            def test_1():
+                pass
+        """
+        pytester.makepyfile(test_a=test_file, test_b=test_file)
+        result = pytester.runpytest("-n2", "--dist=loadgroup", "-v")
+        res = parse_tests_and_workers_from_output(result.outlines)
+        assert len(res) == 2
+        # get test names
+        a_1 = next(t[2] for t in res if "test_a.py::test_1" in t[2])
+        b_1 = next(t[2] for t in res if "test_b.py::test_1" in t[2])
+        # check groups, order should be sorted
+        assert a_1.split("@")[1] == b_1.split("@")[1] == "a_aa_b_c_c2_d"
+
 
 class TestLocking:
     _test_content = """
