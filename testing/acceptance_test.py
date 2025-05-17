@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import os
+import pathlib
 import re
 import shutil
 from typing import cast
+from uuid import uuid1
 
 import pytest
 
@@ -1198,6 +1200,330 @@ def test_internal_errors_propagate_to_controller(pytester: pytest.Pytester) -> N
     result.stdout.fnmatch_lines(["*RuntimeError: Some runtime error*"])
 
 
+@pytest.fixture(scope="session")
+def shared_scope_setup_status_path(
+    tmp_path_factory: pytest.TempPathFactory, testrun_uid: str
+) -> pathlib.Path:
+    return (
+        tmp_path_factory.getbasetemp().parent
+        / "test_distributed_setup_teardown_coordination"
+        / testrun_uid
+        / uuid1().hex
+        / "scope_setup_status.txt"
+    )
+
+
+class TestIsoScope:
+    def test_distributed_setup_teardown_coordination(
+        self, pytester: pytest.Pytester, shared_scope_setup_status_path: pathlib.Path
+    ) -> None:
+        """
+        The isoscope scheduler provides a distributed coordination mechanism
+        for Scope-level Resource Setup/Teardown with the following guarantees:
+            1. Resource Setup is performed exactly once per test Scope.
+            2. Resource Teardown is performed exactly once per test Scope.
+            3. Resource Setup of the executing test Scope completes BEFORE
+                execution of the Scope's tests.
+            4. Resource Teardown phase of the executing test Scope begins after
+                completion of all tests of the Scope.
+            5. Resource Setup of the next test Scope begins after completion of
+                the previous test Scope's Resource Teardown.
+        """
+        test_file = f"""
+        from __future__ import annotations
+        import pathlib
+        from typing import TYPE_CHECKING
+        import pytest
+        if TYPE_CHECKING:
+            from xdist.iso_scheduling_utils import (
+                IsoSchedulingFixture,
+                DistributedSetupContext,
+                DistributedTeardownContext
+            )
+
+        _SHARED_SCOPE_SETUP_STATUS_PATH = pathlib.Path(
+            r"{shared_scope_setup_status_path!s}")
+
+        class TestScopeA:
+            @classmethod
+            @pytest.fixture(scope='class', autouse=True)
+            def distributed_setup_and_teardown(
+                    cls,
+                    iso_scheduling: IsoSchedulingFixture,
+                    request: pytest.FixtureRequest):
+                with iso_scheduling.coordinate_setup_teardown(
+                        setup_request=request) as coordinator:
+                    # Distributed Setup
+                    coordinator.maybe_call_setup(cls.patch_system_under_test)
+                    try:
+                        # Yield control back to the XDist Worker to allow the
+                        # test cases to run
+                        yield
+                    finally:
+                        # Distributed Teardown
+                        coordinator.maybe_call_teardown(cls.revert_system_under_test)
+            @classmethod
+            def patch_system_under_test(
+                    cls,
+                    setup_context: DistributedSetupContext) -> None:
+                # Initialize the System Under Test for all the test cases in
+                # this test class and store state in `setup_context.client_dir`.
+                assert _SHARED_SCOPE_SETUP_STATUS_PATH.read_text() == "TEARDOWN_COMPLETE"
+                _SHARED_SCOPE_SETUP_STATUS_PATH.write_text("SETUP_COMPLETE")
+
+            @classmethod
+            def revert_system_under_test(
+                    cls,
+                    teardown_context: DistributedTeardownContext):
+                # Fetch state from `teardown_context.client_dir` and revert
+                # changes made by `patch_system_under_test()`.
+                assert _SHARED_SCOPE_SETUP_STATUS_PATH.read_text() == "SETUP_COMPLETE"
+                _SHARED_SCOPE_SETUP_STATUS_PATH.write_text("TEARDOWN_COMPLETE")
+
+            @pytest.mark.parametrize('i', range(5))
+            def test(self, i):
+                assert _SHARED_SCOPE_SETUP_STATUS_PATH.read_text() == "SETUP_COMPLETE"
+
+        class TestScopeB(TestScopeA):
+            pass
+        """
+        # Initialize the status file used by underlying test
+        shared_scope_setup_status_path.parent.mkdir(parents=True, exist_ok=True)
+        shared_scope_setup_status_path.write_text("TEARDOWN_COMPLETE")
+
+        pytester.makepyfile(test_a=test_file)
+        result = pytester.runpytest("-n2", "--dist=isoscope", "-v")
+
+        assert (
+            sum(
+                get_workers_and_test_count_by_prefix(
+                    "test_a.py::TestScopeA", result.outlines
+                ).values()
+            )
+            == 5
+        )
+        assert (
+            sum(
+                get_workers_and_test_count_by_prefix(
+                    "test_a.py::TestScopeB", result.outlines
+                ).values()
+            )
+            == 5
+        )
+
+    def test_by_module(self, pytester: pytest.Pytester) -> None:
+        test_file = """
+            import pytest
+            @pytest.mark.parametrize('i', range(10))
+            def test(i):
+                pass
+        """
+        pytester.makepyfile(test_a=test_file, test_b=test_file)
+        result = pytester.runpytest("-n2", "--dist=isoscope", "-v")
+        assert get_workers_and_test_count_by_prefix(
+            "test_a.py::test", result.outlines
+        ) == {"gw0": 5, "gw1": 5}
+        assert get_workers_and_test_count_by_prefix(
+            "test_b.py::test", result.outlines
+        ) == {"gw0": 5, "gw1": 5}
+
+    def test_by_class(self, pytester: pytest.Pytester) -> None:
+        pytester.makepyfile(
+            test_a="""
+            import pytest
+            class TestA:
+                @pytest.mark.parametrize('i', range(10))
+                def test(self, i):
+                    pass
+
+            class TestB:
+                @pytest.mark.parametrize('i', range(10))
+                def test(self, i):
+                    pass
+        """
+        )
+        result = pytester.runpytest("-n2", "--dist=isoscope", "-v")
+        assert get_workers_and_test_count_by_prefix(
+            "test_a.py::TestA", result.outlines
+        ) == {"gw0": 5, "gw1": 5}
+        assert get_workers_and_test_count_by_prefix(
+            "test_a.py::TestB", result.outlines
+        ) == {"gw0": 5, "gw1": 5}
+
+    def test_module_single_start(self, pytester: pytest.Pytester) -> None:
+        """Ensure test suite is finishing in case all workers start with a single test (#277)."""
+        test_file1 = """
+            import pytest
+            def test():
+                pass
+        """
+        test_file2 = """
+            import pytest
+            def test_1():
+                pass
+            def test_2():
+                pass
+        """
+        pytester.makepyfile(test_a=test_file1, test_b=test_file1, test_c=test_file2)
+        result = pytester.runpytest("-n2", "--dist=isoscope", "-v")
+        a = get_workers_and_test_count_by_prefix("test_a.py::test", result.outlines)
+        b = get_workers_and_test_count_by_prefix("test_b.py::test", result.outlines)
+        c1 = get_workers_and_test_count_by_prefix("test_c.py::test_1", result.outlines)
+        c2 = get_workers_and_test_count_by_prefix("test_c.py::test_2", result.outlines)
+        assert a in ({"gw0": 1}, {"gw1": 1})
+        assert b in ({"gw0": 1}, {"gw1": 1})
+        assert a.items() == b.items()
+        assert c1 == c2
+
+    def test_single_scope_all_workers_utilized(self, pytester: pytest.Pytester) -> None:
+        """
+        With single scope, there are no fence tests from another scope, so
+        this scheduler resorts to shutting down the workers in order to execute
+        the final tests in each worker. isoscope allocates at least two tests
+        per worker from the active scope, unless the scope has only one test.
+        """
+        test_file = """
+            import pytest
+            @pytest.mark.parametrize('i', range(5))
+            def test(i):
+                pass
+        """
+        pytester.makepyfile(test_a=test_file)
+        result = pytester.runpytest("-n2", "--dist=isoscope", "-v")
+        counts_by_worker = get_workers_and_test_count_by_prefix(
+            "test_a.py::test", result.outlines
+        )
+        assert counts_by_worker["gw0"] in (2, 3)
+        assert counts_by_worker["gw1"] in (2, 3)
+        assert counts_by_worker["gw0"] + counts_by_worker["gw1"] == 5
+
+    @pytest.mark.parametrize("num_tests", [1, 2, 3])
+    def test_single_scope_subset_of_workers_utilized(
+        self, num_tests: int, pytester: pytest.Pytester
+    ) -> None:
+        """
+        With single scope, there are no fence tests from another scope, so
+        this scheduler resorts to shutting down the workers in order to execute
+        the final tests in each worker. isoscope allocates at least two tests
+        per worker from the active scope, unless the scope has only one test.
+        """
+        test_file = f"""
+            import pytest
+            @pytest.mark.parametrize('i', range({num_tests}))
+            def test(i):
+                pass
+        """
+        pytester.makepyfile(test_a=test_file)
+        result = pytester.runpytest("-n2", "--dist=isoscope", "-v")
+        counts_by_worker = get_workers_and_test_count_by_prefix(
+            "test_a.py::test", result.outlines
+        )
+        assert counts_by_worker.setdefault("gw0", 0) in (0, num_tests)
+        assert counts_by_worker.setdefault("gw1", 0) in (0, num_tests)
+        assert counts_by_worker["gw0"] + counts_by_worker["gw1"] == num_tests
+
+    def test_multi_scope_with_insufficient_fence(
+        self, pytester: pytest.Pytester
+    ) -> None:
+        """
+        When there are not enough fence tests from subsequent scope(s),
+        this scheduler resorts to shutting down the excess workers in order to
+        execute the final tests in each worker. isoscope allocates at least two
+        tests per worker from the active scope, unless the scope has only one
+        test.
+        """
+        test_file1 = """
+            import pytest
+            # 6 tests should distribute 2 per worker for 3 workers due to the
+            # min-2 scope tests per worker rule.
+            @pytest.mark.parametrize('i', range(6))
+            def test(i):
+                pass
+        """
+        test_file2 = """
+            import pytest
+            class TestFenceA:
+                def test(self):
+                    pass
+
+            class TestFenceB:
+                # Two tests are only enough for one fence due to min-2 scope
+                # tests per worker rule
+                def test1(self):
+                    pass
+                def test2(self):
+                    pass
+        """
+        pytester.makepyfile(test_a=test_file1, test_fence_scopes=test_file2)
+        result = pytester.runpytest("-n3", "--dist=isoscope", "-v")
+
+        counts_by_worker_a = get_workers_and_test_count_by_prefix(
+            "test_a.py::test", result.outlines
+        )
+        # 6 tests should distribute 2 per worker for 3 workers due to the
+        # min-2 scope tests per worker rule.
+        assert sum(counts_by_worker_a.values()) == 6
+        for worker in ["gw0", "gw1", "gw2"]:
+            assert counts_by_worker_a[worker] == 2
+
+        counts_by_worker_fence_a = get_workers_and_test_count_by_prefix(
+            "test_fence_scopes.py::TestFenceA", result.outlines
+        )
+        counts_by_worker_fence_b = get_workers_and_test_count_by_prefix(
+            "test_fence_scopes.py::TestFenceB", result.outlines
+        )
+
+        assert len(counts_by_worker_fence_a) == 1
+        assert next(iter(counts_by_worker_fence_a.values())) == 1
+
+        assert len(counts_by_worker_fence_b) == 1
+        assert next(iter(counts_by_worker_fence_b.values())) == 2
+
+    @pytest.mark.parametrize("num_tests", [1, 2, 3, 4, 5, 7])
+    def test_two_tests_min_per_worker_rule(
+        self, num_tests: int, pytester: pytest.Pytester
+    ) -> None:
+        """
+        isoscope allocates at least two tests per worker from the active scope,
+        unless the scope has only one test.
+        """
+        test_file1 = f"""
+            import pytest
+            @pytest.mark.parametrize('i', range({num_tests}))
+            def test(i):
+                pass
+        """
+        pytester.makepyfile(test_a=test_file1)
+        result = pytester.runpytest("-n2", "--dist=isoscope", "-v")
+
+        if num_tests == 1:
+            expected_worker_a_test_count = 1
+        elif num_tests == 2:
+            expected_worker_a_test_count = 2
+        elif num_tests == 3:
+            expected_worker_a_test_count = 3
+        elif num_tests == 4:
+            expected_worker_a_test_count = 2
+        elif num_tests == 5:
+            expected_worker_a_test_count = 3
+        elif num_tests == 7:
+            expected_worker_a_test_count = 4
+        else:
+            assert False, f"Unexpected {num_tests=}"
+
+        counts_by_worker_a = get_workers_and_test_count_by_prefix(
+            "test_a.py::test", result.outlines
+        )
+
+        counts_by_worker_a.setdefault("gw0", 0)
+        counts_by_worker_a.setdefault("gw1", 0)
+
+        assert set(counts_by_worker_a.values()) == {
+            expected_worker_a_test_count,
+            num_tests - expected_worker_a_test_count,
+        }
+
+
 class TestLoadScope:
     def test_by_module(self, pytester: pytest.Pytester) -> None:
         test_file = """
@@ -1553,7 +1879,8 @@ class TestLocking:
     """ + ((_test_content * 4) % ("A", "B", "C", "D"))
 
     @pytest.mark.parametrize(
-        "scope", ["each", "load", "loadscope", "loadfile", "worksteal", "no"]
+        "scope",
+        ["each", "isoscope", "load", "loadscope", "loadfile", "worksteal", "no"],
     )
     def test_single_file(self, pytester: pytest.Pytester, scope: str) -> None:
         pytester.makepyfile(test_a=self.test_file1)
@@ -1561,7 +1888,8 @@ class TestLocking:
         result.assert_outcomes(passed=(12 if scope != "each" else 12 * 2))
 
     @pytest.mark.parametrize(
-        "scope", ["each", "load", "loadscope", "loadfile", "worksteal", "no"]
+        "scope",
+        ["each", "isoscope", "load", "loadscope", "loadfile", "worksteal", "no"],
     )
     def test_multi_file(self, pytester: pytest.Pytester, scope: str) -> None:
         pytester.makepyfile(

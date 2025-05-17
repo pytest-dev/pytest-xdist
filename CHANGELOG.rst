@@ -1,3 +1,10 @@
+pytest-xdist 3.ZZZ.ZZZ (2024-zz-zz)
+===================================
+
+Features
+--------
+- `#1126 <https://github.com/pytest-dev/pytest-xdist/pull/1126>`_: New ``isoscope`` scheduler.
+
 pytest-xdist 3.6.1 (2024-04-28)
 ===============================
 
