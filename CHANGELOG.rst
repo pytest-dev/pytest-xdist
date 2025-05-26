@@ -1,3 +1,38 @@
+pytest-xdist 3.7.0 (2025-05-26)
+===============================
+
+Features
+--------
+
+- `#1142 <https://github.com/pytest-dev/pytest-xdist/issues/1142>`_: Added support for Python 3.13.
+
+- `#1144 <https://github.com/pytest-dev/pytest-xdist/issues/1144>`_: The internal `steal` command is now atomic - it unschedules either all requested tests or none.
+
+  This is a prerequisite for group/scope support in the `worksteal` scheduler, so test groups won't be broken up incorrectly.
+
+- `#1170 <https://github.com/pytest-dev/pytest-xdist/issues/1170>`_: Add the `--px` arg to create proxy gateways.
+
+  Proxy gateways are passed to additional gateways using the `via` keyword.
+  They can serve as a way to run multiple workers on remote machines.
+
+- `#1200 <https://github.com/pytest-dev/pytest-xdist/issues/1200>`_: Now multiple ``xdist_group`` markers are considered when assigning tests to groups (order does not matter).
+
+  Previously, only the last marker would assign a test to a group, but now if a test has multiple ``xdist_group`` marks applied (for example via parametrization or via fixtures), they are merged to make a new group.
+
+
+Removals
+--------
+
+- `#1162 <https://github.com/pytest-dev/pytest-xdist/issues/1162>`_: Dropped support for EOL Python 3.8.
+
+
+Trivial Changes
+---------------
+
+- `#1092 <https://github.com/pytest-dev/pytest-xdist/issues/1092>`_: Update an error message to better indicate where users should go for more information.
+
+- `#1190 <https://github.com/pytest-dev/pytest-xdist/issues/1190>`_: Switched to using a SPDX license identifier introduced in PEP 639.
+
 pytest-xdist 3.6.1 (2024-04-28)
 ===============================
 
