@@ -248,7 +248,7 @@ class WorkerInteractor:
                         if len(mark.args) > 0
                         else mark.kwargs.get("name", "default")
                     )
-                    gnames.add(name)
+                    gnames.add(str(name))
                 if not gnames:
                     continue
                 item._nodeid = f"{item.nodeid}@{'_'.join(sorted(gnames))}"
