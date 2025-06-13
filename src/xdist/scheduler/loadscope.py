@@ -371,14 +371,14 @@ class LoadScopeScheduling:
             work_unit = unsorted_workqueue.setdefault(scope, {})
             work_unit[nodeid] = False
 
-        if self.config.option.noloadscopenoreorder:
-            for scope, nodeids in unsorted_workqueue.items():
-                self.workqueue[scope] = nodeids
-        else:
+        if self.config.option.loadscopereorder:
             # Insert tests scopes into work queue ordered by number of tests.
             for scope, nodeids in sorted(
                 unsorted_workqueue.items(), key=lambda item: -len(item[1])
             ):
+                self.workqueue[scope] = nodeids
+        else:
+            for scope, nodeids in unsorted_workqueue.items():
                 self.workqueue[scope] = nodeids
 
         # Avoid having more workers than work

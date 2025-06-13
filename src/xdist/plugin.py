@@ -129,13 +129,16 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     )
     group.addoption(
         "--no-loadscope-reorder",
-        action="store_true",
-        dest="noloadscopenoreorder",
-        default=False,
+        dest="loadscopereorder",
+        action="store_false",
+        default=True,
         help=(
-            "Reorders tests when used in conjunction with loadscope.\n"
-            "Will order tests by number of tests per scope as a best-effort"
-            " attempt to evenly distribute scopes across all workers."
+            "Pytest-xdist will default reorder tests by number of tests per scope "
+            "when used in conjunction with loadscope.\n"
+            "This option will disable loadscope reorder, "
+            "and the partial order of tests can be retained.\n"
+            "This is useful when pytest-xdist is used together with "
+            "other plugins that specify tests in a specific order."
         ),
     )
     group.addoption(
