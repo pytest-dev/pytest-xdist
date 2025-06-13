@@ -1,0 +1,3 @@
+Add ``--no-loadscope-reorder`` option to disable automatic reordering of tests in loadscope for tests where relative ordering matters. This only applies when using ``loadscope``. 
+
+For example, [test_file_1, test_file_2, ..., test_file_n] are given as input test files, if ``--no-loadscope-reorder`` is used, for either worker, the ``test_file_a`` will be executed before ``test_file_b`` only if ``a < b``.
