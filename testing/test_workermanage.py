@@ -206,8 +206,8 @@ class TestNodeManager:
         p = Path(p)
         print("remote curdir", p)
         assert p == dest.joinpath(config.rootpath.name)
-        assert p.joinpath("dir1").check()
-        assert p.joinpath("dir1", "file1").check()
+        assert p.joinpath("dir1").is_dir()
+        assert p.joinpath("dir1", "file1").is_file()
 
     def test_popen_rsync_subdir(
         self,
