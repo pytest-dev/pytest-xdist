@@ -1,3 +1,15 @@
+pytest-xdist 3.8.0 (2025-06-30)
+===============================
+
+Features
+--------
+
+- `#1083 <https://github.com/pytest-dev/pytest-xdist/issues/1083>`_: Add ``--no-loadscope-reorder`` and ``--loadscope-reorder`` option to control whether to automatically reorder tests in loadscope for tests where relative ordering matters. This only applies when using ``loadscope``. 
+
+  For example, [test_file_1, test_file_2, ..., test_file_n] are given as input test files, if ``--no-loadscope-reorder`` is used, for either worker, the ``test_file_a`` will be executed before ``test_file_b`` only if ``a < b``.
+
+  The default behavior is to reorder the tests to maximize the number of tests that can be executed in parallel.
+
 pytest-xdist 3.7.0 (2025-05-26)
 ===============================
 
