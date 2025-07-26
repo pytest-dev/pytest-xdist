@@ -1,6 +1,8 @@
 from __future__ import annotations
+from concurrent.futures import ThreadPoolExecutor
 
 from collections.abc import Sequence
+import time
 import enum
 import fnmatch
 import os
@@ -94,7 +96,12 @@ class NodeManager:
     ) -> list[WorkerController]:
         self.config.hook.pytest_xdist_setupnodes(config=self.config, specs=self.specs)
         self.trace("setting up nodes")
-        return [self.setup_node(spec, putevent) for spec in self.specs]
+        t = time.monotonic()
+        with ThreadPoolExecutor(max_workers=len(self.specs)) as executor:
+            futs = [executor.submit(self.setup_node, spec, putevent) for spec in self.specs]
+            ret = [f.result() for f in futs]
+            print('setup_nodes took %.3f seconds' % (time.monotonic() - t))
+            return ret
 
     def setup_node(
         self,
