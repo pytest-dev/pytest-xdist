@@ -87,8 +87,7 @@ class TestNodeManagerPopen:
             hookrecorder.popcall("pytest_xdist_newgateway"),
             hookrecorder.popcall("pytest_xdist_newgateway"),
         ]
-        ids = {c.gateway.id for c in gw_calls}
-        assert ids == {"gw0", "gw1"}
+        assert {c.gateway.id for c in gw_calls} == {"gw0", "gw1"}
 
         for c in gw_calls:
             expected_spec = execnet.XSpec(
