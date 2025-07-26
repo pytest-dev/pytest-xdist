@@ -97,7 +97,8 @@ class NodeManager:
         self.trace("setting up nodes")
         with ThreadPoolExecutor(max_workers=len(self.specs)) as executor:
             futs = [
-                executor.submit(self.setup_node, idx, spec, putevent) for idx, spec in enumerate(self.specs)
+                executor.submit(self.setup_node, idx, spec, putevent)
+                for idx, spec in enumerate(self.specs)
             ]
             return [f.result() for f in futs]
 
