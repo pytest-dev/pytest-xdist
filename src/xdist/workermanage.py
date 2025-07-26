@@ -101,8 +101,8 @@ class NodeManager:
         self.trace("setting up nodes")
         with ThreadPoolExecutor(max_workers=len(self.specs)) as executor:
             futs = [
-                executor.submit(self.setup_node, spec, putevent, idx)
-                for idx, spec in enumerate(self.specs)
+                executor.submit(self.setup_node, spec, putevent)
+                for spec in self.specs
             ]
             results = [f.result() for f in futs]
             for r in results:
@@ -113,7 +113,6 @@ class NodeManager:
         self,
         spec: execnet.XSpec,
         putevent: Callable[[tuple[str, dict[str, Any]]], None],
-        idx: int | None = None,
     ) -> WorkerController:
         if getattr(spec, "execmodel", None) != "main_thread_only":
             spec = execnet.XSpec(f"execmodel=main_thread_only//{spec}")

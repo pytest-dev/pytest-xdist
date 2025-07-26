@@ -523,7 +523,6 @@ class TerminalDistReporter:
 
     @pytest.hookimpl
     def pytest_xdist_newgateway(self, gateway: execnet.Gateway) -> None:
-        print('pytest_xdist_newgateway', gateway.id, gateway.spec)
         if self.config.option.verbose > 0:
             rinfo = gateway._rinfo()
             different_interpreter = rinfo.executable != sys.executable
