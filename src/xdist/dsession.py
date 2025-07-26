@@ -188,7 +188,7 @@ class DSession:
             node.shutdown()
         else:
             assert self.sched is not None
-            print('scheduler:', self.sched.__class__.__name__)
+            # print('scheduler:', self.sched.__class__.__name__)
             self.sched.add_node(node)
 
     def worker_workerfinished(self, node: WorkerController) -> None:
