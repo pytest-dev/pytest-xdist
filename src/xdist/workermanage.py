@@ -1,14 +1,14 @@
 from __future__ import annotations
-from concurrent.futures import ThreadPoolExecutor
 
 from collections.abc import Sequence
-import time
+from concurrent.futures import ThreadPoolExecutor
 import enum
 import fnmatch
 import os
 from pathlib import Path
 import re
 import sys
+import time
 from typing import Any
 from typing import Callable
 from typing import Literal
@@ -98,9 +98,11 @@ class NodeManager:
         self.trace("setting up nodes")
         t = time.monotonic()
         with ThreadPoolExecutor(max_workers=len(self.specs)) as executor:
-            futs = [executor.submit(self.setup_node, spec, putevent) for spec in self.specs]
+            futs = [
+                executor.submit(self.setup_node, spec, putevent) for spec in self.specs
+            ]
             ret = [f.result() for f in futs]
-            print('setup_nodes took %.3f seconds' % (time.monotonic() - t))
+            print("setup_nodes took %.3f seconds" % (time.monotonic() - t))
             return ret
 
     def setup_node(
