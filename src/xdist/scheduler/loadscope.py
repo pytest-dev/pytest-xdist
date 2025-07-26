@@ -162,6 +162,8 @@ class LoadScopeScheduling:
         """
         assert node not in self.assigned_work
         self.assigned_work[node] = {}
+        # sort by gw id
+        self.assigned_work = dict(sorted(self.assigned_work.items(), key=lambda item: item[0].gateway.id))
 
     def remove_node(self, node: WorkerController) -> str | None:
         """Remove a node from the scheduler.

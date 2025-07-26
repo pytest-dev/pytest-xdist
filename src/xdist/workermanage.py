@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from concurrent.futures import ThreadPoolExecutor
 import enum
 import fnmatch
 import os
@@ -94,15 +95,24 @@ class NodeManager:
     ) -> list[WorkerController]:
         self.config.hook.pytest_xdist_setupnodes(config=self.config, specs=self.specs)
         self.trace("setting up nodes")
-        return [self.setup_node(spec, putevent) for spec in self.specs]
+        with ThreadPoolExecutor(max_workers=len(self.specs)) as executor:
+            futs = [
+                executor.submit(self.setup_node, spec, putevent, idx)
+                for idx, spec in enumerate(self.specs)
+            ]
+            return [f.result() for f in futs]
+        # return [self.setup_node(spec, putevent) for spec in self.specs]
 
     def setup_node(
         self,
         spec: execnet.XSpec,
         putevent: Callable[[tuple[str, dict[str, Any]]], None],
+        idx: int | None = None,
     ) -> WorkerController:
         if getattr(spec, "execmodel", None) != "main_thread_only":
             spec = execnet.XSpec(f"execmodel=main_thread_only//{spec}")
+        # if idx is not None:
+        #     spec = execnet.XSpec(f"{spec}//id=gw{idx}")
         gw = self.group.makegateway(spec)
         self.config.hook.pytest_xdist_newgateway(gateway=gw)
         self.rsync_roots(gw)
