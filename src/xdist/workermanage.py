@@ -96,9 +96,7 @@ class NodeManager:
         self.config.hook.pytest_xdist_setupnodes(config=self.config, specs=self.specs)
         self.trace("setting up nodes")
         with ThreadPoolExecutor(max_workers=len(self.specs)) as executor:
-            futs = [
-                executor.submit(self.setup_node, spec, putevent) for spec in self.specs
-            ]
+            futs = [executor.submit(self.setup_node, spec, putevent) for spec in self.specs]
             return [f.result() for f in futs]
 
     def setup_node(
