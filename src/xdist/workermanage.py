@@ -8,7 +8,6 @@ import os
 from pathlib import Path
 import re
 import sys
-import time
 from typing import Any
 from typing import Callable
 from typing import Literal
@@ -96,14 +95,11 @@ class NodeManager:
     ) -> list[WorkerController]:
         self.config.hook.pytest_xdist_setupnodes(config=self.config, specs=self.specs)
         self.trace("setting up nodes")
-        t = time.monotonic()
         with ThreadPoolExecutor(max_workers=len(self.specs)) as executor:
             futs = [
                 executor.submit(self.setup_node, spec, putevent) for spec in self.specs
             ]
-            ret = [f.result() for f in futs]
-            print("setup_nodes took %.3f seconds" % (time.monotonic() - t))
-            return ret
+            return [f.result() for f in futs]
 
     def setup_node(
         self,
