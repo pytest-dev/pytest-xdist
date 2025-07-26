@@ -51,7 +51,7 @@ def dest(tmp_path: Path) -> Path:
 def workercontroller(monkeypatch: pytest.MonkeyPatch) -> None:
     class MockController:
         def __init__(self, *args: object) -> None:
-            self.gateway = args[1]
+            pass
 
         def setup(self) -> None:
             pass

@@ -104,10 +104,7 @@ class NodeManager:
                 executor.submit(self.setup_node, spec, putevent)
                 for spec in self.specs
             ]
-            results = [f.result() for f in futs]
-            for r in results:
-                self.config.hook.pytest_xdist_newgateway(gateway=r.gateway)
-            return results
+            return [f.result() for f in futs]
 
     def setup_node(
         self,
@@ -117,6 +114,7 @@ class NodeManager:
         if getattr(spec, "execmodel", None) != "main_thread_only":
             spec = execnet.XSpec(f"execmodel=main_thread_only//{spec}")
         gw = self.group.makegateway(spec)
+        self.config.hook.pytest_xdist_newgateway(gateway=gw)
         self.rsync_roots(gw)
         node = WorkerController(self, gw, self.config, putevent)
         # Keep the node alive.
