@@ -97,17 +97,19 @@ class NodeManager:
         self.trace("setting up nodes")
         with ThreadPoolExecutor(max_workers=len(self.specs)) as executor:
             futs = [
-                executor.submit(self.setup_node, spec, putevent) for spec in self.specs
+                executor.submit(self.setup_node, idx, spec, putevent) for idx, spec in enumerate(self.specs)
             ]
             return [f.result() for f in futs]
 
     def setup_node(
         self,
+        idx: int,
         spec: execnet.XSpec,
         putevent: Callable[[tuple[str, dict[str, Any]]], None],
     ) -> WorkerController:
         if getattr(spec, "execmodel", None) != "main_thread_only":
             spec = execnet.XSpec(f"execmodel=main_thread_only//{spec}")
+        spec = execnet.XSpec(f"{spec}//id=gw{idx}")
         gw = self.group.makegateway(spec)
         self.config.hook.pytest_xdist_newgateway(gateway=gw)
         self.rsync_roots(gw)

@@ -82,11 +82,20 @@ class TestNodeManagerPopen:
         call = hookrecorder.popcall("pytest_xdist_setupnodes")
         assert len(call.specs) == 2
 
-        call = hookrecorder.popcall("pytest_xdist_newgateway")
-        assert call.gateway.spec == execnet.XSpec("execmodel=main_thread_only//popen")
-        assert call.gateway.id == "gw0"
-        call = hookrecorder.popcall("pytest_xdist_newgateway")
-        assert call.gateway.id == "gw1"
+        # check expected gateways
+        gw_calls = [
+            hookrecorder.popcall("pytest_xdist_newgateway"),
+            hookrecorder.popcall("pytest_xdist_newgateway"),
+        ]
+        ids = {c.gateway.id for c in gw_calls}
+        assert ids == {"gw0", "gw1"}
+
+        for c in gw_calls:
+            expected_spec = execnet.XSpec(
+                f"execmodel=main_thread_only//popen//id={c.gateway.id}"
+            )
+            assert c.gateway.spec == expected_spec
+
         assert len(hm.group) == 2
         hm.teardown_nodes()
         assert not len(hm.group)
