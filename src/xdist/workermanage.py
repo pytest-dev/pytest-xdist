@@ -99,12 +99,17 @@ class NodeManager:
 
         self.config.hook.pytest_xdist_setupnodes(config=self.config, specs=self.specs)
         self.trace("setting up nodes")
+        import threading
+        lock = threading.Lock()
         with ThreadPoolExecutor(max_workers=len(self.specs)) as executor:
             futs = [
-                executor.submit(self.setup_node, spec, putevent, idx)
+                executor.submit(self.setup_node, spec, putevent, idx, lock)
                 for idx, spec in enumerate(self.specs)
             ]
-            return [f.result() for f in futs]
+            results = [f.result() for f in futs]
+            for r in results:
+                self.config.hook.pytest_xdist_newgateway(gateway=r.gateway)
+            return results
         # return [self.setup_node(spec, putevent) for spec in self.specs]
 
     def setup_node(
@@ -112,13 +117,21 @@ class NodeManager:
         spec: execnet.XSpec,
         putevent: Callable[[tuple[str, dict[str, Any]]], None],
         idx: int | None = None,
+        lock = None,
     ) -> WorkerController:
+        if lock is None:
+            import threading
+            lock = threading.Lock()
         if getattr(spec, "execmodel", None) != "main_thread_only":
             spec = execnet.XSpec(f"execmodel=main_thread_only//{spec}")
         # if idx is not None:
         #     spec = execnet.XSpec(f"{spec}//id=gw{idx}")
+        print('theoretical gateway id', idx, spec.id)
         gw = self.group.makegateway(spec)
-        self.config.hook.pytest_xdist_newgateway(gateway=gw)
+        # with lock:
+        #     print('calling pytest_xdist_newgateway with gateway id', gw.id)
+        #     self.config.hook.pytest_xdist_newgateway(gateway=gw)
+        print(f"setup_node: {gw} {spec}")
         self.rsync_roots(gw)
         node = WorkerController(self, gw, self.config, putevent)
         # Keep the node alive.
