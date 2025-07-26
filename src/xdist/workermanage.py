@@ -106,7 +106,7 @@ class NodeManager:
         self,
         spec: execnet.XSpec,
         putevent: Callable[[tuple[str, dict[str, Any]]], None],
-        idx: int = None,
+        idx: int | None = None,
     ) -> WorkerController:
         if getattr(spec, "execmodel", None) != "main_thread_only":
             spec = execnet.XSpec(f"execmodel=main_thread_only//{spec}")
