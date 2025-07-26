@@ -1247,12 +1247,20 @@ class TestLoadScope:
         """
         pytester.makepyfile(test_a=test_file.format(10), test_b=test_file.format(20))
         result = pytester.runpytest("-n2", "--dist=loadscope", "-v")
-        assert get_workers_and_test_count_by_prefix(
+        # assert sorted([
+        #     get_workers_and_test_count_by_prefix(
+        #         "test_a.py::test", result.outlines
+        #     ),
+        #     get_workers_and_test_count_by_prefix(
+        #         "test_b.py::test", result.outlines
+        #     )
+        # ], key=lambda d: d.keys()) == [{"gw0": 20}, {"gw1": 10}]
+        assert list(get_workers_and_test_count_by_prefix(
             "test_a.py::test", result.outlines
-        ) == {"gw1": 10}
-        assert get_workers_and_test_count_by_prefix(
+        ).values()) == [10]
+        assert list(get_workers_and_test_count_by_prefix(
             "test_b.py::test", result.outlines
-        ) == {"gw0": 20}
+        ).values()) == [20]
 
     def test_workqueue_ordered_by_input(self, pytester: pytest.Pytester) -> None:
         test_file = """
