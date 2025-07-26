@@ -93,6 +93,10 @@ class NodeManager:
         self,
         putevent: Callable[[tuple[str, dict[str, Any]]], None],
     ) -> list[WorkerController]:
+        # create basetemp directory only once
+        if hasattr(self.config, "_tmp_path_factory"):
+            self.config._tmp_path_factory.getbasetemp()
+
         self.config.hook.pytest_xdist_setupnodes(config=self.config, specs=self.specs)
         self.trace("setting up nodes")
         with ThreadPoolExecutor(max_workers=len(self.specs)) as executor:
