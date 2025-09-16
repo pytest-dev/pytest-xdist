@@ -235,7 +235,7 @@ class TestWorkerInteractor:
         worker.use_callback = True
         worker.setup()
         worker.slp.process_from_remote(("<nonono>", {}))
-        out, err = capsys.readouterr()
+        out, _err = capsys.readouterr()
         assert "INTERNALERROR> ValueError: unknown event: <nonono>" in out
         ev = worker.popevent()
         assert ev.name == "errordown"

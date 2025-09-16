@@ -388,7 +388,7 @@ class LoadScopeScheduling:
             self.log(f"Shutting down {extra_nodes} nodes")
 
             for _ in range(extra_nodes):
-                unused_node, assigned = self.assigned_work.popitem()
+                unused_node, _assigned = self.assigned_work.popitem()
 
                 self.log(f"Shutting down unused node {unused_node}")
                 unused_node.shutdown()
