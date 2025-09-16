@@ -132,7 +132,7 @@ class RemoteControl:
         self.setup()
         self.wasfailing = self.failures and len(self.failures)
         result = self.runsession()
-        failures, reports, collection_failed = result
+        failures, _reports, collection_failed = result
         if collection_failed:
             pass  # "Collection failed, keeping previous failure set"
         else:
