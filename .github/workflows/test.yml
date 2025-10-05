@@ -93,4 +93,4 @@ jobs:
     - name: Test
       shell: bash
       run: |
-        tox run -e ${{ matrix.tox_env }} --installpkg `find dist/*.tar.gz`
+        tox run -e ${{ matrix.tox_env }} --installpkg "$(find dist/*.whl)"
