@@ -62,7 +62,7 @@ jobs:
           - tox_env: "py313-pytestlatest"
             python: "3.13"
           - tox_env: "py314-pytestlatest"
-            python: "3.14"
+            python: "~3.14.0-0"
           - tox_env: "py310-psutil"
             python: "3.10"
           - tox_env: "py310-setproctitle"
