@@ -40,7 +40,7 @@ def pytest_xdist_auto_num_workers(config: pytest.Config) -> int:
 
     except ImportError:
         if os.environ.get("TRAVIS") == "true":
-            # workaround https://bitbucket.org/pypy/pypy/issues/2375
+            # workaround https://github.com/pypy/pypy/issues/2375
             return 2
         try:
             from os import cpu_count  # type: ignore[assignment]
