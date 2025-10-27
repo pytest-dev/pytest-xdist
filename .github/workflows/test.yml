@@ -22,7 +22,7 @@ jobs:
     steps:
     - uses: actions/checkout@v5
     - name: Build and Check Package
-      uses: hynek/build-and-inspect-python-package@v2.13
+      uses: hynek/build-and-inspect-python-package@v2.14
 
   test:
 
@@ -75,7 +75,7 @@ jobs:
         fetch-depth: 0
 
     - name: Download Package
-      uses: actions/download-artifact@v5
+      uses: actions/download-artifact@v6
       with:
         name: Packages
         path: dist
