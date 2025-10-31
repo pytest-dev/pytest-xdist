@@ -785,7 +785,7 @@ class TestWarnings:
     def test_warnings(self, pytester: pytest.Pytester, n: str) -> None:
         pytester.makepyfile(
             """
-            import warnings, py, pytest
+            import warnings, pytest
 
             @pytest.mark.filterwarnings('ignore:config.warn has been deprecated')
             def test_func(request):
@@ -834,7 +834,7 @@ class TestWarnings:
         """
         pytester.makepyfile(
             """
-            import warnings, py, pytest
+            import warnings, pytest
 
             class MyWarning(UserWarning):
 
