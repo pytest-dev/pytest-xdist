@@ -378,6 +378,11 @@ def test_remote_mainargv(pytester: pytest.Pytester) -> None:
 
 
 def test_remote_usage_prog(pytester: pytest.Pytester) -> None:
+    if pytest.version_tuple[:2] >= (9, 0):
+        get_optparser_expr = "get_config_parser.optparser"
+    else:
+        get_optparser_expr = "get_config_parser._getparser()"
+
     pytester.makeconftest(
         """
         import pytest
@@ -394,12 +399,12 @@ def test_remote_usage_prog(pytester: pytest.Pytester) -> None:
     """
     )
     pytester.makepyfile(
-        """
+        f"""
         import sys
 
         def test(get_config_parser, request):
-            get_config_parser._getparser().error("my_usage_error")
-    """
+            {get_optparser_expr}.error("my_usage_error")
+        """
     )
 
     result = pytester.runpytest_subprocess("-n1")
