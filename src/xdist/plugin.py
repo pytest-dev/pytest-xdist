@@ -98,6 +98,13 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         "when crashed (set to zero to disable this feature)",
     )
     group.addoption(
+        "--dist-reset-workers",
+        action="store_true",
+        dest="dist_reset_workers",
+        default=False,
+        help="If set, workers are restarted after each test file.",
+    )
+    group.addoption(
         "--dist",
         metavar="distmode",
         action="store",
