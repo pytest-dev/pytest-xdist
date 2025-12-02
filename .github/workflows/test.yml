@@ -20,7 +20,7 @@ jobs:
   package:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
     - name: Build and Check Package
       uses: hynek/build-and-inspect-python-package@v2.14
 
@@ -69,7 +69,7 @@ jobs:
             python: "3.10"
 
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
       with:
         # Needed to fetch tags, which are required by setuptools-scm.
         fetch-depth: 0
