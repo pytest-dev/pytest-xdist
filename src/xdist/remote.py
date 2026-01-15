@@ -119,6 +119,7 @@ class WorkerInteractor:
         self.channel = channel
         self.torun = TestQueue(self.channel.gateway.execmodel)
         self.nextitem_index: int | None | Literal[Marker.SHUTDOWN] = None
+        self.shutdown_on_finish = False
         config.pluginmanager.register(self)
 
     def sendevent(self, name: str, **kwargs: object) -> None:
@@ -170,6 +171,8 @@ class WorkerInteractor:
                 self.torun.put(i)
         elif name == "shutdown":
             self.torun.put(Marker.SHUTDOWN)
+        elif name == "shutdown_after_finished":
+            self.shutdown_on_finish = True
         elif name == "steal":
             self.steal(kwargs["indices"])
 
@@ -200,12 +203,15 @@ class WorkerInteractor:
     @pytest.hookimpl
     def pytest_runtestloop(self, session: pytest.Session) -> bool:
         self.log("entering main loop")
+        self.shutdown_on_finish = False
         self.channel.setcallback(self.handle_command, endmarker=Marker.SHUTDOWN)
         self.nextitem_index = self.torun.get()
         while self.nextitem_index is not Marker.SHUTDOWN:
             self.run_one_test()
             if session.shouldfail or session.shouldstop:
                 break
+        if self.shutdown_on_finish:
+            os._exit(1)
         return True
 
     def run_one_test(self) -> None:
