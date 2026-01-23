@@ -320,6 +320,11 @@ class LoadScopeScheduling:
         if node.shutting_down:
             return
 
+        # Skip nodes that aren't properly registered (e.g., collection mismatch)
+        # See https://github.com/pytest-dev/pytest-xdist/issues/1189
+        if node not in self.registered_collections:
+            return
+
         # Check that more work is available
         if not self.workqueue:
             node.shutdown()
