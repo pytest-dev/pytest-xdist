@@ -15,6 +15,7 @@ from xdist.dsession import WorkerStatus
 from xdist.report import report_collection_diff
 from xdist.scheduler import EachScheduling
 from xdist.scheduler import LoadScheduling
+from xdist.scheduler import SingleCollectScheduling
 from xdist.scheduler import WorkStealingScheduling
 from xdist.workermanage import WorkerController
 
@@ -465,6 +466,137 @@ class TestWorkStealingScheduling:
         rep = collect_hook.reports[0]
         assert isinstance(rep.longrepr, str)
         assert "Different tests were collected between" in rep.longrepr
+
+
+class TestSingleCollectScheduling:
+    def test_initialization(self, pytester: pytest.Pytester) -> None:
+        config = pytester.parseconfig("--tx=2*popen")
+        sched = SingleCollectScheduling(config)
+        assert sched.first_node is None
+        assert sched.collection is None
+        assert not sched.collection_done
+        assert not sched.collection_is_completed
+        assert len(sched.node2pending) == 0
+
+    def test_add_node_and_collection(self, pytester: pytest.Pytester) -> None:
+        config = pytester.parseconfig("--tx=2*popen")
+        sched = SingleCollectScheduling(config)
+        node1, node2 = MockNode(), MockNode()
+
+        # First node should be set as collector
+        sched.add_node(node1)
+        assert sched.first_node == node1
+
+        # Second node should not become the collector
+        sched.add_node(node2)
+        assert sched.first_node == node1
+
+        # Collection from first node should be used
+        collection = ["a.py::test_1", "a.py::test_2", "a.py::test_3"]
+        sched.add_node_collection(node1, collection)
+        assert sched.collection == collection
+        assert sched.collection_done
+        assert sched.collection_is_completed
+
+        # Collection from second node should be ignored
+        different_collection = ["a.py::test_1", "a.py::test_4"]
+        sched.add_node_collection(node2, different_collection)
+        # Collection should not change - still using the first node's collection
+        assert sched.collection == collection
+
+    def test_schedule_tests(self, pytester: pytest.Pytester) -> None:
+        config = pytester.parseconfig("--tx=2*popen")
+        sched = SingleCollectScheduling(config)
+        node1, node2 = MockNode(), MockNode()
+        sched.add_node(node1)
+        sched.add_node(node2)
+
+        collection = ["a.py::test_1", "a.py::test_2", "a.py::test_3", "a.py::test_4"]
+        sched.add_node_collection(node1, collection)
+
+        # Should use collection from node1 and distribute tests
+        sched.schedule()
+
+        # Check that tests were distributed across both nodes
+        assert len(node1.sent) > 0
+        assert len(node2.sent) > 0
+
+        # Tests should be distributed completely
+        all_tests = node1.sent + node2.sent
+        assert sorted(all_tests) == list(range(len(collection)))
+
+        # The pending list should be empty after distribution
+        assert not sched.pending
+
+    def test_handle_node_failure(self, pytester: pytest.Pytester) -> None:
+        config = pytester.parseconfig("--tx=2*popen")
+        sched = SingleCollectScheduling(config)
+        node1, node2 = MockNode(), MockNode()
+        sched.add_node(node1)
+        sched.add_node(node2)
+
+        collection = ["a.py::test_1", "a.py::test_2", "a.py::test_3", "a.py::test_4"]
+        sched.add_node_collection(node1, collection)
+        sched.schedule()
+
+        # Simulate node1 completing a test
+        test_idx = node1.sent[0]
+        sched.mark_test_complete(node1, test_idx)
+
+        # Now remove node2 (simulating failure)
+        sched.remove_node(node2)
+
+        # Tests assigned to node2 should go back to pending
+        assert len(sched.pending) > 0
+
+        # Add a new node
+        node3 = MockNode()
+        sched.add_node(node3)
+
+        # Since collection is already completed, schedule should assign pending tests to node3
+        sched.schedule()
+        assert len(node3.sent) > 0
+
+        # Complete all tests
+        for idx in node1.sent:
+            if idx != test_idx:  # Skip the one we already completed
+                sched.mark_test_complete(node1, idx)
+
+        for idx in node3.sent:
+            sched.mark_test_complete(node3, idx)
+
+        # All tests should be completed
+        assert sched.tests_finished
+
+    def test_first_node_failure(self, pytester: pytest.Pytester) -> None:
+        """Test what happens when the collecting node fails before collection is done."""
+        config = pytester.parseconfig("--tx=2*popen")
+        sched = SingleCollectScheduling(config)
+        node1, node2 = MockNode(), MockNode()
+
+        # First node should be collector
+        sched.add_node(node1)
+        assert sched.first_node == node1
+
+        # Add second node
+        sched.add_node(node2)
+
+        # First node fails before collection
+        sched.remove_node(node1)
+
+        # Now first_node should be reset after removal
+        # Add a new node, it should become the collector
+        node3 = MockNode()
+        sched.add_node(node3)
+        # Verify the new node became the collector
+        assert sched.first_node == node3
+
+        # Complete collection with node3
+        collection = ["a.py::test_1", "a.py::test_2"]
+        sched.add_node_collection(node3, collection)
+        assert sched.collection == collection
+        assert sched.collection_done
+        assert sched.collection_is_completed
 
 
 class TestDistReporter:

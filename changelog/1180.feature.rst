@@ -1,0 +1,1 @@
+Added new 'singlecollect' distribution mode that only collects tests once on a single worker and skips collection verification on other workers. This can significantly improve startup time for test suites with expensive collection.
