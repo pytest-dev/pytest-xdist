@@ -55,7 +55,9 @@ def pytest_xdist_auto_num_workers(config: pytest.Config) -> int:
     if config.option.numprocesses == "logical":
         # New in Python 3.13.
         try:
-            from os import process_cpu_count
+            from os import (
+                process_cpu_count,  # type: ignore[attr-defined, unused-ignore]
+            )
         except ImportError:
             pass
         else:
