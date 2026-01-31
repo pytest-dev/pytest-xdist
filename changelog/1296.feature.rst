@@ -1,0 +1,5 @@
+``-n auto`` and ``-n logical`` now support the ``PYTHON_CPU_COUNT``
+environment variable and the ``-X cpu_count`` option from Python 3.13 (but
+on all supported Python versions) to override the auto-detected CPU count.
+The ``PYTEST_XDIST_AUTO_NUM_WORKERS`` environment variable has precedence
+over these.
