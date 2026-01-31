@@ -23,6 +23,46 @@ def pytest_xdist_auto_num_workers(config: pytest.Config) -> int:
                 "PYTEST_XDIST_AUTO_NUM_WORKERS is not a number: {env_var!r}. Ignoring it."
             )
 
+    # New in Python 3.13, but the mechanisms are available since 3.2. Per
+    # https://github.com/python/cpython/issues/109595#issuecomment-1731240132,
+    # the -X option overrides the environment variable.
+    #
+    # Python 3.13 validates both the -X cpu_count and the PYTHON_CPU_COUNT
+    # values. On other Pythons, we treat invalid values the same way we
+    # treat invalid PYTEST_XDIST_AUTO_NUM_WORKERS values: we ignore them.
+    x_option = getattr(sys, "_xoptions", {}).get("cpu_count")
+    if x_option is not None:
+        # If x_option is "default", then we must ensure the env var is not
+        # consulted.
+        if x_option != "default":
+            try:
+                return int(x_option)
+            except ValueError:
+                warnings.warn(
+                    "-X cpu_count value is not a number: {x_option!r}. Ignoring it."
+                )
+    else:
+        env_var = os.environ.get("PYTHON_CPU_COUNT")
+        if env_var:
+            try:
+                return int(env_var)
+            except ValueError:
+                warnings.warn(
+                    "PYTHON_CPU_COUNT is not a number: {env_var!r}. Ignoring it."
+                )
+
+    count: int | None
+    if config.option.numprocesses == "logical":
+        # New in Python 3.13.
+        try:
+            from os import process_cpu_count
+        except ImportError:
+            pass
+        else:
+            count = process_cpu_count()
+            if count:
+                return count
+
     try:
         import psutil
     except ImportError:
