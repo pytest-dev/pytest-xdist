@@ -666,6 +666,24 @@ def test_crashing_item(pytester: pytest.Pytester, when: str) -> None:
     )
 
 
+def test_exit_code_reported_in_error(pytester: pytest.Pytester) -> None:
+    """Ensure worker exit code is reported when process terminates (#1278).
+
+    This specifically tests for cases where native code terminates the process
+    directly (e.g., via C's exit() function), bypassing Python exception handling.
+    """
+    pytester.makepyfile(
+        """
+        import os
+        def test_exit_nonzero():
+            os._exit(42)
+    """
+    )
+    result = pytester.runpytest("-n1", "-v")
+    # The error message should include the exit code
+    result.stdout.fnmatch_lines(["*exit code*42*"])
+
+
 def test_multiple_log_reports(pytester: pytest.Pytester) -> None:
     """
     Ensure that pytest-xdist supports plugins that emit multiple logreports
