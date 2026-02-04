@@ -16,42 +16,42 @@ jobs:
       SETUPTOOLS_SCM_PRETEND_VERSION: ${{ github.event.inputs.version }}
 
     steps:
-    - uses: actions/checkout@v6
+      - uses: actions/checkout@v6
 
-    - name: Build and Check Package
-      uses: hynek/build-and-inspect-python-package@v2.14
+      - name: Build and Check Package
+        uses: hynek/build-and-inspect-python-package@v2.14
 
   deploy:
     needs: package
     runs-on: ubuntu-latest
     environment: deploy
     permissions:
-      id-token: write  # For PyPI trusted publishers.
-      contents: write  # For tag.
+      id-token: write # For PyPI trusted publishers.
+      contents: write # For tag.
 
     steps:
-    - uses: actions/checkout@v6
+      - uses: actions/checkout@v6
 
-    - name: Download Package
-      uses: actions/download-artifact@v7
-      with:
-        name: Packages
-        path: dist
+      - name: Download Package
+        uses: actions/download-artifact@v7
+        with:
+          name: Packages
+          path: dist
 
-    - name: Publish package to PyPI
-      uses: pypa/gh-action-pypi-publish@v1.13.0
-      with:
-        attestations: true
+      - name: Publish package to PyPI
+        uses: pypa/gh-action-pypi-publish@v1.13.0
+        with:
+          attestations: true
 
-    - name: Push tag
-      run: |
-        git config user.name "pytest bot"
-        git config user.email "pytestbot@gmail.com"
-        git tag --annotate --message=v${{ github.event.inputs.version }} v${{ github.event.inputs.version }} ${{ github.sha }}
-        git push origin v${{ github.event.inputs.version }}
+      - name: Push tag
+        run: |
+          git config user.name "pytest bot"
+          git config user.email "pytestbot@gmail.com"
+          git tag --annotate --message=v${{ github.event.inputs.version }} v${{ github.event.inputs.version }} ${{ github.sha }}
+          git push origin v${{ github.event.inputs.version }}
 
-    - name: GitHub Release
-      uses: softprops/action-gh-release@v2
-      with:
-        files: dist/*
-        tag_name: v${{ github.event.inputs.version }}
+      - name: GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          tag_name: v${{ github.event.inputs.version }}
