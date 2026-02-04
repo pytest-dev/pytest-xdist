@@ -1,0 +1,10 @@
+# config for pre-commit https://github.com/google/yamlfmt
+
+formatter:
+  type: basic
+  line_ending: lf
+  indent: 2
+  include_document_start: false
+  retain_line_breaks: true
+  retain_empty_objects: false
+  disable_sort_keys: false
