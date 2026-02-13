@@ -281,6 +281,9 @@ class LoadScopeScheduling:
 
         node.send_runtest_some(nodeids_indexes)
 
+        if self.config.option.dist_reset_workers:
+            node.send_shutdown_after_finished()
+
     def _split_scope(self, nodeid: str) -> str:
         """Determine the scope (grouping) of a nodeid.
 
