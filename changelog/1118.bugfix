@@ -1,0 +1,1 @@
+Loadgroup: Always apply the node ID transformation, even if test collection is run on the controller node.
