@@ -12,6 +12,10 @@ from xdist.workermanage import NodeManager
 @pytest.fixture
 def monkeypatch_3_cpus(monkeypatch: pytest.MonkeyPatch) -> None:
     """Make pytest-xdist believe the system has 3 CPUs."""
+    # block overrides from Python 3.13 and higher
+    getattr(sys, "_xoptions", {}).pop("cpu_count", None)
+    monkeypatch.delenv("PYTHON_CPU_COUNT", raising=False)
+    monkeypatch.delattr(os, "process_cpu_count", raising=False)
     # block import
     monkeypatch.setitem(sys.modules, "psutil", None)
     monkeypatch.delattr(os, "sched_getaffinity", raising=False)
@@ -72,11 +76,17 @@ def test_auto_detect_cpus(
     from xdist.plugin import pytest_cmdline_main as check_options
 
     monkeypatch.delenv("PYTEST_XDIST_AUTO_NUM_WORKERS", raising=False)
+    monkeypatch.delitem(getattr(sys, "_xoptions", {}), "cpu_count", raising=False)
+    monkeypatch.delenv("PYTHON_CPU_COUNT", raising=False)
 
     with suppress(ImportError):
         import psutil
 
         monkeypatch.setattr(psutil, "cpu_count", lambda logical=True: None)
+
+    # Only used with -nlogical, so not exclusive with other monkeypatchings.
+    if hasattr(os, "process_cpu_count"):
+        monkeypatch.setattr(os, "process_cpu_count", lambda: 99)
 
     if hasattr(os, "sched_getaffinity"):
         monkeypatch.setattr(os, "sched_getaffinity", lambda _pid: set(range(99)))
@@ -116,6 +126,9 @@ def test_auto_detect_cpus_psutil(
     psutil = pytest.importorskip("psutil")
 
     monkeypatch.delenv("PYTEST_XDIST_AUTO_NUM_WORKERS", raising=False)
+    monkeypatch.delitem(getattr(sys, "_xoptions", {}), "cpu_count", raising=False)
+    monkeypatch.delenv("PYTHON_CPU_COUNT", raising=False)
+    monkeypatch.delattr(os, "process_cpu_count", raising=False)
     monkeypatch.setattr(psutil, "cpu_count", lambda logical=True: 84 if logical else 42)
 
     config = pytester.parseconfigure("-nauto")
@@ -230,12 +243,100 @@ def test_envvar_auto_num_workers(
     assert config.getoption("numprocesses") == 7
 
 
+def test_python_x_option_auto_num_workers(
+    pytester: pytest.Pytester, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from xdist.plugin import pytest_cmdline_main as check_options
+
+    monkeypatch.delenv("PYTEST_XDIST_AUTO_NUM_WORKERS", raising=False)
+    monkeypatch.delenv("PYTHON_CPU_COUNT", raising=False)
+    monkeypatch.setitem(getattr(sys, "_xoptions", {}), "cpu_count", "7")
+
+    config = pytester.parseconfigure("-nauto")
+    check_options(config)
+    assert config.getoption("numprocesses") == 7
+
+    config = pytester.parseconfigure("-nlogical")
+    check_options(config)
+    assert config.getoption("numprocesses") == 7
+
+
+def test_python_x_option_default_auto_num_workers(
+    pytester: pytest.Pytester, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from xdist.plugin import pytest_cmdline_main as check_options
+
+    monkeypatch.delenv("PYTEST_XDIST_AUTO_NUM_WORKERS", raising=False)
+    monkeypatch.setitem(getattr(sys, "_xoptions", {}), "cpu_count", "default")
+    monkeypatch.setenv("PYTHON_CPU_COUNT", "987")
+    # See monkeypatch_3_cpus fixture for the remaining monkeypatching lines.
+    monkeypatch.delattr(os, "process_cpu_count", raising=False)
+    monkeypatch.setitem(sys.modules, "psutil", None)
+    monkeypatch.delattr(os, "sched_getaffinity", raising=False)
+    monkeypatch.setattr(os, "cpu_count", lambda: 7)
+
+    config = pytester.parseconfigure("-nauto")
+    check_options(config)
+    assert config.getoption("numprocesses") == 7
+
+    config = pytester.parseconfigure("-nlogical")
+    check_options(config)
+    assert config.getoption("numprocesses") == 7
+
+
+def test_python_envvar_auto_num_workers(
+    pytester: pytest.Pytester, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from xdist.plugin import pytest_cmdline_main as check_options
+
+    monkeypatch.delenv("PYTEST_XDIST_AUTO_NUM_WORKERS", raising=False)
+    monkeypatch.delitem(getattr(sys, "_xoptions", {}), "cpu_count", raising=False)
+    monkeypatch.setenv("PYTHON_CPU_COUNT", "7")
+
+    config = pytester.parseconfigure("-nauto")
+    check_options(config)
+    assert config.getoption("numprocesses") == 7
+
+    config = pytester.parseconfigure("-nlogical")
+    check_options(config)
+    assert config.getoption("numprocesses") == 7
+
+
 def test_envvar_auto_num_workers_warn(
     pytester: pytest.Pytester, monkeypatch: pytest.MonkeyPatch, monkeypatch_3_cpus: None
 ) -> None:
     from xdist.plugin import pytest_cmdline_main as check_options
 
     monkeypatch.setenv("PYTEST_XDIST_AUTO_NUM_WORKERS", "fourscore")
+
+    config = pytester.parseconfigure("-nauto")
+    with pytest.warns(UserWarning):
+        check_options(config)
+    assert config.getoption("numprocesses") == 3
+
+
+def test_python_x_option_auto_num_workers_warn(
+    pytester: pytest.Pytester, monkeypatch: pytest.MonkeyPatch, monkeypatch_3_cpus: None
+) -> None:
+    from xdist.plugin import pytest_cmdline_main as check_options
+
+    monkeypatch.delenv("PYTEST_XDIST_AUTO_NUM_WORKERS", raising=False)
+    monkeypatch.setitem(getattr(sys, "_xoptions", {}), "cpu_count", "fourscore")
+
+    config = pytester.parseconfigure("-nauto")
+    with pytest.warns(UserWarning):
+        check_options(config)
+    assert config.getoption("numprocesses") == 3
+
+
+def test_python_envvar_auto_num_workers_warn(
+    pytester: pytest.Pytester, monkeypatch: pytest.MonkeyPatch, monkeypatch_3_cpus: None
+) -> None:
+    from xdist.plugin import pytest_cmdline_main as check_options
+
+    monkeypatch.delenv("PYTEST_XDIST_AUTO_NUM_WORKERS", raising=False)
+    monkeypatch.delitem(getattr(sys, "_xoptions", {}), "cpu_count", raising=False)
+    monkeypatch.setenv("PYTHON_CPU_COUNT", "fourscore")
 
     config = pytester.parseconfigure("-nauto")
     with pytest.warns(UserWarning):
@@ -260,6 +361,56 @@ def test_auto_num_workers_hook_overrides_envvar(
     assert config.getoption("numprocesses") == 2
 
     config = pytester.parseconfigure("-nauto")
+    check_options(config)
+    assert config.getoption("numprocesses") == 2
+
+
+def test_envvar_overrides_python_x_option(
+    pytester: pytest.Pytester, monkeypatch: pytest.MonkeyPatch, monkeypatch_3_cpus: None
+) -> None:
+    from xdist.plugin import pytest_cmdline_main as check_options
+
+    monkeypatch.setenv("PYTEST_XDIST_AUTO_NUM_WORKERS", "2")
+    monkeypatch.setitem(getattr(sys, "_xoptions", {}), "cpu_count", "987")
+    config = pytester.parseconfigure("-nauto")
+    check_options(config)
+    assert config.getoption("numprocesses") == 2
+
+    config = pytester.parseconfigure("-nlogical")
+    check_options(config)
+    assert config.getoption("numprocesses") == 2
+
+
+def test_envvar_overrides_python_envvar(
+    pytester: pytest.Pytester, monkeypatch: pytest.MonkeyPatch, monkeypatch_3_cpus: None
+) -> None:
+    from xdist.plugin import pytest_cmdline_main as check_options
+
+    monkeypatch.setenv("PYTEST_XDIST_AUTO_NUM_WORKERS", "2")
+    monkeypatch.delitem(getattr(sys, "_xoptions", {}), "cpu_count", raising=False)
+    monkeypatch.setenv("PYTHON_CPU_COUNT", "987")
+    config = pytester.parseconfigure("-nauto")
+    check_options(config)
+    assert config.getoption("numprocesses") == 2
+
+    config = pytester.parseconfigure("-nlogical")
+    check_options(config)
+    assert config.getoption("numprocesses") == 2
+
+
+def test_python_x_option_overrides_python_envvar(
+    pytester: pytest.Pytester, monkeypatch: pytest.MonkeyPatch, monkeypatch_3_cpus: None
+) -> None:
+    from xdist.plugin import pytest_cmdline_main as check_options
+
+    monkeypatch.delenv("PYTEST_XDIST_AUTO_NUM_WORKERS", raising=False)
+    monkeypatch.setitem(getattr(sys, "_xoptions", {}), "cpu_count", "2")
+    monkeypatch.setenv("PYTHON_CPU_COUNT", "987")
+    config = pytester.parseconfigure("-nauto")
+    check_options(config)
+    assert config.getoption("numprocesses") == 2
+
+    config = pytester.parseconfigure("-nlogical")
     check_options(config)
     assert config.getoption("numprocesses") == 2
 

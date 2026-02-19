@@ -2,55 +2,136 @@ from __future__ import annotations
 
 import os
 import sys
-from typing import Literal
+from typing import TYPE_CHECKING
 import uuid
 import warnings
 
 import pytest
 
 
+if TYPE_CHECKING:
+    from collections.abc import Callable
+    from typing import Literal
+
+
 _sys_path = list(sys.path)  # freeze a copy of sys.path at interpreter startup
 
 
-@pytest.hookimpl
-def pytest_xdist_auto_num_workers(config: pytest.Config) -> int:
-    env_var = os.environ.get("PYTEST_XDIST_AUTO_NUM_WORKERS")
-    if env_var:
-        try:
+def _auto_num_workers_envvar(config: pytest.Config) -> int | None:
+    try:
+        env_var = os.environ.get("PYTEST_XDIST_AUTO_NUM_WORKERS")
+        if env_var is not None:
             return int(env_var)
-        except ValueError:
-            warnings.warn(
-                "PYTEST_XDIST_AUTO_NUM_WORKERS is not a number: {env_var!r}. Ignoring it."
-            )
+    except ValueError:
+        warnings.warn(
+            "PYTEST_XDIST_AUTO_NUM_WORKERS is not a number: {env_var!r}. Ignoring it."
+        )
+    return None
 
+
+def _auto_num_workers_x_option_python_cpu_count(config: pytest.Config) -> int | None:
+    # New in Python 3.13, but the mechanisms are available since 3.2. Per
+    # https://github.com/python/cpython/issues/109595#issuecomment-1731240132,
+    # the -X option overrides the environment variable.
+    #
+    # Python 3.13 validates both the -X cpu_count and the PYTHON_CPU_COUNT
+    # values. On other Pythons, we treat invalid values the same way we
+    # treat invalid PYTEST_XDIST_AUTO_NUM_WORKERS values: we ignore them.
+    x_option = getattr(sys, "_xoptions", {}).get("cpu_count")
+    if x_option is not None:
+        # If x_option is "default", then we must ensure the env var is not
+        # consulted.
+        if x_option != "default":
+            try:
+                return int(x_option)
+            except ValueError:
+                warnings.warn(
+                    "-X cpu_count value is not a number: {x_option!r}. Ignoring it."
+                )
+    else:
+        env_var = os.environ.get("PYTHON_CPU_COUNT")
+        if env_var is not None:
+            try:
+                return int(env_var)
+            except ValueError:
+                warnings.warn(
+                    "PYTHON_CPU_COUNT is not a number: {env_var!r}. Ignoring it."
+                )
+    return None
+
+
+def _auto_num_workers_os_process_cpu_count(config: pytest.Config) -> int | None:
+    if config.option.numprocesses != "logical":
+        return None
+    # New in Python 3.13.
+    try:
+        if TYPE_CHECKING:  # type-check also on older Pythons
+            process_cpu_count: Callable[[], int | None]
+        else:
+            from os import process_cpu_count
+    except ImportError:
+        return None
+    else:
+        count = process_cpu_count()
+        if count:
+            return count
+        return None
+
+
+def _auto_num_workers_psutil(config: pytest.Config) -> int | None:
     try:
         import psutil
     except ImportError:
-        pass
+        return None
     else:
         use_logical: bool = config.option.numprocesses == "logical"
         count = psutil.cpu_count(logical=use_logical) or psutil.cpu_count()
         if count:
             return count
+        return None
+
+
+def _auto_num_workers_os_sched_getaffinity(config: pytest.Config) -> int | None:
     try:
         from os import sched_getaffinity
 
-        def cpu_count() -> int:
-            return len(sched_getaffinity(0))
-
+        return len(sched_getaffinity(0))
     except ImportError:
         if os.environ.get("TRAVIS") == "true":
             # workaround https://github.com/pypy/pypy/issues/2375
             return 2
-        try:
-            from os import cpu_count  # type: ignore[assignment]
-        except ImportError:
-            from multiprocessing import cpu_count
+        return None
+
+
+def _auto_num_workers_os_multiprocessing_cpu_count(config: pytest.Config) -> int | None:
+    try:
+        from os import cpu_count
+    except ImportError:
+        from multiprocessing import cpu_count
     try:
         n = cpu_count()
     except NotImplementedError:
-        return 1
-    return n if n else 1
+        return None
+    if n:
+        return n
+    return None
+
+
+@pytest.hookimpl
+def pytest_xdist_auto_num_workers(config: pytest.Config) -> int:
+    providers: list[Callable[[pytest.Config], int | None]] = [
+        _auto_num_workers_envvar,
+        _auto_num_workers_x_option_python_cpu_count,
+        _auto_num_workers_os_process_cpu_count,
+        _auto_num_workers_psutil,
+        _auto_num_workers_os_sched_getaffinity,
+        _auto_num_workers_os_multiprocessing_cpu_count,
+    ]
+    for provider in providers:
+        result = provider(config)
+        if result is not None:
+            return result
+    return 1
 
 
 def parse_numprocesses(s: str) -> int | Literal["auto", "logical"]:
