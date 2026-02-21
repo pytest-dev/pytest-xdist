@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from concurrent.futures import ThreadPoolExecutor
 import enum
 import fnmatch
 import os
@@ -92,9 +93,17 @@ class NodeManager:
         self,
         putevent: Callable[[tuple[str, dict[str, Any]]], None],
     ) -> list[WorkerController]:
+        # create basetemp directory only once
+        if hasattr(self.config, "_tmp_path_factory"):
+            self.config._tmp_path_factory.getbasetemp()
+
         self.config.hook.pytest_xdist_setupnodes(config=self.config, specs=self.specs)
         self.trace("setting up nodes")
-        return [self.setup_node(spec, putevent) for spec in self.specs]
+        with ThreadPoolExecutor(max_workers=len(self.specs)) as executor:
+            futs = [
+                executor.submit(self.setup_node, spec, putevent) for spec in self.specs
+            ]
+            return [f.result() for f in futs]
 
     def setup_node(
         self,
