@@ -114,7 +114,10 @@ class NodeManager:
         return node
 
     def teardown_nodes(self) -> None:
-        self.group.terminate(self.EXIT_TIMEOUT)
+        try:
+            self.group.terminate(self.EXIT_TIMEOUT)
+        except OSError:
+            pass
 
     def _gettxspecs(self) -> list[execnet.XSpec]:
         return [execnet.XSpec(x) for x in parse_tx_spec_config(self.config)]
@@ -357,11 +360,20 @@ class WorkerController:
             if not self.channel.isclosed():
                 self.log("closing", self.channel)
                 self.channel.close()
-            # del self.channel
         if hasattr(self, "gateway"):
             self.log("exiting", self.gateway)
-            self.gateway.exit()
-            # del self.gateway
+            try:
+                self.gateway.exit()
+            except OSError:
+                pass
+            try:
+                self.gateway.join(timeout=1)
+            except Exception:
+                pass
+            try:
+                self.gateway._io.wait()
+            except Exception:
+                pass
 
     def send_runtest_some(self, indices: Sequence[int]) -> None:
         self.sendcommand("runtests", indices=indices)
