@@ -22,7 +22,7 @@ jobs:
     steps:
     - uses: actions/checkout@v6
     - name: Build and Check Package
-      uses: hynek/build-and-inspect-python-package@v2.14
+      uses: hynek/build-and-inspect-python-package@v2.17
 
   test:
 
