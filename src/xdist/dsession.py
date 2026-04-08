@@ -199,9 +199,14 @@ class DSession:
         workerready before shutdown was triggered.
         """
         self.config.hook.pytest_testnodedown(node=node, error=None)
-        if node.workeroutput["exitstatus"] == 2:  # keyboard-interrupt
+        exitstatus = node.workeroutput["exitstatus"]
+        if exitstatus == 2:  # keyboard-interrupt
             self.shouldstop = f"{node} received keyboard-interrupt"
             self.worker_errordown(node, "keyboard-interrupt")
+            return
+        if exitstatus != 0:  # non-zero exit (pytest.exit with custom returncode)
+            self.shouldstop = f"{node} exited with status {exitstatus}"
+            self.worker_errordown(node, f"exit-{exitstatus}")
             return
         shouldfail = node.workeroutput["shouldfail"]
         shouldstop = node.workeroutput["shouldstop"]
