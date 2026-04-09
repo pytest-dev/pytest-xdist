@@ -204,10 +204,6 @@ class DSession:
             self.shouldstop = f"{node} received keyboard-interrupt"
             self.worker_errordown(node, "keyboard-interrupt")
             return
-        if exitstatus != 0:  # non-zero exit (pytest.exit with custom returncode)
-            self.shouldstop = f"{node} exited with status {exitstatus}"
-            self.worker_errordown(node, f"exit-{exitstatus}")
-            return
         shouldfail = node.workeroutput["shouldfail"]
         shouldstop = node.workeroutput["shouldstop"]
         for shouldx in [shouldfail, shouldstop]:
@@ -219,6 +215,22 @@ class DSession:
             assert self.sched is not None
             if node in self.sched.nodes:
                 crashitem = self.sched.remove_node(node)
+                # pytest.exit() with a custom exitcode can leave pending tests,
+                # causing crashitem to be non-empty. Handle this gracefully
+                # instead of raising INTERNALERROR.
+                if crashitem:
+                    self.shouldstop = (
+                        f"{node} exited with status {exitstatus}, "
+                        f"pending test: {crashitem}"
+                    )
+                    self.worker_errordown(node, f"exit-{exitstatus}")
+                    return
+                # For normal completion, crashitem should be empty.
+                # This assertion catches unexpected states.
+                # Note: exitstatus 0/1/5 are normal outcomes:
+                #   0: all tests passed
+                #   1: tests failed (but all were run)
+                #   5: no tests collected
                 assert not crashitem, (crashitem, node)
         self._active_nodes.remove(node)
 
