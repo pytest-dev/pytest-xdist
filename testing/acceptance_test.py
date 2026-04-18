@@ -974,6 +974,27 @@ class TestNodeFailure:
             ]
         )
 
+    def test_loadgroup_does_not_hang_after_restart(
+        self, pytester: pytest.Pytester
+    ) -> None:
+        """Fix test suite never finishing in case a worker has to be restarted
+        after having already finished a test (#1323)."""
+        f = pytester.makepyfile(
+            """
+            import os
+            def test_a(): pass
+            def test_b(): os._exit(1)
+        """
+        )
+        res = pytester.runpytest(f, "-n1", "--dist=loadgroup")
+        res.stdout.fnmatch_lines(
+            [
+                "replacing crashed worker gw*",
+                "worker*crashed while running*",
+                "*5 failed*1 passed*",
+            ]
+        )
+
     def test_max_worker_restart(self, pytester: pytest.Pytester) -> None:
         f = pytester.makepyfile(
             """
