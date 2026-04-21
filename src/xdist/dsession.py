@@ -216,6 +216,7 @@ class DSession:
                 crashitem = self.sched.remove_node(node)
                 assert not crashitem, (crashitem, node)
         self._active_nodes.remove(node)
+        node.ensure_teardown()
 
     def worker_internal_error(
         self, node: WorkerController, formatted_error: str
@@ -228,6 +229,7 @@ class DSession:
         here ourselves using the formatted message.
         """
         self._active_nodes.remove(node)
+        node.ensure_teardown()
         try:
             assert False, formatted_error
         except AssertionError:
