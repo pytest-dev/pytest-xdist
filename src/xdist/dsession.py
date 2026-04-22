@@ -582,7 +582,7 @@ def get_workers_status_line(
         # All workers collect the same number of items, so we grab
         # the total number of items from the first worker.
         first = status_and_items[0]
-        status, tests_collected = first
+        _status, tests_collected = first
         tests_noun = "item" if tests_collected == 1 else "items"
         return f"{total_workers} {workers_noun} [{tests_collected} {tests_noun}]"
     if WorkerStatus.CollectionDone in statuses:

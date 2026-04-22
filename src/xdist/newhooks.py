@@ -9,7 +9,7 @@ with the worker instance that executed the hook originally:
 You can use this hooks just as you would use normal pytest hooks, but some care
 must be taken in plugins in case ``xdist`` is not installed. Please see:
 
-    http://pytest.org/en/latest/writing_plugins.html#optionally-using-hooks-from-3rd-party-plugins
+    https://pytest.org/en/latest/how-to/writing_hook_functions.html#optionally-using-hooks-from-3rd-party-plugins
 """
 
 from __future__ import annotations

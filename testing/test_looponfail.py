@@ -116,7 +116,7 @@ class TestRemoteControl:
         item = pytester.getitem("def test_func(): pass\n")
         control = RemoteControl(item.config)
         control.setup()
-        topdir, failures = control.runsession()[:2]
+        _topdir, failures = control.runsession()[:2]
         assert not failures
 
     def test_failures_somewhere(self, pytester: pytest.Pytester) -> None:
@@ -128,7 +128,7 @@ class TestRemoteControl:
         control.setup()
         item.path.write_text("def test_func():\n assert 1\n")
         removepyc(item.path)
-        topdir, failures = control.runsession()[:2]
+        _topdir, failures = control.runsession()[:2]
         assert not failures
 
     def test_failure_change(self, pytester: pytest.Pytester) -> None:
@@ -218,7 +218,7 @@ class TestRemoteControl:
         )
         control = RemoteControl(item.config)
         control.setup()
-        topdir, failures = control.runsession()[:2]
+        _topdir, failures = control.runsession()[:2]
         assert not failures
 
 

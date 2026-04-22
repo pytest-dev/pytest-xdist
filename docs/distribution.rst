@@ -14,8 +14,10 @@ With ``-n auto``, pytest-xdist will use as many processes as your computer
 has physical CPU cores.
 
 Use ``-n logical`` to use the number of *logical* CPU cores rather than
-physical ones. This currently requires the `psutil <https://pypi.org/project/psutil/>`__ package to be installed;
-if it is not or if it fails to determine the number of logical CPUs, fall back to ``-n auto`` behavior.
+physical ones. This currently requires either Python 3.13 or higher, or the
+`psutil <https://pypi.org/project/psutil/>`__ package to be installed. If
+neither method is available or if they all fail to determine the number of
+logical CPUs, fall back to ``-n auto`` behavior.
 
 Pass a number, e.g. ``-n 8``, to specify the number of processes explicitly.
 
@@ -25,7 +27,12 @@ To specify a different meaning for ``-n auto`` and ``-n logical`` for your
 tests, you can:
 
 * Set the environment variable ``PYTEST_XDIST_AUTO_NUM_WORKERS`` to the
-  desired number of processes.
+  desired number of processes. This is specific to xdist.
+
+  Alternatively, use the standard ``-X cpu_count`` option to the Python
+  interpreter or set the environment variable ``PYTHON_CPU_COUNT`` to affect
+  the entire Python process, as documented for Python 3.13. xdist honors
+  these settings even on Python 3.12 and lower.
 
 * Implement the ``pytest_xdist_auto_num_workers``
   `pytest hook <https://docs.pytest.org/en/latest/how-to/writing_plugins.html>`__
@@ -35,8 +42,10 @@ tests, you can:
   asked for ``"auto"`` or ``"logical"``, and it can return ``None`` to fall
   back to the default.
 
-If both the hook and environment variable are specified, the hook takes
-priority.
+If both the hook and overrides are specified, the hook takes priority over
+the ``PYTEST_XDIST_AUTO_NUM_WORKERS`` environment variable, which in turn
+takes priority over the ``-X cpu_count`` option, which in turn takes
+priority over the ``PYTHON_CPU_COUNT`` environment variable.
 
 
 Parallelization can be configured further with these options:
