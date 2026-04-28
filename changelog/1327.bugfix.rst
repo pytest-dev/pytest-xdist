@@ -1,0 +1,1 @@
+Fix hang with `--dist=loadgroup` if a crashed worker is replaced.
