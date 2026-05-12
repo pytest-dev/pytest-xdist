@@ -9,6 +9,7 @@ import unittest.mock
 
 import pytest
 
+from xdist.looponfail import looponfail_main
 from xdist.looponfail import RemoteControl
 from xdist.looponfail import StatRecorder
 
@@ -53,6 +54,37 @@ class TestStatRecorder:
         shutil.rmtree(str(tmp.joinpath("a")))
         changed = sd.check()
         assert changed
+
+    def test_filechange_ignored(self, tmp_path: Path) -> None:
+        tmp = tmp_path
+        hello = tmp / "hello.py"
+        generated = tmp / "generated.sqlite"
+        hello.touch()
+        generated.touch()
+        sd = StatRecorder([tmp], ignores=["*.sqlite"])
+        assert not sd.check()
+
+        generated.write_text("generated")
+        assert not sd.check()
+
+        hello.write_text("world")
+        assert sd.check()
+
+    def test_dirchange_ignored(self, tmp_path: Path) -> None:
+        tmp = tmp_path
+        generated = tmp / "generated"
+        generated.mkdir()
+        generated.joinpath("data.yaml").touch()
+        hello = tmp / "hello.py"
+        hello.touch()
+        sd = StatRecorder([tmp], ignores=["generated"])
+        assert not sd.check()
+
+        generated.joinpath("data.yaml").write_text("generated")
+        assert not sd.check()
+
+        hello.write_text("world")
+        assert sd.check()
 
     def test_dirchange(self, tmp_path: Path) -> None:
         tmp = tmp_path
@@ -220,6 +252,43 @@ class TestRemoteControl:
         control.setup()
         _topdir, failures = control.runsession()[:2]
         assert not failures
+
+
+def test_looponfail_passes_ignore_patterns(
+    pytester: pytest.Pytester, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    pytester.makeini(
+        """
+        [pytest]
+        looponfailrootsignore = *.sqlite
+        """
+    )
+    config = pytester.parseconfigure("--looponfailrootsignore=*.yaml")
+    ignore_patterns = []
+
+    class FakeRemoteControl:
+        failures: list[str] = []
+        wasfailing = False
+
+        def __init__(self, config: pytest.Config) -> None:
+            pass
+
+        def loop_once(self) -> None:
+            pass
+
+    class FakeStatRecorder:
+        def __init__(self, rootdirs: list[Path], ignores: list[str]) -> None:
+            ignore_patterns.extend(ignores)
+
+        def waitonchange(self, checkinterval: float = 1.0) -> None:
+            raise KeyboardInterrupt
+
+    monkeypatch.setattr("xdist.looponfail.RemoteControl", FakeRemoteControl)
+    monkeypatch.setattr("xdist.looponfail.StatRecorder", FakeStatRecorder)
+
+    looponfail_main(config)
+
+    assert ignore_patterns == ["*.yaml", "*.sqlite"]
 
 
 class TestLooponFailing:
