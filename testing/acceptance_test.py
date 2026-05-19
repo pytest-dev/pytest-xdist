@@ -344,6 +344,44 @@ class TestDistribution:
         assert "s2call" in s
         assert "Interrupted" in s
 
+    def test_idle_worker_freed_early(self, pytester: pytest.Pytester) -> None:
+        """Workers that finish all their tests should have their gateway
+        process terminated early, before the session ends (#1314)."""
+        pytester.makepyfile(
+            test_fast="""
+            import os
+            import pathlib
+
+            def test_fast(request):
+                pid_file = request.config.rootpath / "fast_worker_pid.txt"
+                pid_file.write_text(str(os.getpid()))
+        """,
+            test_slow="""
+            import os
+            import time
+            import pathlib
+
+            def test_slow(request):
+                pid_file = request.config.rootpath / "fast_worker_pid.txt"
+                # Wait for the fast worker to write its PID and be torn down.
+                for _ in range(40):
+                    time.sleep(0.1)
+                    if pid_file.exists():
+                        pid = int(pid_file.read_text())
+                        # Check if the process is gone (killed by ensure_teardown).
+                        try:
+                            os.kill(pid, 0)
+                        except OSError:
+                            # Process is dead - early teardown worked.
+                            return
+                raise AssertionError(
+                    "Fast worker process was not terminated during slow test"
+                )
+        """,
+        )
+        result = pytester.runpytest("-n2", "--dist=load")
+        result.assert_outcomes(passed=2)
+
     def test_keyboard_interrupt_dist(self, pytester: pytest.Pytester) -> None:
         # xxx could be refined to check for return code
         pytester.makepyfile(
