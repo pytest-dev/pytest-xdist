@@ -90,6 +90,13 @@ class DSession:
         nodes = self.nodemanager.setup_nodes(putevent=self.queue.put)
         self._active_nodes.update(nodes)
         self._session = session
+        ramp = self.config.getoption("ramp")
+        if ramp:
+            workers = len(nodes)
+            workers_noun = "worker" if workers == 1 else "workers"
+            self.report_line(
+                f"ramping test start over {ramp:g}s across {workers} {workers_noun}"
+            )
 
     @pytest.hookimpl
     def pytest_sessionfinish(self) -> None:

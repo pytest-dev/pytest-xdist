@@ -4,6 +4,7 @@ import marshal
 import pprint
 from queue import Queue
 import sys
+import time
 from typing import Any
 from typing import Callable
 from typing import cast
@@ -13,6 +14,7 @@ import uuid
 import execnet
 import pytest
 
+from xdist.remote import WorkerInteractor
 from xdist.workermanage import NodeManager
 from xdist.workermanage import WorkerController
 
@@ -91,6 +93,35 @@ class TestWorkerInteractor:
     UnserializerReport = Callable[
         [dict[str, Any]], Union[pytest.CollectReport, pytest.TestReport]
     ]
+
+    def test_ramp_delay_sleeps_once_before_first_test(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        slept: list[float] = []
+        monkeypatch.setattr(time, "sleep", slept.append)
+
+        interactor = WorkerInteractor.__new__(WorkerInteractor)
+        interactor.rampdelay = 0.25
+        interactor._ramp_sleep_done = False
+
+        interactor._sleep_before_first_test()
+        interactor._sleep_before_first_test()
+
+        assert slept == [0.25]
+
+    def test_ramp_delay_zero_does_not_sleep(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        slept: list[float] = []
+        monkeypatch.setattr(time, "sleep", slept.append)
+
+        interactor = WorkerInteractor.__new__(WorkerInteractor)
+        interactor.rampdelay = 0.0
+        interactor._ramp_sleep_done = False
+
+        interactor._sleep_before_first_test()
+
+        assert slept == []
 
     @pytest.fixture
     def unserialize_report(self, pytestconfig: pytest.Config) -> UnserializerReport:

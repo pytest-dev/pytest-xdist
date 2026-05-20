@@ -94,19 +94,23 @@ class NodeManager:
     ) -> list[WorkerController]:
         self.config.hook.pytest_xdist_setupnodes(config=self.config, specs=self.specs)
         self.trace("setting up nodes")
-        return [self.setup_node(spec, putevent) for spec in self.specs]
+        return [
+            self.setup_node(spec, putevent, worker_index)
+            for worker_index, spec in enumerate(self.specs)
+        ]
 
     def setup_node(
         self,
         spec: execnet.XSpec,
         putevent: Callable[[tuple[str, dict[str, Any]]], None],
+        worker_index: int = 0,
     ) -> WorkerController:
         if getattr(spec, "execmodel", None) != "main_thread_only":
             spec = execnet.XSpec(f"execmodel=main_thread_only//{spec}")
         gw = self.group.makegateway(spec)
         self.config.hook.pytest_xdist_newgateway(gateway=gw)
         self.rsync_roots(gw)
-        node = WorkerController(self, gw, self.config, putevent)
+        node = WorkerController(self, gw, self.config, putevent, worker_index)
         # Keep the node alive.
         gw.node = node  # type: ignore[attr-defined]
         node.setup()
@@ -299,17 +303,22 @@ class WorkerController:
         gateway: execnet.Gateway,
         config: pytest.Config,
         putevent: Callable[[tuple[str, dict[str, Any]]], None],
+        worker_index: int = 0,
     ) -> None:
         config.pluginmanager.register(self.RemoteHook())
         self.nodemanager = nodemanager
         self.putevent = putevent
         self.gateway = gateway
         self.config = config
+        workercount = len(nodemanager.specs)
+        ramp = getattr(config.option, "ramp", 0.0)
+        rampdelay = ramp * worker_index / workercount if workercount and ramp else 0.0
         self.workerinput = {
             "workerid": gateway.id,
-            "workercount": len(nodemanager.specs),
+            "workercount": workercount,
             "testrunuid": nodemanager.testrunuid,
             "mainargv": sys.argv,
+            "rampdelay": rampdelay,
         }
         self._down = False
         self._shutdown_sent = False
