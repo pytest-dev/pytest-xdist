@@ -389,6 +389,25 @@ class WorkerController:
         self.log(f"queuing {eventname}(**{kwargs})")
         self.putevent((eventname, kwargs))
 
+    def _get_worker_exit_code(self) -> int | None:
+        """Get the exit code of the worker process, if available.
+
+        Returns the exit code if the worker process has terminated,
+        or None if the exit code cannot be determined (e.g., for
+        non-popen gateways or if the process hasn't terminated yet).
+        """
+        try:
+            io = getattr(self.gateway, "_io", None)
+            if io is None:
+                return None
+            popen = getattr(io, "popen", None)
+            if popen is None:
+                return None
+            # Poll to check if process has terminated and get return code
+            return popen.poll()
+        except Exception:
+            return None
+
     def process_from_remote(
         self, eventcall: tuple[str, dict[str, Any]] | Literal[Marker.END]
     ) -> None:
@@ -404,7 +423,14 @@ class WorkerController:
                 err: object | None = self.channel._getremoteerror()  # type: ignore[no-untyped-call]
                 if not self._down:
                     if not err or isinstance(err, EOFError):
-                        err = "Not properly terminated"  # lost connection?
+                        # Check if the worker process exited with non-zero status
+                        # This handles cases like direct exit(1) calls from native code
+                        # where Python exception handling is bypassed (#1278)
+                        exit_code = self._get_worker_exit_code()
+                        if exit_code is not None and exit_code != 0:
+                            err = f"Worker exited with non-zero exit code: {exit_code}"
+                        else:
+                            err = "Not properly terminated"  # lost connection?
                     self.notify_inproc("errordown", node=self, error=err)
                     self._down = True
                 return
