@@ -1,0 +1,1 @@
+Add ``looponfailrootsignore`` to ignore generated files when using ``--looponfail``.
