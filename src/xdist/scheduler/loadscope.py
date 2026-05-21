@@ -352,6 +352,12 @@ class LoadScopeScheduling:
         if self.collection is not None:
             for node in self.nodes:
                 self._reschedule(node)
+            # Ensure nodes have at least two work units if possible,
+            # since workers need a "next item" before running the current one.
+            # (A restarted worker has no item before calling _reschedule()
+            # for the first time.)
+            for node in self.nodes:
+                self._reschedule(node)
             return
 
         # Check that all nodes collected the same tests
