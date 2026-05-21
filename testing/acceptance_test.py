@@ -1699,3 +1699,28 @@ def test_dist_in_addopts(pytester: pytest.Pytester) -> None:
     )
     result = pytester.runpytest()
     assert result.ret == 0
+
+
+def test_pytest_exit_nonzero_exitcode(pytester: pytest.Pytester) -> None:
+    """Test that pytest.exit() with non-zero exit code is handled properly.
+
+    Issue #1239: pytest.exit causes internal error when exit code is non-zero.
+    """
+    pytester.makepyfile(
+        """
+        import pytest
+        import time
+
+        @pytest.mark.parametrize('i', range(10))
+        def test_me(i):
+            if i == 5:
+                pytest.exit("Something", 1)
+            time.sleep(0.1)
+        """
+    )
+    result = pytester.runpytest("-n2", "--tb=short")
+    # Should not cause INTERNALERROR, should exit cleanly
+    assert "INTERNALERROR" not in result.stdout.str()
+    # The worker exit status is handled, but xdist raises Interrupted
+    # which causes INTERRUPTED (2) exit status
+    assert result.ret == 2  # INTERRUPTED due to shouldstop handling
