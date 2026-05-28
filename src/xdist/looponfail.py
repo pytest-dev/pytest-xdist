@@ -136,11 +136,7 @@ class RemoteControl:
         if collection_failed:
             pass  # "Collection failed, keeping previous failure set"
         else:
-            uniq_failures = []
-            for failure in failures:
-                if failure not in uniq_failures:
-                    uniq_failures.append(failure)
-            self.failures = uniq_failures
+            self.failures = list(set(failures))
 
 
 def repr_pytest_looponfailinfo(
