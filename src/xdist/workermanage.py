@@ -372,6 +372,9 @@ class WorkerController:
     def send_steal(self, indices: Sequence[int]) -> None:
         self.sendcommand("steal", indices=indices)
 
+    def send_shutdown_after_finished(self) -> None:
+        self.sendcommand("shutdown_after_finished")
+
     def shutdown(self) -> None:
         if not self._down:
             try:
