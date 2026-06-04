@@ -35,6 +35,9 @@ Features
   pytest waits until a file in your project changes and then re-runs
   the previously failing tests.  This is repeated until all tests pass
   after which again a full run is performed (DEPRECATED).
+  The ``looponfailroots`` configuration value can limit watched directories,
+  and ``looponfailrootsignore`` can ignore generated files using glob-style
+  path patterns.
 
 * :ref:`Multi-Platform` coverage: you can specify different Python interpreters
   or different platforms and run tests in parallel on all of them.

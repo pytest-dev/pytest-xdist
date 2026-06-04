@@ -93,7 +93,10 @@ def _auto_num_workers_psutil(config: pytest.Config) -> int | None:
 
 def _auto_num_workers_os_sched_getaffinity(config: pytest.Config) -> int | None:
     try:
-        from os import sched_getaffinity
+        if TYPE_CHECKING:
+            sched_getaffinity: Callable[[int], set[int]]
+        else:
+            from os import sched_getaffinity
 
         return len(sched_getaffinity(0))
     except ImportError:
@@ -319,6 +322,11 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         type="paths",
         help="directories to check for changes. Default: current directory.",
     )
+    parser.addini(
+        "looponfailrootsignore",
+        type="args",
+        help="glob-style paths to ignore when checking for looponfail changes.",
+    )
 
 
 # -------------------------------------------------------------------------
@@ -362,9 +370,15 @@ def pytest_configure(config: pytest.Config) -> None:
             tr.showfspath = False
 
     # Deprecation warnings for deprecated command-line/configuration options.
-    if config.getoption("looponfail", None) or config.getini("looponfailroots"):
+    if (
+        config.getoption("looponfail", None)
+        or config.getini("looponfailroots")
+        or config.getoption("looponfailrootsignore", None)
+        or config.getini("looponfailrootsignore")
+    ):
         warning = DeprecationWarning(
-            "The --looponfail command line argument and looponfailroots config variable are deprecated.\n"
+            "The --looponfail command line argument and looponfailroots/looponfailrootsignore "
+            "config variables are deprecated.\n"
             "The loop-on-fail feature will be removed in pytest-xdist 4.0."
         )
         config.issue_config_time_warning(warning, 2)

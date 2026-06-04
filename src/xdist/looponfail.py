@@ -35,6 +35,13 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         help="Run tests in subprocess: wait for files to be modified, then "
         "re-run failing test set until all pass.",
     )
+    group.addoption(
+        "--looponfailrootsignore",
+        action="append",
+        default=[],
+        metavar="GLOB",
+        help="Ignore glob-style paths when watching for --looponfail changes.",
+    )
 
 
 @pytest.hookimpl
@@ -54,7 +61,9 @@ def looponfail_main(config: pytest.Config) -> None:
     if not config_roots:
         config_roots = [Path.cwd()]
     rootdirs = [Path(root) for root in config_roots]
-    statrecorder = StatRecorder(rootdirs)
+    ignores = list(config.getoption("looponfailrootsignore", []))
+    ignores += config.getini("looponfailrootsignore")
+    statrecorder = StatRecorder(rootdirs, ignores=ignores)
     try:
         while 1:
             remotecontrol.loop_once()
@@ -248,16 +257,37 @@ class WorkerFailSession:
 
 
 class StatRecorder:
-    def __init__(self, rootdirlist: Sequence[Path]) -> None:
+    def __init__(
+        self, rootdirlist: Sequence[Path], ignores: Sequence[str] = ()
+    ) -> None:
         self.rootdirlist = rootdirlist
+        self.ignore_patterns = tuple(ignores)
         self.statcache: dict[Path, os.stat_result] = {}
         self.check()  # snapshot state
 
     def fil(self, p: Path) -> bool:
-        return p.is_file() and not p.name.startswith(".") and p.suffix != ".pyc"
+        return (
+            p.is_file()
+            and not p.name.startswith(".")
+            and p.suffix != ".pyc"
+            and not self.is_ignored(p)
+        )
 
     def rec(self, p: Path) -> bool:
-        return not p.name.startswith(".") and p.exists()
+        return not p.name.startswith(".") and p.exists() and not self.is_ignored(p)
+
+    def is_ignored(self, p: Path) -> bool:
+        for pattern in self.ignore_patterns:
+            if Path(p.name).match(pattern) or p.match(pattern):
+                return True
+            for rootdir in self.rootdirlist:
+                try:
+                    relpath = p.relative_to(rootdir)
+                except ValueError:
+                    continue
+                if relpath.match(pattern):
+                    return True
+        return False
 
     def waitonchange(self, checkinterval: float = 1.0) -> None:
         while 1:
