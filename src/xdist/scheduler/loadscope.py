@@ -394,11 +394,12 @@ class LoadScopeScheduling:
                 unused_node.shutdown()
 
         # Assign initial workload
-        for node in self.nodes:
+        # Sort the nodes to keep assingment consistent (#985)
+        for node in sorted(self.nodes, key=lambda node: node.gateway.id):
             self._assign_work_unit(node)
 
         # Ensure nodes start with at least two work units if possible (#277)
-        for node in self.nodes:
+        for node in sorted(self.nodes, key=lambda node: node.gateway.id):
             self._reschedule(node)
 
         # Initial distribution sent all tests, start node shutdown
