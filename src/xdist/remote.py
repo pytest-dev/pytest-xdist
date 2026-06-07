@@ -210,8 +210,6 @@ class WorkerInteractor:
             if session.shouldfail or session.shouldstop:
                 break
             self.run_one_test()
-            if session.shouldfail or session.shouldstop:
-                break
         return True
 
     def run_one_test(self) -> None:
