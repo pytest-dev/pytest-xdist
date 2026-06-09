@@ -205,9 +205,11 @@ class WorkerInteractor:
         self.channel.setcallback(self.handle_command, endmarker=Marker.SHUTDOWN)
         self.nextitem_index = self.torun.get()
         while self.nextitem_index is not Marker.SHUTDOWN:
-            self.run_one_test()
+            # Check shouldfail/shouldstop before running the pre-fetched test,
+            # in case it was set during the previous test's execution
             if session.shouldfail or session.shouldstop:
                 break
+            self.run_one_test()
         return True
 
     def run_one_test(self) -> None:
@@ -235,6 +237,12 @@ class WorkerInteractor:
         self.sendevent(
             "runtest_protocol_complete", item_index=self.item_index, duration=duration
         )
+
+        # If shouldfail/shouldstop was set during test execution, ensure the
+        # nextitem_index causes an immediate loop exit. This prevents the
+        # pre-fetched next test from running after the session should stop.
+        if self.session.shouldfail or self.session.shouldstop:
+            self.nextitem_index = Marker.SHUTDOWN
 
     def _sleep_before_first_test(self) -> None:
         if self._ramp_sleep_done:
