@@ -115,6 +115,8 @@ class WorkerInteractor:
         workerinput: dict[str, Any] = config.workerinput  # type: ignore[attr-defined]
         self.workerid = workerinput.get("workerid", "?")
         self.testrunuid = workerinput["testrunuid"]
+        self.rampdelay = float(workerinput.get("rampdelay", 0.0))
+        self._ramp_sleep_done = False
         self.log = Producer(f"worker-{self.workerid}", enabled=config.option.debug)
         self.channel = channel
         self.torun = TestQueue(self.channel.gateway.execmodel)
@@ -221,6 +223,7 @@ class WorkerInteractor:
             assert self.nextitem_index is not None
             nextitem = items[self.nextitem_index]
 
+        self._sleep_before_first_test()
         worker_title("[pytest-xdist running] %s" % item.nodeid)
 
         start = time.perf_counter()
@@ -232,6 +235,13 @@ class WorkerInteractor:
         self.sendevent(
             "runtest_protocol_complete", item_index=self.item_index, duration=duration
         )
+
+    def _sleep_before_first_test(self) -> None:
+        if self._ramp_sleep_done:
+            return
+        self._ramp_sleep_done = True
+        if self.rampdelay > 0:
+            time.sleep(self.rampdelay)
 
     def pytest_collection_modifyitems(
         self,

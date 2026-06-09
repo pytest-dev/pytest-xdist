@@ -56,6 +56,12 @@ Parallelization can be configured further with these options:
 * ``--max-worker-restart``: maximum number of workers that can be restarted
   when crashed (set to zero to disable this feature).
 
+* ``--ramp=DURATION``: gradually start worker test execution over a duration.
+  Workers still start and collect tests normally, but each worker waits before
+  its first test according to its position in the worker pool. The duration is
+  specified in seconds by default and also accepts ``s``, ``m``, and ``h``
+  suffixes, for example ``--ramp=10s`` or ``--ramp=5m``.
+
 The test distribution algorithm is configured with the ``--dist`` command-line option:
 
 .. _distribution modes:

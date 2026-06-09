@@ -22,6 +22,22 @@ class TestDistribution:
         assert result.ret == 0
         result.stdout.fnmatch_lines(["*1 passed*"])
 
+    def test_ramp_reports_ramp_period(self, pytester: pytest.Pytester) -> None:
+        pytester.makepyfile(
+            """
+            def test_ok():
+                pass
+        """
+        )
+        result = pytester.runpytest("-n2", "--ramp=0.01s")
+        assert result.ret == 0
+        result.stdout.fnmatch_lines(
+            [
+                "ramping test start over 0.01s across 2 workers",
+                "*1 passed*",
+            ]
+        )
+
     def test_n1_fail(self, pytester: pytest.Pytester) -> None:
         p1 = pytester.makepyfile(
             """
