@@ -53,6 +53,9 @@ class MockNode(BaseOfMockNode):
     def shutdown(self) -> None:
         self._shutdown = True
 
+    def ensure_teardown(self) -> None:
+        pass
+
     @property
     def shutting_down(self) -> bool:
         return self._shutdown
