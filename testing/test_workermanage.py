@@ -91,6 +91,55 @@ class TestNodeManagerPopen:
         hm.teardown_nodes()
         assert not len(hm.group)
 
+    def test_popen_makegateway_passes_stable_worker_index(
+        self,
+        config: pytest.Config,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        worker_indices: list[tuple[str, int]] = []
+
+        class MockController:
+            def __init__(
+                self,
+                nodemanager: NodeManager,
+                gateway: execnet.Gateway,
+                config: pytest.Config,
+                putevent: object,
+                worker_index: int,
+            ) -> None:
+                worker_indices.append((gateway.id, worker_index))
+
+            def setup(self) -> None:
+                pass
+
+        monkeypatch.setattr(workermanage, "WorkerController", MockController)
+        hm = NodeManager(config, ["popen//id=alpha", "popen//id=beta"])
+        hm.setup_nodes(None)  # type: ignore[arg-type]
+
+        assert worker_indices == [("alpha", 0), ("beta", 1)]
+
+    def test_workerinput_includes_ramp_delay(self, config: pytest.Config) -> None:
+        from xdist.workermanage import WorkerController
+
+        class DummyManager:
+            testrunuid = "testrun"
+            specs = [execnet.XSpec("popen")] * 4
+
+        class DummyGateway:
+            id = "gw2"
+            spec = execnet.XSpec("popen")
+
+        config.option.ramp = 12.0
+        node = WorkerController(
+            nodemanager=DummyManager(),  # type: ignore[arg-type]
+            gateway=DummyGateway(),  # type: ignore[arg-type]
+            config=config,
+            putevent=lambda event: None,
+            worker_index=2,
+        )
+
+        assert node.workerinput["rampdelay"] == 6.0
+
     def test_popens_rsync(
         self,
         config: pytest.Config,

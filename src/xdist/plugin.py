@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import os
 import sys
 from typing import TYPE_CHECKING
@@ -92,15 +93,13 @@ def _auto_num_workers_psutil(config: pytest.Config) -> int | None:
 
 
 def _auto_num_workers_os_sched_getaffinity(config: pytest.Config) -> int | None:
-    try:
-        from os import sched_getaffinity
-
+    sched_getaffinity = getattr(os, "sched_getaffinity", None)
+    if sched_getaffinity is not None:
         return len(sched_getaffinity(0))
-    except ImportError:
-        if os.environ.get("TRAVIS") == "true":
-            # workaround https://github.com/pypy/pypy/issues/2375
-            return 2
-        return None
+    if os.environ.get("TRAVIS") == "true":
+        # workaround https://github.com/pypy/pypy/issues/2375
+        return 2
+    return None
 
 
 def _auto_num_workers_os_multiprocessing_cpu_count(config: pytest.Config) -> int | None:
@@ -141,6 +140,32 @@ def parse_numprocesses(s: str) -> int | Literal["auto", "logical"]:
         return int(s)
 
 
+def parse_ramp_duration(s: str) -> float:
+    value = s.strip()
+    if not value:
+        raise pytest.UsageError("--ramp requires a duration")
+
+    unit = value[-1] if value[-1].isalpha() else ""
+    number = value[:-1] if unit else value
+    multipliers = {"": 1.0, "s": 1.0, "m": 60.0, "h": 3600.0}
+    if unit not in multipliers or not number:
+        raise pytest.UsageError(
+            "--ramp duration must be a non-negative number with optional s, m, or h suffix"
+        )
+
+    try:
+        seconds = float(number)
+    except ValueError as e:
+        raise pytest.UsageError(
+            "--ramp duration must be a non-negative number with optional s, m, or h suffix"
+        ) from e
+
+    if seconds < 0 or not math.isfinite(seconds):
+        raise pytest.UsageError("--ramp duration must be a non-negative finite value")
+
+    return seconds * multipliers[unit]
+
+
 @pytest.hookimpl
 def pytest_addoption(parser: pytest.Parser) -> None:
     # 'Help' formatting (same rules as pytest's):
@@ -177,6 +202,18 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         dest="maxworkerrestart",
         help="Maximum number of workers that can be restarted "
         "when crashed (set to zero to disable this feature)",
+    )
+    group.addoption(
+        "--ramp",
+        action="store",
+        default=0.0,
+        dest="ramp",
+        metavar="DURATION",
+        type=parse_ramp_duration,
+        help=(
+            "Gradually start worker test execution over the given duration. "
+            "Accepts seconds by default, or s, m, h suffixes."
+        ),
     )
     group.addoption(
         "--dist",

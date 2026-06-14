@@ -9,6 +9,30 @@ import pytest
 from xdist.workermanage import NodeManager
 
 
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        ("10", 10.0),
+        ("10s", 10.0),
+        ("0.01s", 0.01),
+        ("5m", 300.0),
+        ("1h", 3600.0),
+    ],
+)
+def test_parse_ramp_duration(value: str, expected: float) -> None:
+    from xdist.plugin import parse_ramp_duration
+
+    assert parse_ramp_duration(value) == expected
+
+
+@pytest.mark.parametrize("value", ["", "-1", "-1s", "1d", "1ss", "soon"])
+def test_parse_ramp_duration_rejects_invalid_values(value: str) -> None:
+    from xdist.plugin import parse_ramp_duration
+
+    with pytest.raises(pytest.UsageError):
+        parse_ramp_duration(value)
+
+
 @pytest.fixture
 def monkeypatch_3_cpus(monkeypatch: pytest.MonkeyPatch) -> None:
     """Make pytest-xdist believe the system has 3 CPUs."""
