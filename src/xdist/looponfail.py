@@ -164,7 +164,6 @@ def init_worker_session(
     option_dict: dict[str, "Any"],  # noqa: UP037
     invocation_args: list[str],
 ) -> None:
-    import dataclasses
     import os
     import sys
 
@@ -191,8 +190,16 @@ def init_worker_session(
     # original command-line flags (e.g. --tb=short). Restore the full
     # invocation arguments so that any nested distributed (-n) run propagates
     # those options to its workers. See #767.
-    config.invocation_params = dataclasses.replace(
-        config.invocation_params, args=tuple(invocation_args)
+    #
+    # InvocationParams is constructed directly (rather than via
+    # dataclasses.replace) because it is a frozen attrs class on pytest 7.x
+    # and a dataclass only on newer pytest; calling its type with the same
+    # fields works across both.
+    invocation_params = config.invocation_params
+    config.invocation_params = type(invocation_params)(
+        args=tuple(invocation_args),
+        plugins=invocation_params.plugins,
+        dir=invocation_params.dir,
     )
     from xdist.looponfail import WorkerFailSession
 
