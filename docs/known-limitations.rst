@@ -69,3 +69,27 @@ Debugging
 This also means that debugging using PDB (or any other debugger that wants to use standard I/O) will not work. The ``--pdb`` option is disabled when distributing tests with ``pytest-xdist`` for this reason.
 
 It is generally likely best to use ``pytest-xdist`` to find failing tests and then debug them without distribution; however, if you need to debug from within a worker process (for example, to address failures that only happen when running tests concurrently), remote debuggers (for example, `python-remote-pdb <https://github.com/ionelmc/python-remote-pdb>`__ or `python-web-pdb <https://github.com/romanvm/python-web-pdb>`__) have been reported to work for this purpose.
+
+.. _multiprocessing-fork-warning:
+
+Warnings when tests use ``multiprocessing`` with ``fork``
+---------------------------------------------------------
+
+When a test running under xdist invokes ``multiprocessing.get_context("fork")`` or relies on the default fork start method on Linux, you may see a warning about creating a child process from a non-main thread, even though your test itself runs on the main thread of the xdist worker.
+
+This is a known interaction with the threading primitives used by `execnet <https://github.com/pytest-dev/execnet>`__, which xdist depends on for worker communication. See issue `#1186 <https://github.com/pytest-dev/pytest-xdist/issues/1186>`__ for the background and `execnet#336 <https://github.com/pytest-dev/execnet/pull/336>`__ for the upstream structural fix that is being investigated.
+
+Recommended workaround: switch the multiprocessing context to ``spawn`` for processes that are created inside the test:
+
+.. code-block:: python
+
+    import multiprocessing
+
+
+    def test_thing():
+        ctx = multiprocessing.get_context("spawn")
+        proc = ctx.Process(target=worker, args=())
+        proc.start()
+        proc.join()
+
+``spawn`` does not inherit the parent's thread state, so the warning does not fire. It is also the default on Windows and macOS already, so this only changes behaviour on Linux.

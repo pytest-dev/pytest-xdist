@@ -1,0 +1,1 @@
+Document the recommended ``multiprocessing`` ``spawn`` context workaround for the fork warning emitted when tests call ``os.fork()`` under xdist.
