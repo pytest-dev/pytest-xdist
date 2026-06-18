@@ -434,4 +434,7 @@ if __name__ == "__channelexec__":
     config.workerinput = workerinput  # type: ignore[attr-defined]
     config.workeroutput = {}  # type: ignore[attr-defined]
     interactor = WorkerInteractor(config, channel)  # type: ignore[name-defined]
-    config.hook.pytest_cmdline_main(config=config)
+    try:
+        config.hook.pytest_cmdline_main(config=config)
+    except pytest.exit.Exit as e:
+        workeroutput["exitstatus"] = e.returncode
