@@ -1,0 +1,1 @@
+Handle ``pytest.exit()`` raised in a worker without reporting it as an internal error.
