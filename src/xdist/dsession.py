@@ -59,6 +59,7 @@ class DSession:
         self._active_nodes: set[WorkerController] = set()
         self._failed_nodes_count = 0
         self._max_worker_restart = get_default_max_worker_restart(self.config)
+        self._worker_exit: tuple[str, int | None] | None = None
         # summary message to print at the end of the session
         self._summary_report: str | None = None
         self.terminal = config.pluginmanager.getplugin("terminalreporter")
@@ -140,12 +141,16 @@ class DSession:
         assert self.sched is not None
 
         self.shouldstop = False
-        pending_exception = None
+        pending_exception: BaseException | None = None
         while not self.session_finished:
             self.loop_once()
             if self.shouldstop:
                 self.triggershutdown()
                 pending_exception = Interrupted(str(self.shouldstop))
+            if self._worker_exit is not None:
+                reason, returncode = self._worker_exit
+                self.triggershutdown()
+                pending_exception = pytest.exit.Exception(reason, returncode)
         if pending_exception:
             raise pending_exception
         return True
@@ -206,6 +211,17 @@ class DSession:
         workerready before shutdown was triggered.
         """
         self.config.hook.pytest_testnodedown(node=node, error=None)
+        if "exitreason" in node.workeroutput:
+            assert self.sched is not None
+            if node in self.sched.nodes:
+                self.sched.remove_node(node)
+            self._worker_exit = (
+                node.workeroutput["exitreason"],
+                node.workeroutput["exitreturncode"],
+            )
+            self._active_nodes.remove(node)
+            return
+
         if node.workeroutput["exitstatus"] == 2:  # keyboard-interrupt
             self.shouldstop = f"{node} received keyboard-interrupt"
             self.worker_errordown(node, "keyboard-interrupt")

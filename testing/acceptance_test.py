@@ -919,6 +919,28 @@ class TestWarnings:
 
 
 class TestNodeFailure:
+    @pytest.mark.parametrize("returncode", [0, 1])
+    def test_pytest_exit_is_not_reported_as_internal_error(
+        self, pytester: pytest.Pytester, returncode: int
+    ) -> None:
+        f = pytester.makepyfile(
+            f"""
+            import time
+            import pytest
+
+            @pytest.mark.parametrize("i", range(20))
+            def test_me(i):
+                if i == 12:
+                    pytest.exit("Something", {returncode})
+                time.sleep(0.01)
+        """
+        )
+        res = pytester.runpytest(f, "-n4")
+        assert res.ret == returncode
+        assert "INTERNALERROR" not in res.stdout.str()
+        assert "received keyboard-interrupt" not in res.stdout.str()
+        res.stdout.fnmatch_lines(["* _pytest.outcomes.Exit: Something *"])
+
     def test_load_single(self, pytester: pytest.Pytester) -> None:
         f = pytester.makepyfile(
             """
