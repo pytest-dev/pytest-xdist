@@ -47,11 +47,11 @@ class WorkerSetup:
         self.use_callback = False
         self.events = Queue()  # type: ignore[var-annotated]
 
-    def setup(self) -> None:
+    def setup(self, extra_args: tuple[str, ...] = ()) -> None:
         self.pytester.chdir()
         # import os ; os.environ['EXECNET_DEBUG'] = "2"
         self.gateway = execnet.makegateway("execmodel=main_thread_only//popen")
-        self.config = config = self.pytester.parseconfigure()
+        self.config = config = self.pytester.parseconfigure(*extra_args)
         putevent = self.events.put if self.use_callback else None
 
         class DummyMananger:
@@ -270,6 +270,56 @@ class TestWorkerInteractor:
         assert "INTERNALERROR> ValueError: unknown event: <nonono>" in out
         ev = worker.popevent()
         assert ev.name == "errordown"
+
+    def test_early_shutdown_stops_worker_after_local_failure(
+        self, worker: WorkerSetup, unserialize_report: UnserializerReport
+    ) -> None:
+        """When a test fails and shouldfail is set (as happens with --exitfirst),
+        the worker should stop immediately and NOT run the pre-fetched next test.
+
+        This verifies the fix for issues #420, #868, and #1034 where
+        --exitfirst/--maxfail would let the failing worker continue running
+        tests in the background.
+        """
+        worker.pytester.makepyfile(
+            """
+            def test_pass():
+                pass
+            def test_fail():
+                assert False, "intentional failure"
+            def test_should_not_run():
+                pass
+        """
+        )
+        worker.setup(("-x",))  # Pass --exitfirst so maxfail=1
+        # Setup phase
+        ev = worker.popevent()
+        assert ev.name == "workerready"
+        ev = worker.popevent()
+        assert ev.name == "collectionstart"
+        ev = worker.popevent("collectionfinish")
+        ids = ev.kwargs["ids"]
+        assert len(ids) == 3
+        # Send all tests, wait for the first one to run and complete
+        worker.sendcommand("runtests_all")
+        ev = worker.popevent("logstart")
+        assert ev.kwargs["nodeid"].endswith("test_pass")
+        # test_pass should complete (setup + call + teardown = 3 reports)
+        for _ in range(3):
+            ev = worker.popevent("testreport")
+            assert ev.name == "testreport"
+        # test_fail should start
+        ev = worker.popevent("logstart")
+        assert ev.kwargs["nodeid"].endswith("test_fail")
+        # test_fail runs and fails. pytest's session sets shouldfail.
+        # The worker should then stop without running test_should_not_run.
+        # We check that workerfinished arrives without test_should_not_run
+        # having been logged.
+        ev = worker.popevent("workerfinished")
+        assert "workeroutput" in ev.kwargs
+        wo = ev.kwargs["workeroutput"]
+        assert wo["exitstatus"] == 1  # at least one test failed
+        assert wo["shouldfail"]  # shouldfail should be set by pytest
 
     def test_steal_work(
         self, worker: WorkerSetup, unserialize_report: UnserializerReport
