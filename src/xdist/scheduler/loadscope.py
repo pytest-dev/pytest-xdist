@@ -303,6 +303,12 @@ class LoadScopeScheduling:
             example/loadsuite/test/test_delta.py::Delta1
             example/loadsuite/epsilon/__init__.py
         """
+        # rsplit("::", 1) can break when parameter values contain "::" (e.g.
+        # IPv6 addresses). Prefer to split on the ".py::" boundary which
+        # separates the file path from the test ID, when present.
+        py_colon_idx = nodeid.rfind(".py::")
+        if py_colon_idx != -1:
+            return nodeid[: py_colon_idx + 3]
         return nodeid.rsplit("::", 1)[0]
 
     def _pending_of(self, workload: dict[str, dict[str, bool]]) -> int:
