@@ -227,7 +227,7 @@ class LoadScheduling:
         if not pending:
             return None
 
-        # The node crashed, reassing pending items
+        # The node crashed, reassign pending items
         assert self.collection is not None
         crashitem = self.collection[pending.pop(0)]
         self.pending.extend(pending)

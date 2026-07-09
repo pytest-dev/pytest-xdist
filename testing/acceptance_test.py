@@ -133,7 +133,7 @@ class TestDistribution:
 
         When -x/--exitfirst is set, the DSession wait for all workers to finish
         before raising an Interrupt exception. This prevents reports from the
-        faiing test and other tests from being discarded.
+        failing test and other tests from being discarded.
         """
         p1 = pytester.makepyfile(
             """
