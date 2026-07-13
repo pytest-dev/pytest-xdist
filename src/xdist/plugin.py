@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 import math
 import os
 import sys
@@ -419,6 +420,24 @@ def _is_distribution_mode(config: pytest.Config) -> bool:
     return config.getoption("dist") != "no" and bool(config.getoption("tx"))
 
 
+def _validate_collection_args(config: pytest.Config) -> None:
+    """Raise pytest's normal UsageError for invalid collection arguments."""
+    from _pytest.main import resolve_collection_argument
+
+    parameters = inspect.signature(resolve_collection_argument).parameters
+    kwargs: dict[str, object] = {"as_pypath": config.option.pyargs}
+    if "consider_namespace_packages" in parameters:
+        kwargs["consider_namespace_packages"] = config.getini(
+            "consider_namespace_packages"
+        )
+
+    for arg_index, arg in enumerate(config.args):
+        args: list[object] = [config.invocation_params.dir, arg]
+        if "arg_index" in parameters:
+            args.append(arg_index)
+        resolve_collection_argument(*args, **kwargs)
+
+
 @pytest.hookimpl(tryfirst=True)
 def pytest_cmdline_main(config: pytest.Config) -> None:
     if config.option.distload:
@@ -446,10 +465,12 @@ def pytest_cmdline_main(config: pytest.Config) -> None:
         config.option.tx = []
 
     val = config.getvalue
-    if not val("collectonly") and _is_distribution_mode(config) and usepdb:
-        raise pytest.UsageError(
-            "--pdb is incompatible with distributing tests; try using -n0 or -nauto."
-        )
+    if not val("collectonly") and _is_distribution_mode(config):
+        if usepdb:
+            raise pytest.UsageError(
+                "--pdb is incompatible with distributing tests; try using -n0 or -nauto."
+            )
+        _validate_collection_args(config)
 
 
 # -------------------------------------------------------------------------
