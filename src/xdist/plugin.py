@@ -470,7 +470,7 @@ def is_xdist_worker(
 def is_xdist_controller(
     request_or_session: pytest.FixtureRequest | pytest.Session,
 ) -> bool:
-    """Return `True` if this is the xdist controller, `False` otherwise.
+    """Return `True` if this is the xdist master, `False` otherwise.
 
     Note: this method also returns `False` when distribution has not been
     activated at all.
