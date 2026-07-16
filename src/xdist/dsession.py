@@ -221,7 +221,8 @@ class DSession:
             assert self.sched is not None
             if node in self.sched.nodes:
                 crashitem = self.sched.remove_node(node)
-                assert not crashitem, (crashitem, node)
+                if crashitem:
+                    self.handle_crashitem(crashitem, node)
         self._active_nodes.remove(node)
 
     def worker_internal_error(
