@@ -303,6 +303,8 @@ class LoadScopeScheduling:
             example/loadsuite/test/test_delta.py::Delta1
             example/loadsuite/epsilon/__init__.py
         """
+        if ".py::" in nodeid:
+            return nodeid.split(".py::")[0] + ".py"
         return nodeid.rsplit("::", 1)[0]
 
     def _pending_of(self, workload: dict[str, dict[str, bool]]) -> int:
