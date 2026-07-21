@@ -388,6 +388,16 @@ class TestDistribution:
         assert result.ret == 0
         result.stdout.fnmatch_lines(["*collected 1 item*"])
 
+    def test_dist_with_missing_path_reports_usage_error(
+        self, pytester: pytest.Pytester
+    ) -> None:
+        result = pytester.runpytest("missing_path", "-n2")
+
+        assert result.ret != 0
+        result.stderr.fnmatch_lines(
+            ["ERROR: file or directory not found: missing_path"]
+        )
+
 
 class TestDistEach:
     def test_simple(self, pytester: pytest.Pytester) -> None:

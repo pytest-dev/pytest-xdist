@@ -1,0 +1,1 @@
+Preserve pytest's missing path error when using distributed mode.
