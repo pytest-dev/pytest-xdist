@@ -1,0 +1,1 @@
+Fixed a scheduler deadlock in ``--dist loadscope``, ``loadfile`` and ``loadgroup`` where a worker crash caused already-completed work units to be requeued, making the session hang near completion with idle workers (and any replacement workers being assigned empty work units).

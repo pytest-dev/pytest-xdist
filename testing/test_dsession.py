@@ -15,6 +15,7 @@ from xdist.dsession import WorkerStatus
 from xdist.report import report_collection_diff
 from xdist.scheduler import EachScheduling
 from xdist.scheduler import LoadScheduling
+from xdist.scheduler import LoadScopeScheduling
 from xdist.scheduler import WorkStealingScheduling
 from xdist.workermanage import WorkerController
 
@@ -288,6 +289,85 @@ class TestLoadScheduling:
         rep = collect_hook.reports[0]
         assert isinstance(rep.longrepr, str)
         assert "Different tests were collected between" in rep.longrepr
+
+
+class TestLoadScopeScheduling:
+    def test_replacement_node_after_crash_gets_pending_work(
+        self, pytester: pytest.Pytester
+    ) -> None:
+        """A node crashing after completing scopes must not wedge the scheduler.
+
+        Completed work units used to be requeued by remove_node(), so a
+        replacement node was assigned an empty work unit ("runtests" with no
+        indices) that could never be marked complete, deadlocking the whole
+        session (#1313).
+        """
+        config = pytester.parseconfig("--tx=2*popen", "--dist=loadscope")
+        sched = LoadScopeScheduling(config)
+        node1, node2 = MockNode(), MockNode()
+        sched.add_node(node1)
+        sched.add_node(node2)
+        collection = [f"{scope}.py::test_{i}" for scope in "abc" for i in range(4)]
+        sched.add_node_collection(node1, collection)
+        sched.add_node_collection(node2, collection)
+        sched.schedule()
+        assert sched.collection_is_completed
+        # Initial distribution: one scope per node, c.py still in the queue
+        assert node1.sent == [0, 1, 2, 3]
+        assert node2.sent == [4, 5, 6, 7]
+        assert list(sched.workqueue) == ["c.py"]
+
+        # node1 completes all of a.py; c.py gets assigned to it along the way
+        for i in range(4):
+            sched.mark_test_complete(node1, i)
+        assert node1.sent == [0, 1, 2, 3, 8, 9, 10, 11]
+        assert not sched.workqueue
+
+        # node2 completes all of b.py and is told to shut down
+        for i in range(4, 8):
+            sched.mark_test_complete(node2, i)
+        assert node2.shutting_down
+
+        # node1 completes c.py partially, then crashes on index 10
+        sched.mark_test_complete(node1, 8)
+        sched.mark_test_complete(node1, 9)
+        crashitem = sched.remove_node(node1)
+        assert crashitem == "c.py::test_2"
+
+        # Only the scope with pending tests may be requeued: the completed
+        # a.py must not come back
+        assert list(sched.workqueue) == ["c.py"]
+
+        # A replacement node must be assigned the pending tests, not an
+        # empty work unit
+        node3 = MockNode()
+        sched.add_node(node3)
+        sched.add_node_collection(node3, collection)
+        sched.schedule()
+        assert node3.sent == [10, 11]
+        sched.mark_test_complete(node3, 10)
+        sched.mark_test_complete(node3, 11)
+        assert sched.tests_finished
+
+    def test_remove_node_with_only_completed_work(
+        self, pytester: pytest.Pytester
+    ) -> None:
+        """A node crashing right after finishing its work requeues nothing."""
+        config = pytester.parseconfig("--tx=2*popen", "--dist=loadscope")
+        sched = LoadScopeScheduling(config)
+        node1, node2 = MockNode(), MockNode()
+        sched.add_node(node1)
+        sched.add_node(node2)
+        collection = [f"{scope}.py::test_{i}" for scope in "ab" for i in range(4)]
+        sched.add_node_collection(node1, collection)
+        sched.add_node_collection(node2, collection)
+        sched.schedule()
+        for i in range(4):
+            sched.mark_test_complete(node1, i)
+        assert node1.shutting_down
+        crashitem = sched.remove_node(node1)
+        assert crashitem is None
+        assert not sched.workqueue
 
 
 class TestWorkStealingScheduling:

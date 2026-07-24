@@ -249,7 +249,15 @@ class LoadScopeScheduling:
         nodeid = self.registered_collections[node][item_index]
         scope = self._split_scope(nodeid)
 
-        self.assigned_work[node][scope][nodeid] = True
+        work_unit = self.assigned_work[node].get(scope)
+        if work_unit is not None:
+            work_unit[nodeid] = True
+            # Drop the work unit once fully completed.  Otherwise, if this
+            # node crashes later, remove_node() would requeue the completed
+            # unit and a replacement node would be assigned an empty unit,
+            # deadlocking the scheduler (#1313).
+            if all(work_unit.values()):
+                del self.assigned_work[node][scope]
         self._reschedule(node)
 
     def mark_test_pending(self, item: str) -> NoReturn:
@@ -266,8 +274,19 @@ class LoadScopeScheduling:
         """Assign a work unit to a node."""
         assert self.workqueue
 
-        # Grab a unit of work
-        scope, work_unit = self.workqueue.popitem(last=False)
+        # Grab a unit of work, discarding any unit with no pending tests
+        # (assigning one would deadlock the scheduler: the node would be
+        # sent an empty "runtests" command and the unit could never be
+        # marked complete, see #1313)
+        while True:
+            scope, work_unit = self.workqueue.popitem(last=False)
+            if not all(work_unit.values()):
+                break
+            if not self.workqueue:
+                # Only fully-completed units were queued: nothing to assign,
+                # and the workqueue is now empty
+                node.shutdown()
+                return
 
         # Keep track of the assigned work
         assigned_to_node = self.assigned_work.setdefault(node, {})
