@@ -179,6 +179,10 @@ class LoadScopeScheduling:
         node has no more pending items.
         """
         workload = self.assigned_work.pop(node)
+        # Drop the dead node's collection too. Leaving it behind keeps ``collection_is_completed``
+        # counting a node that is gone, so a *later* still-collecting worker looks done and
+        # ``_assign_work_unit`` then raises ``KeyError`` indexing ``registered_collections`` for it.
+        self.registered_collections.pop(node, None)
         if not self._pending_of(workload):
             return None
 

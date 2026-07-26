@@ -15,6 +15,7 @@ from xdist.dsession import WorkerStatus
 from xdist.report import report_collection_diff
 from xdist.scheduler import EachScheduling
 from xdist.scheduler import LoadScheduling
+from xdist.scheduler import LoadScopeScheduling
 from xdist.scheduler import WorkStealingScheduling
 from xdist.workermanage import WorkerController
 
@@ -288,6 +289,37 @@ class TestLoadScheduling:
         rep = collect_hook.reports[0]
         assert isinstance(rep.longrepr, str)
         assert "Different tests were collected between" in rep.longrepr
+
+
+class TestLoadScopeScheduling:
+    def test_remove_node_forgets_dead_worker_collection(
+        self, pytester: pytest.Pytester
+    ) -> None:
+        # A dead worker must not keep inflating ``collection_is_completed``: otherwise a still-collecting
+        # worker looks done, ``schedule()`` runs early, and ``_assign_work_unit`` crashes with a
+        # ``KeyError`` indexing ``registered_collections`` for the worker that never registered.
+        config = pytester.parseconfig("--tx=3*popen", "--dist=loadscope")
+        sched = LoadScopeScheduling(config)
+        node_a, node_b, node_c = MockNode(), MockNode(), MockNode()
+        for node in (node_a, node_b, node_c):
+            sched.add_node(node)
+        collection = ["test_a.py::test_1", "test_a.py::test_2"]
+        sched.add_node_collection(node_a, collection)
+        sched.add_node_collection(node_b, collection)
+        # node_c is still collecting, so the run is not ready to schedule.
+        assert not sched.collection_is_completed
+
+        # node_a dies before the collection completed.
+        assert sched.remove_node(node_a) is None
+        assert node_a not in sched.registered_collections
+
+        # A replacement worker joins and reports its collection.
+        node_d = MockNode()
+        sched.add_node(node_d)
+        sched.add_node_collection(node_d, collection)
+
+        # With the dead node forgotten, we still wait for node_c instead of scheduling early.
+        assert not sched.collection_is_completed
 
 
 class TestWorkStealingScheduling:

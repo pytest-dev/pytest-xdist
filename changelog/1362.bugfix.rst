@@ -1,0 +1,1 @@
+Fixed an ``INTERNALERROR`` (``KeyError``) with ``--dist=loadscope``/``--dist=loadfile`` when a worker died before the collection completed: the dead worker's entry is now dropped from the scheduler's registered collections, so a still-collecting worker is no longer mistaken for a completed one.
