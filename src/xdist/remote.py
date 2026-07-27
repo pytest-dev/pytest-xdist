@@ -120,7 +120,7 @@ class WorkerInteractor:
         self.log = Producer(f"worker-{self.workerid}", enabled=config.option.debug)
         self.channel = channel
         self.torun = TestQueue(self.channel.gateway.execmodel)
-        self.nextitem_index: int | None | Literal[Marker.SHUTDOWN] = None
+        self.nextitem_index: int | Literal[Marker.SHUTDOWN] | None = None
         config.pluginmanager.register(self)
 
     def sendevent(self, name: str, **kwargs: object) -> None:
