@@ -1,0 +1,1 @@
+Add ``.gitattributes`` for cross-platform line ending normalization.
