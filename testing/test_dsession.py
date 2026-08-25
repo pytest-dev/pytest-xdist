@@ -15,6 +15,7 @@ from xdist.dsession import WorkerStatus
 from xdist.report import report_collection_diff
 from xdist.scheduler import EachScheduling
 from xdist.scheduler import LoadScheduling
+from xdist.scheduler import LoadScopeScheduling
 from xdist.scheduler import WorkStealingScheduling
 from xdist.workermanage import WorkerController
 
@@ -632,3 +633,108 @@ def test_get_workers_status_line(
     status_and_items: Sequence[tuple[WorkerStatus, int]], expected: str
 ) -> None:
     assert get_workers_status_line(status_and_items) == expected
+
+
+class TestLoadScopeScheduling:
+    def test_remove_node_clears_registered_collection(
+        self, pytester: pytest.Pytester
+    ) -> None:
+        """Replacement workers must be able to re-register collections (#1189)."""
+        config = pytester.parseconfig("--tx=2*popen", "--dist=loadscope")
+        sched = LoadScopeScheduling(config)
+        node1, node2 = MockNode(), MockNode()
+        node1.gateway.id = "gw0"
+        node2.gateway.id = "gw1"
+        sched.add_node(node1)
+        sched.add_node(node2)
+
+        collection = [
+            "test_a.py::test_1",
+            "test_a.py::test_2",
+            "test_b.py::test_1",
+        ]
+        sched.add_node_collection(node1, collection)
+        sched.add_node_collection(node2, collection)
+        assert sched.collection_is_completed
+        sched.schedule()
+
+        # Give node1 unfinished work, then crash it.
+        assert node1 in sched.registered_collections
+        crashitem = sched.remove_node(node1)
+        assert crashitem is not None
+        assert node1 not in sched.registered_collections
+
+        # A replacement worker with the same collection should register cleanly.
+        replacement = MockNode()
+        replacement.gateway.id = "gw0-replaced"
+        sched.add_node(replacement)
+        sched.add_node_collection(replacement, collection)
+        assert replacement in sched.registered_collections
+        assert sched.registered_collections[replacement] == collection
+
+    def test_remove_node_does_not_requeue_completed_work_units(
+        self, pytester: pytest.Pytester
+    ) -> None:
+        """Completed scopes must not be requeued on crash (#1323)."""
+        config = pytester.parseconfig("--tx=2*popen", "--dist=loadscope")
+        sched = LoadScopeScheduling(config)
+        node1, node2 = MockNode(), MockNode()
+        node1.gateway.id = "gw0"
+        node2.gateway.id = "gw1"
+        sched.add_node(node1)
+        sched.add_node(node2)
+
+        collection = [
+            "test_a.py::test_1",
+            "test_a.py::test_2",
+            "test_b.py::test_1",
+        ]
+        sched.add_node_collection(node1, collection)
+        sched.add_node_collection(node2, collection)
+        sched.schedule()
+
+        # Force a deterministic assigned workload on node1:
+        # one fully completed scope and one pending scope.
+        sched.assigned_work[node1] = {
+            "test_a.py": {
+                "test_a.py::test_1": True,
+                "test_a.py::test_2": True,
+            },
+            "test_b.py": {
+                "test_b.py::test_1": False,
+            },
+        }
+        # Ensure workqueue is empty before crash so we can observe requeueing.
+        sched.workqueue.clear()
+
+        crashitem = sched.remove_node(node1)
+        assert crashitem == "test_b.py::test_1"
+        assert "test_b.py" in sched.workqueue
+        assert "test_a.py" not in sched.workqueue
+        # Pending scope should still contain the unfinished test marker.
+        assert sched.workqueue["test_b.py"]["test_b.py::test_1"] is False
+
+    def test_add_node_collection_registers_mismatch_after_schedule(
+        self, pytester: pytest.Pytester
+    ) -> None:
+        """Mismatched collections are still registered after scheduling (#1189)."""
+        config = pytester.parseconfig("--tx=2*popen", "--dist=loadscope")
+        sched = LoadScopeScheduling(config)
+        node1, node2 = MockNode(), MockNode()
+        node1.gateway.id = "gw0"
+        node2.gateway.id = "gw1"
+        sched.add_node(node1)
+        sched.add_node(node2)
+
+        collection = ["test_a.py::test_1", "test_b.py::test_1"]
+        sched.add_node_collection(node1, collection)
+        sched.add_node_collection(node2, collection)
+        sched.schedule()
+
+        late = MockNode()
+        late.gateway.id = "gw2"
+        mismatched = ["test_a.py::test_1", "test_c.py::test_1"]
+        sched.add_node(late)
+        sched.add_node_collection(late, mismatched)
+        assert late in sched.registered_collections
+        assert sched.registered_collections[late] == mismatched
