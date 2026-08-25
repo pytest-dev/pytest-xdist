@@ -1699,6 +1699,20 @@ def test_collection_crash(pytester: pytest.Pytester) -> None:
     )
 
 
+def test_collection_crash_reported_once(pytester: pytest.Pytester) -> None:
+    """A collection error must be reported only once, regardless of how
+    many workers collected the failing module (#1140)."""
+    p1 = pytester.makepyfile(
+        """
+        assert 0
+    """
+    )
+    result = pytester.runpytest(p1, "-n2")
+    assert result.ret == 1
+    assert result.stdout.lines.count("E   assert 0") == 1
+    result.stdout.fnmatch_lines(["*= 1 error in *"])
+
+
 def test_dist_in_addopts(pytester: pytest.Pytester) -> None:
     """Users can set a default distribution in the configuration file (#789)."""
     pytester.makepyfile(

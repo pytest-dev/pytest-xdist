@@ -1,0 +1,1 @@
+Fixed duplicate ``pytest_collectreport`` calls (one per worker) for the same collection error when a test module fails to collect under ``-n``.
