@@ -15,6 +15,7 @@ from collections.abc import Sequence
 import contextlib
 import enum
 import os
+from pathlib import Path
 import sys
 import time
 from typing import Any
@@ -250,6 +251,28 @@ class WorkerInteractor:
     ) -> None:
         # add the group name to nodeid as suffix if --dist=loadgroup
         if config.getvalue("loadgroup"):
+            conftest_marks = []
+            for plugin in config.pluginmanager.get_plugins():
+                conftest_path = getattr(plugin, "__file__", None)
+                pytestmark = getattr(plugin, "pytestmark", None)
+                if conftest_path is None or pytestmark is None:
+                    continue
+                if not isinstance(pytestmark, (list, tuple)):
+                    pytestmark = (pytestmark,)
+                marks = tuple(
+                    mark
+                    for mark in pytestmark
+                    if getattr(mark, "name", None) == "xdist_group"
+                )
+                if marks:
+                    conftest_marks.append((Path(conftest_path).parent, marks))
+
+            for item in items:
+                for conftest_dir, marks in conftest_marks:
+                    if Path(item.path).is_relative_to(conftest_dir):
+                        for mark in marks:
+                            item.add_marker(mark)
+
             for item in items:
                 gnames: set[str] = set()
                 for mark in item.iter_markers("xdist_group"):

@@ -1,0 +1,2 @@
+Fix ``--dist=loadgroup`` to honor ``xdist_group`` marks declared through a
+package-level ``pytestmark`` in ``conftest.py``.

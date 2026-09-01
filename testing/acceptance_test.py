@@ -1426,6 +1426,31 @@ class TestFileScope:
 
 
 class TestGroupScope:
+    def test_pytestmark_in_conftest(self, pytester: pytest.Pytester) -> None:
+        """Group tests marked via a package conftest's ``pytestmark`` (#1295)."""
+        for package, group in (("foo", "foo"), ("bar", "bar")):
+            package_tests = pytester.path / package / "tests"
+            package_tests.mkdir(parents=True)
+            (package_tests / "conftest.py").write_text(
+                f"import pytest\npytestmark = pytest.mark.xdist_group(name={group!r})\n"
+            )
+            (package_tests / f"test_{package}.py").write_text(
+                "def test_one():\n    pass\n\ndef test_two():\n    pass\n"
+            )
+
+        result = pytester.runpytest(
+            "foo/tests", "bar/tests", "-n2", "--dist=loadgroup", "-v"
+        )
+        result.assert_outcomes(passed=4)
+        nodeids = [
+            nodeid
+            for _worker, _status, nodeid in parse_tests_and_workers_from_output(
+                result.outlines
+            )
+        ]
+        assert all("@foo" in nodeid for nodeid in nodeids if "foo/tests" in nodeid)
+        assert all("@bar" in nodeid for nodeid in nodeids if "bar/tests" in nodeid)
+
     def test_by_module(self, pytester: pytest.Pytester) -> None:
         test_file = """
             import pytest
