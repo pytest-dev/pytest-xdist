@@ -150,9 +150,16 @@ class WorkerInteractor:
         yield
         self.sendevent("workerfinished", workeroutput=workeroutput)
 
-    @pytest.hookimpl
-    def pytest_collection(self) -> None:
+    @pytest.hookimpl(hookwrapper=True)
+    def pytest_collection(self) -> Generator[None, object, None]:
         self.sendevent("collectionstart")
+        outcome: Any = yield
+        if outcome.excinfo is not None and isinstance(
+            outcome.excinfo[1], pytest.UsageError
+        ):
+            exc = outcome.excinfo[1]
+            workeroutput: dict[str, Any] = self.config.workeroutput  # type: ignore[attr-defined]
+            workeroutput["usage_error"] = tuple(str(arg) for arg in exc.args)
 
     def handle_command(
         self, command: tuple[str, dict[str, Any]] | Literal[Marker.SHUTDOWN]

@@ -77,6 +77,12 @@ class TestDistribution:
         result2 = pytester.runpytest(p1, "-n1")
         assert len(result1.stdout.lines) == len(result2.stdout.lines)
 
+    def test_missing_path_usage_error(self, pytester: pytest.Pytester) -> None:
+        result = pytester.runpytest("-n2", "MISSING")
+
+        assert result.ret == pytest.ExitCode.USAGE_ERROR
+        result.stderr.fnmatch_lines(["ERROR: file or directory not found: MISSING"])
+
     def test_n1_skip(self, pytester: pytest.Pytester) -> None:
         p1 = pytester.makepyfile(
             """
