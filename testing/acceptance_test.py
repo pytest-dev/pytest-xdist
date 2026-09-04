@@ -994,7 +994,9 @@ class TestNodeFailure:
         self, pytester: pytest.Pytester
     ) -> None:
         """Fix test suite never finishing in case a worker has to be restarted
-        after having already finished a test (#1323)."""
+        after having already finished a test (#1323).
+
+        The crashed test fails once and is not retried (#1371)."""
         f = pytester.makepyfile(
             """
             import os
@@ -1007,7 +1009,7 @@ class TestNodeFailure:
             [
                 "replacing crashed worker gw*",
                 "worker*crashed while running*",
-                "*5 failed*1 passed*",
+                "*1 failed*1 passed*",
             ]
         )
 
@@ -1015,7 +1017,9 @@ class TestNodeFailure:
         self, pytester: pytest.Pytester
     ) -> None:
         """Fix test suite never finishing in case a worker has to be restarted
-        if there is still work to be done (#1327)."""
+        if there is still work to be done (#1327).
+
+        The crashed test fails once and is not retried (#1371)."""
         f = pytester.makepyfile(
             """
             import os
@@ -1028,7 +1032,7 @@ class TestNodeFailure:
             [
                 "replacing crashed worker gw*",
                 "worker*crashed while running*",
-                "*5 failed*",
+                "*1 failed*1 passed*",
             ]
         )
 
@@ -1073,6 +1077,35 @@ class TestNodeFailure:
             ]
         )
         assert "INTERNALERROR" not in res.stdout.str()
+
+    def test_loadfile_crashed_worker(self, pytester: pytest.Pytester) -> None:
+        """The test a worker crashed on is not run again (#1371).
+
+        Without the fix the replacement worker starts test_crash a second
+        time and dies on it too, and so on until --max-worker-restart is
+        spent: the run ends "5 failed, 2 passed" with test_after never
+        executed. The crashed test is already reported by handle_crashitem,
+        so one failure is the whole of what it should contribute.
+        """
+        pytester.makepyfile(
+            test_a="""
+                def test_pass_1(): pass
+                def test_pass_2(): pass
+            """,
+            test_b="""
+                import os
+                def test_crash(): os._exit(1)
+                def test_after(): pass
+            """,
+        )
+        res = pytester.runpytest_subprocess("-n1", "--dist=loadfile", "-v", timeout=120)
+        res.stdout.fnmatch_lines(
+            [
+                "replacing crashed worker gw*",
+                "worker*crashed while running*test_crash*",
+                "*1 failed*3 passed*",
+            ]
+        )
 
     def test_max_worker_restart_die(self, pytester: pytest.Pytester) -> None:
         f = pytester.makepyfile(
