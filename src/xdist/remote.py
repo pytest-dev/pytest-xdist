@@ -261,7 +261,14 @@ class WorkerInteractor:
                     gnames.add(str(name))
                 if not gnames:
                     continue
-                item._nodeid = f"{item.nodeid}@{'_'.join(sorted(gnames))}"
+                nodeid = f"{item.nodeid}@{'_'.join(sorted(gnames))}"
+                item_id = getattr(item, "id", None)
+                if item_id is not None and hasattr(item_id, "parse"):
+                    # pytest 9.2 stores the structured node ID in ``_id``;
+                    # assigning ``_nodeid`` is ignored there.
+                    item._id = item_id.parse(nodeid)  # type: ignore[attr-defined]
+                else:
+                    item._nodeid = nodeid
 
     @pytest.hookimpl
     def pytest_collection_finish(self, session: pytest.Session) -> None:
