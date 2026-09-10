@@ -1,7 +1,7 @@
 from xdist.scheduler.loadscope import LoadScopeScheduling
 
 
-def test_split_scope_uses_module_boundary_for_colon_parameters():
+def test_split_scope_uses_module_boundary_for_colon_parameters() -> None:
     scheduler = LoadScopeScheduling.__new__(LoadScopeScheduling)
 
     assert (
@@ -10,7 +10,7 @@ def test_split_scope_uses_module_boundary_for_colon_parameters():
     )
 
 
-def test_split_scope_keeps_class_scope():
+def test_split_scope_keeps_class_scope() -> None:
     scheduler = LoadScopeScheduling.__new__(LoadScopeScheduling)
 
     assert (
