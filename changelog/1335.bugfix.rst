@@ -1,0 +1,1 @@
+Fix ``--dist=loadscope`` splitting test scopes when parametrized values contain ``::``.
