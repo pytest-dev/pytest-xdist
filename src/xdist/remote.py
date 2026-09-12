@@ -261,7 +261,18 @@ class WorkerInteractor:
                     gnames.add(str(name))
                 if not gnames:
                     continue
-                item._nodeid = f"{item.nodeid}@{'_'.join(sorted(gnames))}"
+                nodeid = f"{item.nodeid}@{'_'.join(sorted(gnames))}"
+                node_id = getattr(item, "_id", None)
+                if node_id is not None:
+                    # pytest>=9.2 derives ``Node.nodeid`` from a structured
+                    # ``NodeId`` stored in ``Node._id``
+                    # (pytest-dev/pytest#14758); the ``_nodeid`` attribute
+                    # no longer exists. Overriding the cached string form
+                    # keeps ``item.nodeid`` suffixed with the group while
+                    # leaving the structured fields untouched.
+                    object.__setattr__(node_id, "_str_cache", nodeid)
+                else:
+                    item._nodeid = nodeid
 
     @pytest.hookimpl
     def pytest_collection_finish(self, session: pytest.Session) -> None:

@@ -1,0 +1,3 @@
+Fix ``--dist=loadgroup`` under pytest 9.2+, where ``Node.nodeid`` is derived
+from a structured ``NodeId`` object instead of the ``_nodeid`` attribute
+(`pytest-dev/pytest#14758 <https://github.com/pytest-dev/pytest/pull/14758>`_).
