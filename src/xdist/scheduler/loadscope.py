@@ -40,16 +40,16 @@ class LoadScopeScheduling:
        None until ``.schedule()`` is called.
 
     :workqueue: Ordered dictionary that maps all available scopes with their
-       associated tests (nodeid). Nodeids are in turn associated with their
-       completion status. One entry of the workqueue is called a work unit.
+       associated test collection indices. Indices are in turn associated with
+       their completion status. One entry of the workqueue is called a work unit.
        In turn, a collection of work unit is called a workload.
 
        ::
 
             workqueue = {
                 '<full>/<path>/<to>/test_module.py': {
-                    '<full>/<path>/<to>/test_module.py::test_case1': False,
-                    '<full>/<path>/<to>/test_module.py::test_case2': False,
+                    0: False,
+                    1: False,
                     (...)
                 },
                 (...)
@@ -63,8 +63,8 @@ class LoadScopeScheduling:
             assigned_work = {
                 '<worker node A>': {
                     '<full>/<path>/<to>/test_module.py': {
-                        '<full>/<path>/<to>/test_module.py::test_case1': False,
-                        '<full>/<path>/<to>/test_module.py::test_case2': False,
+                        0: False,
+                        1: False,
                         (...)
                     },
                     (...)
@@ -94,8 +94,8 @@ class LoadScopeScheduling:
         self.numnodes = len(parse_tx_spec_config(config))
         self.collection: list[str] | None = None
 
-        self.workqueue: OrderedDict[str, dict[str, bool]] = OrderedDict()
-        self.assigned_work: dict[WorkerController, dict[str, dict[str, bool]]] = {}
+        self.workqueue: OrderedDict[str, dict[int, bool]] = OrderedDict()
+        self.assigned_work: dict[WorkerController, dict[str, dict[int, bool]]] = {}
         self.registered_collections: dict[WorkerController, list[str]] = {}
 
         if log is None:
@@ -183,10 +183,11 @@ class LoadScopeScheduling:
             return None
 
         # The node crashed, identify test that crashed
+        assert self.collection is not None
         for work_unit in workload.values():
-            for nodeid, completed in work_unit.items():
+            for item_index, completed in work_unit.items():
                 if not completed:
-                    crashitem = nodeid
+                    crashitem = self.collection[item_index]
                     break
             else:
                 continue
@@ -249,7 +250,7 @@ class LoadScopeScheduling:
         nodeid = self.registered_collections[node][item_index]
         scope = self._split_scope(nodeid)
 
-        self.assigned_work[node][scope][nodeid] = True
+        self.assigned_work[node][scope][item_index] = True
         self._reschedule(node)
 
     def mark_test_pending(self, item: str) -> NoReturn:
@@ -274,11 +275,8 @@ class LoadScopeScheduling:
         assigned_to_node[scope] = work_unit
 
         # Ask the node to execute the workload
-        worker_collection = self.registered_collections[node]
         nodeids_indexes = [
-            worker_collection.index(nodeid)
-            for nodeid, completed in work_unit.items()
-            if not completed
+            item_index for item_index, completed in work_unit.items() if not completed
         ]
         if not nodeids_indexes:
             # Raise since this is an internal error that may result in a hanging worker
@@ -313,7 +311,7 @@ class LoadScopeScheduling:
         """
         return nodeid.rsplit("::", 1)[0]
 
-    def _pending_of(self, workload: dict[str, dict[str, bool]]) -> int:
+    def _pending_of(self, workload: dict[str, dict[int, bool]]) -> int:
         """Return the number of pending tests in a workload."""
         pending = sum(list(scope.values()).count(False) for scope in workload.values())
         return pending
@@ -379,21 +377,22 @@ class LoadScopeScheduling:
             return
 
         # Determine chunks of work (scopes)
-        unsorted_workqueue: dict[str, dict[str, bool]] = {}
-        for nodeid in self.collection:
+        unsorted_workqueue: dict[str, dict[int, bool]] = {}
+        for item_index, nodeid in enumerate(self.collection):
             scope = self._split_scope(nodeid)
             work_unit = unsorted_workqueue.setdefault(scope, {})
-            work_unit[nodeid] = False
+            # Nodeids need not be unique. Preserve each collected occurrence.
+            work_unit[item_index] = False
 
         if self.config.option.loadscopereorder:
             # Insert tests scopes into work queue ordered by number of tests.
-            for scope, nodeids in sorted(
+            for scope, work_unit in sorted(
                 unsorted_workqueue.items(), key=lambda item: -len(item[1])
             ):
-                self.workqueue[scope] = nodeids
+                self.workqueue[scope] = work_unit
         else:
-            for scope, nodeids in unsorted_workqueue.items():
-                self.workqueue[scope] = nodeids
+            for scope, work_unit in unsorted_workqueue.items():
+                self.workqueue[scope] = work_unit
 
         # Avoid having more workers than work
         extra_nodes = len(self.nodes) - len(self.workqueue)
