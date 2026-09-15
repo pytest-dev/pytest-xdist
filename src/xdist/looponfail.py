@@ -93,6 +93,7 @@ class RemoteControl:
             init_worker_session,
             args=self.config.args,
             option_dict=vars(self.config.option),
+            invocation_args=list(self.config.invocation_params.args),
         )
         remote_outchannel: execnet.Channel = channel.receive()
 
@@ -161,6 +162,7 @@ def init_worker_session(
     channel: "execnet.Channel",  # noqa: UP037
     args: list[str],
     option_dict: dict[str, "Any"],  # noqa: UP037
+    invocation_args: list[str],
 ) -> None:
     import os
     import sys
@@ -183,6 +185,22 @@ def init_worker_session(
 
     config = Config.fromdictargs(option_dict, list(args))
     config.args = args
+    # fromdictargs() rebuilds the config from the parsed options plus the
+    # positional arguments only, so config.invocation_params.args loses the
+    # original command-line flags (e.g. --tb=short). Restore the full
+    # invocation arguments so that any nested distributed (-n) run propagates
+    # those options to its workers. See #767.
+    #
+    # InvocationParams is constructed directly (rather than via
+    # dataclasses.replace) because it is a frozen attrs class on pytest 7.x
+    # and a dataclass only on newer pytest; calling its type with the same
+    # fields works across both.
+    invocation_params = config.invocation_params
+    config.invocation_params = type(invocation_params)(
+        args=tuple(invocation_args),
+        plugins=invocation_params.plugins,
+        dir=invocation_params.dir,
+    )
     from xdist.looponfail import WorkerFailSession
 
     WorkerFailSession(config, channel).main()
