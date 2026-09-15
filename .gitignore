@@ -33,3 +33,4 @@ pytestdebug.log
 .pytest_cache/
 .eggs/
 .idea/
+venv/
