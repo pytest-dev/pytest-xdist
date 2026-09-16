@@ -57,6 +57,7 @@ class DSession:
         self._session: pytest.Session | None = None
         self._failed_collection_errors: dict[object, bool] = {}
         self._active_nodes: set[WorkerController] = set()
+        self._worker_internal_error: str | None = None
         self._failed_nodes_count = 0
         self._max_worker_restart = get_default_max_worker_restart(self.config)
         # summary message to print at the end of the session
@@ -146,6 +147,12 @@ class DSession:
             if self.shouldstop:
                 self.triggershutdown()
                 pending_exception = Interrupted(str(self.shouldstop))
+            if self._worker_internal_error:
+                self.triggershutdown()
+        if self._worker_internal_error:
+            pytest.exit(
+                self._worker_internal_error, returncode=pytest.ExitCode.INTERNAL_ERROR
+            )
         if pending_exception:
             raise pending_exception
         return True
@@ -210,6 +217,10 @@ class DSession:
             self.shouldstop = f"{node} received keyboard-interrupt"
             self.worker_errordown(node, "keyboard-interrupt")
             return
+        if node.workeroutput["exitstatus"] == pytest.ExitCode.INTERNAL_ERROR:
+            self._worker_internal_error = f"{node} exited with an internal error"
+            self._active_nodes.remove(node)
+            return
         shouldfail = node.workeroutput["shouldfail"]
         shouldstop = node.workeroutput["shouldstop"]
         for shouldx in [shouldfail, shouldstop]:
@@ -233,8 +244,9 @@ class DSession:
         pytest_internalerror() arguments are an excinfo and an excrepr, which can't
         be serialized, so we go with a poor man's solution of raising an exception
         here ourselves using the formatted message.
+
+        The worker remains active until workerfinished or errordown is received.
         """
-        self._active_nodes.remove(node)
         try:
             assert False, formatted_error
         except AssertionError:
