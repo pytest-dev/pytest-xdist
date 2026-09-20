@@ -4,6 +4,7 @@ import os
 import re
 import shutil
 from typing import cast
+import xml.etree.ElementTree as ET
 
 import pytest
 
@@ -1720,6 +1721,39 @@ class TestAPI:
         assert xdist.get_xdist_worker_id(fake_request) == "gw5"
         del fake_request.config.workerinput  # type: ignore[attr-defined]
         assert xdist.get_xdist_worker_id(fake_request) == "master"
+
+
+@pytest.mark.parametrize("error_source", ["same", "worker", "module"])
+def test_collection_error_deduplication(
+    pytester: pytest.Pytester, error_source: str
+) -> None:
+    source = "raise RuntimeError('collection failure')"
+    if error_source == "worker":
+        source = (
+            "import os\n"
+            "raise RuntimeError('failure from ' + os.environ['PYTEST_XDIST_WORKER'])"
+        )
+    pytester.makepyfile(test_bad=source)
+    if error_source == "module":
+        pytester.makepyfile(test_other=source)
+
+    result = pytester.runpytest("-n2", "--junitxml=report.xml")
+    errors = 1 if error_source == "same" else 2
+    result.assert_outcomes(errors=errors)
+    assert result.ret == pytest.ExitCode.TESTS_FAILED
+    suite = ET.parse(pytester.path / "report.xml").getroot().find("testsuite")
+    assert suite is not None
+    assert suite.get("errors") == str(errors)
+    reports = suite.findall(".//error")
+    assert len(reports) == errors
+    if error_source == "worker":
+        assert any("failure from gw0" in (report.text or "") for report in reports)
+        assert any("failure from gw1" in (report.text or "") for report in reports)
+    elif error_source == "module":
+        assert {case.get("name") for case in suite.findall("testcase")} == {
+            "test_bad",
+            "test_other",
+        }
 
 
 def test_collection_crash(pytester: pytest.Pytester) -> None:
