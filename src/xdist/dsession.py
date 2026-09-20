@@ -55,7 +55,7 @@ class DSession:
         self.maxfail: int = config.getvalue("maxfail")
         self.queue: Queue[tuple[str, dict[str, Any]]] = Queue()
         self._session: pytest.Session | None = None
-        self._failed_collection_errors: dict[object, bool] = {}
+        self._failed_collection_errors: set[tuple[str, str]] = set()
         self._active_nodes: set[WorkerController] = set()
         self._failed_nodes_count = 0
         self._max_worker_restart = get_default_max_worker_restart(self.config)
@@ -410,8 +410,10 @@ class DSession:
     ) -> None:
         # Check we haven't already seen this report (from
         # another worker).
-        if rep.longrepr not in self._failed_collection_errors:
-            self._failed_collection_errors[rep.longrepr] = True
+        # Exception representations from different workers need not compare equal.
+        report_key = (rep.nodeid, str(rep.longrepr))
+        if report_key not in self._failed_collection_errors:
+            self._failed_collection_errors.add(report_key)
             self.config.hook.pytest_collectreport(report=rep)
             self._handlefailures(rep)
 
