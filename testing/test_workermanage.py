@@ -504,7 +504,21 @@ class MyWarningUnknown(UserWarning):
 
 
 def test_warning_serialization_tweaked_module() -> None:
-    """Test for GH#404."""
+    """Test for GH#404.
+
+    This used to assert `pytest.raises(ModuleNotFoundError)`, which characterised
+    the defect rather than fixing it: the exception escaped into the controller's
+    receiver thread and ended the session. GH#404 is what that looks like from the
+    outside -- a run dying on `'module' object has no attribute 'GtkWarning'` --
+    and the second report on that issue names this exact line:
+
+        INTERNALERROR>   File "xdist/workermanage.py", ...
+        INTERNALERROR>     cls = getattr(mod, data["message_class_name"])
+
+    A warning nobody can rebuild is not a reason to lose the run. It degrades to
+    the generic `Warning` this function already builds, and the reason travels
+    with it so a genuinely broken package stays diagnosable.
+    """
     # Create a test warning message
     with pytest.warns(UserWarning) as w:
         warnings.warn("hello", MyWarningUnknown)
@@ -516,6 +530,75 @@ def test_warning_serialization_tweaked_module() -> None:
     # Serialize and deserialize
     data = serialize_warning_message(w_msg)
 
-    # __module__ cannot be found!
-    with pytest.raises(ModuleNotFoundError):
-        unserialize_warning_message(data)
+    # __module__ cannot be found, and that is now survivable.
+    message = unserialize_warning_message(data).message
+
+    assert type(message) is Warning
+    assert "hello" in str(message)
+    assert "class not resolved" in str(message)
+
+
+def test_a_class_missing_from_its_module_does_not_end_the_session() -> None:
+    """The other half of GH#404: the module imports, the attribute is not there.
+
+    This is what the 2022 report on that issue hit, by setting `__module__` on a
+    warning class so its name would read nicely. The import succeeds and the
+    `getattr` raises `AttributeError`, which is not `ModuleNotFoundError` and was
+    equally fatal.
+    """
+    with pytest.warns(UserWarning) as w:
+        warnings.warn(UserWarning("the original text"))
+
+    data = serialize_warning_message(w[0])
+    data["message_class_name"] = "NoSuchWarningInThisModule"
+
+    message = unserialize_warning_message(data).message
+
+    assert type(message) is Warning
+    assert "the original text" in str(message)
+    assert "AttributeError" in str(message)
+
+
+def test_an_unimportable_message_module_does_not_end_the_session() -> None:
+    """This runs in the controller's receiver thread.
+
+    `importlib.import_module` was called outside every guard, so a package that
+    raised on import killed the thread. The node went down mid-test and the run
+    failed in the scheduler with `KeyError: <WorkerController gwN>` -- a
+    different subsystem, naming nothing that leads back to the import.
+    """
+    with pytest.warns(UserWarning) as w:
+        warnings.warn(UserWarning("the original text"))
+
+    data = serialize_warning_message(w[0])
+    data["message_module"] = "xdist_no_such_module_for_this_test"
+
+    rebuilt = unserialize_warning_message(data).message
+
+    assert type(rebuilt) is Warning
+    assert "the original text" in str(rebuilt)
+    # The reason survives, or a genuinely broken package becomes a warning nobody
+    # can explain.
+    assert "class not resolved" in str(rebuilt)
+    assert "ModuleNotFoundError" in str(rebuilt)
+
+
+def test_an_unimportable_category_degrades_to_the_message_class() -> None:
+    """The category resolution had no guard at all, and no test either.
+
+    It must not degrade to `None`: pytest renders a warning through
+    `warnings.formatwarning`, which reads `category.__name__`, so a `None` category
+    ends the run just as surely as the unguarded `getattr` it replaces.
+    """
+    with pytest.warns(UserWarning) as w:
+        warnings.warn(UserWarning("the original text"))
+
+    data = serialize_warning_message(w[0])
+    data["category_module"] = "xdist_no_such_module_for_this_test"
+
+    unserialized = unserialize_warning_message(data)
+
+    assert unserialized.category is UserWarning
+    assert str(unserialized.message) == "the original text"
+    # What pytest does with it, and the reason `None` will not do.
+    warnings.formatwarning(str(unserialized.message), unserialized.category, "f.py", 1)

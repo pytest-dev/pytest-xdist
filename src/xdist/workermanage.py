@@ -480,10 +480,20 @@ def unserialize_warning_message(data: dict[str, Any]) -> warnings.WarningMessage
     import importlib
 
     if data["message_module"]:
-        mod = importlib.import_module(data["message_module"])
-        cls = getattr(mod, data["message_class_name"])
+        # Resolving the class imports an arbitrary module, in the controller's
+        # receiver thread. Anything raised here used to kill that thread and fail
+        # the run in the scheduler, naming nothing that led back to this line. The
+        # fallback below already exists for a warning we cannot rebuild.
+        cls: type[Warning] | None
+        unresolved = ""
+        try:
+            mod = importlib.import_module(data["message_module"])
+            cls = getattr(mod, data["message_class_name"])
+        except Exception as exc:
+            cls = None
+            unresolved = f"{type(exc).__name__}: {exc}"
         message = None
-        if data["message_args"] is not None:
+        if cls is not None and data["message_args"] is not None:
             try:
                 message = cls(*data["message_args"])
             except TypeError:
@@ -497,13 +507,24 @@ def unserialize_warning_message(data: dict[str, Any]) -> warnings.WarningMessage
                 cls=data["message_class_name"],
                 msg=data["message_str"],
             )
+            if cls is None:
+                # Say why. Widening a guard around an import is how a genuinely
+                # broken package turns into a warning nobody can explain.
+                message_text = f"{message_text} (class not resolved: {unresolved})"
             message = Warning(message_text)
     else:
         message = data["message_str"]
 
     if data["category_module"]:
-        mod = importlib.import_module(data["category_module"])
-        category = getattr(mod, data["category_class_name"])
+        # Same exposure, and no guard at all until now. It degrades to the
+        # message's own class, not to `None`: pytest renders a warning through
+        # `warnings.formatwarning`, which reads `category.__name__`, so `None`
+        # would end the run just as surely as the unguarded `getattr` did.
+        try:
+            mod = importlib.import_module(data["category_module"])
+            category = getattr(mod, data["category_class_name"])
+        except Exception:
+            category = type(message) if isinstance(message, Warning) else Warning
     else:
         category = None
 
