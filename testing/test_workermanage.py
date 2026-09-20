@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 import shutil
 import textwrap
+from typing import Any
 import warnings
 
 import execnet
@@ -495,6 +497,145 @@ def test_unserialize_warning_msg(w_cls: type[Warning] | str) -> None:
             assert v1.args == v2.args
         else:
             assert v1 == v2
+
+
+class WarningWithFieldFirst(UserWarning):
+    """First argument is a field; the message is rendered from it."""
+
+    def __init__(self, resource: str) -> None:
+        self.resource = resource
+        super().__init__(f"{resource!r} is not available")
+
+
+class WarningWithSlots(UserWarning):
+    """Keeps its state in slots, which `BaseException.__reduce__` never reports."""
+
+    __slots__ = ("code",)
+
+    def __init__(self, code: int | None = None) -> None:
+        self.code = code
+        super().__init__()
+
+    def __str__(self) -> str:
+        return f"code {self.code or 'unknown'} tripped"
+
+
+class WarningWithoutArgs(UserWarning):
+    """No args at all; the text is derived from state."""
+
+    def __init__(self, code: int | None = None) -> None:
+        self.code = code
+        super().__init__()
+
+    def __str__(self) -> str:
+        return f"code {self.code or 'unknown'} tripped"
+
+
+def _rebuild_with_own_callable(code: int) -> WarningWithCustomReduce:
+    return WarningWithCustomReduce(code)
+
+
+class WarningWithCustomReduce(UserWarning):
+    """Replaces `__reduce__`, and carries its state inside the *args*."""
+
+    def __init__(self, code: int | None = None) -> None:
+        self.code = code
+        super().__init__()
+
+    def __str__(self) -> str:
+        return f"code {self.code or 'unknown'} tripped"
+
+    def __reduce__(self) -> tuple[Any, ...]:
+        return (_rebuild_with_own_callable, (self.code,))
+
+
+@pytest.mark.parametrize(
+    ("factory", "expected_text", "attribute", "expected_value"),
+    [
+        (
+            lambda: WarningWithFieldFirst("gpu"),
+            "'gpu' is not available",
+            "resource",
+            "gpu",
+        ),
+        (lambda: WarningWithoutArgs(42), "code 42 tripped", "code", 42),
+        (lambda: WarningWithSlots(11), "code 11 tripped", "code", 11),
+        (lambda: WarningWithCustomReduce(7), "code 7 tripped", "code", 7),
+    ],
+    ids=["field-first", "state-only", "slots", "custom-reduce"],
+)
+def test_warning_state_survives_the_round_trip(
+    factory: Callable[[], UserWarning],
+    expected_text: str,
+    attribute: str,
+    expected_value: object,
+) -> None:
+    """The rebuilt warning must be the same warning, not one that reads like it.
+
+    Calling the class with its own `args` re-runs `__init__`, which for these two
+    shapes either renders around the rendered text or falls back to a default.
+    Both survive `pickle` and `copy` untouched, so the loss was ours.
+    """
+    with pytest.warns(UserWarning) as w:
+        warnings.warn(factory())
+
+    assert len(w) == 1
+    w_msg = w[0]
+    assert str(w_msg.message) == expected_text
+
+    data = serialize_warning_message(w_msg)
+    rebuilt = unserialize_warning_message(data).message
+
+    assert type(rebuilt) is type(w_msg.message)
+    assert str(rebuilt) == expected_text
+    assert getattr(rebuilt, attribute) == expected_value
+
+
+class WarningWithUntransferableState(UserWarning):
+    """Keeps something `execnet.dumps` will not carry."""
+
+    def __init__(self, code: int | None = None) -> None:
+        self.code = code
+        self.handle = lambda: None
+        super().__init__()
+
+    def __str__(self) -> str:
+        return f"code {self.code or 'unknown'} tripped"
+
+
+def test_state_that_cannot_transfer_falls_back_to_a_plain_warning() -> None:
+    """Rebuilding the class without its state is worse than not rebuilding it.
+
+    This shape keeps state its own `__str__` reads, and that state is not
+    serializable. Rebuilding the class and applying no state produces an instance
+    missing the attribute, and the controller raises `AttributeError` the moment it
+    renders the warning -- a failure introduced while fixing a rendering defect.
+    So the class is dropped and the text is reported once.
+    """
+    with pytest.warns(UserWarning) as w:
+        warnings.warn(WarningWithUntransferableState(9))
+
+    original = w[0].message
+    rebuilt = unserialize_warning_message(serialize_warning_message(w[0])).message
+
+    assert type(rebuilt) is Warning
+    assert str(original) in str(rebuilt)
+
+
+def test_a_warning_keeping_no_state_is_still_rebuilt_exactly() -> None:
+    """The fallback must not widen to warnings that have nothing to lose.
+
+    A warning holding nothing beside its `args` reduces to a two-tuple. There is
+    no state, so there is nothing to fail to transfer, and dropping its class
+    would cost the caller its type for no reason.
+    """
+    with pytest.warns(UserWarning) as w:
+        warnings.warn(UserWarning("plain text"))
+
+    rebuilt = unserialize_warning_message(serialize_warning_message(w[0])).message
+
+    assert type(rebuilt) is UserWarning
+    assert str(rebuilt) == "plain text"
 
 
 class MyWarningUnknown(UserWarning):
