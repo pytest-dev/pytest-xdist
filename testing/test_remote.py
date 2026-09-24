@@ -47,11 +47,11 @@ class WorkerSetup:
         self.use_callback = False
         self.events = Queue()  # type: ignore[var-annotated]
 
-    def setup(self) -> None:
+    def setup(self, *args: str) -> None:
         self.pytester.chdir()
         # import os ; os.environ['EXECNET_DEBUG'] = "2"
         self.gateway = execnet.makegateway("execmodel=main_thread_only//popen")
-        self.config = config = self.pytester.parseconfigure()
+        self.config = config = self.pytester.parseconfigure(*args)
         putevent = self.events.put if self.use_callback else None
 
         class DummyMananger:
@@ -167,6 +167,30 @@ class TestWorkerInteractor:
         assert rep.when == "call"
         ev = worker.popevent("workerfinished")
         assert "workeroutput" in ev.kwargs
+
+    def test_loadgroup_collects_group_names_separately(
+        self, worker: WorkerSetup
+    ) -> None:
+        worker.pytester.makepyfile(
+            """
+            import pytest
+
+            @pytest.mark.xdist_group("group")
+            def test_grouped():
+                pass
+
+            def test_ungrouped():
+                pass
+            """
+        )
+        worker.setup("--dist=loadgroup")
+        ev = worker.popevent("collectionfinish")
+
+        assert ev.kwargs["ids"] == [
+            "test_loadgroup_collects_group_names_separately.py::test_grouped",
+            "test_loadgroup_collects_group_names_separately.py::test_ungrouped",
+        ]
+        assert ev.kwargs["group_names"] == ["group", None]
 
     def test_remote_collect_skip(
         self, worker: WorkerSetup, unserialize_report: UnserializerReport

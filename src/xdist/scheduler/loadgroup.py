@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
+
 import pytest
 
 from xdist.remote import Producer
+from xdist.workermanage import WorkerController
 
 from .loadscope import LoadScopeScheduling
 
@@ -20,6 +23,20 @@ class LoadGroupScheduling(LoadScopeScheduling):
             self.log = Producer("loadgroupsched")
         else:
             self.log = log.loadgroupsched
+
+    def add_node_collection(
+        self,
+        node: WorkerController,
+        collection: Sequence[str],
+        group_names: Sequence[str | None] | None = None,
+    ) -> None:
+        if group_names is not None:
+            assert len(collection) == len(group_names)
+            collection = [
+                f"{nodeid}@{group_name}" if group_name is not None else nodeid
+                for nodeid, group_name in zip(collection, group_names)
+            ]
+        super().add_node_collection(node, collection)
 
     def _split_scope(self, nodeid: str) -> str:
         """Determine the scope (grouping) of a nodeid.
