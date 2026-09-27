@@ -46,12 +46,17 @@ def _plainify(value: object) -> object:
     pytest-subtests message, for example), and the distinction is not
     meaningful once the value is on the other side.
 
+    ``str.__str__`` is used rather than ``str()`` because a class mixing ``str``
+    with ``enum.Enum`` overrides ``__str__`` to return ``"Cls.MEMBER"``; that
+    would replace the value with its repr. ``str.__str__`` always yields the
+    underlying string data.
+
     Containers are walked so nested values are converted too. Anything that is
     not a dict/list/tuple/``str`` subclass is returned unchanged, leaving
     execnet's own error for genuinely unserializable values.
     """
     if isinstance(value, str) and type(value) is not str:
-        return str(value)
+        return str.__str__(value)
     if isinstance(value, dict):
         return {k: _plainify(v) for k, v in value.items()}
     if isinstance(value, (list, tuple)):

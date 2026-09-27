@@ -1774,7 +1774,8 @@ def test_report_with_str_subclass_is_serializable(pytester: pytest.Pytester) -> 
 
         import pytest
 
-        class Colour(enum.StrEnum):
+        class Colour(str, enum.Enum):
+            # A str subclass; enum.StrEnum is 3.11+ and xdist supports 3.9.
             RED = "red"
 
         @pytest.hookimpl(hookwrapper=True)

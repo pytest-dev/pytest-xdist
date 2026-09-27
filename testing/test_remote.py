@@ -460,7 +460,13 @@ def test_remote_sys_path(pytester: pytest.Pytester) -> None:
     assert result.ret == 0
 
 
-class _Colour(enum.StrEnum):
+class _Colour(str, enum.Enum):
+    """A ``str`` subclass, as ``enum.StrEnum`` is on Python 3.11+.
+
+    The condition being tested is "a str subclass", which holds on every
+    supported version, so this avoids depending on 3.11's ``enum.StrEnum``.
+    """
+
     RED = "red"
 
 
@@ -480,6 +486,19 @@ def test_plainify_walks_containers() -> None:
     assert type(out["b"][0]) is str
     assert type(out["c"]["d"]) is str
     assert isinstance(out["b"], tuple)
+
+
+def test_plainify_uses_string_data_not_enum_repr() -> None:
+    """``str()`` on a ``str``+``Enum`` mixin returns ``"Cls.MEMBER"``.
+
+    Using it would replace the value with its repr, so the conversion has to go
+    through ``str.__str__`` to get the underlying string data. Note the
+    f-string form differs between 3.11 and 3.12, so it is not used here.
+    """
+    assert str(_Colour.RED) != "red"  # the trap
+    out = _plainify(_Colour.RED)
+    assert out == "red"
+    assert type(out) is str
 
 
 def test_plainify_rebuilds_namedtuple_fieldwise() -> None:
