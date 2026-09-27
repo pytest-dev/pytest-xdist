@@ -1757,3 +1757,71 @@ def test_dist_in_addopts(pytester: pytest.Pytester) -> None:
     )
     result = pytester.runpytest()
     assert result.ret == 0
+
+
+def test_report_with_str_subclass_is_serializable(pytester: pytest.Pytester) -> None:
+    """A ``str`` subclass in the report data survives the worker->controller
+    hop (#1161).
+
+    ``execnet`` serializes by exact type, so a ``StrEnum`` member -- which is a
+    ``str`` -- used as a value in the report data used to raise
+    ``DumpError: can't serialize <enum '...'>`` under ``-n``. pytest-subtests
+    messages are a real way for such a value to get there.
+    """
+    pytester.makeconftest(
+        """
+        import enum
+
+        import pytest
+
+        class Colour(enum.StrEnum):
+            RED = "red"
+
+        @pytest.hookimpl(hookwrapper=True)
+        def pytest_report_to_serializable(config, report):
+            outcome = yield
+            data = outcome.get_result()
+            data["strenum"] = Colour.RED
+            data["nested"] = {"items": [Colour.RED]}
+        """
+    )
+    pytester.makepyfile(
+        """
+        def test_report():
+            pass
+        """
+    )
+    result = pytester.runpytest_subprocess("-n", "2")
+    result.assert_outcomes(passed=1)
+
+
+def test_report_with_unserializable_value_still_errors(
+    pytester: pytest.Pytester,
+) -> None:
+    """Coercing ``str`` subclasses must not swallow genuinely bad values.
+
+    Only ``str`` subclasses are converted; anything execnet cannot handle keeps
+    raising, so a real serialization bug is still reported rather than hidden.
+    """
+    pytester.makepyfile(
+        """
+        import pytest
+
+        class Thing:
+            pass
+
+        def test_report():
+            pass
+        """
+    )
+    pytester.makeconftest(
+        """
+        class Plugin:
+            @pytest.hookimpl
+            def pytest_report_to_serializable(self, config, report):
+                return {"bad": Thing()}
+        """
+    )
+    result = pytester.runpytest_subprocess("-n", "2")
+    # The worker fails to send the report; the run must not silently pass.
+    assert result.ret != 0

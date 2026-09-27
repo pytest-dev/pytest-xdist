@@ -36,6 +36,35 @@ except ImportError:
         pass
 
 
+def _plainify(value: object) -> object:
+    """Return ``value`` with ``str`` subclasses replaced by plain ``str``.
+
+    ``execnet`` serializes by exact type, so a ``str`` subclass -- notably a
+    ``StrEnum`` member, which *is* a ``str`` -- raises
+    ``execnet.gateway_base.DumpError: can't serialize ...`` when it crosses the
+    worker->controller channel. Report payloads can carry such values (a
+    pytest-subtests message, for example), and the distinction is not
+    meaningful once the value is on the other side.
+
+    Containers are walked so nested values are converted too. Anything that is
+    not a dict/list/tuple/``str`` subclass is returned unchanged, leaving
+    execnet's own error for genuinely unserializable values.
+    """
+    if isinstance(value, str) and type(value) is not str:
+        return str(value)
+    if isinstance(value, dict):
+        return {k: _plainify(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        converted = tuple(_plainify(v) for v in value)
+        # A plain tuple, or any tuple subclass reconstructed field-by-field
+        # (report ``location`` is a namedtuple, and ``type(value)(converted)``
+        # would call __new__ with a single iterable).
+        if isinstance(value, tuple) and hasattr(value, "_fields"):
+            return type(value)(*converted)
+        return converted if isinstance(value, tuple) else list(converted)
+    return value
+
+
 class Producer:
     """
     Simplified implementation of the same interface as py.log, for backward compatibility
@@ -125,7 +154,7 @@ class WorkerInteractor:
 
     def sendevent(self, name: str, **kwargs: object) -> None:
         self.log("sending", name, kwargs)
-        self.channel.send((name, kwargs))
+        self.channel.send((name, _plainify(kwargs)))
 
     @pytest.hookimpl
     def pytest_internalerror(self, excrepr: object) -> None:

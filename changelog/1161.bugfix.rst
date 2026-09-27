@@ -1,0 +1,3 @@
+Fixed ``DumpError`` when a report value is a ``str`` subclass (e.g. a
+``StrEnum`` member), which ``execnet`` cannot serialize: such values are now
+sent as plain ``str``.
