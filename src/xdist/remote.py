@@ -18,6 +18,7 @@ import os
 import sys
 import time
 from typing import Any
+from typing import cast
 from typing import Literal
 from typing import TypedDict
 from typing import Union
@@ -34,6 +35,45 @@ except ImportError:
 
     def setproctitle(title: str) -> None:
         pass
+
+
+def _plainify(value: object) -> object:
+    """Return ``value`` with ``str`` subclasses replaced by plain ``str``.
+
+    ``execnet`` serializes by exact type, so a ``str`` subclass -- notably a
+    ``StrEnum`` member, which *is* a ``str`` -- raises
+    ``execnet.gateway_base.DumpError: can't serialize ...`` when it crosses the
+    worker->controller channel. Report payloads can carry such values (a
+    pytest-subtests message, for example), and the distinction is not
+    meaningful once the value is on the other side.
+
+    ``str.__str__`` is used rather than ``str()`` because a class mixing ``str``
+    with ``enum.Enum`` overrides ``__str__`` to return ``"Cls.MEMBER"``; that
+    would replace the value with its repr. ``str.__str__`` always yields the
+    underlying string data.
+
+    Containers are walked so nested values are converted too. Anything that is
+    not a dict/list/tuple/``str`` subclass is returned unchanged, leaving
+    execnet's own error for genuinely unserializable values.
+    """
+    if isinstance(value, str) and type(value) is not str:
+        return str.__str__(value)
+    if isinstance(value, dict):
+        return {k: _plainify(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_plainify(v) for v in value]
+    if isinstance(value, tuple):
+        # A tuple subclass is reconstructed field-by-field: report ``location``
+        # is a namedtuple, whose __new__ takes positional fields, so calling
+        # ``type(value)(converted)`` would raise TypeError.
+        if hasattr(value, "_fields"):
+            # mypy types ``type[tuple]`` as taking a single iterable, but a
+            # namedtuple's __new__ takes positional fields, so the cast is the
+            # accurate description of what is being called.
+            cls = cast("Any", type(value))
+            return cls(*[_plainify(v) for v in value])
+        return tuple(_plainify(v) for v in value)
+    return value
 
 
 class Producer:
@@ -125,7 +165,7 @@ class WorkerInteractor:
 
     def sendevent(self, name: str, **kwargs: object) -> None:
         self.log("sending", name, kwargs)
-        self.channel.send((name, kwargs))
+        self.channel.send((name, _plainify(kwargs)))
 
     @pytest.hookimpl
     def pytest_internalerror(self, excrepr: object) -> None:

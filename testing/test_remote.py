@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import enum
 import marshal
 import pprint
 from queue import Queue
@@ -8,12 +9,14 @@ import time
 from typing import Any
 from typing import Callable
 from typing import cast
+from typing import NamedTuple
 from typing import Union
 import uuid
 
 import execnet
 import pytest
 
+from xdist.remote import _plainify
 from xdist.remote import WorkerInteractor
 from xdist.workermanage import NodeManager
 from xdist.workermanage import WorkerController
@@ -455,3 +458,79 @@ def test_remote_sys_path(pytester: pytest.Pytester) -> None:
     )
     result = pytester.runpytest("-n1")
     assert result.ret == 0
+
+
+class _Colour(str, enum.Enum):
+    """A ``str`` subclass, as ``enum.StrEnum`` is on Python 3.11+.
+
+    The condition being tested is "a str subclass", which holds on every
+    supported version, so this avoids depending on 3.11's ``enum.StrEnum``.
+    """
+
+    RED = "red"
+
+
+class _NonStr(enum.Enum):
+    A = 1
+
+
+def test_plainify_converts_str_subclass() -> None:
+    out = _plainify(_Colour.RED)
+    assert out == "red"
+    assert type(out) is str
+
+
+def test_plainify_walks_containers() -> None:
+    converted: dict[str, Any] = {
+        "a": [_Colour.RED],
+        "b": (_Colour.RED,),
+        "c": {"d": _Colour.RED},
+    }
+    out = _plainify(converted)
+    assert isinstance(out, dict)
+    a, b, c = out["a"], out["b"], out["c"]
+    assert type(a[0]) is str
+    assert type(b[0]) is str
+    assert type(c["d"]) is str
+    assert isinstance(b, tuple)
+
+
+def test_plainify_uses_string_data_not_enum_repr() -> None:
+    """``str()`` on a ``str``+``Enum`` mixin returns ``"Cls.MEMBER"``.
+
+    Using it would replace the value with its repr, so the conversion has to go
+    through ``str.__str__`` to get the underlying string data. Note the
+    f-string form differs between 3.11 and 3.12, so it is not used here.
+    """
+    assert str(_Colour.RED) != "red"  # the trap
+    out = _plainify(_Colour.RED)
+    assert out == "red"
+    assert type(out) is str
+
+
+def test_plainify_rebuilds_namedtuple_fieldwise() -> None:
+    """Report ``location`` is a namedtuple; a single-iterable __new__ call
+    would raise TypeError, so tuple subclasses are rebuilt with *args (#1161)."""
+
+    class NT(NamedTuple):
+        a: str
+        b: int
+
+    out = _plainify(NT(_Colour.RED, 1))
+    assert isinstance(out, NT)
+    assert out.a == "red" and type(out.a) is str
+    assert out.b == 1
+
+
+def test_plainify_leaves_other_values_untouched() -> None:
+    s = "plain"
+    assert _plainify(s) is s
+    assert _plainify(None) is None
+    assert _plainify(True) is True
+    # A non-str Enum is not made serializable by coercion -- converting it
+    # would silently change its meaning.
+    v = _NonStr.A
+    assert _plainify(v) is v
+    # execnet cannot serialize sets either; leave them for it to reject.
+    st = {_Colour.RED}
+    assert _plainify(st) is st
