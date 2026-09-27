@@ -18,6 +18,7 @@ import os
 import sys
 import time
 from typing import Any
+from typing import cast
 from typing import Literal
 from typing import TypedDict
 from typing import Union
@@ -59,14 +60,19 @@ def _plainify(value: object) -> object:
         return str.__str__(value)
     if isinstance(value, dict):
         return {k: _plainify(v) for k, v in value.items()}
-    if isinstance(value, (list, tuple)):
-        converted = tuple(_plainify(v) for v in value)
-        # A plain tuple, or any tuple subclass reconstructed field-by-field
-        # (report ``location`` is a namedtuple, and ``type(value)(converted)``
-        # would call __new__ with a single iterable).
-        if isinstance(value, tuple) and hasattr(value, "_fields"):
-            return type(value)(*converted)
-        return converted if isinstance(value, tuple) else list(converted)
+    if isinstance(value, list):
+        return [_plainify(v) for v in value]
+    if isinstance(value, tuple):
+        # A tuple subclass is reconstructed field-by-field: report ``location``
+        # is a namedtuple, whose __new__ takes positional fields, so calling
+        # ``type(value)(converted)`` would raise TypeError.
+        if hasattr(value, "_fields"):
+            # mypy types ``type[tuple]`` as taking a single iterable, but a
+            # namedtuple's __new__ takes positional fields, so the cast is the
+            # accurate description of what is being called.
+            cls = cast("Any", type(value))
+            return cls(*[_plainify(v) for v in value])
+        return tuple(_plainify(v) for v in value)
     return value
 
 

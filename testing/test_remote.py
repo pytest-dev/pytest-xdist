@@ -481,11 +481,18 @@ def test_plainify_converts_str_subclass() -> None:
 
 
 def test_plainify_walks_containers() -> None:
-    out = _plainify({"a": [_Colour.RED], "b": (_Colour.RED,), "c": {"d": _Colour.RED}})
-    assert type(out["a"][0]) is str
-    assert type(out["b"][0]) is str
-    assert type(out["c"]["d"]) is str
-    assert isinstance(out["b"], tuple)
+    converted: dict[str, Any] = {
+        "a": [_Colour.RED],
+        "b": (_Colour.RED,),
+        "c": {"d": _Colour.RED},
+    }
+    out = _plainify(converted)
+    assert isinstance(out, dict)
+    a, b, c = out["a"], out["b"], out["c"]
+    assert type(a[0]) is str
+    assert type(b[0]) is str
+    assert type(c["d"]) is str
+    assert isinstance(b, tuple)
 
 
 def test_plainify_uses_string_data_not_enum_repr() -> None:
