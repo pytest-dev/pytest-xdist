@@ -324,6 +324,11 @@ class LoadScopeScheduling:
         if node.shutting_down:
             return
 
+        # A replacement worker is in ``assigned_work`` from ``add_node`` on, before it
+        # has reported its collection. It gets work once that collection arrives.
+        if node not in self.registered_collections:
+            return
+
         # Check that more work is available
         if not self.workqueue:
             node.shutdown()

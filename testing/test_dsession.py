@@ -321,6 +321,40 @@ class TestLoadScopeScheduling:
         # With the dead node forgotten, we still wait for node_c instead of scheduling early.
         assert not sched.collection_is_completed
 
+    def test_second_crash_while_replacement_collects(
+        self, pytester: pytest.Pytester
+    ) -> None:
+        # ``remove_node`` reschedules every node in ``assigned_work``, which includes a
+        # replacement that has not reported its collection yet. It must be skipped, not
+        # handed work (``KeyError`` in ``_assign_work_unit``).
+        config = pytester.parseconfig("--tx=3*popen", "--dist=loadscope")
+        sched = LoadScopeScheduling(config)
+        node_a, node_b, node_c = MockNode(), MockNode(), MockNode()
+        collection = [f"test_{m}.py::test_{i}" for m in "abcdef" for i in range(3)]
+        for node in (node_a, node_b, node_c):
+            sched.add_node(node)
+        for node in (node_a, node_b, node_c):
+            sched.add_node_collection(node, collection)
+        sched.schedule()
+
+        sched.remove_node(node_a)
+        node_d = MockNode()
+        sched.add_node(node_d)  # still collecting
+        sched.remove_node(node_b)
+
+        assert node_d.sent == []
+        assert not node_d.shutting_down
+
+        # Once the replacements have collected, they get work as usual.
+        node_e = MockNode()
+        sched.add_node(node_e)
+        for node in (node_d, node_e):
+            sched.add_node_collection(node, collection)
+        assert sched.collection_is_completed
+        sched.schedule()
+        assert node_d.sent
+        assert node_e.sent
+
 
 class TestWorkStealingScheduling:
     def test_ideal_case(self, pytester: pytest.Pytester) -> None:
