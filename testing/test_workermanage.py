@@ -64,6 +64,57 @@ class TestNodeManagerPopen:
         gm = NodeManager(config, ["popen"])
         assert gm.specs[0].chdir is None
 
+    @pytest.mark.parametrize(
+        "execmodel", ["thread", "main_thread_only", "gevent", "eventlet"]
+    )
+    @pytest.mark.parametrize("as_xspec", [False, True])
+    def test_explicit_execmodel(
+        self, config: pytest.Config, execmodel: str, as_xspec: bool
+    ) -> None:
+        spec: execnet.XSpec | str = f"popen//execmodel={execmodel}//id=worker"
+        if as_xspec:
+            spec = execnet.XSpec(spec)
+
+        hm = NodeManager(config, [spec])
+
+        assert hm.specs[0].execmodel == execmodel
+        assert hm.specs[0].id == "worker"
+        assert hm.group.execmodel.backend == "main_thread_only"
+
+    @pytest.mark.parametrize(
+        "spec, expected_execmodel",
+        [
+            ("popen", "main_thread_only"),
+            ("popen//execmodel=main_thread_only", "main_thread_only"),
+            ("popen//execmodel=thread", "thread"),
+        ],
+    )
+    def test_setup_node_execmodel(
+        self,
+        config: pytest.Config,
+        workercontroller: None,
+        spec: str,
+        expected_execmodel: str,
+    ) -> None:
+        hm = NodeManager(config, [])
+        try:
+            hm.setup_node(execnet.XSpec(f"{spec}//id=worker"), lambda event: None)
+            gateway = hm.group["worker"]
+            channel = gateway.remote_exec(
+                """
+                import threading
+                channel.send((channel.gateway.execmodel.backend,
+                              threading.current_thread() is threading.main_thread()))
+                """
+            )
+            remote_execmodel, is_main_thread = channel.receive(timeout=10)
+            assert remote_execmodel == expected_execmodel
+            if expected_execmodel == "main_thread_only":
+                assert is_main_thread
+            assert gateway.execmodel.backend == "main_thread_only"
+        finally:
+            hm.teardown_nodes()
+
     def test_default_chdir(self, config: pytest.Config) -> None:
         specs = ["ssh=noco", "socket=xyz"]
         for spec in NodeManager(config, specs).specs:
