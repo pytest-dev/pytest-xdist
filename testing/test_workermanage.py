@@ -71,9 +71,8 @@ class TestNodeManagerPopen:
     def test_explicit_execmodel(
         self, config: pytest.Config, execmodel: str, as_xspec: bool
     ) -> None:
-        spec: execnet.XSpec | str = f"popen//execmodel={execmodel}//id=worker"
-        if as_xspec:
-            spec = execnet.XSpec(spec)
+        spec_string = f"popen//execmodel={execmodel}//id=worker"
+        spec = execnet.XSpec(spec_string) if as_xspec else spec_string
 
         hm = NodeManager(config, [spec])
 
