@@ -1,0 +1,5 @@
+Command-line options such as ``--tb=short`` are no longer dropped when
+``--looponfail`` is combined with distributed runs (``-n``). Previously the
+worker session was rebuilt only from the parsed options and positional
+arguments, so the original invocation flags were lost and the nested workers
+fell back to their defaults (for example, the long traceback style).
