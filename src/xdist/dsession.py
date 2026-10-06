@@ -219,7 +219,9 @@ class DSession:
                 break
         else:
             assert self.sched is not None
-            if node in self.sched.nodes:
+            # When stopping early (e.g. --exitfirst), workers are told to quit
+            # with tests still queued, so pending items are expected.
+            if node in self.sched.nodes and not self.shouldstop:
                 crashitem = self.sched.remove_node(node)
                 assert not crashitem, (crashitem, node)
         self._active_nodes.remove(node)
@@ -434,7 +436,7 @@ class DSession:
             self.shuttingdown = True
             assert self.sched is not None
             for node in self.sched.nodes:
-                node.shutdown()
+                node.shutdown(immediately=bool(self.shouldstop))
 
     def handle_crashitem(self, nodeid: str, worker: WorkerController) -> None:
         # XXX get more reporting info by recording pytest_runtest_logstart?

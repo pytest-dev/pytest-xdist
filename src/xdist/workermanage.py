@@ -381,10 +381,10 @@ class WorkerController:
     def send_steal(self, indices: Sequence[int]) -> None:
         self.sendcommand("steal", indices=indices)
 
-    def shutdown(self) -> None:
+    def shutdown(self, immediately: bool = False) -> None:
         if not self._down:
             try:
-                self.sendcommand("shutdown")
+                self.sendcommand("shutdown", immediately=immediately)
             except OSError:
                 pass
             self._shutdown_sent = True

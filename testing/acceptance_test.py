@@ -1244,6 +1244,33 @@ def test_maxfail_causes_early_termination(pytester: pytest.Pytester) -> None:
     result.assert_outcomes(failed=1)
 
 
+def test_maxfail_stops_other_workers(pytester: pytest.Pytester) -> None:
+    """Other workers stop after their current test once maxfail is reached,
+    instead of running the rest of their queue (#420)."""
+    pytester.makepyfile(
+        test_a="""
+        import time
+
+        def test_fail():
+            time.sleep(0.5)
+            assert False
+        """,
+        test_b="""
+        import time
+        import pytest
+
+        @pytest.mark.parametrize("i", range(40))
+        def test_slow(i):
+            time.sleep(0.1)
+        """,
+    )
+    # loadfile sends all of test_b to one worker up front.
+    result = pytester.runpytest_subprocess("-x", "-n2", "--dist=loadfile")
+    outcomes = result.parseoutcomes()
+    assert outcomes["failed"] == 1
+    assert outcomes.get("passed", 0) < 20
+
+
 def test_internal_errors_propagate_to_controller(pytester: pytest.Pytester) -> None:
     pytester.makeconftest(
         """

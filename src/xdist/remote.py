@@ -117,6 +117,7 @@ class WorkerInteractor:
         self.testrunuid = workerinput["testrunuid"]
         self.rampdelay = float(workerinput.get("rampdelay", 0.0))
         self._ramp_sleep_done = False
+        self.stop_requested = False
         self.log = Producer(f"worker-{self.workerid}", enabled=config.option.debug)
         self.channel = channel
         self.torun = TestQueue(self.channel.gateway.execmodel)
@@ -171,6 +172,10 @@ class WorkerInteractor:
             for i in range(len(self.session.items)):
                 self.torun.put(i)
         elif name == "shutdown":
+            if kwargs.get("immediately"):
+                # Stop after the current test instead of draining the queue
+                # (e.g. --exitfirst/--maxfail was hit on another worker).
+                self.stop_requested = True
             self.torun.put(Marker.SHUTDOWN)
         elif name == "steal":
             self.steal(kwargs["indices"])
@@ -206,7 +211,7 @@ class WorkerInteractor:
         self.nextitem_index = self.torun.get()
         while self.nextitem_index is not Marker.SHUTDOWN:
             self.run_one_test()
-            if session.shouldfail or session.shouldstop:
+            if session.shouldfail or session.shouldstop or self.stop_requested:
                 break
         return True
 
