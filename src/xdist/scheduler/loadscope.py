@@ -305,13 +305,27 @@ class LoadScopeScheduling:
         This function will group tests with the scope determined by splitting
         the first ``::`` from the right. That is, classes will be grouped in a
         single work unit, and functions from a test module will be grouped by
-        their module. In the above example, scopes will be::
+        their module. Parametrized ids can also contain ``::``, so only
+        top-level separators outside ``[]`` are considered. In the above
+        example, scopes will be::
 
             example/loadsuite/test/test_beta.py
             example/loadsuite/test/test_delta.py::Delta1
             example/loadsuite/epsilon/__init__.py
         """
-        return nodeid.rsplit("::", 1)[0]
+        bracket_level = 0
+        split_at = -1
+        for index, char in enumerate(nodeid[:-1]):
+            if char == "[":
+                bracket_level += 1
+            elif char == "]" and bracket_level:
+                bracket_level -= 1
+            elif char == ":" and nodeid[index + 1] == ":" and bracket_level == 0:
+                split_at = index
+
+        if split_at == -1:
+            return nodeid
+        return nodeid[:split_at]
 
     def _pending_of(self, workload: dict[str, dict[str, bool]]) -> int:
         """Return the number of pending tests in a workload."""
