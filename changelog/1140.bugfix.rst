@@ -1,0 +1,1 @@
+Deduplicate identical collection errors from multiple workers while preserving different errors and errors from different modules.
