@@ -1,0 +1,1 @@
+Keep workers active after ``config.notify_exception()`` notifications until they finish or disconnect, avoiding secondary controller errors.
