@@ -261,7 +261,16 @@ def make_reltoroot(roots: Sequence[Path], args: list[str]) -> list[str]:
     result = []
     for arg in args:
         parts = arg.split(splitcode)
-        fspath = Path(parts[0])
+        # py.path.local (used here prior to migrating to pathlib)
+        # transparently resolved a relative path against the current
+        # working directory. Plain pathlib.Path does not do this, so
+        # a relative path given on the command line (e.g.
+        # "tests/test_sample.py") would never compare equal to, or as
+        # a subpath of, any of the (absolute) rsync roots below via
+        # relative_to() -- even when it does in fact point inside one
+        # of them once resolved against the cwd. Resolve it explicitly
+        # to restore the old behavior. See GH #971.
+        fspath = Path(parts[0]).resolve()
         try:
             exists = fspath.exists()
         except OSError:
