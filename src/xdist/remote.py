@@ -324,6 +324,43 @@ class WorkerInteractor:
         )
 
 
+def _serializable_warning_state(
+    message: Warning,
+) -> tuple[dict[str, Any] | None, bool]:
+    """Return `(state, lost)` for everything the instance keeps beside its `args`.
+
+    Read from the instance rather than from `__reduce__`. `BaseException.__reduce__`
+    reports only `self.__dict__`, so a `__slots__` class reduces to a two-tuple and
+    its slots would read as "no state"; and a class that replaces `__reduce__`
+    would read as "state we cannot send" even when it keeps nothing at all.
+
+    `lost` is the half that matters: rebuilding the class without the attributes
+    its own `__str__` reads raises `AttributeError` when the controller renders
+    the warning, so the caller must be able to tell "keeps nothing" from "keeps
+    something that will not cross".
+    """
+    state: dict[str, Any] = {}
+    state.update(getattr(message, "__dict__", None) or {})
+    for klass in type(message).__mro__:
+        slots = getattr(klass, "__slots__", ())
+        if isinstance(slots, str):
+            slots = (slots,)
+        for name in slots:
+            if name in ("__dict__", "__weakref__"):
+                continue
+            try:
+                state[name] = getattr(message, name)
+            except AttributeError:
+                continue
+    if not state:
+        return None, False
+    try:
+        execnet.dumps(state)
+    except execnet.DumpError:
+        return None, True
+    return state, False
+
+
 def serialize_warning_message(
     warning_message: warnings.WarningMessage,
 ) -> dict[str, Any]:
@@ -339,11 +376,19 @@ def serialize_warning_message(
             message_args = None
         else:
             message_args = warning_message.message.args
+        # `args` alone does not describe a warning. Sending only `args` drops
+        # whatever the instance keeps beside them, and the controller then rebuilds
+        # something that renders plausibly and is not the same warning.
+        message_state, message_state_lost = _serializable_warning_state(
+            warning_message.message
+        )
     else:
         message_str = warning_message.message
         message_module = None
         message_class_name = None
         message_args = None
+        message_state = None
+        message_state_lost = False
     if warning_message.category:
         category_module = warning_message.category.__module__
         category_class_name = warning_message.category.__name__
@@ -356,6 +401,8 @@ def serialize_warning_message(
         "message_module": message_module,
         "message_class_name": message_class_name,
         "message_args": message_args,
+        "message_state": message_state,
+        "message_state_lost": message_state_lost,
         "category_module": category_module,
         "category_class_name": category_class_name,
     }

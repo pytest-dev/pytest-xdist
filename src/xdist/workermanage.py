@@ -483,11 +483,20 @@ def unserialize_warning_message(data: dict[str, Any]) -> warnings.WarningMessage
         mod = importlib.import_module(data["message_module"])
         cls = getattr(mod, data["message_class_name"])
         message = None
-        if data["message_args"] is not None:
+        if data["message_args"] is not None and not data["message_state_lost"]:
+            # Rebuilt without running `__init__`: a warning is free to derive its
+            # message from its own fields, and calling the class with the args would
+            # hand it back its own rendered text as if it were input.
             try:
-                message = cls(*data["message_args"])
-            except TypeError:
-                pass
+                message = cls.__new__(cls)
+                BaseException.__init__(message, *data["message_args"])
+                state = data["message_state"]
+                if state is not None:
+                    # `__setstate__` sets one attribute per key, which reaches
+                    # slots as well as the instance dictionary.
+                    message.__setstate__(state)
+            except Exception:
+                message = None
         if message is None:
             # could not recreate the original warning instance;
             # create a generic Warning instance with the original
