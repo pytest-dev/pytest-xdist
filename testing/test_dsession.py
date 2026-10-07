@@ -15,6 +15,7 @@ from xdist.dsession import WorkerStatus
 from xdist.report import report_collection_diff
 from xdist.scheduler import EachScheduling
 from xdist.scheduler import LoadScheduling
+from xdist.scheduler import LoadScopeScheduling
 from xdist.scheduler import WorkStealingScheduling
 from xdist.workermanage import WorkerController
 
@@ -288,6 +289,36 @@ class TestLoadScheduling:
         rep = collect_hook.reports[0]
         assert isinstance(rep.longrepr, str)
         assert "Different tests were collected between" in rep.longrepr
+
+
+class TestLoadScopeScheduling:
+    def test_remove_node_does_not_requeue_completed_scopes(
+        self, pytester: pytest.Pytester
+    ) -> None:
+        config = pytester.parseconfig("--tx=2*popen")
+        sched = LoadScopeScheduling(config)
+        node1, node2 = MockNode(), MockNode()
+        sched.add_node(node1)
+        sched.add_node(node2)
+        collection = [f"test_{i}.py::test_case" for i in range(6)]
+        sched.add_node_collection(node1, collection)
+        sched.add_node_collection(node2, collection)
+        sched.schedule()
+
+        sched.mark_test_complete(node1, 0)
+        assert any(
+            completed
+            for work_unit in sched.assigned_work[node1].values()
+            for completed in work_unit.values()
+        )
+
+        crashitem = sched.remove_node(node1)
+
+        assert crashitem is not None
+        assert all(
+            any(not completed for completed in work_unit.values())
+            for work_unit in sched.workqueue.values()
+        )
 
 
 class TestWorkStealingScheduling:
