@@ -228,6 +228,9 @@ class WorkerInteractor:
             nextitem = items[self.nextitem_index]
 
         self._sleep_before_first_test()
+        if self.session.shouldstop:
+            # The controller asked us to stop while we were waiting above.
+            return
         worker_title("[pytest-xdist running] %s" % item.nodeid)
 
         start = time.perf_counter()

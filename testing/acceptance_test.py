@@ -1271,6 +1271,23 @@ def test_maxfail_stops_other_workers(pytester: pytest.Pytester) -> None:
     assert outcomes.get("passed", 0) < 20
 
 
+def test_maxfail_stops_worker_during_ramp(pytester: pytest.Pytester) -> None:
+    """A worker that is still in its --ramp delay when maxfail is reached
+    does not start any test (#420)."""
+    pytester.makepyfile(
+        """
+        import pytest
+
+        @pytest.mark.parametrize("i", range(10))
+        def test_x(i):
+            assert i != 0
+    """
+    )
+    # gw1 waits 1.5s before its first test; gw0 fails right away.
+    result = pytester.runpytest_subprocess("-x", "-n2", "--dist=load", "--ramp=3")
+    result.assert_outcomes(failed=1)
+
+
 def test_internal_errors_propagate_to_controller(pytester: pytest.Pytester) -> None:
     pytester.makeconftest(
         """
