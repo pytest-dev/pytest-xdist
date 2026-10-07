@@ -437,7 +437,7 @@ class DSession:
             self.shuttingdown = True
             assert self.sched is not None
             for node in self.sched.nodes:
-                node.shutdown()
+                node.shutdown(shouldstop=self.shouldstop)
 
     def handle_crashitem(self, nodeid: str, worker: WorkerController) -> None:
         # XXX get more reporting info by recording pytest_runtest_logstart?

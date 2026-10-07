@@ -1,0 +1,1 @@
+When ``-x``/``--maxfail`` stops the run, the other workers now stop after their current test instead of running the rest of their queued tests.
