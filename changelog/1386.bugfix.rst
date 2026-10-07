@@ -1,0 +1,1 @@
+Fix ``--dist=loadgroup`` with pytest main, whose structured node IDs no longer honor writes to ``_nodeid``.

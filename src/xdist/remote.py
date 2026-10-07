@@ -252,8 +252,9 @@ class WorkerInteractor:
         config: pytest.Config,
         items: list[pytest.Item],
     ) -> None:
-        # add the group name to nodeid as suffix if --dist=loadgroup
+        # Send group names separately so pytest owns test node IDs.
         if config.getvalue("loadgroup"):
+            self._group_names: list[str | None] = []
             for item in items:
                 gnames: set[str] = set()
                 for mark in item.iter_markers("xdist_group"):
@@ -264,8 +265,9 @@ class WorkerInteractor:
                     )
                     gnames.add(str(name))
                 if not gnames:
+                    self._group_names.append(None)
                     continue
-                item._nodeid = f"{item.nodeid}@{'_'.join(sorted(gnames))}"
+                self._group_names.append("_".join(sorted(gnames)))
 
     @pytest.hookimpl
     def pytest_collection_finish(self, session: pytest.Session) -> None:
@@ -273,6 +275,7 @@ class WorkerInteractor:
             "collectionfinish",
             topdir=str(self.config.rootpath),
             ids=[item.nodeid for item in session.items],
+            group_names=getattr(self, "_group_names", None),
         )
 
     @pytest.hookimpl
