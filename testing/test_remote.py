@@ -391,6 +391,20 @@ class TestWorkerInteractor:
         assert "workeroutput" in ev.kwargs
 
 
+def test_remote_explicit_thread_execmodel(pytester: pytest.Pytester) -> None:
+    pytester.makepyfile(
+        """
+        import pytest
+
+        @pytest.mark.parametrize("value", [1, 2])
+        def test_value(value):
+            assert value > 0
+        """
+    )
+    result = pytester.runpytest("-d", "--tx=popen//execmodel=thread")
+    result.assert_outcomes(passed=2)
+
+
 def test_remote_env_vars(pytester: pytest.Pytester) -> None:
     pytester.makepyfile(
         """

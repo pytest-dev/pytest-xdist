@@ -72,7 +72,7 @@ class NodeManager:
         for spec in specs:
             if not isinstance(spec, execnet.XSpec):
                 spec = execnet.XSpec(spec)
-            if getattr(spec, "execmodel", None) != "main_thread_only":
+            if getattr(spec, "execmodel", None) is None:
                 spec = execnet.XSpec(f"execmodel=main_thread_only//{spec}")
             if not spec.chdir and not spec.popen:
                 spec.chdir = defaultchdir
@@ -105,7 +105,7 @@ class NodeManager:
         putevent: Callable[[tuple[str, dict[str, Any]]], None],
         worker_index: int = 0,
     ) -> WorkerController:
-        if getattr(spec, "execmodel", None) != "main_thread_only":
+        if getattr(spec, "execmodel", None) is None:
             spec = execnet.XSpec(f"execmodel=main_thread_only//{spec}")
         gw = self.group.makegateway(spec)
         self.config.hook.pytest_xdist_newgateway(gateway=gw)
