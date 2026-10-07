@@ -171,10 +171,10 @@ class WorkerInteractor:
             for i in range(len(self.session.items)):
                 self.torun.put(i)
         elif name == "shutdown":
-            if kwargs.get("immediately"):
+            if kwargs.get("shouldstop"):
                 # Stop after the current test instead of draining the queue
                 # (e.g. --exitfirst/--maxfail was hit on another worker).
-                self.session.shouldstop = "controller requested stop"
+                self.session.shouldstop = kwargs["shouldstop"]
             self.torun.put(Marker.SHUTDOWN)
         elif name == "steal":
             self.steal(kwargs["indices"])
