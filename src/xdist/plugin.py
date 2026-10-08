@@ -1,44 +1,177 @@
-import os
+from __future__ import annotations
 
-import py
+import math
+import os
+import sys
+from typing import TYPE_CHECKING
+import uuid
+import warnings
+
 import pytest
 
 
-def auto_detect_cpus():
+if TYPE_CHECKING:
+    from collections.abc import Callable
+    from typing import Literal
+
+
+_sys_path = list(sys.path)  # freeze a copy of sys.path at interpreter startup
+
+
+def _auto_num_workers_envvar(config: pytest.Config) -> int | None:
     try:
-        from os import sched_getaffinity
-    except ImportError:
-        if os.environ.get("TRAVIS") == "true":
-            # workaround https://bitbucket.org/pypy/pypy/issues/2375
-            return 2
-        try:
-            from os import cpu_count
-        except ImportError:
-            from multiprocessing import cpu_count
+        env_var = os.environ.get("PYTEST_XDIST_AUTO_NUM_WORKERS")
+        if env_var is not None:
+            return int(env_var)
+    except ValueError:
+        warnings.warn(
+            "PYTEST_XDIST_AUTO_NUM_WORKERS is not a number: {env_var!r}. Ignoring it."
+        )
+    return None
+
+
+def _auto_num_workers_x_option_python_cpu_count(config: pytest.Config) -> int | None:
+    # New in Python 3.13, but the mechanisms are available since 3.2. Per
+    # https://github.com/python/cpython/issues/109595#issuecomment-1731240132,
+    # the -X option overrides the environment variable.
+    #
+    # Python 3.13 validates both the -X cpu_count and the PYTHON_CPU_COUNT
+    # values. On other Pythons, we treat invalid values the same way we
+    # treat invalid PYTEST_XDIST_AUTO_NUM_WORKERS values: we ignore them.
+    x_option = getattr(sys, "_xoptions", {}).get("cpu_count")
+    if x_option is not None:
+        # If x_option is "default", then we must ensure the env var is not
+        # consulted.
+        if x_option != "default":
+            try:
+                return int(x_option)
+            except ValueError:
+                warnings.warn(
+                    "-X cpu_count value is not a number: {x_option!r}. Ignoring it."
+                )
     else:
+        env_var = os.environ.get("PYTHON_CPU_COUNT")
+        if env_var is not None:
+            try:
+                return int(env_var)
+            except ValueError:
+                warnings.warn(
+                    "PYTHON_CPU_COUNT is not a number: {env_var!r}. Ignoring it."
+                )
+    return None
 
-        def cpu_count():
-            return len(sched_getaffinity(0))
 
+def _auto_num_workers_os_process_cpu_count(config: pytest.Config) -> int | None:
+    if config.option.numprocesses != "logical":
+        return None
+    # New in Python 3.13.
+    try:
+        if TYPE_CHECKING:  # type-check also on older Pythons
+            process_cpu_count: Callable[[], int | None]
+        else:
+            from os import process_cpu_count
+    except ImportError:
+        return None
+    else:
+        count = process_cpu_count()
+        if count:
+            return count
+        return None
+
+
+def _auto_num_workers_psutil(config: pytest.Config) -> int | None:
+    try:
+        import psutil
+    except ImportError:
+        return None
+    else:
+        use_logical: bool = config.option.numprocesses == "logical"
+        count = psutil.cpu_count(logical=use_logical) or psutil.cpu_count()
+        if count:
+            return count
+        return None
+
+
+def _auto_num_workers_os_sched_getaffinity(config: pytest.Config) -> int | None:
+    sched_getaffinity = getattr(os, "sched_getaffinity", None)
+    if sched_getaffinity is not None:
+        return len(sched_getaffinity(0))
+    if os.environ.get("TRAVIS") == "true":
+        # workaround https://github.com/pypy/pypy/issues/2375
+        return 2
+    return None
+
+
+def _auto_num_workers_os_multiprocessing_cpu_count(config: pytest.Config) -> int | None:
+    try:
+        from os import cpu_count
+    except ImportError:
+        from multiprocessing import cpu_count
     try:
         n = cpu_count()
     except NotImplementedError:
-        return 1
-    return n if n else 1
+        return None
+    if n:
+        return n
+    return None
 
 
-class AutoInt(int):
-    """Mark value as auto-detected."""
+@pytest.hookimpl
+def pytest_xdist_auto_num_workers(config: pytest.Config) -> int:
+    providers: list[Callable[[pytest.Config], int | None]] = [
+        _auto_num_workers_envvar,
+        _auto_num_workers_x_option_python_cpu_count,
+        _auto_num_workers_os_process_cpu_count,
+        _auto_num_workers_psutil,
+        _auto_num_workers_os_sched_getaffinity,
+        _auto_num_workers_os_multiprocessing_cpu_count,
+    ]
+    for provider in providers:
+        result = provider(config)
+        if result is not None:
+            return result
+    return 1
 
 
-def parse_numprocesses(s):
-    if s == "auto":
-        return AutoInt(auto_detect_cpus())
+def parse_numprocesses(s: str) -> int | Literal["auto", "logical"]:
+    if s in ("auto", "logical"):
+        return s  # type: ignore[return-value]
     elif s is not None:
         return int(s)
 
 
-def pytest_addoption(parser):
+def parse_ramp_duration(s: str) -> float:
+    value = s.strip()
+    if not value:
+        raise pytest.UsageError("--ramp requires a duration")
+
+    unit = value[-1] if value[-1].isalpha() else ""
+    number = value[:-1] if unit else value
+    multipliers = {"": 1.0, "s": 1.0, "m": 60.0, "h": 3600.0}
+    if unit not in multipliers or not number:
+        raise pytest.UsageError(
+            "--ramp duration must be a non-negative number with optional s, m, or h suffix"
+        )
+
+    try:
+        seconds = float(number)
+    except ValueError as e:
+        raise pytest.UsageError(
+            "--ramp duration must be a non-negative number with optional s, m, or h suffix"
+        ) from e
+
+    if seconds < 0 or not math.isfinite(seconds):
+        raise pytest.UsageError("--ramp duration must be a non-negative finite value")
+
+    return seconds * multipliers[unit]
+
+
+@pytest.hookimpl
+def pytest_addoption(parser: pytest.Parser) -> None:
+    # 'Help' formatting (same rules as pytest's):
+    # Start with capitalized letters.
+    # If a single phrase, do not end with period. If more than one phrase, all phrases end with periods.
+    # Use \n to separate logical lines.
     group = parser.getgroup("xdist", "distributed and subprocess testing")
     group._addoption(
         "-n",
@@ -47,9 +180,11 @@ def pytest_addoption(parser):
         metavar="numprocesses",
         action="store",
         type=parse_numprocesses,
-        help="shortcut for '--dist=load --tx=NUM*popen', "
-        "you can use 'auto' here for auto detection CPUs number on "
-        "host system and it will be 0 when used with --pdb",
+        help="Shortcut for '--dist=load --tx=NUM*popen'.\n"
+        "With 'logical', attempt to detect logical CPU count (requires psutil, falls back to 'auto').\n"
+        "With 'auto', attempt to detect physical CPU count. If physical CPU count cannot be determined, "
+        "falls back to 1.\n"
+        "Forced to 0 (disabled) when used with --pdb.",
     )
     group.addoption(
         "--maxprocesses",
@@ -57,36 +192,83 @@ def pytest_addoption(parser):
         metavar="maxprocesses",
         action="store",
         type=int,
-        help="limit the maximum number of workers to process the tests when using --numprocesses=auto",
+        help="Limit the maximum number of workers to process the tests when using --numprocesses "
+        "with 'auto' or 'logical'",
     )
     group.addoption(
         "--max-worker-restart",
-        "--max-slave-restart",
         action="store",
         default=None,
         dest="maxworkerrestart",
-        help="maximum number of workers that can be restarted "
-        "when crashed (set to zero to disable this feature)\n"
-        "'--max-slave-restart' option is deprecated and will be removed in "
-        "a future release",
+        help="Maximum number of workers that can be restarted "
+        "when crashed (set to zero to disable this feature)",
+    )
+    group.addoption(
+        "--ramp",
+        action="store",
+        default=0.0,
+        dest="ramp",
+        metavar="DURATION",
+        type=parse_ramp_duration,
+        help=(
+            "Gradually start worker test execution over the given duration. "
+            "Accepts seconds by default, or s, m, h suffixes."
+        ),
     )
     group.addoption(
         "--dist",
         metavar="distmode",
         action="store",
-        choices=["each", "load", "loadscope", "loadfile", "no"],
+        choices=[
+            "each",
+            "load",
+            "loadscope",
+            "loadfile",
+            "loadgroup",
+            "worksteal",
+            "no",
+        ],
         dest="dist",
         default="no",
         help=(
-            "set mode for distributing tests to exec environments.\n\n"
-            "each: send each test to all available environments.\n\n"
-            "load: load balance by sending any pending test to any"
+            "Set mode for distributing tests to exec environments.\n\n"
+            "each: Send each test to all available environments.\n\n"
+            "load: Load balance by sending any pending test to any"
             " available environment.\n\n"
-            "loadscope: load balance by sending pending groups of tests in"
+            "loadscope: Load balance by sending pending groups of tests in"
             " the same scope to any available environment.\n\n"
-            "loadfile: load balance by sending test grouped by file"
+            "loadfile: Load balance by sending test grouped by file"
             " to any available environment.\n\n"
-            "(default) no: run tests inprocess, don't distribute."
+            "loadgroup: Like 'load', but sends tests marked with 'xdist_group' to the same worker.\n\n"
+            "worksteal: Split the test suite between available environments,"
+            " then re-balance when any worker runs out of tests.\n\n"
+            "(default) no: Run tests inprocess, don't distribute."
+        ),
+    )
+    group.addoption(
+        "--loadscope-reorder",
+        dest="loadscopereorder",
+        action="store_true",
+        default=True,
+        help=(
+            "Pytest-xdist will default reorder tests by number of tests per scope "
+            "when used in conjunction with loadscope.\n"
+            "This option will enable loadscope reorder which will improve the "
+            "parallelism of the test suite.\n"
+            "However, the partial order of tests might not be retained.\n"
+        ),
+    )
+    group.addoption(
+        "--no-loadscope-reorder",
+        dest="loadscopereorder",
+        action="store_false",
+        help=(
+            "Pytest-xdist will default reorder tests by number of tests per scope "
+            "when used in conjunction with loadscope.\n"
+            "This option will disable loadscope reorder, "
+            "and the partial order of tests can be retained.\n"
+            "This is useful when pytest-xdist is used together with "
+            "other plugins that specify tests in a specific order."
         ),
     )
     group.addoption(
@@ -96,9 +278,20 @@ def pytest_addoption(parser):
         default=[],
         metavar="xspec",
         help=(
-            "add a test execution environment. some examples: "
-            "--tx popen//python=python2.5 --tx socket=192.168.1.102:8888 "
+            "Add a test execution environment. Some examples:\n"
+            "--tx popen//python=python2.5 --tx socket=192.168.1.102:8888\n"
             "--tx ssh=user@codespeak.net//chdir=testcache"
+        ),
+    )
+    group.addoption(
+        "--px",
+        dest="px",
+        action="append",
+        default=[],
+        metavar="xspec",
+        help=(
+            "Add a proxy gateway to pass to test execution environments using `via`. Example:\n"
+            "--px id=my_proxy//socket=192.168.1.102:8888 --tx 5*popen//via=my_proxy"
         ),
     )
     group._addoption(
@@ -106,43 +299,62 @@ def pytest_addoption(parser):
         action="store_true",
         dest="distload",
         default=False,
-        help="load-balance tests.  shortcut for '--dist=load'",
+        help="Load-balance tests. Shortcut for '--dist=load'.",
     )
     group.addoption(
         "--rsyncdir",
         action="append",
         default=[],
         metavar="DIR",
-        help="add directory for rsyncing to remote tx nodes.",
+        help="Add directory for rsyncing to remote tx nodes",
     )
     group.addoption(
         "--rsyncignore",
         action="append",
         default=[],
         metavar="GLOB",
-        help="add expression for ignores when rsyncing to remote tx nodes.",
+        help="Add expression for ignores when rsyncing to remote tx nodes",
+    )
+    group.addoption(
+        "--testrunuid",
+        action="store",
+        help=(
+            "Provide an identifier shared amongst all workers as the value of "
+            "the 'testrun_uid' fixture.\n"
+            "If not provided, 'testrun_uid' is filled with a new unique string "
+            "on every test run."
+        ),
+    )
+    group.addoption(
+        "--maxschedchunk",
+        action="store",
+        type=int,
+        help=(
+            "Maximum number of tests scheduled in one step for --dist=load.\n"
+            "Setting it to 1 will force pytest to send tests to workers one by "
+            "one - might be useful for a small number of slow tests.\n"
+            "Larger numbers will allow the scheduler to submit consecutive "
+            "chunks of tests to workers - allows reusing fixtures.\n"
+            "Due to implementation reasons, at least 2 tests are scheduled per "
+            "worker at the start. Only later tests can be scheduled one by one.\n"
+            "Unlimited if not set."
+        ),
     )
 
-    group.addoption(
-        "--boxed",
-        action="store_true",
-        help="backward compatibility alias for pytest-forked --forked",
-    )
     parser.addini(
         "rsyncdirs",
         "list of (relative) paths to be rsynced for remote distributed testing.",
-        type="pathlist",
+        type="paths",
     )
     parser.addini(
         "rsyncignore",
         "list of (relative) glob-style paths to be ignored for rsyncing.",
-        type="pathlist",
+        type="paths",
     )
     parser.addini(
         "looponfailroots",
-        type="pathlist",
-        help="directories to check for changes",
-        default=[py.path.local()],
+        type="paths",
+        help="directories to check for changes. Default: current directory.",
     )
 
 
@@ -151,7 +363,8 @@ def pytest_addoption(parser):
 # -------------------------------------------------------------------------
 
 
-def pytest_addhooks(pluginmanager):
+@pytest.hookimpl
+def pytest_addhooks(pluginmanager: pytest.PytestPluginManager) -> None:
     from xdist import newhooks
 
     pluginmanager.add_hookspecs(newhooks)
@@ -162,9 +375,21 @@ def pytest_addhooks(pluginmanager):
 # -------------------------------------------------------------------------
 
 
-@pytest.mark.trylast
-def pytest_configure(config):
-    if config.getoption("dist") != "no" and not config.getvalue("collectonly"):
+@pytest.hookimpl(trylast=True)
+def pytest_configure(config: pytest.Config) -> None:
+    config_line = (
+        "xdist_group: specify group for tests should run in same session."
+        "in relation to one another. Provided by pytest-xdist."
+    )
+    config.addinivalue_line("markers", config_line)
+
+    # Skip this plugin entirely when only doing collection.
+    if config.getvalue("collectonly"):
+        return
+
+    # Create the distributed session in case we have a valid distribution
+    # mode and test environments.
+    if _is_distribution_mode(config):
         from xdist.dsession import DSession
 
         session = DSession(config)
@@ -172,15 +397,41 @@ def pytest_configure(config):
         tr = config.pluginmanager.getplugin("terminalreporter")
         if tr:
             tr.showfspath = False
-    if config.getoption("boxed"):
-        config.option.forked = True
+
+    # Deprecation warnings for deprecated command-line/configuration options.
+    if config.getoption("looponfail", None) or config.getini("looponfailroots"):
+        warning = DeprecationWarning(
+            "The --looponfail command line argument and looponfailroots config variable are deprecated.\n"
+            "The loop-on-fail feature will be removed in pytest-xdist 4.0."
+        )
+        config.issue_config_time_warning(warning, 2)
+
+    if config.getoption("rsyncdir", None) or config.getini("rsyncdirs"):
+        warning = DeprecationWarning(
+            "The --rsyncdir command line argument and rsyncdirs config variable are deprecated.\n"
+            "The rsync feature will be removed in pytest-xdist 4.0."
+        )
+        config.issue_config_time_warning(warning, 2)
 
 
-@pytest.mark.tryfirst
-def pytest_cmdline_main(config):
+def _is_distribution_mode(config: pytest.Config) -> bool:
+    """Whether distribution mode is on."""
+    return config.getoption("dist") != "no" and bool(config.getoption("tx"))
+
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_cmdline_main(config: pytest.Config) -> None:
+    if config.option.distload:
+        config.option.dist = "load"
+
     usepdb = config.getoption("usepdb", False)  # a core option
-    if isinstance(config.option.numprocesses, AutoInt):
-        config.option.numprocesses = 0 if usepdb else int(config.option.numprocesses)
+    if config.option.numprocesses in ("auto", "logical"):
+        if usepdb:
+            config.option.numprocesses = 0
+            config.option.dist = "no"
+        else:
+            auto_num_cpus = config.hook.pytest_xdist_auto_num_workers(config=config)
+            config.option.numprocesses = auto_num_cpus
 
     if config.option.numprocesses:
         if config.option.dist == "no":
@@ -189,28 +440,86 @@ def pytest_cmdline_main(config):
         if config.option.maxprocesses:
             numprocesses = min(numprocesses, config.option.maxprocesses)
         config.option.tx = ["popen"] * numprocesses
-    if config.option.distload:
-        config.option.dist = "load"
+
+    if config.option.numprocesses == 0:
+        config.option.dist = "no"
+        config.option.tx = []
+
     val = config.getvalue
-    if not val("collectonly"):
-        if val("dist") != "no":
-            if usepdb:
-                raise pytest.UsageError(
-                    "--pdb is incompatible with distributing tests; try using -n0 or -nauto."
-                )  # noqa: E501
+    if not val("collectonly") and _is_distribution_mode(config) and usepdb:
+        raise pytest.UsageError(
+            "--pdb is incompatible with distributing tests; try using -n0 or -nauto."
+        )
 
 
 # -------------------------------------------------------------------------
-# fixtures
+# fixtures and API to easily know the role of current node
 # -------------------------------------------------------------------------
+
+
+def is_xdist_worker(
+    request_or_session: pytest.FixtureRequest | pytest.Session,
+) -> bool:
+    """Return `True` if this is an xdist worker, `False` otherwise.
+
+    :param request_or_session: the `pytest` `request` or `session` object
+    """
+    return hasattr(request_or_session.config, "workerinput")
+
+
+def is_xdist_controller(
+    request_or_session: pytest.FixtureRequest | pytest.Session,
+) -> bool:
+    """Return `True` if this is the xdist controller, `False` otherwise.
+
+    Note: this method also returns `False` when distribution has not been
+    activated at all.
+
+    :param request_or_session: the `pytest` `request` or `session` object
+    """
+    return (
+        not is_xdist_worker(request_or_session)
+        and request_or_session.config.option.dist != "no"
+    )
+
+
+# ALIAS: TODO, deprecate (#592)
+is_xdist_master = is_xdist_controller
+
+
+def get_xdist_worker_id(
+    request_or_session: pytest.FixtureRequest | pytest.Session,
+) -> str:
+    """Return the id of the current worker ('gw0', 'gw1', etc) or 'master'
+    if running on the controller node.
+
+    If not distributing tests (for example passing `-n0` or not passing `-n` at all)
+    also return 'master'.
+
+    :param request_or_session: the `pytest` `request` or `session` object
+    """
+    if hasattr(request_or_session.config, "workerinput"):
+        workerid: str = request_or_session.config.workerinput["workerid"]
+        return workerid
+    else:
+        # TODO: remove "master", ideally for a None
+        return "master"
 
 
 @pytest.fixture(scope="session")
-def worker_id(request):
+def worker_id(request: pytest.FixtureRequest) -> str:
     """Return the id of the current worker ('gw0', 'gw1', etc) or 'master'
     if running on the master node.
     """
+    # TODO: remove "master", ideally for a None
+    return get_xdist_worker_id(request)
+
+
+@pytest.fixture(scope="session")
+def testrun_uid(request: pytest.FixtureRequest) -> str:
+    """Return the unique id of the current test."""
     if hasattr(request.config, "workerinput"):
-        return request.config.workerinput["workerid"]
+        testrunid: str = request.config.workerinput["testrunuid"]
+        return testrunid
     else:
-        return "master"
+        return uuid.uuid4().hex

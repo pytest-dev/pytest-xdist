@@ -1,20 +1,30 @@
 """
-    Implement -f aka looponfailing for pytest.
+Implement -f aka looponfailing for pytest.
 
-    NOTE that we try to avoid loading and depending on application modules
-    within the controlling process (the one that starts repeatedly test
-    processes) otherwise changes to source code can crash
-    the controlling process which should best never happen.
+NOTE that we try to avoid loading and depending on application modules
+within the controlling process (the one that starts repeatedly test
+processes) otherwise changes to source code can crash
+the controlling process which should best never happen.
 """
-from __future__ import print_function
-import py
-import pytest
+
+from __future__ import annotations
+
+from collections.abc import Sequence
+import os
+from pathlib import Path
 import sys
 import time
+from typing import Any
+
+from _pytest._io import TerminalWriter
 import execnet
+import pytest
+
+from xdist._path import visit_path
 
 
-def pytest_addoption(parser):
+@pytest.hookimpl
+def pytest_addoption(parser: pytest.Parser) -> None:
     group = parser.getgroup("xdist", "distributed and subprocess testing")
     group._addoption(
         "-f",
@@ -22,24 +32,28 @@ def pytest_addoption(parser):
         action="store_true",
         dest="looponfail",
         default=False,
-        help="run tests in subprocess, wait for modified files "
-        "and re-run failing test set until all pass.",
+        help="Run tests in subprocess: wait for files to be modified, then "
+        "re-run failing test set until all pass.",
     )
 
 
-def pytest_cmdline_main(config):
-
+@pytest.hookimpl
+def pytest_cmdline_main(config: pytest.Config) -> int | None:
     if config.getoption("looponfail"):
         usepdb = config.getoption("usepdb", False)  # a core option
         if usepdb:
             raise pytest.UsageError("--pdb is incompatible with --looponfail.")
         looponfail_main(config)
         return 2  # looponfail only can get stop with ctrl-C anyway
+    return None
 
 
-def looponfail_main(config):
+def looponfail_main(config: pytest.Config) -> None:
     remotecontrol = RemoteControl(config)
-    rootdirs = config.getini("looponfailroots")
+    config_roots = config.getini("looponfailroots")
+    if not config_roots:
+        config_roots = [Path.cwd()]
+    rootdirs = [Path(root) for root in config_roots]
     statrecorder = StatRecorder(rootdirs)
     try:
         while 1:
@@ -55,22 +69,22 @@ def looponfail_main(config):
         print()
 
 
-class RemoteControl(object):
-    def __init__(self, config):
-        self.config = config
-        self.failures = []
+class RemoteControl:
+    gateway: execnet.Gateway
 
-    def trace(self, *args):
+    def __init__(self, config: pytest.Config) -> None:
+        self.config = config
+        self.failures: list[str] = []
+
+    def trace(self, *args: object) -> None:
         if self.config.option.debug:
-            msg = " ".join([str(x) for x in args])
+            msg = " ".join(str(x) for x in args)
             print("RemoteControl:", msg)
 
-    def initgateway(self):
-        return execnet.makegateway("popen")
+    def initgateway(self) -> execnet.Gateway:
+        return execnet.makegateway("execmodel=main_thread_only//popen")
 
-    def setup(self, out=None):
-        if out is None:
-            out = py.io.TerminalWriter()
+    def setup(self) -> None:
         if hasattr(self, "gateway"):
             raise ValueError("already have gateway %r" % self.gateway)
         self.trace("setting up worker session")
@@ -80,15 +94,17 @@ class RemoteControl(object):
             args=self.config.args,
             option_dict=vars(self.config.option),
         )
-        remote_outchannel = channel.receive()
+        remote_outchannel: execnet.Channel = channel.receive()
 
-        def write(s):
+        out = TerminalWriter()
+
+        def write(s: str) -> None:
             out._file.write(s)
             out._file.flush()
 
         remote_outchannel.setcallback(write)
 
-    def ensure_teardown(self):
+    def ensure_teardown(self) -> None:
         if hasattr(self, "channel"):
             if not self.channel.isclosed():
                 self.trace("closing", self.channel)
@@ -99,12 +115,12 @@ class RemoteControl(object):
             self.gateway.exit()
             del self.gateway
 
-    def runsession(self):
+    def runsession(self) -> tuple[list[str], list[str], bool]:
         try:
             self.trace("sending", self.failures)
             self.channel.send(self.failures)
             try:
-                return self.channel.receive()
+                return self.channel.receive()  # type: ignore[no-any-return]
             except self.channel.RemoteError:
                 e = sys.exc_info()[1]
                 self.trace("ERROR", e)
@@ -112,11 +128,11 @@ class RemoteControl(object):
         finally:
             self.ensure_teardown()
 
-    def loop_once(self):
+    def loop_once(self) -> None:
         self.setup()
         self.wasfailing = self.failures and len(self.failures)
         result = self.runsession()
-        failures, reports, collection_failed = result
+        failures, _reports, collection_failed = result
         if collection_failed:
             pass  # "Collection failed, keeping previous failure set"
         else:
@@ -127,8 +143,10 @@ class RemoteControl(object):
             self.failures = uniq_failures
 
 
-def repr_pytest_looponfailinfo(failreports, rootdirs):
-    tr = py.io.TerminalWriter()
+def repr_pytest_looponfailinfo(
+    failreports: Sequence[str], rootdirs: Sequence[Path]
+) -> None:
+    tr = TerminalWriter()
     if failreports:
         tr.sep("#", "LOOPONFAILING", bold=True)
         for report in failreports:
@@ -136,10 +154,14 @@ def repr_pytest_looponfailinfo(failreports, rootdirs):
                 tr.line(report, red=True)
     tr.sep("#", "waiting for changes", bold=True)
     for rootdir in rootdirs:
-        tr.line("### Watching:   %s" % (rootdir,), bold=True)
+        tr.line(f"### Watching:   {rootdir}", bold=True)
 
 
-def init_worker_session(channel, args, option_dict):
+def init_worker_session(
+    channel: "execnet.Channel",  # noqa: UP037
+    args: list[str],
+    option_dict: dict[str, "Any"],  # noqa: UP037
+) -> None:
     import os
     import sys
 
@@ -150,13 +172,14 @@ def init_worker_session(channel, args, option_dict):
     newpaths = []
     for p in sys.path:
         if p:
-            if not os.path.isabs(p):
+            # Ignore path placeholders created for editable installs
+            if not os.path.isabs(p) and not p.endswith(".__path_hook__"):
                 p = os.path.abspath(p)
             newpaths.append(p)
     sys.path[:] = newpaths
 
     # fullwidth, hasmarkup = channel.receive()
-    from _pytest.config import Config
+    from pytest import Config
 
     config = Config.fromdictargs(option_dict, list(args))
     config.args = args
@@ -165,21 +188,22 @@ def init_worker_session(channel, args, option_dict):
     WorkerFailSession(config, channel).main()
 
 
-class WorkerFailSession(object):
-    def __init__(self, config, channel):
+class WorkerFailSession:
+    def __init__(self, config: pytest.Config, channel: execnet.Channel) -> None:
         self.config = config
         self.channel = channel
-        self.recorded_failures = []
+        self.recorded_failures: list[pytest.CollectReport | pytest.TestReport] = []
         self.collection_failed = False
         config.pluginmanager.register(self)
         config.option.looponfail = False
         config.option.usepdb = False
 
-    def DEBUG(self, *args):
+    def DEBUG(self, *args: object) -> None:
         if self.config.option.debug:
             print(" ".join(map(str, args)))
 
-    def pytest_collection(self, session):
+    @pytest.hookimpl
+    def pytest_collection(self, session: pytest.Session) -> bool:
         self.session = session
         self.trails = self.current_command
         hook = self.session.ihook
@@ -193,16 +217,18 @@ class WorkerFailSession(object):
         hook.pytest_collection_finish(session=session)
         return True
 
-    def pytest_runtest_logreport(self, report):
+    @pytest.hookimpl
+    def pytest_runtest_logreport(self, report: pytest.TestReport) -> None:
         if report.failed:
             self.recorded_failures.append(report)
 
-    def pytest_collectreport(self, report):
+    @pytest.hookimpl
+    def pytest_collectreport(self, report: pytest.CollectReport) -> None:
         if report.failed:
             self.recorded_failures.append(report)
             self.collection_failed = True
 
-    def main(self):
+    def main(self) -> None:
         self.DEBUG("WORKER: received configuration, waiting for command trails")
         try:
             command = self.channel.receive()
@@ -217,56 +243,57 @@ class WorkerFailSession(object):
             loc = rep.longrepr
             loc = str(getattr(loc, "reprcrash", loc))
             failreports.append(loc)
-        self.channel.send((trails, failreports, self.collection_failed))
+        result = (trails, failreports, self.collection_failed)
+        self.channel.send(result)
 
 
-class StatRecorder(object):
-    def __init__(self, rootdirlist):
+class StatRecorder:
+    def __init__(self, rootdirlist: Sequence[Path]) -> None:
         self.rootdirlist = rootdirlist
-        self.statcache = {}
+        self.statcache: dict[Path, os.stat_result] = {}
         self.check()  # snapshot state
 
-    def fil(self, p):
-        return p.check(file=1, dotfile=0) and p.ext != ".pyc"
+    def fil(self, p: Path) -> bool:
+        return p.is_file() and not p.name.startswith(".") and p.suffix != ".pyc"
 
-    def rec(self, p):
-        return p.check(dotfile=0)
+    def rec(self, p: Path) -> bool:
+        return not p.name.startswith(".") and p.exists()
 
-    def waitonchange(self, checkinterval=1.0):
+    def waitonchange(self, checkinterval: float = 1.0) -> None:
         while 1:
             changed = self.check()
             if changed:
                 return
             time.sleep(checkinterval)
 
-    def check(self, removepycfiles=True):  # noqa, too complex
+    def check(self, removepycfiles: bool = True) -> bool:
         changed = False
-        statcache = self.statcache
-        newstat = {}
+        newstat: dict[Path, os.stat_result] = {}
         for rootdir in self.rootdirlist:
-            for path in rootdir.visit(self.fil, self.rec):
-                oldstat = statcache.pop(path, None)
+            for path in visit_path(rootdir, filter=self.fil, recurse=self.rec):
+                oldstat = self.statcache.pop(path, None)
                 try:
-                    newstat[path] = curstat = path.stat()
-                except py.error.ENOENT:
+                    curstat = path.stat()
+                except OSError:
                     if oldstat:
                         changed = True
                 else:
-                    if oldstat:
+                    newstat[path] = curstat
+                    if oldstat is not None:
                         if (
-                            oldstat.mtime != curstat.mtime
-                            or oldstat.size != curstat.size
+                            oldstat.st_mtime != curstat.st_mtime
+                            or oldstat.st_size != curstat.st_size
                         ):
                             changed = True
                             print("# MODIFIED", path)
-                            if removepycfiles and path.ext == ".py":
-                                pycfile = path + "c"
-                                if pycfile.check():
-                                    pycfile.remove()
+                            if removepycfiles and path.suffix == ".py":
+                                pycfile = path.with_suffix(".pyc")
+                                if pycfile.is_file():
+                                    os.unlink(pycfile)
 
                     else:
                         changed = True
-        if statcache:
+        if self.statcache:
             changed = True
         self.statcache = newstat
         return changed

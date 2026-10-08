@@ -9,49 +9,121 @@ with the worker instance that executed the hook originally:
 You can use this hooks just as you would use normal pytest hooks, but some care
 must be taken in plugins in case ``xdist`` is not installed. Please see:
 
-    http://pytest.org/en/latest/writing_plugins.html#optionally-using-hooks-from-3rd-party-plugins
+    https://pytest.org/en/latest/how-to/writing_hook_functions.html#optionally-using-hooks-from-3rd-party-plugins
 """
+
+from __future__ import annotations
+
+from collections.abc import Sequence
+import os
+from typing import Any
+from typing import TYPE_CHECKING
+
+import execnet
 import pytest
 
 
-def pytest_xdist_setupnodes(config, specs):
-    """ called before any remote node is set up. """
+if TYPE_CHECKING:
+    from xdist.remote import Producer
+    from xdist.scheduler.protocol import Scheduling
+    from xdist.workermanage import WorkerController
 
 
-def pytest_xdist_newgateway(gateway):
-    """ called on new raw gateway creation. """
+@pytest.hookspec()
+def pytest_xdist_setupnodes(
+    config: pytest.Config, specs: Sequence[execnet.XSpec]
+) -> None:
+    """Called before any remote node is set up."""
 
 
-def pytest_xdist_rsyncstart(source, gateways):
-    """ called before rsyncing a directory to remote gateways takes place. """
+@pytest.hookspec()
+def pytest_xdist_newgateway(gateway: execnet.Gateway) -> None:
+    """Called on new raw gateway creation."""
 
 
-def pytest_xdist_rsyncfinish(source, gateways):
-    """ called after rsyncing a directory to remote gateways takes place. """
+@pytest.hookspec(
+    warn_on_impl=DeprecationWarning(
+        "rsync feature is deprecated and will be removed in pytest-xdist 4.0"
+    )
+)
+def pytest_xdist_rsyncstart(
+    source: str | os.PathLike[str],
+    gateways: Sequence[execnet.Gateway],
+) -> None:
+    """Called before rsyncing a directory to remote gateways takes place."""
 
 
-@pytest.mark.firstresult
-def pytest_xdist_getremotemodule():
-    """ called when creating remote node"""
+@pytest.hookspec(
+    warn_on_impl=DeprecationWarning(
+        "rsync feature is deprecated and will be removed in pytest-xdist 4.0"
+    )
+)
+def pytest_xdist_rsyncfinish(
+    source: str | os.PathLike[str],
+    gateways: Sequence[execnet.Gateway],
+) -> None:
+    """Called after rsyncing a directory to remote gateways takes place."""
 
 
-def pytest_configure_node(node):
-    """ configure node information before it gets instantiated. """
+@pytest.hookspec(firstresult=True)
+def pytest_xdist_getremotemodule() -> Any:
+    """Called when creating remote node."""
 
 
-def pytest_testnodeready(node):
-    """ Test Node is ready to operate. """
+@pytest.hookspec()
+def pytest_configure_node(node: WorkerController) -> None:
+    """Configure node information before it gets instantiated."""
 
 
-def pytest_testnodedown(node, error):
-    """ Test Node is down. """
+@pytest.hookspec()
+def pytest_testnodeready(node: WorkerController) -> None:
+    """Test Node is ready to operate."""
 
 
-def pytest_xdist_node_collection_finished(node, ids):
-    """called by the master node when a node finishes collecting.
+@pytest.hookspec()
+def pytest_testnodedown(node: WorkerController, error: object | None) -> None:
+    """Test Node is down."""
+
+
+@pytest.hookspec()
+def pytest_xdist_node_collection_finished(
+    node: WorkerController, ids: Sequence[str]
+) -> None:
+    """Called by the controller node when a worker node finishes collecting."""
+
+
+@pytest.hookspec(firstresult=True)
+def pytest_xdist_make_scheduler(
+    config: pytest.Config, log: Producer
+) -> Scheduling | None:
+    """Return a node scheduler implementation."""
+
+
+@pytest.hookspec(firstresult=True)
+def pytest_xdist_auto_num_workers(config: pytest.Config) -> int:
     """
+    Return the number of workers to spawn when ``--numprocesses=auto`` is given in the
+    command-line.
+
+    .. versionadded:: 2.1
+    """
+    raise NotImplementedError()
 
 
-@pytest.mark.firstresult
-def pytest_xdist_make_scheduler(config, log):
-    """ return a node scheduler implementation """
+@pytest.hookspec(firstresult=True)
+def pytest_handlecrashitem(
+    crashitem: str, report: pytest.TestReport, sched: Scheduling
+) -> None:
+    """
+    Handle a crashitem, modifying the report if necessary.
+
+    The scheduler is provided as a parameter to reschedule the test if desired with
+    `sched.mark_test_pending`.
+
+    def pytest_handlecrashitem(crashitem, report, sched):
+        if should_rerun(crashitem):
+            sched.mark_test_pending(crashitem)
+            report.outcome = "rerun"
+
+    .. versionadded:: 2.2.1
+    """

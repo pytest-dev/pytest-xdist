@@ -1,36 +1,37 @@
-import six
-import py
-import pytest
+from __future__ import annotations
+
+from collections.abc import Generator
+import shutil
+from typing import Callable
+
 import execnet
+import pytest
+
 
 pytest_plugins = "pytester"
 
-if six.PY2:
-
-    @pytest.fixture(scope="session", autouse=True)
-    def _ensure_imports():
-        # we import some modules because pytest-2.8's testdir fixture
-        # will unload all modules after each test and this cause
-        # (unknown) problems with execnet.Group()
-        execnet.Group
-        execnet.makegateway
-
 
 @pytest.fixture(autouse=True)
-def _divert_atexit(request, monkeypatch):
+def _divert_atexit(monkeypatch: pytest.MonkeyPatch) -> Generator[None]:
     import atexit
 
     finalizers = []
 
-    def finish():
-        while finalizers:
-            finalizers.pop()()
+    def fake_register(
+        func: Callable[..., object], *args: object, **kwargs: object
+    ) -> None:
+        finalizers.append((func, args, kwargs))
 
-    monkeypatch.setattr(atexit, "register", finalizers.append)
-    request.addfinalizer(finish)
+    monkeypatch.setattr(atexit, "register", fake_register)
+
+    yield
+
+    while finalizers:
+        func, args, kwargs = finalizers.pop()
+        func(*args, **kwargs)
 
 
-def pytest_addoption(parser):
+def pytest_addoption(parser: pytest.Parser) -> None:
     parser.addoption(
         "--gx",
         action="append",
@@ -40,28 +41,28 @@ def pytest_addoption(parser):
 
 
 @pytest.fixture
-def specssh(request):
+def specssh(request: pytest.FixtureRequest) -> str:
     return getspecssh(request.config)
 
 
 # configuration information for tests
-def getgspecs(config):
+def getgspecs(config: pytest.Config) -> list[execnet.XSpec]:
     return [execnet.XSpec(spec) for spec in config.getvalueorskip("gspecs")]
 
 
-def getspecssh(config):
+def getspecssh(config: pytest.Config) -> str:
     xspecs = getgspecs(config)
     for spec in xspecs:
         if spec.ssh:
-            if not py.path.local.sysfind("ssh"):
-                py.test.skip("command not found: ssh")
+            if not shutil.which("ssh"):
+                pytest.skip("command not found: ssh")
             return str(spec)
-    py.test.skip("need '--gx ssh=...'")
+    pytest.skip("need '--gx ssh=...'")
 
 
-def getsocketspec(config):
+def getsocketspec(config: pytest.Config) -> execnet.XSpec:
     xspecs = getgspecs(config)
     for spec in xspecs:
         if spec.socket:
             return spec
-    py.test.skip("need '--gx socket=...'")
+    pytest.skip("need '--gx socket=...'")

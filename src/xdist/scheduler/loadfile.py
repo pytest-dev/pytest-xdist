@@ -1,5 +1,10 @@
+from __future__ import annotations
+
+import pytest
+
+from xdist.remote import Producer
+
 from .loadscope import LoadScopeScheduling
-from py.log import Producer
 
 
 class LoadFileScheduling(LoadScopeScheduling):
@@ -20,14 +25,14 @@ class LoadFileScheduling(LoadScopeScheduling):
     This class behaves very much like LoadScopeScheduling, but with a file-level scope.
     """
 
-    def __init__(self, config, log=None):
-        super(LoadFileScheduling, self).__init__(config, log)
+    def __init__(self, config: pytest.Config, log: Producer | None = None) -> None:
+        super().__init__(config, log)
         if log is None:
             self.log = Producer("loadfilesched")
         else:
             self.log = log.loadfilesched
 
-    def _split_scope(self, nodeid):
+    def _split_scope(self, nodeid: str) -> str:
         """Determine the scope (grouping) of a nodeid.
 
         There are usually 3 cases for a nodeid::
@@ -43,7 +48,10 @@ class LoadFileScheduling(LoadScopeScheduling):
         This function will group tests with the scope determined by splitting
         the first ``::`` from the left. That is, test will be grouped in a
         single work unit when they reside in the same file.
-         In the above example, scopes will be::
+
+        In the above example, scopes will be::
+
+        .. code-block:: text
 
             example/loadsuite/test/test_beta.py
             example/loadsuite/test/test_delta.py

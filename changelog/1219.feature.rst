@@ -1,0 +1,2 @@
+Added ``--ramp`` to stagger when workers begin executing tests, while still
+allowing workers to start and collect tests normally.

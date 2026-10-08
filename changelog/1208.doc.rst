@@ -1,0 +1,1 @@
+Document that workers run with replaced standard streams and a default terminal size, so tests asserting on width-dependent output may need to monkeypatch the expected width.

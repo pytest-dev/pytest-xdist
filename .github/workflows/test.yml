@@ -1,0 +1,96 @@
+name: test
+
+on:
+  push:
+    branches:
+      - master
+      - "test-me-*"
+
+  pull_request:
+    branches:
+      - "*"
+
+# Cancel running jobs for the same workflow and branch.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+
+  package:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v7
+    - name: Build and Check Package
+      uses: hynek/build-and-inspect-python-package@v2.18
+
+  test:
+
+    needs: [package]
+
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        tox_env:
+          - "py39-pytestmin"
+          - "py39-pytestlatest"
+          - "py310-pytestlatest"
+          - "py311-pytestlatest"
+          - "py311-pytestmain"
+          - "py312-pytestlatest"
+          - "py313-pytestlatest"
+          - "py314-pytestlatest"
+          - "py310-psutil"
+          - "py310-setproctitle"
+
+        os: [ubuntu-latest, windows-latest]
+        include:
+          - tox_env: "py39-pytestmin"
+            python: "3.9"
+          - tox_env: "py39-pytestlatest"
+            python: "3.9"
+          - tox_env: "py310-pytestlatest"
+            python: "3.10"
+          - tox_env: "py311-pytestlatest"
+            python: "3.11"
+          - tox_env: "py311-pytestmain"
+            python: "3.11"
+          - tox_env: "py312-pytestlatest"
+            python: "3.12"
+          - tox_env: "py313-pytestlatest"
+            python: "3.13"
+          - tox_env: "py314-pytestlatest"
+            python: "~3.14.0-0"
+          - tox_env: "py310-psutil"
+            python: "3.10"
+          - tox_env: "py310-setproctitle"
+            python: "3.10"
+
+    steps:
+    - uses: actions/checkout@v7
+      with:
+        # Needed to fetch tags, which are required by setuptools-scm.
+        fetch-depth: 0
+
+    - name: Download Package
+      uses: actions/download-artifact@v8
+      with:
+        name: Packages
+        path: dist
+
+    - name: Set up Python
+      uses: actions/setup-python@v7
+      with:
+        python-version: ${{ matrix.python }}
+
+    - name: Install tox
+      run: |
+        python -m pip install --upgrade pip
+        pip install tox
+
+    - name: Test
+      shell: bash
+      run: |
+        tox run -e ${{ matrix.tox_env }} --installpkg "$(find dist/*.whl)"

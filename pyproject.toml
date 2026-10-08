@@ -1,3 +1,147 @@
+[build-system]
+requires = [
+  "setuptools>=77.0",
+  "setuptools-scm[toml]>=6.2.3",
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pytest-xdist"
+description = "pytest xdist plugin for distributed testing, most importantly across multiple CPUs"
+readme = "README.rst"
+license = "MIT"
+authors = [{name = "holger krekel and contributors", email = "pytest-dev@python.org"}, {email = "holger@merlinux.eu"}]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Framework :: Pytest",
+    "Intended Audience :: Developers",
+    "Operating System :: POSIX",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: MacOS :: MacOS X",
+    "Topic :: Software Development :: Testing",
+    "Topic :: Software Development :: Quality Assurance",
+    "Topic :: Utilities",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+]
+requires-python = ">=3.9"
+dependencies = [
+    "execnet>=2.1",
+    "pytest>=7.0.0",
+]
+dynamic = ["version"]
+
+[project.urls]
+Homepage = "https://github.com/pytest-dev/pytest-xdist"
+Documentation = "https://pytest-xdist.readthedocs.io/en/latest"
+Changelog = "https://pytest-xdist.readthedocs.io/en/latest/changelog.html"
+Source = "https://github.com/pytest-dev/pytest-xdist"
+Tracker = "https://github.com/pytest-dev/pytest-xdist/issues"
+
+[project.entry-points.pytest11]
+xdist = "xdist.plugin"
+"xdist.looponfail" = "xdist.looponfail"
+
+[project.optional-dependencies]
+testing = ["filelock"]
+psutil = ["psutil>=3.0"]
+setproctitle = ["setproctitle"]
+
+[tool.setuptools_scm]
+write_to = "src/xdist/_version.py"
+
+[tool.pytest.ini_options]
+# pytest-services also defines a worker_id fixture, disable
+# it so they don't conflict with each other (#611).
+addopts = "-ra -p no:pytest-services"
+testpaths = ["testing"]
+
+[tool.ruff]
+src = ["src"]
+
+[tool.ruff.format]
+docstring-code-format = true
+
+[tool.ruff.lint]
+select = [
+    "B",        # bugbear
+    "D",        # pydocstyle
+    "E",        # pycodestyle
+    "F",        # pyflakes
+    "I",        # isort
+    "PYI",      # flake8-pyi
+    "UP",       # pyupgrade
+    "RUF",      # ruff
+    "W",        # pycodestyle
+    "T10",      # flake8-debugger
+    "PIE",      # flake8-pie
+    "FA",       # flake8-future-annotations
+    "PGH",      # pygrep-hooks
+    "PLE",      # pylint error
+    "PLW",      # pylint warning
+    "PLR1714",  # Consider merging multiple comparisons
+]
+ignore = [
+    # bugbear ignore
+    "B011",     # Do not `assert False` (`python -O` removes these calls)
+    "B028",     # No explicit `stacklevel` keyword argument found
+    # pydocstyle ignore
+    "D100",     # Missing docstring in public module
+    "D101",     # Missing docstring in public class
+    "D102",     # Missing docstring in public method
+    "D103",     # Missing docstring in public function
+    "D104",     # Missing docstring in public package
+    "D105",     # Missing docstring in magic method
+    "D106",     # Missing docstring in public nested class
+    "D107",     # Missing docstring in `__init__`
+    "D209",     # Multi-line docstring closing quotes should be on a separate line
+    "D205",     # 1 blank line required between summary line and description
+    "D400",     # First line should end with a period
+    "D401",     # First line of docstring should be in imperative mood
+    # ruff ignore
+    "RUF012",   # Mutable class attributes should be annotated with `typing.ClassVar`
+    # pylint ignore
+    "PLW0603",  # Using the global statement
+    "PLW0120",  # remove the else and dedent its contents
+    "PLW2901",  # for loop variable overwritten by assignment target
+    "PLR5501",  # Use `elif` instead of `else` then `if`
+    "UP031",  # Use format specifiers instead of percent format
+]
+
+[tool.ruff.lint.pycodestyle]
+# In order to be able to format for 88 char in ruff format
+max-line-length = 120
+
+[tool.ruff.lint.pydocstyle]
+convention = "pep257"
+
+[tool.ruff.lint.isort]
+force-single-line = true
+combine-as-imports = true
+force-sort-within-sections = true
+order-by-type = false
+lines-after-imports = 2
+
+[tool.ruff.lint.per-file-ignores]
+"src/xdist/_version.py" = ["I001"]
+
+[tool.mypy]
+mypy_path = ["src"]
+files = ["src", "testing"]
+strict = true
+warn_unreachable = true
+[[tool.mypy.overrides]]
+module = ["xdist._version"]
+ignore_missing_imports = true
+
+
 [tool.towncrier]
 package = "xdist"
 filename = "CHANGELOG.rst"
@@ -5,32 +149,23 @@ directory = "changelog/"
 title_format = "pytest-xdist {version} ({project_date})"
 template = "changelog/_template.rst"
 
-  [[tool.towncrier.type]]
-  directory = "removal"
-  name = "Deprecations and Removals"
-  showcontent = true
+[tool.towncrier.fragment.removal]
+name = "Removals"
 
-  [[tool.towncrier.type]]
-  directory = "feature"
-  name = "Features"
-  showcontent = true
+[tool.towncrier.fragment.deprecation]
+name = "Deprecations"
 
-  [[tool.towncrier.type]]
-  directory = "bugfix"
-  name = "Bug Fixes"
-  showcontent = true
+[tool.towncrier.fragment.feature]
+name = "Features"
 
-  [[tool.towncrier.type]]
-  directory = "vendor"
-  name = "Vendored Libraries"
-  showcontent = true
+[tool.towncrier.fragment.bugfix]
+name = "Bug Fixes"
 
-  [[tool.towncrier.type]]
-  directory = "doc"
-  name = "Improved Documentation"
-  showcontent = true
+[tool.towncrier.fragment.vendor]
+name = "Vendored Libraries"
 
-  [[tool.towncrier.type]]
-  directory = "trivial"
-  name = "Trivial Changes"
-  showcontent = true
+[tool.towncrier.fragment.doc]
+name = "Improved Documentation"
+
+[tool.towncrier.fragment.trivial]
+name = "Trivial Changes"

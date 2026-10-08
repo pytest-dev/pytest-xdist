@@ -1,19 +1,32 @@
-from __future__ import print_function
+from __future__ import annotations
+
+from collections.abc import Sequence
+import enum
 import fnmatch
 import os
+from pathlib import Path
 import re
 import sys
+from typing import Any
+from typing import Callable
+from typing import Literal
+from typing import Union
+import uuid
+import warnings
 
-import py
-import pytest
 import execnet
+import pytest
 
+from xdist.plugin import _sys_path
 import xdist.remote
+from xdist.remote import Producer
+from xdist.remote import WorkerInfo
 
 
-def parse_spec_config(config):
+def parse_tx_spec_config(config: pytest.Config) -> list[str]:
     xspeclist = []
-    for xspec in config.getvalue("tx"):
+    tx: list[str] = config.getvalue("tx")
+    for xspec in tx:
         i = xspec.find("*")
         try:
             num = int(xspec[:i])
@@ -28,101 +41,151 @@ def parse_spec_config(config):
     return xspeclist
 
 
-class NodeManager(object):
+class NodeManager:
     EXIT_TIMEOUT = 10
     DEFAULT_IGNORES = [".*", "*.pyc", "*.pyo", "*~"]
 
-    def __init__(self, config, specs=None, defaultchdir="pyexecnetcache"):
+    def __init__(
+        self,
+        config: pytest.Config,
+        specs: Sequence[execnet.XSpec | str] | None = None,
+        defaultchdir: str = "pyexecnetcache",
+    ) -> None:
         self.config = config
         self.trace = self.config.trace.get("nodemanager")
-        self.group = execnet.Group()
+        self.testrunuid = self.config.getoption("testrunuid")
+        if self.testrunuid is None:
+            self.testrunuid = uuid.uuid4().hex
+        self.group = execnet.Group(execmodel="main_thread_only")
+        for proxy_spec in self._getpxspecs():
+            # Proxy gateways do not run workers, and are meant to be passed with the `via` attribute
+            # to additional gateways.
+            # They are useful for running multiple workers on remote machines.
+            if getattr(proxy_spec, "id", None) is None:
+                raise pytest.UsageError(
+                    f"Proxy gateway {proxy_spec} must include an id"
+                )
+            self.group.makegateway(proxy_spec)
         if specs is None:
-            specs = self._getxspecs()
-        self.specs = []
+            specs = self._gettxspecs()
+        self.specs: list[execnet.XSpec] = []
         for spec in specs:
             if not isinstance(spec, execnet.XSpec):
                 spec = execnet.XSpec(spec)
+            if getattr(spec, "execmodel", None) is None:
+                spec = execnet.XSpec(f"execmodel=main_thread_only//{spec}")
             if not spec.chdir and not spec.popen:
                 spec.chdir = defaultchdir
             self.group.allocate_id(spec)
             self.specs.append(spec)
         self.roots = self._getrsyncdirs()
         self.rsyncoptions = self._getrsyncoptions()
-        self._rsynced_specs = set()
+        self._rsynced_specs: set[tuple[Any, Any]] = set()
 
-    def rsync_roots(self, gateway):
+    def rsync_roots(self, gateway: execnet.Gateway) -> None:
         """Rsync the set of roots to the node's gateway cwd."""
         if self.roots:
             for root in self.roots:
                 self.rsync(gateway, root, **self.rsyncoptions)
 
-    def setup_nodes(self, putevent):
+    def setup_nodes(
+        self,
+        putevent: Callable[[tuple[str, dict[str, Any]]], None],
+    ) -> list[WorkerController]:
         self.config.hook.pytest_xdist_setupnodes(config=self.config, specs=self.specs)
         self.trace("setting up nodes")
-        nodes = []
-        for spec in self.specs:
-            nodes.append(self.setup_node(spec, putevent))
-        return nodes
+        return [
+            self.setup_node(spec, putevent, worker_index)
+            for worker_index, spec in enumerate(self.specs)
+        ]
 
-    def setup_node(self, spec, putevent):
+    def setup_node(
+        self,
+        spec: execnet.XSpec,
+        putevent: Callable[[tuple[str, dict[str, Any]]], None],
+        worker_index: int = 0,
+    ) -> WorkerController:
+        if getattr(spec, "execmodel", None) is None:
+            spec = execnet.XSpec(f"execmodel=main_thread_only//{spec}")
         gw = self.group.makegateway(spec)
         self.config.hook.pytest_xdist_newgateway(gateway=gw)
         self.rsync_roots(gw)
-        node = WorkerController(self, gw, self.config, putevent)
-        gw.node = node  # keep the node alive
+        node = WorkerController(self, gw, self.config, putevent, worker_index)
+        # Keep the node alive.
+        gw.node = node  # type: ignore[attr-defined]
         node.setup()
         self.trace("started node %r" % node)
         return node
 
-    def teardown_nodes(self):
+    def teardown_nodes(self) -> None:
         self.group.terminate(self.EXIT_TIMEOUT)
 
-    def _getxspecs(self):
-        return [execnet.XSpec(x) for x in parse_spec_config(self.config)]
+    def _gettxspecs(self) -> list[execnet.XSpec]:
+        return [execnet.XSpec(x) for x in parse_tx_spec_config(self.config)]
 
-    def _getrsyncdirs(self):
+    def _getpxspecs(self) -> list[execnet.XSpec]:
+        return [execnet.XSpec(x) for x in self.config.getoption("px")]
+
+    def _getrsyncdirs(self) -> list[Path]:
         for spec in self.specs:
             if not spec.popen or spec.chdir:
                 break
         else:
             return []
-        import pytest
         import _pytest
+        import pytest
 
-        pytestpath = pytest.__file__.rstrip("co")
-        pytestdir = py.path.local(_pytest.__file__).dirpath()
+        def get_dir(p: str) -> str:
+            """Return the directory path if p is a package or the path to the .py file otherwise."""
+            stripped = p.rstrip("co")
+            if os.path.basename(stripped) == "__init__.py":
+                return os.path.dirname(p)
+            else:
+                return stripped
+
+        pytestpath = get_dir(pytest.__file__)
+        pytestdir = get_dir(_pytest.__file__)
         config = self.config
-        candidates = [py._pydir, pytestpath, pytestdir]
+        candidates = [pytestpath, pytestdir]
         candidates += config.option.rsyncdir
         rsyncroots = config.getini("rsyncdirs")
         if rsyncroots:
             candidates.extend(rsyncroots)
         roots = []
         for root in candidates:
-            root = py.path.local(root).realpath()
-            if not root.check():
-                raise pytest.UsageError("rsyncdir doesn't exist: %r" % (root,))
-            if root not in roots:
-                roots.append(root)
+            root_path = Path(root).resolve()
+            if not root_path.exists():
+                raise pytest.UsageError(f"rsyncdir doesn't exist: {root!r}")
+            if root_path not in roots:
+                roots.append(root_path)
         return roots
 
-    def _getrsyncoptions(self):
+    def _getrsyncoptions(self) -> dict[str, Any]:
         """Get options to be passed for rsync."""
         ignores = list(self.DEFAULT_IGNORES)
-        ignores += self.config.option.rsyncignore
-        ignores += self.config.getini("rsyncignore")
+        ignores += [str(path) for path in self.config.option.rsyncignore]
+        ignores += [str(path) for path in self.config.getini("rsyncignore")]
 
         return {
             "ignores": ignores,
-            "verbose": getattr(self.config.option, "verbose", False),
+            "verbose": getattr(self.config.option, "verbose", 0),
         }
 
-    def rsync(self, gateway, source, notify=None, verbose=False, ignores=None):
+    def rsync(
+        self,
+        gateway: execnet.Gateway,
+        source: str | os.PathLike[str],
+        notify: (
+            Callable[[str, execnet.XSpec, str | os.PathLike[str]], Any] | None
+        ) = None,
+        verbose: int = False,
+        ignores: Sequence[str] | None = None,
+    ) -> None:
         """Perform rsync to remote hosts for node."""
         # XXX This changes the calling behaviour of
         #     pytest_xdist_rsyncstart and pytest_xdist_rsyncfinish to
         #     be called once per rsync target.
-        rsync = HostRSync(source, verbose=verbose, ignores=ignores)
+        rsync = HostRSync(source, verbose=verbose > 0, ignores=ignores)
         spec = gateway.spec
         if spec.popen and not spec.chdir:
             # XXX This assumes that sources are python-packages
@@ -137,7 +200,7 @@ class NodeManager(object):
         if (spec, source) in self._rsynced_specs:
             return
 
-        def finished():
+        def finished() -> None:
             if notify:
                 notify("rsyncrootready", spec, source)
 
@@ -149,124 +212,156 @@ class NodeManager(object):
 
 
 class HostRSync(execnet.RSync):
-    """ RSyncer that filters out common files
-    """
+    """RSyncer that filters out common files."""
 
-    def __init__(self, sourcedir, *args, **kwargs):
-        self._synced = {}
-        self._ignores = []
-        ignores = kwargs.pop("ignores", None) or []
-        for x in ignores:
-            x = getattr(x, "strpath", x)
-            self._ignores.append(re.compile(fnmatch.translate(x)))
-        super(HostRSync, self).__init__(sourcedir=sourcedir, **kwargs)
+    PathLike = Union[str, "os.PathLike[str]"]
 
-    def filter(self, path):
-        path = py.path.local(path)
+    def __init__(
+        self,
+        sourcedir: PathLike,
+        *,
+        ignores: Sequence[PathLike] | None = None,
+        verbose: bool = True,
+    ) -> None:
+        if ignores is None:
+            ignores = []
+        self._ignores = [re.compile(fnmatch.translate(os.fspath(x))) for x in ignores]
+        super().__init__(sourcedir=Path(sourcedir), verbose=verbose)
+
+    def filter(self, path: PathLike) -> bool:
+        path = Path(path)
         for cre in self._ignores:
-            if cre.match(path.basename) or cre.match(path.strpath):
+            if cre.match(path.name) or cre.match(str(path)):
                 return False
         else:
             return True
 
-    def add_target_host(self, gateway, finished=None):
+    def add_target_host(
+        self,
+        gateway: execnet.Gateway,
+        finished: Callable[[], None] | None = None,
+    ) -> None:
         remotepath = os.path.basename(self._sourcedir)
-        super(HostRSync, self).add_target(
-            gateway, remotepath, finishedcallback=finished, delete=True
-        )
+        super().add_target(gateway, remotepath, finishedcallback=finished, delete=True)
 
-    def _report_send_file(self, gateway, modified_rel_path):
-        if self._verbose:
+    def _report_send_file(
+        self,
+        gateway: execnet.Gateway,  # type: ignore[override]
+        modified_rel_path: str,
+    ) -> None:
+        if self._verbose > 0:
             path = os.path.basename(self._sourcedir) + "/" + modified_rel_path
             remotepath = gateway.spec.chdir
-            print("%s:%s <= %s" % (gateway.spec, remotepath, path))
+            print(f"{gateway.spec}:{remotepath} <= {path}")
 
 
-def make_reltoroot(roots, args):
+def make_reltoroot(roots: Sequence[Path], args: list[str]) -> list[str]:
     # XXX introduce/use public API for splitting pytest args
     splitcode = "::"
     result = []
     for arg in args:
         parts = arg.split(splitcode)
-        fspath = py.path.local(parts[0])
-        if not fspath.exists():
+        fspath = Path(parts[0])
+        try:
+            exists = fspath.exists()
+        except OSError:
+            exists = False
+        if not exists:
             result.append(arg)
             continue
         for root in roots:
-            x = fspath.relto(root)
+            x: Path | None
+            try:
+                x = fspath.relative_to(root)
+            except ValueError:
+                x = None
             if x or fspath == root:
-                parts[0] = root.basename + "/" + x
+                parts[0] = root.name + "/" + str(x)
                 break
         else:
-            raise ValueError("arg %s not relative to an rsync root" % (arg,))
+            raise ValueError(f"arg {arg} not relative to an rsync root")
         result.append(splitcode.join(parts))
     return result
 
 
-class WorkerController(object):
-    ENDMARK = -1
+class Marker(enum.Enum):
+    END = -1
+
+
+class WorkerController:
+    # Set when the worker is ready.
+    workerinfo: WorkerInfo
 
     class RemoteHook:
-        @pytest.mark.trylast
-        def pytest_xdist_getremotemodule(self):
+        @pytest.hookimpl(trylast=True)
+        def pytest_xdist_getremotemodule(self) -> Any:
             return xdist.remote
 
-    def __init__(self, nodemanager, gateway, config, putevent):
+    def __init__(
+        self,
+        nodemanager: NodeManager,
+        gateway: execnet.Gateway,
+        config: pytest.Config,
+        putevent: Callable[[tuple[str, dict[str, Any]]], None],
+        worker_index: int = 0,
+    ) -> None:
         config.pluginmanager.register(self.RemoteHook())
         self.nodemanager = nodemanager
         self.putevent = putevent
         self.gateway = gateway
         self.config = config
+        workercount = len(nodemanager.specs)
+        ramp = getattr(config.option, "ramp", 0.0)
+        rampdelay = ramp * worker_index / workercount if workercount and ramp else 0.0
         self.workerinput = {
             "workerid": gateway.id,
-            "workercount": len(nodemanager.specs),
-            "slaveid": gateway.id,
-            "slavecount": len(nodemanager.specs),
+            "workercount": workercount,
+            "testrunuid": nodemanager.testrunuid,
             "mainargv": sys.argv,
+            "rampdelay": rampdelay,
         }
-        # TODO: deprecated name, backward compatibility only. Remove it in future
-        self.slaveinput = self.workerinput
         self._down = False
         self._shutdown_sent = False
-        self.log = py.log.Producer("workerctl-%s" % gateway.id)
-        if not self.config.option.debug:
-            py.log.setconsumer(self.log._keywords, None)
+        self.log = Producer(f"workerctl-{gateway.id}", enabled=config.option.debug)
 
-    def __repr__(self):
-        return "<%s %s>" % (self.__class__.__name__, self.gateway.id)
+    def __repr__(self) -> str:
+        return f"<{self.__class__.__name__} {self.gateway.id}>"
 
     @property
-    def shutting_down(self):
+    def shutting_down(self) -> bool:
         return self._down or self._shutdown_sent
 
-    def setup(self):
+    def setup(self) -> None:
         self.log("setting up worker session")
+        # Cache rinfo for backward compatibility, since pytest-cov
+        # accesses rinfo while the main thread is busy executing our
+        # remote_exec call, which triggers a deadlock error for the
+        # main_thread_only execmodel if the rinfo has not been cached.
+        self.gateway._rinfo()
         spec = self.gateway.spec
-        if hasattr(self.config, "invocation_params"):
-            args = [str(x) for x in self.config.invocation_params.args or ()]
-            option_dict = {}
-        else:
-            args = self.config.args
-            option_dict = vars(self.config.option)
+        args = [str(x) for x in self.config.invocation_params.args or ()]
+        option_dict = {}
         if not spec.popen or spec.chdir:
             args = make_reltoroot(self.nodemanager.roots, args)
         if spec.popen:
             name = "popen-%s" % self.gateway.id
-            if hasattr(self.config, "_tmpdirhandler"):
-                basetemp = self.config._tmpdirhandler.getbasetemp()
-                option_dict["basetemp"] = str(basetemp.join(name))
+            if hasattr(self.config, "_tmp_path_factory"):
+                basetemp = self.config._tmp_path_factory.getbasetemp()
+                option_dict["basetemp"] = str(basetemp / name)
         self.config.hook.pytest_configure_node(node=self)
 
         remote_module = self.config.hook.pytest_xdist_getremotemodule()
         self.channel = self.gateway.remote_exec(remote_module)
         # change sys.path only for remote workers
-        change_sys_path = not self.gateway.spec.popen
+        # restore sys.path from a frozen copy for local workers
+        change_sys_path = _sys_path if self.gateway.spec.popen else None
         self.channel.send((self.workerinput, args, option_dict, change_sys_path))
 
-        if self.putevent:
-            self.channel.setcallback(self.process_from_remote, endmarker=self.ENDMARK)
+        # putevent is only None in a test.
+        if self.putevent:  # type: ignore[truthy-function]
+            self.channel.setcallback(self.process_from_remote, endmarker=Marker.END)
 
-    def ensure_teardown(self):
+    def ensure_teardown(self) -> None:
         if hasattr(self, "channel"):
             if not self.channel.isclosed():
                 self.log("closing", self.channel)
@@ -277,40 +372,45 @@ class WorkerController(object):
             self.gateway.exit()
             # del self.gateway
 
-    def send_runtest_some(self, indices):
+    def send_runtest_some(self, indices: Sequence[int]) -> None:
         self.sendcommand("runtests", indices=indices)
 
-    def send_runtest_all(self):
+    def send_runtest_all(self) -> None:
         self.sendcommand("runtests_all")
 
-    def shutdown(self):
+    def send_steal(self, indices: Sequence[int]) -> None:
+        self.sendcommand("steal", indices=indices)
+
+    def shutdown(self) -> None:
         if not self._down:
             try:
                 self.sendcommand("shutdown")
-            except (IOError, OSError):
+            except OSError:
                 pass
             self._shutdown_sent = True
 
-    def sendcommand(self, name, **kwargs):
-        """ send a named parametrized command to the other side. """
-        self.log("sending command %s(**%s)" % (name, kwargs))
+    def sendcommand(self, name: str, **kwargs: object) -> None:
+        """Send a named parametrized command to the other side."""
+        self.log(f"sending command {name}(**{kwargs})")
         self.channel.send((name, kwargs))
 
-    def notify_inproc(self, eventname, **kwargs):
-        self.log("queuing %s(**%s)" % (eventname, kwargs))
+    def notify_inproc(self, eventname: str, **kwargs: object) -> None:
+        self.log(f"queuing {eventname}(**{kwargs})")
         self.putevent((eventname, kwargs))
 
-    def process_from_remote(self, eventcall):  # noqa too complex
-        """ this gets called for each object we receive from
-            the other side and if the channel closes.
+    def process_from_remote(
+        self, eventcall: tuple[str, dict[str, Any]] | Literal[Marker.END]
+    ) -> None:
+        """This gets called for each object we receive from
+        the other side and if the channel closes.
 
-            Note that channel callbacks run in the receiver
-            thread of execnet gateways - we need to
-            avoid raising exceptions or doing heavy work.
+        Note that channel callbacks run in the receiver
+        thread of execnet gateways - we need to
+        avoid raising exceptions or doing heavy work.
         """
         try:
-            if eventcall == self.ENDMARK:
-                err = self.channel._getremoteerror()
+            if eventcall is Marker.END:
+                err: object | None = self.channel._getremoteerror()  # type: ignore[no-untyped-call]
                 if not self._down:
                     if not err or isinstance(err, EOFError):
                         err = "Not properly terminated"  # lost connection?
@@ -319,12 +419,14 @@ class WorkerController(object):
                 return
             eventname, kwargs = eventcall
             if eventname in ("collectionstart",):
-                self.log("ignoring %s(%s)" % (eventname, kwargs))
+                self.log(f"ignoring {eventname}({kwargs})")
             elif eventname == "workerready":
+                self.notify_inproc(eventname, node=self, **kwargs)
+            elif eventname == "internal_error":
                 self.notify_inproc(eventname, node=self, **kwargs)
             elif eventname == "workerfinished":
                 self._down = True
-                self.workeroutput = self.slaveoutput = kwargs["workeroutput"]
+                self.workeroutput = kwargs["workeroutput"]
                 self.notify_inproc("workerfinished", node=self)
             elif eventname in ("logstart", "logfinish"):
                 self.notify_inproc(eventname, node=self, **kwargs)
@@ -337,8 +439,15 @@ class WorkerController(object):
                     rep.item_index = item_index
                 self.notify_inproc(eventname, node=self, rep=rep)
             elif eventname == "collectionfinish":
-                self.notify_inproc(eventname, node=self, ids=kwargs["ids"])
+                self.notify_inproc(
+                    eventname,
+                    node=self,
+                    ids=kwargs["ids"],
+                    group_names=kwargs.get("group_names"),
+                )
             elif eventname == "runtest_protocol_complete":
+                self.notify_inproc(eventname, node=self, **kwargs)
+            elif eventname == "unscheduled":
                 self.notify_inproc(eventname, node=self, **kwargs)
             elif eventname == "logwarning":
                 self.notify_inproc(
@@ -348,7 +457,7 @@ class WorkerController(object):
                     nodeid=kwargs["nodeid"],
                     fslocation=kwargs["nodeid"],
                 )
-            elif eventname == "warning_captured":
+            elif eventname == "warning_recorded":
                 warning_message = unserialize_warning_message(
                     kwargs["warning_message_data"]
                 )
@@ -356,29 +465,23 @@ class WorkerController(object):
                     eventname,
                     warning_message=warning_message,
                     when=kwargs["when"],
-                    item=kwargs["item"],
+                    nodeid=kwargs["nodeid"],
+                    location=kwargs["location"],
                 )
             else:
-                raise ValueError("unknown event: %s" % (eventname,))
+                raise ValueError(f"unknown event: {eventname}")
         except KeyboardInterrupt:
             # should not land in receiver-thread
             raise
-        except:  # noqa
-            from _pytest._code import ExceptionInfo
-
-            # ExceptionInfo API changed in pytest 4.1
-            if hasattr(ExceptionInfo, "from_current"):
-                excinfo = ExceptionInfo.from_current()
-            else:
-                excinfo = ExceptionInfo()
+        except BaseException:
+            excinfo = pytest.ExceptionInfo.from_current()
             print("!" * 20, excinfo)
             self.config.notify_exception(excinfo)
             self.shutdown()
             self.notify_inproc("errordown", node=self, error=excinfo)
 
 
-def unserialize_warning_message(data):
-    import warnings
+def unserialize_warning_message(data: dict[str, Any]) -> warnings.WarningMessage:
     import importlib
 
     if data["message_module"]:
@@ -411,7 +514,7 @@ def unserialize_warning_message(data):
 
     kwargs = {"message": message, "category": category}
     # access private _WARNING_DETAILS because the attributes vary between Python versions
-    for attr_name in warnings.WarningMessage._WARNING_DETAILS:
+    for attr_name in warnings.WarningMessage._WARNING_DETAILS:  # type: ignore[attr-defined]
         if attr_name in ("message", "category"):
             continue
         kwargs[attr_name] = data[attr_name]

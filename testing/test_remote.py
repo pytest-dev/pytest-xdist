@@ -1,56 +1,75 @@
-import py
-import pprint
-import pytest
-import sys
+from __future__ import annotations
 
-from xdist.workermanage import WorkerController
-import execnet
 import marshal
+import pprint
+from queue import Queue
+import sys
+import time
+from typing import Any
+from typing import Callable
+from typing import cast
+from typing import Union
+import uuid
 
-from six.moves.queue import Queue
+import execnet
+import pytest
+
+from xdist.remote import WorkerInteractor
+from xdist.workermanage import NodeManager
+from xdist.workermanage import WorkerController
+
 
 WAIT_TIMEOUT = 10.0
 
 
-def check_marshallable(d):
+def check_marshallable(d: object) -> None:
     try:
-        marshal.dumps(d)
-    except ValueError:
+        marshal.dumps(d)  # type: ignore[arg-type]
+    except ValueError as e:
         pprint.pprint(d)
-        raise ValueError("not marshallable")
+        raise ValueError("not marshallable") from e
 
 
 class EventCall:
-    def __init__(self, eventcall):
+    def __init__(self, eventcall: tuple[str, dict[str, Any]]) -> None:
         self.name, self.kwargs = eventcall
 
-    def __str__(self):
-        return "<EventCall %s(**%s)>" % (self.name, self.kwargs)
+    def __str__(self) -> str:
+        return f"<EventCall {self.name}(**{self.kwargs})>"
 
 
 class WorkerSetup:
-    use_callback = False
-
-    def __init__(self, request, testdir):
+    def __init__(
+        self, request: pytest.FixtureRequest, pytester: pytest.Pytester
+    ) -> None:
         self.request = request
-        self.testdir = testdir
-        self.events = Queue()
+        self.pytester = pytester
+        self.use_callback = False
+        self.events = Queue()  # type: ignore[var-annotated]
 
-    def setup(self,):
-        self.testdir.chdir()
+    def setup(self, *args: str) -> None:
+        self.pytester.chdir()
         # import os ; os.environ['EXECNET_DEBUG'] = "2"
-        self.gateway = execnet.makegateway()
-        self.config = config = self.testdir.parseconfigure()
-        putevent = self.use_callback and self.events.put or None
+        self.gateway = execnet.makegateway("execmodel=main_thread_only//popen")
+        self.config = config = self.pytester.parseconfigure(*args)
+        putevent = self.events.put if self.use_callback else None
 
         class DummyMananger:
+            testrunuid = uuid.uuid4().hex
             specs = [0, 1]
 
-        self.slp = WorkerController(DummyMananger, self.gateway, config, putevent)
+        nodemanager = cast(NodeManager, DummyMananger)
+
+        self.slp = WorkerController(
+            nodemanager=nodemanager,
+            gateway=self.gateway,
+            config=config,
+            putevent=putevent,  # type: ignore[arg-type]
+        )
         self.request.addfinalizer(self.slp.ensure_teardown)
         self.slp.setup()
 
-    def popevent(self, name=None):
+    def popevent(self, name: str | None = None) -> EventCall:
         while 1:
             if self.use_callback:
                 data = self.events.get(timeout=WAIT_TIMEOUT)
@@ -59,39 +78,66 @@ class WorkerSetup:
             ev = EventCall(data)
             if name is None or ev.name == name:
                 return ev
-            print("skipping %s" % (ev,))
+            print(f"skipping {ev}")
 
-    def sendcommand(self, name, **kwargs):
+    def sendcommand(self, name: str, **kwargs: Any) -> None:
         self.slp.sendcommand(name, **kwargs)
 
 
 @pytest.fixture
-def worker(request, testdir):
-    return WorkerSetup(request, testdir)
-
-
-@pytest.mark.xfail(reason="#59")
-def test_remoteinitconfig(testdir):
-    from xdist.remote import remote_initconfig
-
-    config1 = testdir.parseconfig()
-    config2 = remote_initconfig(config1.option.__dict__, config1.args)
-    assert config2.option.__dict__ == config1.option.__dict__
-    assert config2.pluginmanager.getplugin("terminal") in (-1, None)
+def worker(request: pytest.FixtureRequest, pytester: pytest.Pytester) -> WorkerSetup:
+    return WorkerSetup(request, pytester)
 
 
 class TestWorkerInteractor:
+    UnserializerReport = Callable[
+        [dict[str, Any]], Union[pytest.CollectReport, pytest.TestReport]
+    ]
+
+    def test_ramp_delay_sleeps_once_before_first_test(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        slept: list[float] = []
+        monkeypatch.setattr(time, "sleep", slept.append)
+
+        interactor = WorkerInteractor.__new__(WorkerInteractor)
+        interactor.rampdelay = 0.25
+        interactor._ramp_sleep_done = False
+
+        interactor._sleep_before_first_test()
+        interactor._sleep_before_first_test()
+
+        assert slept == [0.25]
+
+    def test_ramp_delay_zero_does_not_sleep(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        slept: list[float] = []
+        monkeypatch.setattr(time, "sleep", slept.append)
+
+        interactor = WorkerInteractor.__new__(WorkerInteractor)
+        interactor.rampdelay = 0.0
+        interactor._ramp_sleep_done = False
+
+        interactor._sleep_before_first_test()
+
+        assert slept == []
+
     @pytest.fixture
-    def unserialize_report(self, pytestconfig):
-        def unserialize(data):
-            return pytestconfig.hook.pytest_report_from_serializable(
+    def unserialize_report(self, pytestconfig: pytest.Config) -> UnserializerReport:
+        def unserialize(
+            data: dict[str, Any],
+        ) -> pytest.CollectReport | pytest.TestReport:
+            return pytestconfig.hook.pytest_report_from_serializable(  # type: ignore[no-any-return]
                 config=pytestconfig, data=data
             )
 
         return unserialize
 
-    def test_basic_collect_and_runtests(self, worker, unserialize_report):
-        worker.testdir.makepyfile(
+    def test_basic_collect_and_runtests(
+        self, worker: WorkerSetup, unserialize_report: UnserializerReport
+    ) -> None:
+        worker.pytester.makepyfile(
             """
             def test_func():
                 pass
@@ -104,7 +150,7 @@ class TestWorkerInteractor:
         assert ev.name == "collectionstart"
         assert not ev.kwargs
         ev = worker.popevent("collectionfinish")
-        assert ev.kwargs["topdir"] == worker.testdir.tmpdir
+        assert ev.kwargs["topdir"] == str(worker.pytester.path)
         ids = ev.kwargs["ids"]
         assert len(ids) == 1
         worker.sendcommand("runtests", indices=list(range(len(ids))))
@@ -122,8 +168,34 @@ class TestWorkerInteractor:
         ev = worker.popevent("workerfinished")
         assert "workeroutput" in ev.kwargs
 
-    def test_remote_collect_skip(self, worker, unserialize_report):
-        worker.testdir.makepyfile(
+    def test_loadgroup_collects_group_names_separately(
+        self, worker: WorkerSetup
+    ) -> None:
+        worker.pytester.makepyfile(
+            """
+            import pytest
+
+            @pytest.mark.xdist_group("group")
+            def test_grouped():
+                pass
+
+            def test_ungrouped():
+                pass
+            """
+        )
+        worker.setup("--dist=loadgroup")
+        ev = worker.popevent("collectionfinish")
+
+        assert ev.kwargs["ids"] == [
+            "test_loadgroup_collects_group_names_separately.py::test_grouped",
+            "test_loadgroup_collects_group_names_separately.py::test_ungrouped",
+        ]
+        assert ev.kwargs["group_names"] == ["group", None]
+
+    def test_remote_collect_skip(
+        self, worker: WorkerSetup, unserialize_report: UnserializerReport
+    ) -> None:
+        worker.pytester.makepyfile(
             """
             import pytest
             pytest.skip("hello", allow_module_level=True)
@@ -136,12 +208,15 @@ class TestWorkerInteractor:
         assert ev.name == "collectreport"
         rep = unserialize_report(ev.kwargs["data"])
         assert rep.skipped
+        assert isinstance(rep.longrepr, tuple)
         assert rep.longrepr[2] == "Skipped: hello"
         ev = worker.popevent("collectionfinish")
         assert not ev.kwargs["ids"]
 
-    def test_remote_collect_fail(self, worker, unserialize_report):
-        worker.testdir.makepyfile("""aasd qwe""")
+    def test_remote_collect_fail(
+        self, worker: WorkerSetup, unserialize_report: UnserializerReport
+    ) -> None:
+        worker.pytester.makepyfile("""aasd qwe""")
         worker.setup()
         ev = worker.popevent("collectionstart")
         assert not ev.kwargs
@@ -152,8 +227,10 @@ class TestWorkerInteractor:
         ev = worker.popevent("collectionfinish")
         assert not ev.kwargs["ids"]
 
-    def test_runtests_all(self, worker, unserialize_report):
-        worker.testdir.makepyfile(
+    def test_runtests_all(
+        self, worker: WorkerSetup, unserialize_report: UnserializerReport
+    ) -> None:
+        worker.pytester.makepyfile(
             """
             def test_func(): pass
             def test_func2(): pass
@@ -171,7 +248,7 @@ class TestWorkerInteractor:
         worker.sendcommand("runtests_all")
         worker.sendcommand("shutdown")
         for func in "::test_func", "::test_func2":
-            for i in range(3):  # setup/call/teardown
+            for _ in range(3):  # setup/call/teardown
                 ev = worker.popevent("testreport")
                 assert ev.name == "testreport"
                 rep = unserialize_report(ev.kwargs["data"])
@@ -179,17 +256,19 @@ class TestWorkerInteractor:
         ev = worker.popevent("workerfinished")
         assert "workeroutput" in ev.kwargs
 
-    def test_happy_run_events_converted(self, testdir, worker):
-        py.test.xfail("implement a simple test for event production")
-        assert not worker.use_callback
-        worker.testdir.makepyfile(
+    def test_happy_run_events_converted(
+        self, pytester: pytest.Pytester, worker: WorkerSetup
+    ) -> None:
+        pytest.xfail("implement a simple test for event production")
+        assert not worker.use_callback  # type: ignore[unreachable]
+        worker.pytester.makepyfile(
             """
             def test_func():
                 pass
         """
         )
         worker.setup()
-        hookrec = testdir.getreportrecorder(worker.config)
+        hookrec = pytester.getreportrecorder(worker.config)
         for data in worker.slp.channel:
             worker.slp.process_from_remote(data)
         worker.slp.process_from_remote(worker.slp.ENDMARK)
@@ -205,32 +284,144 @@ class TestWorkerInteractor:
             ]
         )
 
-    def test_process_from_remote_error_handling(self, worker, capsys):
+    def test_process_from_remote_error_handling(
+        self, worker: WorkerSetup, capsys: pytest.CaptureFixture[str]
+    ) -> None:
         worker.use_callback = True
         worker.setup()
-        worker.slp.process_from_remote(("<nonono>", ()))
-        out, err = capsys.readouterr()
+        worker.slp.process_from_remote(("<nonono>", {}))
+        out, _err = capsys.readouterr()
         assert "INTERNALERROR> ValueError: unknown event: <nonono>" in out
         ev = worker.popevent()
         assert ev.name == "errordown"
 
+    def test_steal_work(
+        self, worker: WorkerSetup, unserialize_report: UnserializerReport
+    ) -> None:
+        worker.pytester.makepyfile(
+            """
+            import time
+            def test_func(): time.sleep(1)
+            def test_func2(): pass
+            def test_func3(): pass
+            def test_func4(): pass
+        """
+        )
+        worker.setup()
+        ev = worker.popevent("collectionfinish")
+        ids = ev.kwargs["ids"]
+        assert len(ids) == 4
+        worker.sendcommand("runtests_all")
 
-def test_remote_env_vars(testdir):
-    testdir.makepyfile(
+        # wait for test_func setup
+        ev = worker.popevent("testreport")
+        rep = unserialize_report(ev.kwargs["data"])
+        assert rep.nodeid.endswith("::test_func")
+        assert rep.when == "setup"
+
+        worker.sendcommand("steal", indices=[1, 2])
+        ev = worker.popevent("unscheduled")
+        # Cannot steal index 1 because it is completed already, so do not steal any.
+        assert ev.kwargs["indices"] == []
+
+        # Index 2 can be stolen, as it is still pending.
+        worker.sendcommand("steal", indices=[2])
+        ev = worker.popevent("unscheduled")
+        assert ev.kwargs["indices"] == [2]
+
+        reports = [
+            ("test_func", "call"),
+            ("test_func", "teardown"),
+            ("test_func2", "setup"),
+            ("test_func2", "call"),
+            ("test_func2", "teardown"),
+        ]
+
+        for func, when in reports:
+            ev = worker.popevent("testreport")
+            rep = unserialize_report(ev.kwargs["data"])
+            assert rep.nodeid.endswith(f"::{func}")
+            assert rep.when == when
+
+        worker.sendcommand("shutdown")
+
+        for when in ["setup", "call", "teardown"]:
+            ev = worker.popevent("testreport")
+            rep = unserialize_report(ev.kwargs["data"])
+            assert rep.nodeid.endswith("::test_func4")
+            assert rep.when == when
+
+        ev = worker.popevent("workerfinished")
+        assert "workeroutput" in ev.kwargs
+
+    def test_steal_empty_queue(
+        self, worker: WorkerSetup, unserialize_report: UnserializerReport
+    ) -> None:
+        worker.pytester.makepyfile(
+            """
+            def test_func(): pass
+            def test_func2(): pass
+        """
+        )
+        worker.setup()
+        ev = worker.popevent("collectionfinish")
+        ids = ev.kwargs["ids"]
+        assert len(ids) == 2
+        worker.sendcommand("runtests_all")
+
+        for when in ["setup", "call", "teardown"]:
+            ev = worker.popevent("testreport")
+            rep = unserialize_report(ev.kwargs["data"])
+            assert rep.nodeid.endswith("::test_func")
+            assert rep.when == when
+
+        worker.sendcommand("steal", indices=[0, 1])
+        ev = worker.popevent("unscheduled")
+        assert ev.kwargs["indices"] == []
+
+        worker.sendcommand("shutdown")
+
+        for when in ["setup", "call", "teardown"]:
+            ev = worker.popevent("testreport")
+            rep = unserialize_report(ev.kwargs["data"])
+            assert rep.nodeid.endswith("::test_func2")
+            assert rep.when == when
+
+        ev = worker.popevent("workerfinished")
+        assert "workeroutput" in ev.kwargs
+
+
+def test_remote_explicit_thread_execmodel(pytester: pytest.Pytester) -> None:
+    pytester.makepyfile(
+        """
+        import pytest
+
+        @pytest.mark.parametrize("value", [1, 2])
+        def test_value(value):
+            assert value > 0
+        """
+    )
+    result = pytester.runpytest("-d", "--tx=popen//execmodel=thread")
+    result.assert_outcomes(passed=2)
+
+
+def test_remote_env_vars(pytester: pytest.Pytester) -> None:
+    pytester.makepyfile(
         """
         import os
         def test():
+            assert len(os.environ['PYTEST_XDIST_TESTRUNUID']) == 32
             assert os.environ['PYTEST_XDIST_WORKER'] in ('gw0', 'gw1')
             assert os.environ['PYTEST_XDIST_WORKER_COUNT'] == '2'
     """
     )
-    result = testdir.runpytest("-n2", "--max-worker-restart=0")
+    result = pytester.runpytest("-n2", "--max-worker-restart=0")
     assert result.ret == 0
 
 
-def test_remote_inner_argv(testdir):
+def test_remote_inner_argv(pytester: pytest.Pytester) -> None:
     """Test/document the behavior due to execnet using `python -c`."""
-    testdir.makepyfile(
+    pytester.makepyfile(
         """
         import sys
 
@@ -238,29 +429,30 @@ def test_remote_inner_argv(testdir):
             assert sys.argv == ["-c"]
         """
     )
-    result = testdir.runpytest("-n1")
+    result = pytester.runpytest("-n1")
     assert result.ret == 0
 
 
-def test_remote_mainargv(testdir):
+def test_remote_mainargv(pytester: pytest.Pytester) -> None:
     outer_argv = sys.argv
 
-    testdir.makepyfile(
-        """
+    pytester.makepyfile(
+        f"""
         def test_mainargv(request):
-            assert request.config.workerinput["mainargv"] == {!r}
-        """.format(
-            outer_argv
-        )
+            assert request.config.workerinput["mainargv"] == {outer_argv!r}
+        """
     )
-    result = testdir.runpytest("-n1")
+    result = pytester.runpytest("-n1")
     assert result.ret == 0
 
 
-def test_remote_usage_prog(testdir, request):
-    if not hasattr(request.config._parser, "prog"):
-        pytest.skip("prog not available in config parser")
-    testdir.makeconftest(
+def test_remote_usage_prog(pytester: pytest.Pytester) -> None:
+    if pytest.version_tuple[:2] >= (9, 0):
+        get_optparser_expr = "get_config_parser.optparser"
+    else:
+        get_optparser_expr = "get_config_parser._getparser()"
+
+    pytester.makeconftest(
         """
         import pytest
 
@@ -275,16 +467,16 @@ def test_remote_usage_prog(testdir, request):
             config_parser = config._parser
     """
     )
-    testdir.makepyfile(
-        """
+    pytester.makepyfile(
+        f"""
         import sys
 
         def test(get_config_parser, request):
-            get_config_parser._getparser().error("my_usage_error")
-    """
+            {get_optparser_expr}.error("my_usage_error")
+        """
     )
 
-    result = testdir.runpytest_subprocess("-n1")
+    result = pytester.runpytest_subprocess("-n1")
     assert result.ret == 1
     result.stdout.re_match_lines(
         [
@@ -293,3 +485,17 @@ def test_remote_usage_prog(testdir, request):
             "^E       (pytest.py|__main__.py): error: my_usage_error",
         ]
     )
+
+
+def test_remote_sys_path(pytester: pytest.Pytester) -> None:
+    """Work around sys.path differences due to execnet using `python -c`."""
+    pytester.makepyfile(
+        """
+        import sys
+
+        def test_sys_path():
+            assert "" not in sys.path
+        """
+    )
+    result = pytester.runpytest("-n1")
+    assert result.ret == 0
