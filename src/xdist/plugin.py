@@ -486,6 +486,10 @@ def is_xdist_controller(
     activated at all, including when the xdist plugin is disabled
     (``-p no:xdist``).
 
+    The result is only reliable from ``pytest_configure`` on: before that,
+    xdist has not yet turned ``-n`` into a distribution mode, so this returns
+    `False` even when tests will be distributed.
+
     :param request_or_session: the `pytest` `request`, `session` or `config` object
     """
     config = _get_config(request_or_session)
