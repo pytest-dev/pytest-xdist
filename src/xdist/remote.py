@@ -243,15 +243,14 @@ class WorkerInteractor:
         if self.rampdelay > 0:
             time.sleep(self.rampdelay)
 
-    def pytest_collection_modifyitems(
-        self,
-        config: pytest.Config,
-        items: list[pytest.Item],
-    ) -> None:
+    @pytest.hookimpl
+    def pytest_collection_finish(self, session: pytest.Session) -> None:
         # Send group names separately so pytest owns test node IDs.
-        if config.getvalue("loadgroup"):
-            self._group_names: list[str | None] = []
-            for item in items:
+        # Collection hooks may have filtered, reordered, or marked the items.
+        group_names: list[str | None] | None = None
+        if self.config.getvalue("loadgroup"):
+            group_names = []
+            for item in session.items:
                 gnames: set[str] = set()
                 for mark in item.iter_markers("xdist_group"):
                     name = (
@@ -261,17 +260,15 @@ class WorkerInteractor:
                     )
                     gnames.add(str(name))
                 if not gnames:
-                    self._group_names.append(None)
+                    group_names.append(None)
                     continue
-                self._group_names.append("_".join(sorted(gnames)))
+                group_names.append("_".join(sorted(gnames)))
 
-    @pytest.hookimpl
-    def pytest_collection_finish(self, session: pytest.Session) -> None:
         self.sendevent(
             "collectionfinish",
             topdir=str(self.config.rootpath),
             ids=[item.nodeid for item in session.items],
-            group_names=getattr(self, "_group_names", None),
+            group_names=group_names,
         )
 
     @pytest.hookimpl

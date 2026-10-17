@@ -192,6 +192,55 @@ class TestWorkerInteractor:
         ]
         assert ev.kwargs["group_names"] == ["group", None]
 
+    @pytest.mark.parametrize("change", ["deselect", "reorder", "mark"])
+    def test_loadgroup_after_late_collection_changes(
+        self, worker: WorkerSetup, change: str
+    ) -> None:
+        worker.pytester.makeconftest(
+            f"""
+            import pytest
+
+            @pytest.hookimpl(trylast=True)
+            def pytest_collection_modifyitems(config, items):
+                if {change!r} == "deselect":
+                    deselected = [items.pop(0)]
+                    config.hook.pytest_deselected(items=deselected)
+                elif {change!r} == "reorder":
+                    items.reverse()
+                else:
+                    items[1].add_marker(pytest.mark.xdist_group("late"))
+            """
+        )
+        worker.pytester.makepyfile(
+            test_groups="""
+            import pytest
+
+            @pytest.mark.xdist_group("group")
+            def test_grouped():
+                pass
+
+            def test_ungrouped():
+                pass
+            """
+        )
+        worker.setup("--dist=loadgroup")
+        ev = worker.popevent("collectionfinish")
+
+        expected_groups: list[str | None]
+        if change == "deselect":
+            expected_names = ["test_ungrouped"]
+            expected_groups = [None]
+        elif change == "reorder":
+            expected_names = ["test_ungrouped", "test_grouped"]
+            expected_groups = [None, "group"]
+        else:
+            expected_names = ["test_grouped", "test_ungrouped"]
+            expected_groups = ["group", "late"]
+        assert ev.kwargs["ids"] == [
+            f"test_groups.py::{name}" for name in expected_names
+        ]
+        assert ev.kwargs["group_names"] == expected_groups
+
     def test_remote_collect_skip(
         self, worker: WorkerSetup, unserialize_report: UnserializerReport
     ) -> None:
