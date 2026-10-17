@@ -1,0 +1,2 @@
+Fix ``--dist=loadgroup`` crashing or assigning stale groups when collection
+hooks deselect, reorder, or mark tests.

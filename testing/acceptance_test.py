@@ -1447,6 +1447,34 @@ class TestFileScope:
 
 
 class TestGroupScope:
+    def test_late_deselection(self, pytester: pytest.Pytester) -> None:
+        pytester.makeconftest(
+            """
+            import pytest
+
+            @pytest.hookimpl(trylast=True)
+            def pytest_collection_modifyitems(config, items):
+                deselected = [items.pop(0)]
+                config.hook.pytest_deselected(items=deselected)
+            """
+        )
+        pytester.makepyfile(
+            """
+            import pytest
+
+            @pytest.mark.xdist_group("group")
+            def test_deselected():
+                pytest.fail("should have been deselected")
+
+            @pytest.mark.xdist_group("group")
+            def test_selected():
+                pass
+            """
+        )
+        result = pytester.runpytest("-n2", "--dist=loadgroup")
+        assert result.ret == 0
+        result.assert_outcomes(passed=1)
+
     def test_by_module(self, pytester: pytest.Pytester) -> None:
         test_file = """
             import pytest
