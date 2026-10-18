@@ -1,0 +1,3 @@
+Respect an explicitly configured ``execmodel`` in ``--tx`` specifications instead
+of failing with a duplicate-key error. Workers without an explicit execution
+model continue to use ``main_thread_only``.
