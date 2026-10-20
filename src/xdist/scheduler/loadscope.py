@@ -179,6 +179,10 @@ class LoadScopeScheduling:
         node has no more pending items.
         """
         workload = self.assigned_work.pop(node)
+        # Also drop the node's collection registration so a replacement worker
+        # can register its own collection (#1189).
+        self.registered_collections.pop(node, None)
+
         if not self._pending_of(workload):
             return None
 
