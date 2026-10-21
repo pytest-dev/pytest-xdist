@@ -192,6 +192,39 @@ class TestWorkerInteractor:
         ]
         assert ev.kwargs["group_names"] == ["group", None]
 
+    def test_loadgroup_group_names_follow_late_reorder(
+        self, worker: WorkerSetup
+    ) -> None:
+        worker.pytester.makeconftest(
+            """
+            import pytest
+
+            @pytest.hookimpl(trylast=True)
+            def pytest_collection_modifyitems(items):
+                items.reverse()
+            """
+        )
+        worker.pytester.makepyfile(
+            """
+            import pytest
+
+            @pytest.mark.xdist_group("group")
+            def test_grouped():
+                pass
+
+            def test_ungrouped():
+                pass
+            """
+        )
+        worker.setup("--dist=loadgroup")
+        ev = worker.popevent("collectionfinish")
+
+        assert ev.kwargs["ids"] == [
+            "test_loadgroup_group_names_follow_late_reorder.py::test_ungrouped",
+            "test_loadgroup_group_names_follow_late_reorder.py::test_grouped",
+        ]
+        assert ev.kwargs["group_names"] == [None, "group"]
+
     def test_remote_collect_skip(
         self, worker: WorkerSetup, unserialize_report: UnserializerReport
     ) -> None:
