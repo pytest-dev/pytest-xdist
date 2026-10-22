@@ -187,6 +187,10 @@ class LoadScopeScheduling:
             for nodeid, completed in work_unit.items():
                 if not completed:
                     crashitem = nodeid
+                    # The crashed test is reported as failed by handle_crashitem, so
+                    # mark it complete lest the replacement node run it again and crash
+                    # in turn. This matches LoadScheduling, which pops the crashed item.
+                    work_unit[nodeid] = True
                     break
             else:
                 continue

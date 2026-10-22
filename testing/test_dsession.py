@@ -15,6 +15,7 @@ from xdist.dsession import WorkerStatus
 from xdist.report import report_collection_diff
 from xdist.scheduler import EachScheduling
 from xdist.scheduler import LoadScheduling
+from xdist.scheduler import LoadScopeScheduling
 from xdist.scheduler import WorkStealingScheduling
 from xdist.workermanage import WorkerController
 
@@ -632,3 +633,92 @@ def test_get_workers_status_line(
     status_and_items: Sequence[tuple[WorkerStatus, int]], expected: str
 ) -> None:
     assert get_workers_status_line(status_and_items) == expected
+
+
+class TestLoadScopeScheduling:
+    def test_remove_node_does_not_requeue_the_crashed_test(
+        self, pytester: pytest.Pytester
+    ) -> None:
+        """The test a worker crashed on must be marked complete rather than
+        re-queued: handle_crashitem has already reported it as failed, and a
+        second attempt only crashes the replacement worker in turn (#1371).
+
+        The surrounding assertions cover the requeue filtering fixed in
+        #1323, which has no scheduler-level test of its own: work units the
+        crashed node had finished are dropped, and those with pending tests
+        are preserved."""
+        config = pytester.parseconfig("--tx=2*popen", "--dist=loadscope")
+        sched = LoadScopeScheduling(config)
+        node1, node2 = MockNode(), MockNode()
+        sched.add_node(node1)
+        sched.add_node(node2)
+        collection = [f"test_{m}.py::test_{i}" for m in "abcdef" for i in (1, 2)]
+        sched.add_node_collection(node1, collection)
+        sched.add_node_collection(node2, collection)
+        sched.schedule()
+        # node1 was assigned test_a.py and test_c.py.
+        assert node1.sent == [0, 1, 4, 5]
+
+        # node1 completes the whole of test_a.py, picking up test_e.py.
+        sched.mark_test_complete(node1, 0)
+        sched.mark_test_complete(node1, 1)
+        assert node1.sent == [0, 1, 4, 5, 8, 9]
+
+        # node1 crashes in test_c.py::test_1.
+        crashitem = sched.remove_node(node1)
+        assert crashitem == "test_c.py::test_1"
+
+        # The completed test_a.py unit is gone for good, the units with
+        # pending tests are re-queued, and the crashed test is marked
+        # completed so that it is not run a second time.
+        assert list(sched.workqueue.keys()) == ["test_f.py", "test_c.py", "test_e.py"]
+        for work_unit in sched.workqueue.values():
+            assert not all(work_unit.values())
+        assert sched.workqueue["test_c.py"] == {
+            "test_c.py::test_1": True,
+            "test_c.py::test_2": False,
+        }
+
+    def test_node_is_topped_up_until_it_can_report(
+        self, pytester: pytest.Pytester
+    ) -> None:
+        """A node must be given at least two pending tests, because a worker
+        does not start its last test until it is sent further work or told to
+        shut down. A replacement node given a single-test work unit would
+        otherwise never report, and a report is the only thing that drives
+        scheduling onwards.
+
+        This pins the behaviour .schedule() gained in #1327; it passes
+        without the fix in this branch, and is here because that path had no
+        scheduler-level test."""
+        config = pytester.parseconfig("--tx=2*popen", "--dist=loadscope")
+        sched = LoadScopeScheduling(config)
+        node1, node2 = MockNode(), MockNode()
+        sched.add_node(node1)
+        sched.add_node(node2)
+        collection = [
+            "test_a.py::test_1",
+            "test_a.py::test_2",
+            "test_a.py::test_3",
+            "test_b.py::test_1",
+            "test_b.py::test_2",
+            "test_b.py::test_3",
+            "test_c.py::test_1",
+            "test_d.py::test_1",
+            "test_e.py::test_1",
+        ]
+        sched.add_node_collection(node1, collection)
+        sched.add_node_collection(node2, collection)
+        sched.schedule()
+        assert node1.sent == [0, 1, 2]
+        assert node2.sent == [3, 4, 5]
+
+        # A replacement node arrives while single-test scopes are queued.
+        node3 = MockNode()
+        sched.add_node(node3)
+        sched.add_node_collection(node3, collection)
+        sched.schedule()
+
+        # One test is not enough to make progress: it must receive two.
+        assert node3.sent == [6, 7]
+        assert not node3.shutting_down
