@@ -1,0 +1,2 @@
+Preserve duplicate collected test occurrences in ``loadscope``, ``loadfile``, and ``loadgroup`` scheduling, including when unfinished work is reassigned after a worker restart.
+Dispatch work by collection index instead of repeatedly searching for each test's nodeid.
