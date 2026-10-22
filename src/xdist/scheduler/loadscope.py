@@ -200,8 +200,10 @@ class LoadScopeScheduling:
                 "Unable to identify crashitem on a workload with pending items"
             )
 
-        # Made uncompleted work unit available again
-        self.workqueue.update(workload)
+        # Make uncompleted work units available again
+        for scope, work_unit in workload.items():
+            if any(not completed for completed in work_unit.values()):
+                self.workqueue[scope] = work_unit
 
         for node in self.assigned_work:
             self._reschedule(node)
@@ -209,7 +211,10 @@ class LoadScopeScheduling:
         return crashitem
 
     def add_node_collection(
-        self, node: WorkerController, collection: Sequence[str]
+        self,
+        node: WorkerController,
+        collection: Sequence[str],
+        group_names: Sequence[str | None] | None = None,
     ) -> None:
         """Add the collected test items from a node.
 
@@ -282,6 +287,12 @@ class LoadScopeScheduling:
             for nodeid, completed in work_unit.items()
             if not completed
         ]
+        if not nodeids_indexes:
+            # Raise since this is an internal error that may result in a hanging worker
+            # See #1323
+            raise RuntimeError(
+                "Trying to assign a work unit with no pending items to a node"
+            )
 
         node.send_runtest_some(nodeids_indexes)
 
@@ -359,6 +370,12 @@ class LoadScopeScheduling:
 
         # Initial distribution already happened, reschedule on all nodes
         if self.collection is not None:
+            for node in self.nodes:
+                self._reschedule(node)
+            # Ensure nodes have at least two work units if possible,
+            # since workers need a "next item" before running the current one.
+            # (A restarted worker has no item before calling _reschedule()
+            # for the first time.)
             for node in self.nodes:
                 self._reschedule(node)
             return

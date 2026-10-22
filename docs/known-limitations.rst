@@ -69,3 +69,13 @@ Debugging
 This also means that debugging using PDB (or any other debugger that wants to use standard I/O) will not work. The ``--pdb`` option is disabled when distributing tests with ``pytest-xdist`` for this reason.
 
 It is generally likely best to use ``pytest-xdist`` to find failing tests and then debug them without distribution; however, if you need to debug from within a worker process (for example, to address failures that only happen when running tests concurrently), remote debuggers (for example, `python-remote-pdb <https://github.com/ionelmc/python-remote-pdb>`__ or `python-web-pdb <https://github.com/romanvm/python-web-pdb>`__) have been reported to work for this purpose.
+
+Terminal size
+-------------
+
+Because ``pytest-xdist`` replaces the workers' standard streams with I/O pipes for its protocol, code that queries the terminal size (for example, ``shutil.get_terminal_size()`` or argparse help formatting) sees the default size instead of the actual terminal width. This can cause output to be formatted differently when using ``-n`` than when running plain ``pytest``.
+
+Workaround
+~~~~~~~~~~
+
+In tests that assert on such output, impose the expected width by monkeypatching ``shutil.get_terminal_size`` or by setting the ``COLUMNS`` environment variable for the subprocess that produces the output.

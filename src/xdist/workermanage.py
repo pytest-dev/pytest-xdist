@@ -72,7 +72,7 @@ class NodeManager:
         for spec in specs:
             if not isinstance(spec, execnet.XSpec):
                 spec = execnet.XSpec(spec)
-            if getattr(spec, "execmodel", None) != "main_thread_only":
+            if getattr(spec, "execmodel", None) is None:
                 spec = execnet.XSpec(f"execmodel=main_thread_only//{spec}")
             if not spec.chdir and not spec.popen:
                 spec.chdir = defaultchdir
@@ -105,7 +105,7 @@ class NodeManager:
         putevent: Callable[[tuple[str, dict[str, Any]]], None],
         worker_index: int = 0,
     ) -> WorkerController:
-        if getattr(spec, "execmodel", None) != "main_thread_only":
+        if getattr(spec, "execmodel", None) is None:
             spec = execnet.XSpec(f"execmodel=main_thread_only//{spec}")
         gw = self.group.makegateway(spec)
         self.config.hook.pytest_xdist_newgateway(gateway=gw)
@@ -439,7 +439,12 @@ class WorkerController:
                     rep.item_index = item_index
                 self.notify_inproc(eventname, node=self, rep=rep)
             elif eventname == "collectionfinish":
-                self.notify_inproc(eventname, node=self, ids=kwargs["ids"])
+                self.notify_inproc(
+                    eventname,
+                    node=self,
+                    ids=kwargs["ids"],
+                    group_names=kwargs.get("group_names"),
+                )
             elif eventname == "runtest_protocol_complete":
                 self.notify_inproc(eventname, node=self, **kwargs)
             elif eventname == "unscheduled":

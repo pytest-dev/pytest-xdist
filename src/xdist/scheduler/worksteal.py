@@ -134,7 +134,10 @@ class WorkStealingScheduling:
         self.node2pending[node] = []
 
     def add_node_collection(
-        self, node: WorkerController, collection: Sequence[str]
+        self,
+        node: WorkerController,
+        collection: Sequence[str],
+        group_names: Sequence[str | None] | None = None,
     ) -> None:
         """Add the collected test items from a node.
 
