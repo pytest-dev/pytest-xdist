@@ -1,0 +1,1 @@
+Avoid re-queueing completed loadscope work units when a worker crashes.
