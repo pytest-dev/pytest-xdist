@@ -1,0 +1,3 @@
+Warnings crossing to the controller now keep the state they carry beside their ``args``.
+
+Only ``args`` was transferred, and the warning was rebuilt by calling its class with them, so a warning deriving its message from its own fields arrived rendered from defaults -- reading like a legitimate message while saying something else. Whatever the instance keeps, in its dictionary or in ``__slots__``, is transferred now, and the instance is rebuilt without re-running ``__init__``; when that state cannot be serialized, the class is dropped rather than rebuilt without it.
