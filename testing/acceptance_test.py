@@ -1273,6 +1273,29 @@ class TestLoadScope:
             "test_b.py::test", result.outlines
         ) in ({"gw0": 10}, {"gw1": 10})
 
+    def test_by_module_with_double_colons_in_parametrize_ids(
+        self, pytester: pytest.Pytester
+    ) -> None:
+        test_file = """
+            import pytest
+
+            @pytest.mark.parametrize(
+                "address",
+                ["::1", "cafe:cafe::cafe"],
+                ids=["::1", "cafe:cafe::cafe"],
+            )
+            def test_address(address):
+                pass
+        """
+        pytester.makepyfile(test_a=test_file, test_b=test_file)
+        result = pytester.runpytest("-n2", "--dist=loadscope", "-v")
+        assert get_workers_and_test_count_by_prefix(
+            "test_a.py::test_address", result.outlines
+        ) in ({"gw0": 2}, {"gw1": 2})
+        assert get_workers_and_test_count_by_prefix(
+            "test_b.py::test_address", result.outlines
+        ) in ({"gw0": 2}, {"gw1": 2})
+
     def test_by_class(self, pytester: pytest.Pytester) -> None:
         pytester.makepyfile(
             test_a="""
