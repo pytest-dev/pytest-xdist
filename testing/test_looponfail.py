@@ -342,6 +342,50 @@ class TestLooponFailing:
         remotecontrol.loop_once()
         assert len(remotecontrol.failures) == 1
 
+    def test_looponfail_passes_command_line_options_to_workers(
+        self,
+        pytester: pytest.Pytester,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        # Regression test for #767: command-line options such as --tb=short
+        # were dropped when looponfail ran the failing tests through
+        # distributed (-n) workers. The reconstructed worker config lost the
+        # original invocation arguments, so the nested workers fell back to
+        # the default (long) traceback style.
+        pytester.makepyfile(
+            foo=textwrap.dedent(
+                """
+                def a():
+                    b()
+
+                def b():
+                    c()
+
+                def c():
+                    assert False
+                """
+            )
+        )
+        modcol = pytester.getmodulecol(
+            textwrap.dedent(
+                """
+                from foo import a
+
+                def test_foo():
+                    a()
+                """
+            ),
+            configargs=["-n2", "--tb=short"],
+        )
+        control = RemoteControl(modcol.config)
+        control.loop_once()
+        out, _err = capsys.readouterr()
+        # --tb=short renders frames as compact "path:lineno: in func" lines.
+        # The default (long) style instead expands the source ("def test_foo():"
+        # with a ">" marker), so its absence confirms the option propagated.
+        assert ": in test_foo" in out
+        assert "def test_foo():" not in out
+
 
 class TestFunctional:
     def test_fail_to_ok(self, pytester: pytest.Pytester) -> None:
