@@ -50,7 +50,7 @@ class MockNode(BaseOfMockNode):
     def send_steal(self, indices: Sequence[int]) -> None:
         self.stolen.extend(indices)
 
-    def shutdown(self) -> None:
+    def shutdown(self, shouldstop: bool | str = False) -> None:
         self._shutdown = True
 
     @property

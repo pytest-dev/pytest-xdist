@@ -171,6 +171,10 @@ class WorkerInteractor:
             for i in range(len(self.session.items)):
                 self.torun.put(i)
         elif name == "shutdown":
+            if kwargs.get("shouldstop"):
+                # Stop after the current test instead of draining the queue
+                # (e.g. --exitfirst/--maxfail was hit on another worker).
+                self.session.shouldstop = kwargs["shouldstop"]
             self.torun.put(Marker.SHUTDOWN)
         elif name == "steal":
             self.steal(kwargs["indices"])
@@ -224,6 +228,9 @@ class WorkerInteractor:
             nextitem = items[self.nextitem_index]
 
         self._sleep_before_first_test()
+        if self.session.shouldstop:
+            # The controller asked us to stop while we were waiting above.
+            return
         worker_title("[pytest-xdist running] %s" % item.nodeid)
 
         start = time.perf_counter()
