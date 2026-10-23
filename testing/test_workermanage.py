@@ -569,3 +569,61 @@ def test_warning_serialization_tweaked_module() -> None:
     # __module__ cannot be found!
     with pytest.raises(ModuleNotFoundError):
         unserialize_warning_message(data)
+
+
+class TestMakeReltoroot:
+    """Regression tests for GH#971.
+
+    A relative path given as a test-selection arg on the command line
+    (e.g. ``pytest tests/test_sample.py``, as opposed to an absolute
+    path) must still be correctly recognized as being inside one of
+    the rsync roots. ``py.path.local`` (used here prior to migrating
+    to ``pathlib``) transparently resolved a relative path against the
+    current working directory; plain ``pathlib.Path`` does not do
+    this on its own.
+    """
+
+    def test_relative_arg_inside_root(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        root = tmp_path / "project"
+        (root / "tests").mkdir(parents=True)
+        test_file = root / "tests" / "test_sample.py"
+        test_file.write_text("def test_x(): pass\n")
+
+        monkeypatch.chdir(root)
+        result = workermanage.make_reltoroot([root], ["tests/test_sample.py"])
+        assert result == [f"{root.name}/tests/test_sample.py"]
+
+    def test_relative_arg_with_test_id_suffix(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        root = tmp_path / "project"
+        (root / "tests").mkdir(parents=True)
+        test_file = root / "tests" / "test_sample.py"
+        test_file.write_text("def test_x(): pass\n")
+
+        monkeypatch.chdir(root)
+        result = workermanage.make_reltoroot([root], ["tests/test_sample.py::test_x"])
+        assert result == [f"{root.name}/tests/test_sample.py::test_x"]
+
+    def test_absolute_arg_inside_root_still_works(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        root = tmp_path / "project"
+        (root / "tests").mkdir(parents=True)
+        test_file = root / "tests" / "test_sample.py"
+        test_file.write_text("def test_x(): pass\n")
+
+        monkeypatch.chdir(tmp_path)  # cwd unrelated to the arg itself
+        result = workermanage.make_reltoroot([root], [str(test_file)])
+        assert result == [f"{root.name}/tests/test_sample.py"]
+
+    def test_nonexistent_relative_arg_passes_through_unchanged(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        root = tmp_path / "project"
+        root.mkdir()
+        monkeypatch.chdir(root)
+        result = workermanage.make_reltoroot([root], ["does/not/exist.py"])
+        assert result == ["does/not/exist.py"]
