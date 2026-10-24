@@ -519,12 +519,13 @@ def test_remote_sys_path_explicit_python(pytester: pytest.Pytester) -> None:
     site_packages.joinpath("worker_only.py").write_text("", encoding="utf-8")
     pytester.makepyfile(
         f"""
+        from pathlib import Path
         import sys
         import worker_only
 
         def test_worker_environment():
             assert sys.prefix == {str(env_dir)!r}
-            assert worker_only.__file__ == {str(site_packages / "worker_only.py")!r}
+            assert Path(worker_only.__file__).samefile({str(site_packages / "worker_only.py")!r})
         """
     )
     result = pytester.runpytest_subprocess(
