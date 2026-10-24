@@ -1,15 +1,20 @@
 from __future__ import annotations
 
 import marshal
+from pathlib import Path
 import pprint
 from queue import Queue
+import shlex
+import subprocess
 import sys
+import sysconfig
 import time
 from typing import Any
 from typing import Callable
 from typing import cast
 from typing import Union
 import uuid
+import venv
 
 import execnet
 import pytest
@@ -493,3 +498,36 @@ def test_remote_sys_path(pytester: pytest.Pytester) -> None:
     )
     result = pytester.runpytest("-n1")
     assert result.ret == 0
+
+
+def test_remote_sys_path_explicit_python(pytester: pytest.Pytester) -> None:
+    env_dir = pytester.path / "worker venv"
+    builder = venv.EnvBuilder()
+    builder.create(env_dir)
+    python = builder.ensure_directories(env_dir).env_exe
+    site_packages = Path(
+        subprocess.check_output(
+            [python, "-c", "import sysconfig; print(sysconfig.get_path('purelib'))"],
+            text=True,
+        ).strip()
+    )
+    # Reuse the test dependencies without installing packages over the network.
+    site_packages.joinpath("test_dependencies.pth").write_text(
+        f"import site; site.addsitedir({sysconfig.get_path('purelib')!r})\n",
+        encoding="utf-8",
+    )
+    site_packages.joinpath("worker_only.py").write_text("", encoding="utf-8")
+    pytester.makepyfile(
+        f"""
+        import sys
+        import worker_only
+
+        def test_worker_environment():
+            assert sys.prefix == {str(env_dir)!r}
+            assert worker_only.__file__ == {str(site_packages / "worker_only.py")!r}
+        """
+    )
+    result = pytester.runpytest_subprocess(
+        "-d", "--tx", f"popen//python={shlex.quote(python)}"
+    )
+    result.assert_outcomes(passed=1)
