@@ -1,16 +1,20 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from io import StringIO
+from types import SimpleNamespace
 from typing import Any
 from typing import cast
 from typing import TYPE_CHECKING
 
+from _pytest.terminal import TerminalReporter
 import execnet
 import pytest
 
 from xdist.dsession import DSession
 from xdist.dsession import get_default_max_worker_restart
 from xdist.dsession import get_workers_status_line
+from xdist.dsession import TerminalDistReporter
 from xdist.dsession import WorkerStatus
 from xdist.report import report_collection_diff
 from xdist.scheduler import EachScheduling
@@ -468,6 +472,67 @@ class TestWorkStealingScheduling:
 
 
 class TestDistReporter:
+    @pytest.mark.parametrize("isatty", [False, True])
+    @pytest.mark.parametrize("no_header", [False, True])
+    def test_no_header(
+        self,
+        pytester: pytest.Pytester,
+        monkeypatch: pytest.MonkeyPatch,
+        isatty: bool,
+        no_header: bool,
+    ) -> None:
+        args = ["-v"]
+        if no_header:
+            args.append("--no-header")
+        config = pytester.parseconfig(*args)
+        output = StringIO()
+        terminal = TerminalReporter(config, file=output)
+        monkeypatch.setattr(terminal, "isatty", isatty)
+        config.pluginmanager.register(terminal, "terminalreporter")
+        reporter = TerminalDistReporter(config)
+        spec = execnet.XSpec("popen//id=gw0")
+        gateway = cast(
+            execnet.Gateway,
+            SimpleNamespace(
+                id="gw0",
+                spec=spec,
+                _rinfo=lambda: SimpleNamespace(
+                    executable="/different/python",
+                    version_info=(3, 13, 0),
+                    platform="test",
+                    cwd="/work",
+                ),
+            ),
+        )
+        node = cast(
+            WorkerController,
+            SimpleNamespace(
+                gateway=gateway,
+                workerinfo={
+                    "id": "gw0",
+                    "executable": "/different/python",
+                    "version": "worker version",
+                },
+            ),
+        )
+
+        reporter.pytest_xdist_setupnodes([spec])
+        reporter.pytest_xdist_newgateway(gateway)
+        reporter.pytest_testnodeready(node)
+        reporter.setstatus(spec, WorkerStatus.CollectionDone, tests_collected=1)
+        reporter.ensure_show_status()
+        header = output.getvalue()
+        if no_header:
+            assert header == ""
+        else:
+            assert "created: 1/1 worker" in header
+            assert "[gw0] test Python 3.13.0 cwd: /work" in header
+            assert "[gw0] Python worker version" in header
+            assert "1 worker [1 item]" in header
+
+        reporter.pytest_testnodedown(node, "worker failure")
+        assert "[gw0] node down: worker failure" in output.getvalue()[len(header) :]
+
     @pytest.mark.xfail
     def test_rsync_printing(self, pytester: pytest.Pytester, linecomp: Any) -> None:
         config = pytester.parseconfig()
