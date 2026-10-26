@@ -1,0 +1,1 @@
+Document ``xdist.is_xdist_master`` as an alias of ``xdist.is_xdist_controller`` instead of repeating the controller docstring under the old name.
