@@ -33,3 +33,5 @@ pytestdebug.log
 .pytest_cache/
 .eggs/
 .idea/
+config.bat
+node_modules
