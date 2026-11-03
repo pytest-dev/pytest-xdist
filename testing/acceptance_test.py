@@ -868,6 +868,73 @@ class TestWarnings:
         result.stdout.fnmatch_lines(["*MyWarning*", "*1 passed, 1 warning*"])
 
     @pytest.mark.parametrize("n", ["-n0", "-n1"])
+    def test_state_beyond_args_survives(
+        self, pytester: pytest.Pytester, n: str
+    ) -> None:
+        """A warning keeping state beside its args must report the same either way.
+
+        `-n0` is the reference: no serialization happens, so whatever it prints is
+        what the warning says. `-n1` must match it. The class below renders its
+        message from `self.code`, which `args` does not carry, so rebuilding it by
+        calling the class reports the default instead — and reads like a real
+        message while doing it.
+        """
+        pytester.makepyfile(
+            """
+            import warnings
+
+            class CodeWarning(UserWarning):
+
+                def __init__(self, code=None):
+                    self.code = code
+                    super().__init__()
+
+                def __str__(self):
+                    return "code {} tripped".format(self.code or "unknown")
+
+            def test_func():
+                warnings.warn(CodeWarning(42))
+        """
+        )
+        pytester.syspathinsert()
+        result = pytester.runpytest(n)
+        result.stdout.fnmatch_lines(["*code 42 tripped*", "*1 passed, 1 warning*"])
+        result.stdout.no_fnmatch_line("*code unknown tripped*")
+
+    @pytest.mark.parametrize("n", ["-n0", "-n1"])
+    def test_state_in_slots_survives(self, pytester: pytest.Pytester, n: str) -> None:
+        """A warning keeping its state in slots must report the same either way.
+
+        `BaseException.__reduce__` reports only the instance dictionary, so slots
+        read as "this warning keeps nothing". Rebuilding the class without running
+        `__init__` then leaves the slot unset, and the `AttributeError` lands where
+        the controller renders the warning -- an INTERNALERROR, not a wrong message.
+        """
+        pytester.makepyfile(
+            """
+            import warnings
+
+            class SlotsWarning(UserWarning):
+
+                __slots__ = ("code",)
+
+                def __init__(self, code=None):
+                    self.code = code
+                    super().__init__()
+
+                def __str__(self):
+                    return "code {} tripped".format(self.code or "unknown")
+
+            def test_func():
+                warnings.warn(SlotsWarning(11))
+        """
+        )
+        pytester.syspathinsert()
+        result = pytester.runpytest(n)
+        result.stdout.fnmatch_lines(["*code 11 tripped*", "*1 passed, 1 warning*"])
+        result.stdout.no_fnmatch_line("*INTERNALERROR*")
+
+    @pytest.mark.parametrize("n", ["-n0", "-n1"])
     def test_unserializable_arguments(self, pytester: pytest.Pytester, n: str) -> None:
         """Check that warnings with unserializable arguments are handled correctly (#349)."""
         pytester.makepyfile(
