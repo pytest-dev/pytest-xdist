@@ -1,0 +1,1 @@
+Worker process exit codes are now reported when the process terminates abnormally (e.g., via native code calling ``exit()`` directly). The exit code is included in the error message, helping diagnose crashes that bypass Python's exception handling.
