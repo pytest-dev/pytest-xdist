@@ -40,7 +40,11 @@ Since version 2.0, the following functions are also available in the ``xdist`` m
 
 .. autofunction:: xdist.is_xdist_worker
 .. autofunction:: xdist.is_xdist_controller
-.. autofunction:: xdist.is_xdist_master
+.. function:: xdist.is_xdist_master(request_or_session)
+
+   Alias of :func:`xdist.is_xdist_controller`, kept for backward compatibility.
+   New code should use :func:`xdist.is_xdist_controller`.
+
 .. autofunction:: xdist.get_xdist_worker_id
 
 Identifying workers from the system environment
