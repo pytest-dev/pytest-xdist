@@ -1719,6 +1719,61 @@ class TestAPI:
         del fake_request.config.workerinput  # type: ignore[attr-defined]
         assert xdist.get_xdist_worker_id(fake_request) == "master"
 
+    @pytest.mark.parametrize(
+        ("args", "expected_controller"),
+        [
+            (["-n2"], True),
+            (["-n0"], False),
+            ([], False),
+            (["-p", "no:xdist"], False),
+        ],
+    )
+    def test_helpers_accept_config(
+        self, pytester: pytest.Pytester, args: list[str], expected_controller: bool
+    ) -> None:
+        """The helpers accept a Config, and don't fail when xdist is disabled (#1397)."""
+        pytester.makeconftest(
+            """
+            import xdist
+
+            def report(config, where):
+                if xdist.is_xdist_worker(config):
+                    return
+                print(
+                    f"{where}: controller={xdist.is_xdist_controller(config)}"
+                    f" worker_id={xdist.get_xdist_worker_id(config)}"
+                )
+
+            def pytest_configure(config):
+                report(config, "configure")
+
+            def pytest_sessionstart(session):
+                report(session, "sessionstart")
+
+            def pytest_terminal_summary(config):
+                report(config, "summary")
+            """
+        )
+        pytester.makepyfile(
+            """
+            import xdist
+
+            def test_worker(request):
+                assert xdist.get_xdist_worker_id(request.config) == (
+                    xdist.get_xdist_worker_id(request)
+                )
+                assert xdist.is_xdist_worker(request.config) == (
+                    xdist.is_xdist_worker(request)
+                )
+            """
+        )
+        result = pytester.runpytest("-s", *args)
+        result.assert_outcomes(passed=1)
+        for where in ("configure", "sessionstart", "summary"):
+            result.stdout.fnmatch_lines(
+                [f"{where}: controller={expected_controller} worker_id=master"]
+            )
+
 
 def test_collection_crash(pytester: pytest.Pytester) -> None:
     p1 = pytester.makepyfile(
