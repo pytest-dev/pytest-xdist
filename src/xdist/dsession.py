@@ -206,6 +206,12 @@ class DSession:
         workerready before shutdown was triggered.
         """
         self.config.hook.pytest_testnodedown(node=node, error=None)
+        if node.workeroutput["exitstatus"] == pytest.ExitCode.USAGE_ERROR:
+            self._active_nodes.remove(node)
+            messages = node.workeroutput.get("usage_error")
+            if messages is None:
+                messages = [f"{node} exited with a usage error"]
+            raise pytest.UsageError(*messages)
         if node.workeroutput["exitstatus"] == 2:  # keyboard-interrupt
             self.shouldstop = f"{node} received keyboard-interrupt"
             self.worker_errordown(node, "keyboard-interrupt")

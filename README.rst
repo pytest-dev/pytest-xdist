@@ -27,6 +27,10 @@ tests across multiple CPUs to speed up test execution::
 With this call, pytest will spawn a number of workers processes equal to the number of available CPUs, and distribute
 the tests randomly across them.
 
+Worker usage errors, including invalid strict marker expressions, retain their
+original error messages and pytest exit code 4 in the controller process.
+pytest-xdist requires pluggy 1.2 or newer for its hook wrappers.
+
 Documentation
 =============
 
