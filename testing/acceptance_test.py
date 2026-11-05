@@ -11,6 +11,52 @@ import xdist
 
 
 class TestDistribution:
+    @pytest.mark.parametrize("dist", ["load", "worksteal"])
+    @pytest.mark.parametrize("workers", [1, 2])
+    @pytest.mark.parametrize(
+        "hook", ["pytest_collection_modifyitems", "pytest_runtestloop"]
+    )
+    def test_worker_usage_error(
+        self, pytester: pytest.Pytester, dist: str, workers: int, hook: str
+    ) -> None:
+        pytester.makepyfile("def test_example(): pass")
+        pytester.makeconftest(
+            f"""
+            import pytest
+
+            @pytest.hookimpl(tryfirst=True)
+            def {hook}(session):
+                if hasattr(session.config, "workerinput"):
+                    raise pytest.UsageError("first usage problem", "second usage problem")
+            """
+        )
+
+        result = pytester.runpytest(f"-n{workers}", f"--dist={dist}")
+
+        assert result.ret == pytest.ExitCode.USAGE_ERROR
+        result.stderr.fnmatch_lines(
+            ["ERROR: first usage problem", "ERROR: second usage problem"]
+        )
+        assert "INTERNALERROR>" not in result.stdout.str()
+
+    @pytest.mark.skipif(pytest.version_tuple < (9, 2), reason="requires pytest 9.2")
+    @pytest.mark.parametrize("dist", ["load", "worksteal"])
+    @pytest.mark.parametrize("workers", [1, 2])
+    def test_unknown_marker_usage_error(
+        self, pytester: pytest.Pytester, dist: str, workers: int
+    ) -> None:
+        pytester.makepyfile("def test_example(): pass")
+
+        result = pytester.runpytest(
+            f"-n{workers}", f"--dist={dist}", "--strict-markers", "-m", "unknown_marker"
+        )
+
+        assert result.ret == pytest.ExitCode.USAGE_ERROR
+        result.stderr.fnmatch_lines(
+            ["ERROR: Unknown marker(s) in '-m' expression: unknown_marker.*"]
+        )
+        assert "INTERNALERROR>" not in result.stdout.str()
+
     def test_n1_pass(self, pytester: pytest.Pytester) -> None:
         p1 = pytester.makepyfile(
             """

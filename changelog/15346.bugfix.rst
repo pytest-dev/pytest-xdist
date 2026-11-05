@@ -1,0 +1,3 @@
+Preserve worker usage-error messages and exit code 4 instead of reporting an
+internal error, including when strict marker expressions contain unknown markers.
+Hook wrappers require pluggy 1.2 or newer.
