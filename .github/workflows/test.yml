@@ -28,7 +28,7 @@ jobs:
 
     needs: [package]
 
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.runner || matrix.os }}
 
     strategy:
       fail-fast: false
@@ -67,6 +67,13 @@ jobs:
             python: "3.10"
           - tox_env: "py310-setproctitle"
             python: "3.10"
+          # setup-python does not provide Python 3.9 builds for Ubuntu 26.04.
+          - os: ubuntu-latest
+            tox_env: "py39-pytestmin"
+            runner: ubuntu-24.04
+          - os: ubuntu-latest
+            tox_env: "py39-pytestlatest"
+            runner: ubuntu-24.04
 
     steps:
     - uses: actions/checkout@v7

@@ -352,9 +352,9 @@ class WorkerController:
 
         remote_module = self.config.hook.pytest_xdist_getremotemodule()
         self.channel = self.gateway.remote_exec(remote_module)
-        # change sys.path only for remote workers
-        # restore sys.path from a frozen copy for local workers
-        change_sys_path = _sys_path if self.gateway.spec.popen else None
+        # Restore the controller's path only for its default local interpreter.
+        # An explicitly selected interpreter must retain its own environment.
+        change_sys_path = _sys_path if spec.popen and not spec.python else None
         self.channel.send((self.workerinput, args, option_dict, change_sys_path))
 
         # putevent is only None in a test.

@@ -1,0 +1,2 @@
+Preserve the selected interpreter's import paths when using ``--tx popen//python=...``,
+so packages installed in its virtual environment remain importable.
