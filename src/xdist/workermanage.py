@@ -420,7 +420,7 @@ class WorkerController:
             eventname, kwargs = eventcall
             if eventname in ("collectionstart",):
                 self.log(f"ignoring {eventname}({kwargs})")
-            elif eventname == "workerready" or eventname == "internal_error":
+            elif eventname in {"workerready", "internal_error"}:
                 self.notify_inproc(eventname, node=self, **kwargs)
             elif eventname == "workerfinished":
                 self._down = True
@@ -443,7 +443,7 @@ class WorkerController:
                     ids=kwargs["ids"],
                     group_names=kwargs.get("group_names"),
                 )
-            elif eventname == "runtest_protocol_complete" or eventname == "unscheduled":
+            elif eventname in {"runtest_protocol_complete", "unscheduled"}:
                 self.notify_inproc(eventname, node=self, **kwargs)
             elif eventname == "logwarning":
                 self.notify_inproc(
