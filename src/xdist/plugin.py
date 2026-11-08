@@ -187,6 +187,12 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         "Forced to 0 (disabled) when used with --pdb.",
     )
     group.addoption(
+        "--worker-start-method",
+        choices=("popen", "forkserver"),
+        default="popen",
+        help="Worker process startup method. forkserver is experimental and requires psutil.",
+    )
+    group.addoption(
         "--maxprocesses",
         dest="maxprocesses",
         metavar="maxprocesses",

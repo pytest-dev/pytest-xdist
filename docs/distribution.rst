@@ -143,3 +143,42 @@ The test distribution algorithm is configured with the ``--dist`` command-line o
   or better reuse of fixtures.
 
 * ``--dist no``: The normal pytest execution mode, runs one test at a time (no distribution at all).
+
+Experimental preloaded workers
+------------------------------
+
+On Linux and macOS, ``pytest -n 4 --worker-start-method=forkserver tests/unit``
+starts a separate interpreter which prepares pytest's configuration and imports
+initial conftest files once, then forks workers from that interpreter. Install
+``pytest-xdist[psutil]`` to enable this mode. The default remains ``popen``.
+
+Each worker inherits the prepared configuration and imports, but runs its own
+configuration hooks, collection, fixtures and test execution. Only initial
+conftest files are preloaded: pass the relevant test directory explicitly.
+Nested conftest files discovered during collection still load in each worker.
+The controller also imports its initial conftest files as usual.
+
+During preload, ``PYTEST_XDIST_PRELOAD=1`` is set and no worker identity exists.
+Code which reads a PID or worker identity at import time must instead do so in a
+fixture or a worker configuration hook. Initial argument parsing and plugin
+registration happen before the fork, including hooks such as
+``pytest_addoption`` and ``pytest_load_initial_conftests``.
+
+Preloaded code must be safe to fork. Create connections, event loops, thread
+pools and other process-owned resources in worker fixtures, rather than during
+imports. xdist rejects a preload which leaves multiple native threads, but
+this check cannot certify arbitrary libraries as fork-safe. Set any native
+library thread limits in the environment before invoking pytest. On macOS,
+CoreFoundation, Cocoa and other system libraries can be unsafe after fork even
+when Python appears single-threaded. This mode is explicitly experimental on
+both platforms.
+
+The Python standard random generator is handled by Python's fork machinery;
+third-party random generators may inherit identical state. Seed these explicitly
+in worker fixtures where independent streams are required. Preloaded objects
+are frozen out of cyclic GC to preserve shared pages until worker exit.
+
+Only plain local popen specifications and the standard xdist remote module are
+supported. Remote hosts, proxy gateways and alternate interpreters are rejected.
+Worker crashes are replaced from the original preload process. Collection and
+all existing distribution modes keep their usual worker protocol.

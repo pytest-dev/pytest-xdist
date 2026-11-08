@@ -78,6 +78,26 @@ class NodeManager:
                 spec.chdir = defaultchdir
             self.group.allocate_id(spec)
             self.specs.append(spec)
+        self.forkserver: ForkServer | None = None
+        if config.getoption("worker_start_method") == "forkserver":
+            from xdist._forkserver import ForkServer
+
+            for spec in self.specs:
+                if (
+                    not spec.popen
+                    or spec.python
+                    or spec.chdir
+                    or spec.via
+                    or spec.env
+                    or spec.execmodel != "main_thread_only"
+                ):
+                    raise pytest.UsageError(
+                        "forkserver requires plain local popen workers"
+                    )
+            if config.getoption("px"):
+                raise pytest.UsageError("forkserver does not support proxy gateways")
+            self.forkserver = ForkServer(config, self.testrunuid, len(self.specs))
+            config.add_cleanup(self.teardown_nodes)
         self.roots = self._getrsyncdirs()
         self.rsyncoptions = self._getrsyncoptions()
         self._rsynced_specs: set[tuple[Any, Any]] = set()
@@ -107,7 +127,10 @@ class NodeManager:
     ) -> WorkerController:
         if getattr(spec, "execmodel", None) is None:
             spec = execnet.XSpec(f"execmodel=main_thread_only//{spec}")
-        gw = self.group.makegateway(spec)
+        if self.forkserver is None:
+            gw = self.group.makegateway(spec)
+        else:
+            gw = self.forkserver.makegateway(self.group, spec)
         self.config.hook.pytest_xdist_newgateway(gateway=gw)
         self.rsync_roots(gw)
         node = WorkerController(self, gw, self.config, putevent, worker_index)
@@ -118,7 +141,11 @@ class NodeManager:
         return node
 
     def teardown_nodes(self) -> None:
-        self.group.terminate(self.EXIT_TIMEOUT)
+        try:
+            self.group.terminate(self.EXIT_TIMEOUT)
+        finally:
+            if self.forkserver is not None:
+                self.forkserver.close()
 
     def _gettxspecs(self) -> list[execnet.XSpec]:
         return [execnet.XSpec(x) for x in parse_tx_spec_config(self.config)]
@@ -348,9 +375,18 @@ class WorkerController:
             if hasattr(self.config, "_tmp_path_factory"):
                 basetemp = self.config._tmp_path_factory.getbasetemp()
                 option_dict["basetemp"] = str(basetemp / name)
+        if getattr(self.nodemanager, "forkserver", None) is not None:
+            self.workerinput["forkserver"] = True
         self.config.hook.pytest_configure_node(node=self)
 
         remote_module = self.config.hook.pytest_xdist_getremotemodule()
+        if (
+            getattr(self.nodemanager, "forkserver", None) is not None
+            and remote_module is not xdist.remote
+        ):
+            raise pytest.UsageError(
+                "forkserver requires the standard xdist remote module"
+            )
         self.channel = self.gateway.remote_exec(remote_module)
         # change sys.path only for remote workers
         # restore sys.path from a frozen copy for local workers

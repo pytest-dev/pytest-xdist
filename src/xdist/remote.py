@@ -430,7 +430,12 @@ if __name__ == "__channelexec__":
     os.environ["PYTEST_XDIST_WORKER"] = workerinput["workerid"]
     os.environ["PYTEST_XDIST_WORKER_COUNT"] = str(workerinput["workercount"])
 
-    config = _prepareconfig(args, None)
+    if workerinput.get("forkserver"):
+        from xdist._forkserver import take_config
+
+        config = take_config()
+    else:
+        config = _prepareconfig(args, None)
 
     setup_config(config, option_dict.get("basetemp"))
     config._parser.prog = os.path.basename(workerinput["mainargv"][0])
