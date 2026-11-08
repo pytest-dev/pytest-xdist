@@ -135,3 +135,69 @@ def test_coverage(pytester: pytest.Pytester) -> None:
     )
     result.assert_outcomes(passed=1)
     result.stdout.fnmatch_lines(["*application.py*100%*"])
+
+
+@pytest.mark.parametrize("start_method", ["popen", "forkserver"])
+@pytest.mark.parametrize("test_fails", [False, True])
+def test_worker_exit_handlers(
+    pytester: pytest.Pytester, start_method: str, test_fails: bool
+) -> None:
+    pytester.makeconftest("""
+        import atexit
+        import os
+        import sys
+        from pathlib import Path
+
+        def record_import_exit():
+            worker = os.environ.get('PYTEST_XDIST_WORKER')
+            if worker:
+                with Path(f'exit-{worker}').open('a') as stream:
+                    stream.write('import exit\\n')
+
+        atexit.register(record_import_exit)
+
+        def pytest_configure(config):
+            if hasattr(config, 'workerinput'):
+                def record_plugin_exit():
+                    worker = config.workerinput['workerid']
+                    with Path(f'exit-{worker}').open('a') as stream:
+                        stream.write('plugin exit\\n')
+                    sys.stderr.write('worker exit flush')
+                atexit.register(record_plugin_exit)
+    """)
+    pytester.makepyfile(f"""
+        import atexit
+        from pathlib import Path
+        def test_exit(worker_id):
+            stream = Path(f'buffered-{{worker_id}}').open('w')
+            stream.write('buffered data')
+            atexit.register(stream.close)
+            assert {not test_fails!r}
+    """)
+    result = pytester.runpytest_subprocess(
+        "-n2", "--dist=each", f"--worker-start-method={start_method}", timeout=30
+    )
+    result.assert_outcomes(**{"failed" if test_fails else "passed": 2})
+    assert "\n".join(result.errlines).count("worker exit flush") == 2
+    for worker in ("gw0", "gw1"):
+        assert (pytester.path / f"exit-{worker}").read_text().splitlines() == [
+            "plugin exit",
+            "import exit",
+        ]
+        assert (pytester.path / f"buffered-{worker}").read_text() == "buffered data"
+
+
+def test_abrupt_exit_skips_exit_handlers(pytester: pytest.Pytester) -> None:
+    pytester.makepyfile("""
+        import atexit
+        import os
+        from pathlib import Path
+        def test_crash():
+            atexit.register(Path('unexpected-exit-handler').touch)
+            os._exit(17)
+    """)
+    result = pytester.runpytest_subprocess(
+        "-n1", "--worker-start-method=forkserver", "--max-worker-restart=0", timeout=30
+    )
+    result.assert_outcomes(failed=1)
+    assert not (pytester.path / "unexpected-exit-handler").exists()

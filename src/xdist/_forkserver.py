@@ -6,6 +6,7 @@ must not acquire a receiver thread before forking.
 
 from __future__ import annotations
 
+import atexit
 import gc
 from multiprocessing.connection import Connection
 from multiprocessing.reduction import recv_handle
@@ -85,6 +86,11 @@ def serve(fd: int) -> None:
                         model = get_execmodel("main_thread_only")
                         io = Popen2IO(child.makefile("wb"), child.makefile("rb"), model)
                         serve_gateway(io, id=value + "-worker")  # type: ignore[arg-type]
+                        # _exit bypasses interpreter shutdown: run callbacks
+                        # registered both before and after fork, then flush.
+                        atexit._run_exitfuncs()
+                        sys.stdout.flush()
+                        sys.stderr.flush()
                     except BaseException:
                         traceback.print_exc()
                         os._exit(1)
