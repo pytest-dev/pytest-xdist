@@ -124,7 +124,7 @@ You can also add default environments like this:
 .. code-block:: ini
 
     [pytest]
-    addopts = --tx ssh=myhost//python=python3.9 --tx ssh=myhost//python=python3.6
+    addopts = --tx ssh=myhost//python=python3.10 --tx ssh=myhost//python=python3.11
 
 and then just type::
 

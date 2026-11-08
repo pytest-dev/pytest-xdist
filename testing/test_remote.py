@@ -1,14 +1,13 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 import marshal
 import pprint
 from queue import Queue
 import sys
 import time
 from typing import Any
-from typing import Callable
 from typing import cast
-from typing import Union
 import uuid
 
 import execnet
@@ -91,7 +90,7 @@ def worker(request: pytest.FixtureRequest, pytester: pytest.Pytester) -> WorkerS
 
 class TestWorkerInteractor:
     UnserializerReport = Callable[
-        [dict[str, Any]], Union[pytest.CollectReport, pytest.TestReport]
+        [dict[str, Any]], pytest.CollectReport | pytest.TestReport
     ]
 
     def test_ramp_delay_sleeps_once_before_first_test(

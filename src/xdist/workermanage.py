@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from collections.abc import Sequence
 import enum
 import fnmatch
@@ -8,7 +9,6 @@ from pathlib import Path
 import re
 import sys
 from typing import Any
-from typing import Callable
 from typing import Literal
 from typing import Union
 import uuid
@@ -420,9 +420,7 @@ class WorkerController:
             eventname, kwargs = eventcall
             if eventname in ("collectionstart",):
                 self.log(f"ignoring {eventname}({kwargs})")
-            elif eventname == "workerready":
-                self.notify_inproc(eventname, node=self, **kwargs)
-            elif eventname == "internal_error":
+            elif eventname == "workerready" or eventname == "internal_error":
                 self.notify_inproc(eventname, node=self, **kwargs)
             elif eventname == "workerfinished":
                 self._down = True
@@ -445,9 +443,7 @@ class WorkerController:
                     ids=kwargs["ids"],
                     group_names=kwargs.get("group_names"),
                 )
-            elif eventname == "runtest_protocol_complete":
-                self.notify_inproc(eventname, node=self, **kwargs)
-            elif eventname == "unscheduled":
+            elif eventname == "runtest_protocol_complete" or eventname == "unscheduled":
                 self.notify_inproc(eventname, node=self, **kwargs)
             elif eventname == "logwarning":
                 self.notify_inproc(

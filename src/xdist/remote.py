@@ -20,7 +20,6 @@ import time
 from typing import Any
 from typing import Literal
 from typing import TypedDict
-from typing import Union
 import warnings
 
 from _pytest.config import _prepareconfig
@@ -74,7 +73,7 @@ class Marker(enum.Enum):
 class TestQueue:
     """A simple queue that can be inspected and modified while the lock is held via the ``lock()`` method."""
 
-    Item = Union[int, Literal[Marker.SHUTDOWN]]
+    Item = int | Literal[Marker.SHUTDOWN]
 
     def __init__(self, execmodel: execnet.gateway_base.ExecModel):
         self._items: collections.deque[TestQueue.Item] = collections.deque()
