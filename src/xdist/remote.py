@@ -139,15 +139,21 @@ class WorkerInteractor:
         workerinfo = getinfodict()
         self.sendevent("workerready", workerinfo=workerinfo)
 
-    @pytest.hookimpl(hookwrapper=True)
-    def pytest_sessionfinish(self, exitstatus: int) -> Generator[None, object, None]:
+    @pytest.hookimpl(wrapper=True)
+    def pytest_sessionfinish(self, exitstatus: int) -> Generator[None, object, object]:
         workeroutput: dict[str, Any] = self.config.workeroutput  # type: ignore[attr-defined]
         # in pytest 5.0+, exitstatus is an IntEnum object
         workeroutput["exitstatus"] = int(exitstatus)
         workeroutput["shouldfail"] = self.session.shouldfail
         workeroutput["shouldstop"] = self.session.shouldstop
-        yield
+        error = sys.exc_info()[1]
+        if exitstatus == pytest.ExitCode.USAGE_ERROR and isinstance(
+            error, pytest.UsageError
+        ):
+            workeroutput["usage_error"] = [str(message) for message in error.args]
+        result = yield
         self.sendevent("workerfinished", workeroutput=workeroutput)
+        return result
 
     @pytest.hookimpl
     def pytest_collection(self) -> None:
