@@ -17,7 +17,7 @@ import warnings
 import execnet
 import pytest
 
-from xdist.plugin import _sys_path
+from xdist.plugin import _sys_path0
 import xdist.remote
 from xdist.remote import Producer
 from xdist.remote import WorkerInfo
@@ -352,10 +352,14 @@ class WorkerController:
 
         remote_module = self.config.hook.pytest_xdist_getremotemodule()
         self.channel = self.gateway.remote_exec(remote_module)
-        # change sys.path only for remote workers
-        # restore sys.path from a frozen copy for local workers
-        change_sys_path = _sys_path if self.gateway.spec.popen else None
-        self.channel.send((self.workerinput, args, option_dict, change_sys_path))
+        # Remote workers get the cwd prepended to sys.path (and PYTHONPATH).
+        # Local workers keep the worker interpreter's own sys.path; only the
+        # leading entry is replaced, see remote.py.
+        if self.gateway.spec.popen:
+            sys_path_info: dict[str, str | None] | None = {"path0": _sys_path0}
+        else:
+            sys_path_info = None
+        self.channel.send((self.workerinput, args, option_dict, sys_path_info))
 
         # putevent is only None in a test.
         if self.putevent:  # type: ignore[truthy-function]

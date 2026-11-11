@@ -1,0 +1,1 @@
+Local workers using a different interpreter (``--tx popen//python=...``) now keep that interpreter's own ``sys.path`` instead of a copy of the controller's, so packages installed only in the worker's environment are importable again. Only the ``""`` entry added by execnet's ``python -c`` bootstrap is replaced, by the controller's ``sys.path[0]``.
