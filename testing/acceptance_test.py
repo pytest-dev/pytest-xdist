@@ -8,6 +8,7 @@ from typing import cast
 import pytest
 
 import xdist
+from xdist.scheduler.loadscope import LoadScopeScheduling
 
 
 class TestDistribution:
@@ -1257,6 +1258,45 @@ def test_internal_errors_propagate_to_controller(pytester: pytest.Pytester) -> N
 
 
 class TestLoadScope:
+    @pytest.mark.parametrize(
+        ("nodeid", "expected"),
+        [
+            ("a.py::test", "a.py"),
+            ("a.py::TestA::test", "a.py::TestA"),
+            ("a.py::TestA::TestB::test", "a.py::TestA::TestB"),
+            ("pkg/__init__.py::pkg.func", "pkg/__init__.py"),
+            ("a.txt", "a.txt"),
+            ("a.py::test[::1-x]", "a.py"),
+            ("a.py::TestA::test[cafe:cafe::cafe]", "a.py::TestA"),
+            ("a.yaml::item[::1]", "a.yaml"),
+            ("a.py::test[x]::y]", "a.py"),
+            ("a.py::test[[::1]:80]", "a.py"),
+            ("dir[/a.py::test[::1]", "dir[/a.py"),
+            ("test[1].py::test[::1]", "test[1].py"),
+        ],
+    )
+    def test_split_scope(self, nodeid: str, expected: str) -> None:
+        sched = LoadScopeScheduling.__new__(LoadScopeScheduling)
+        assert sched._split_scope(nodeid) == expected
+
+    def test_by_module_with_double_colons_in_ids(
+        self, pytester: pytest.Pytester
+    ) -> None:
+        test_file = """
+            import pytest
+            @pytest.mark.parametrize('i', ['::1', 'cafe:cafe::cafe', 'x]::y', 'x'])
+            def test(i):
+                pass
+        """
+        pytester.makepyfile(test_a=test_file, test_b=test_file)
+        result = pytester.runpytest("-n2", "--dist=loadscope", "-v")
+        assert get_workers_and_test_count_by_prefix(
+            "test_a.py::test", result.outlines
+        ) in ({"gw0": 4}, {"gw1": 4})
+        assert get_workers_and_test_count_by_prefix(
+            "test_b.py::test", result.outlines
+        ) in ({"gw0": 4}, {"gw1": 4})
+
     def test_by_module(self, pytester: pytest.Pytester) -> None:
         test_file = """
             import pytest
