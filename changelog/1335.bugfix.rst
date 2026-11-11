@@ -1,0 +1,1 @@
+``--dist=loadscope`` no longer splits a module or class into several work units when a parametrization id contains ``::`` (for example IPv6 addresses).
