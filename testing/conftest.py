@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from collections.abc import Generator
 import shutil
-from typing import Callable
 
 import execnet
 import pytest
