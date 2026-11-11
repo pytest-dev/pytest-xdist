@@ -415,16 +415,25 @@ def setup_config(config: pytest.Config, basetemp: str | None) -> None:
 
 if __name__ == "__channelexec__":
     channel: execnet.Channel = channel  # type: ignore[name-defined] # noqa: F821, PLW0127
-    workerinput, args, option_dict, change_sys_path = channel.receive()  # type: ignore[name-defined]
+    workerinput, args, option_dict, sys_path_info = channel.receive()  # type: ignore[name-defined]
 
-    if change_sys_path is None:
+    if sys_path_info is None:
         importpath = os.getcwd()
         sys.path.insert(0, importpath)
         os.environ["PYTHONPATH"] = (
             importpath + os.pathsep + os.environ.get("PYTHONPATH", "")
         )
     else:
-        sys.path = change_sys_path
+        # Local worker: execnet starts it with ``python -c``, which puts ""
+        # (the cwd, resolved at import time) at sys.path[0]. Replace it with
+        # what the controller had there, so the worker sees the same
+        # sys.path[0] as a plain run, but otherwise keep the worker
+        # interpreter's own paths (it may be a different venv, see #1049).
+        if sys.path and sys.path[0] == "":
+            del sys.path[0]
+        path0 = sys_path_info.get("path0")
+        if path0 is not None and path0 not in sys.path:
+            sys.path.insert(0, path0)
 
     os.environ["PYTEST_XDIST_TESTRUNUID"] = workerinput["testrunuid"]
     os.environ["PYTEST_XDIST_WORKER"] = workerinput["workerid"]

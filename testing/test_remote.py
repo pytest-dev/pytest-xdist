@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import marshal
+from pathlib import Path
 import pprint
 from queue import Queue
 import sys
@@ -493,3 +494,28 @@ def test_remote_sys_path(pytester: pytest.Pytester) -> None:
     )
     result = pytester.runpytest("-n1")
     assert result.ret == 0
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="uses env(1) as a wrapper")
+def test_local_worker_keeps_own_sys_path(
+    pytester: pytest.Pytester, tmp_path: Path
+) -> None:
+    """A popen worker running a different environment keeps its own sys.path
+    instead of the controller's, without getting the cwd injected (#1049)."""
+    extra = tmp_path / "worker_only"
+    extra.mkdir()
+    extra.joinpath("worker_only_mod.py").write_text("X = 1\n")
+    pytester.makepyfile(
+        f"""
+        import os
+        import sys
+
+        def test_sys_path():
+            import worker_only_mod
+            assert "" not in sys.path
+            assert os.environ.get("PYTHONPATH") == {str(extra)!r}
+        """
+    )
+    python = f"env PYTHONPATH={extra} {sys.executable}"
+    result = pytester.runpytest("-d", "--tx", f"popen//python={python}")
+    result.assert_outcomes(passed=1)
