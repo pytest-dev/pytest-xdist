@@ -1256,6 +1256,17 @@ def test_internal_errors_propagate_to_controller(pytester: pytest.Pytester) -> N
     result.stdout.fnmatch_lines(["*RuntimeError: Some runtime error*"])
 
 
+@pytest.mark.parametrize("dist", ["loadscope", "loadfile", "loadgroup"])
+def test_scope_keeps_duplicate_occurrences(
+    pytester: pytest.Pytester, dist: str
+) -> None:
+    test_file = pytester.makepyfile("def test_selected_occurrence(): pass")
+    result = pytester.runpytest_subprocess(
+        "-n2", f"--dist={dist}", "--keep-duplicates", test_file, test_file
+    )
+    result.assert_outcomes(passed=2)
+
+
 class TestLoadScope:
     def test_by_module(self, pytester: pytest.Pytester) -> None:
         test_file = """
