@@ -1,0 +1,3 @@
+A warning whose class cannot be resolved on the controller no longer ends the run.
+
+``unserialize_warning_message`` resolved the class with ``importlib.import_module`` and a ``getattr``, both outside every guard and both in the controller's receiver thread. Anything they raised killed that thread: the node went down mid-test and the run failed in the scheduler, reporting an error that named nothing leading back to the import. Both now degrade to the generic ``Warning`` this function already builds, carrying the reason, and an unresolvable category degrades to the message's own class.
