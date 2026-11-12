@@ -1595,6 +1595,35 @@ class TestGroupScope:
         b_1 = next(t[2] for t in res if "test_b.py::test_1" in t[2])
         assert a_1[0] == b_1[0]
 
+    def test_late_deselection(self, pytester: pytest.Pytester) -> None:
+        """Group names match the items left after a late deselection (#1399)."""
+        pytester.makeconftest(
+            """
+            import pytest
+
+            @pytest.hookimpl(trylast=True)
+            def pytest_collection_modifyitems(config, items):
+                deselected = [items.pop(0)]
+                config.hook.pytest_deselected(items=deselected)
+        """
+        )
+        pytester.makepyfile(
+            """
+            import pytest
+
+            @pytest.mark.xdist_group("group")
+            def test_deselected():
+                pytest.fail("should have been deselected")
+
+            @pytest.mark.xdist_group("group")
+            def test_selected():
+                pass
+        """
+        )
+        result = pytester.runpytest("-n2", "--dist=loadgroup", "-v")
+        result.assert_outcomes(passed=1)
+        assert result.ret == 0
+
 
 class TestLocking:
     _test_content = """
