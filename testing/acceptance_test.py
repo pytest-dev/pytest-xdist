@@ -514,6 +514,62 @@ class TestTerminalReporting:
         result = pytester.runpytest("-n1", "-s")
         result.stdout.fnmatch_lines(["*pytest_runtest_logfinish hook called*"])
 
+    def test_last_failed_banner(self, pytester: pytest.Pytester) -> None:
+        pytester.makepyfile(
+            test_a="""
+            def test_fail():
+                assert False
+            """,
+            test_b="""
+            def test_pass():
+                assert True
+            """,
+        )
+        first = pytester.runpytest()
+        first.assert_outcomes(failed=1, passed=1)
+
+        result = pytester.runpytest("-n2", "--lf")
+        result.assert_outcomes(failed=1)
+        out = result.stdout.str()
+        expected = "run-last-failure: rerun previous 1 failure (skipped 1 file)"
+        assert out.count(expected) == 1
+        result.stdout.fnmatch_lines(
+            [
+                "2 workers [1 item]",
+                expected,
+            ]
+        )
+
+        quiet = pytester.runpytest("-n2", "-q", "--lf")
+        quiet.assert_outcomes(failed=1)
+        assert "run-last-failure:" not in quiet.stdout.str()
+
+    def test_report_collectionfinish_hook(self, pytester: pytest.Pytester) -> None:
+        pytester.makeconftest(
+            """
+            def pytest_report_collectionfinish(config, items):
+                return [f"custom collection summary: {len(items)} item(s)"]
+            """
+        )
+        pytester.makepyfile(
+            """
+            def test_ok():
+                pass
+            """
+        )
+        result = pytester.runpytest("-n2", "-v")
+        result.assert_outcomes(passed=1)
+        out = result.stdout.str()
+        assert out.count("custom collection summary: 1 item(s)") == 1
+        result.stdout.fnmatch_lines(
+            [
+                "2 workers [1 item]",
+                "custom collection summary: 1 item(s)",
+                "",
+                "scheduling tests via LoadScheduling",
+            ]
+        )
+
 
 def test_teardownfails_one_function(pytester: pytest.Pytester) -> None:
     p = pytester.makepyfile(

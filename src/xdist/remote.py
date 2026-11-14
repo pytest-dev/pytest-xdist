@@ -264,13 +264,26 @@ class WorkerInteractor:
                     continue
                 self._group_names.append("_".join(sorted(gnames)))
 
-    @pytest.hookimpl
+    @pytest.hookimpl(hookwrapper=True)
+    def pytest_report_collectionfinish(self) -> Generator[None, Any, None]:
+        outcome = yield
+        lines: list[str] = []
+        raw_lines: Sequence[str | Sequence[str]] = outcome.get_result() or ()
+        for line_or_lines in reversed(raw_lines):
+            if isinstance(line_or_lines, str):
+                lines.append(str(line_or_lines))
+            elif line_or_lines is not None:
+                lines.extend(str(line) for line in line_or_lines)
+        self._report_collectionfinish = lines
+
+    @pytest.hookimpl(trylast=True)
     def pytest_collection_finish(self, session: pytest.Session) -> None:
         self.sendevent(
             "collectionfinish",
             topdir=str(self.config.rootpath),
             ids=[item.nodeid for item in session.items],
             group_names=getattr(self, "_group_names", None),
+            report_collectionfinish=getattr(self, "_report_collectionfinish", None),
         )
 
     @pytest.hookimpl

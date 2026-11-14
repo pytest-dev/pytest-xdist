@@ -442,6 +442,7 @@ class WorkerController:
                     node=self,
                     ids=kwargs["ids"],
                     group_names=kwargs.get("group_names"),
+                    report_collectionfinish=kwargs.get("report_collectionfinish"),
                 )
             elif eventname in {"runtest_protocol_complete", "unscheduled"}:
                 self.notify_inproc(eventname, node=self, **kwargs)
