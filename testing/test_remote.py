@@ -191,6 +191,46 @@ class TestWorkerInteractor:
         ]
         assert ev.kwargs["group_names"] == ["group", None]
 
+    def test_report_collectionfinish_sent_to_controller(
+        self, worker: WorkerSetup
+    ) -> None:
+        worker.pytester.makeconftest(
+            """
+            import pytest
+
+            calls = 0
+
+            def pytest_report_collectionfinish():
+                global calls
+                calls += 1
+                return [f"hook-a (calls={calls})", "hook-b"]
+
+            class ExtraPlugin:
+                @pytest.hookimpl(trylast=True)
+                def pytest_report_collectionfinish(self):
+                    return "first-banner"
+
+            def pytest_configure(config):
+                config.pluginmanager.register(ExtraPlugin())
+            """
+        )
+        worker.pytester.makepyfile(
+            """
+            def test_ok():
+                pass
+            """
+        )
+        worker.setup()
+        ev = worker.popevent("collectionfinish")
+        check_marshallable(ev.kwargs)
+        assert ev.kwargs["report_collectionfinish"] == [
+            "first-banner",
+            "hook-a (calls=1)",
+            "hook-b",
+        ]
+        worker.sendcommand("shutdown")
+        worker.popevent("workerfinished")
+
     def test_remote_collect_skip(
         self, worker: WorkerSetup, unserialize_report: UnserializerReport
     ) -> None:

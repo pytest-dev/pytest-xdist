@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+import io
 from typing import Any
 from typing import cast
 from typing import TYPE_CHECKING
@@ -497,6 +498,49 @@ class TestDistReporter:
         # ])
         dsession.pytest_xdist_rsyncstart(source="hello", gateways=[gw1, gw2])  # type: ignore[attr-defined]
         linecomp.assert_contains_lines(["[X1,X2] rsyncing: hello"])
+
+    @pytest.mark.parametrize("isatty", [False, True])
+    def test_report_collectionfinish_printing(
+        self, pytester: pytest.Pytester, isatty: bool
+    ) -> None:
+        from _pytest.terminal import TerminalReporter
+
+        class TTYStringIO(io.StringIO):
+            def isatty(self) -> bool:
+                return isatty
+
+        buf = TTYStringIO()
+        config = pytester.parseconfig("--tx=2*popen")
+        config.pluginmanager.unregister(name="terminalreporter")
+        rep = TerminalReporter(config, file=buf)
+        config.pluginmanager.register(rep, "terminalreporter")
+
+        dsession = DSession(config)
+        dsession._session = pytest.Session.from_config(config)
+        sched = LoadScheduling(config)
+        dsession.sched = sched
+
+        node1, node2 = MockNode(), MockNode()
+        node1.gateway.spec = execnet.XSpec("id=gw0//popen")
+        node2.gateway.spec = execnet.XSpec("id=gw1//popen")
+        dsession.trdist.pytest_xdist_setupnodes(
+            [node1.gateway.spec, node2.gateway.spec]
+        )
+        sched.add_node(node1)
+        sched.add_node(node2)
+
+        banner = "run-last-failure: rerun previous 1 failure (skipped 1 file)"
+        dsession.worker_collectionfinish(
+            node1, ["a.py::test_1"], report_collectionfinish=[banner]
+        )
+        assert banner not in buf.getvalue()
+
+        # Even if the second worker passes None/empty (or the same banner),
+        # the banner is printed once on its own line after the status line.
+        dsession.worker_collectionfinish(node2, ["a.py::test_1"])
+        out = buf.getvalue()
+        assert out.count(banner) == 1
+        assert f"\n{banner}\n" in out
 
 
 def test_report_collection_diff_equal() -> None:

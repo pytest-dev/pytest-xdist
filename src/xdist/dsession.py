@@ -61,6 +61,8 @@ class DSession:
         self._max_worker_restart = get_default_max_worker_restart(self.config)
         # summary message to print at the end of the session
         self._summary_report: str | None = None
+        self._report_collectionfinish: list[str] = []
+        self._collectionfinish_reported = False
         self.terminal = config.pluginmanager.getplugin("terminalreporter")
         if self.terminal:
             self.trdist = TerminalDistReporter(config)
@@ -283,6 +285,7 @@ class DSession:
         node: WorkerController,
         ids: Sequence[str],
         group_names: Sequence[str | None] | None = None,
+        report_collectionfinish: Sequence[str] | None = None,
     ) -> None:
         """Worker has finished test collection.
 
@@ -301,6 +304,12 @@ class DSession:
         self._session.testscollected = len(ids)
         assert self.sched is not None
         self.sched.add_node_collection(node, ids, group_names)
+        if (
+            report_collectionfinish
+            and not self._collectionfinish_reported
+            and not self._report_collectionfinish
+        ):
+            self._report_collectionfinish = list(report_collectionfinish)
         if self.terminal:
             self.trdist.setstatus(
                 node.gateway.spec, WorkerStatus.CollectionDone, tests_collected=len(ids)
@@ -308,6 +317,13 @@ class DSession:
         if self.sched.collection_is_completed:
             if self.terminal and not self.sched.has_pending:
                 self.trdist.ensure_show_status()
+                if not self._collectionfinish_reported:
+                    self._collectionfinish_reported = True
+                    if self._report_collectionfinish:
+                        if self.trdist._isatty:
+                            self.terminal.write_line("")
+                        for line in self._report_collectionfinish:
+                            self.terminal.write_line(line)
                 self.terminal.write_line("")
                 if self.config.option.verbose > 0:
                     self.terminal.write_line(
