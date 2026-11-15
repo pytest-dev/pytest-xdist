@@ -17,6 +17,8 @@ import warnings
 import execnet
 import pytest
 
+from xdist._forkserver import forkserver_key
+from xdist._forkserver import ForkserverGroup
 from xdist.plugin import _sys_path
 import xdist.remote
 from xdist.remote import Producer
@@ -56,7 +58,12 @@ class NodeManager:
         self.testrunuid = self.config.getoption("testrunuid")
         if self.testrunuid is None:
             self.testrunuid = uuid.uuid4().hex
-        self.group = execnet.Group(execmodel="main_thread_only")
+        forkserver = config.stash.get(forkserver_key, None)
+        self.group = (
+            execnet.Group(execmodel="main_thread_only")
+            if forkserver is None
+            else ForkserverGroup(forkserver)
+        )
         for proxy_spec in self._getpxspecs():
             # Proxy gateways do not run workers, and are meant to be passed with the `via` attribute
             # to additional gateways.

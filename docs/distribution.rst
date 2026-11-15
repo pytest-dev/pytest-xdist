@@ -62,6 +62,47 @@ Parallelization can be configured further with these options:
   specified in seconds by default and also accepts ``s``, ``m``, and ``h``
   suffixes, for example ``--ramp=10s`` or ``--ramp=5m``.
 
+Experimental preloaded workers
+------------------------------
+
+Local workers normally start in fresh Python interpreters. On Unix systems,
+``--worker-start-method=forkserver`` can reuse imports loaded by plugins and
+initial conftests::
+
+    pytest -n auto --worker-start-method=forkserver
+
+The equivalent configuration is:
+
+.. code-block:: toml
+
+    [tool.pytest.ini_options]
+    xdist_worker_start_method = "forkserver"
+
+The command-line option overrides the configuration. The default is ``popen``.
+The setting has no effect with ``-n0`` or ``--collect-only``.
+
+The fork server snapshots the controller after initial conftest imports and
+before ``pytest_configure``. Each worker, including replacement workers after
+a crash, forks from that snapshot and configures pytest, collects tests, and
+initializes fixtures independently. Test collection itself is not shared.
+
+This experimental mode requires Unix fork support and local workers using the
+current interpreter and the ``main_thread_only`` execution model. Remote and
+proxy gateways and per-worker interpreter, environment, working-directory,
+priority, or bytecode settings are not supported.
+
+Imports must be safe to fork. Applications can implement
+``pytest_xdist_before_fork(config)`` in an initial conftest or plugin to stop
+import-time background threads, then initialize process-local clients during
+``pytest_configure``. Xdist rejects active Python background threads before
+creating the server. This check cannot establish that native libraries are safe
+to fork, particularly on macOS; use the default ``popen`` mode for those suites.
+The server is forked from the controller, rather than spawned as a fresh
+interpreter as in Python's ``multiprocessing`` forkserver implementation.
+
+Distribution modes
+------------------
+
 The test distribution algorithm is configured with the ``--dist`` command-line option:
 
 .. _distribution modes:

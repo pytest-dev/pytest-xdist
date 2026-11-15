@@ -187,6 +187,17 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         "Forced to 0 (disabled) when used with --pdb.",
     )
     group.addoption(
+        "--worker-start-method",
+        choices=("popen", "forkserver"),
+        default=None,
+        help="Start local workers in fresh interpreters or fork them from preloaded imports",
+    )
+    parser.addini(
+        "xdist_worker_start_method",
+        "Local worker startup method: popen or forkserver",
+        default="popen",
+    )
+    group.addoption(
         "--maxprocesses",
         dest="maxprocesses",
         metavar="maxprocesses",
@@ -450,6 +461,20 @@ def pytest_cmdline_main(config: pytest.Config) -> None:
         raise pytest.UsageError(
             "--pdb is incompatible with distributing tests; try using -n0 or -nauto."
         )
+
+    method = config.getoption("worker_start_method") or config.getini(
+        "xdist_worker_start_method"
+    )
+    if method not in ("popen", "forkserver"):
+        raise pytest.UsageError(f"Unknown xdist worker start method: {method!r}")
+    if (
+        method == "forkserver"
+        and not val("collectonly")
+        and _is_distribution_mode(config)
+    ):
+        from xdist._forkserver import start_forkserver
+
+        start_forkserver(config)
 
 
 # -------------------------------------------------------------------------
