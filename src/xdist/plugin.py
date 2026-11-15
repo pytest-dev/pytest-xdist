@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import contextlib
+import copy
 import math
 import os
 import sys
@@ -13,6 +15,8 @@ import pytest
 if TYPE_CHECKING:
     from collections.abc import Callable
     from typing import Literal
+
+    from _pytest.config.argparsing import Parser
 
 
 _sys_path = list(sys.path)  # freeze a copy of sys.path at interpreter startup
@@ -431,7 +435,50 @@ def _is_distribution_mode(config: pytest.Config) -> bool:
 
 
 @pytest.hookimpl(tryfirst=True)
-def pytest_cmdline_main(config: pytest.Config) -> None:
+def pytest_load_initial_conftests(
+    early_config: pytest.Config, parser: Parser, args: list[str]
+) -> None:
+    from xdist import _forkserver
+
+    if _forkserver.preloading:
+        return
+    options = parser.parse_known_args(args, namespace=copy.copy(early_config.option))
+    method = options.worker_start_method or early_config.getini(
+        "xdist_worker_start_method"
+    )
+    if method not in ("popen", "forkserver"):
+        raise pytest.UsageError(f"Unknown xdist worker start method: {method!r}")
+    distributed = options.numprocesses or (
+        (options.dist != "no" or options.distload) and options.tx
+    )
+    if (
+        method == "forkserver"
+        and distributed
+        and options.numprocesses != 0
+        and not (options.collectonly or options.help or options.version)
+        and not (options.usepdb and options.numprocesses in ("auto", "logical"))
+    ):
+        capture = early_config.pluginmanager.getplugin("capturemanager")
+        with (
+            capture.global_and_fixture_disabled()
+            if capture is not None
+            else contextlib.nullcontext()
+        ):
+            _forkserver.start_forkserver(early_config, options)
+        # The forked controller uses the fully parsed preloaded Config. The
+        # launcher only needs to reach pytest_cmdline_main to relay its result;
+        # it must not import conftests or parse their custom options again.
+        early_config.known_args_namespace.noconftest = True
+        args.clear()
+
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_cmdline_main(config: pytest.Config) -> int | None:
+    from xdist._forkserver import session_key
+
+    session = config.stash.get(session_key, None)
+    if session is not None:
+        return session.run()
     if config.option.distload:
         config.option.dist = "load"
 
@@ -462,19 +509,7 @@ def pytest_cmdline_main(config: pytest.Config) -> None:
             "--pdb is incompatible with distributing tests; try using -n0 or -nauto."
         )
 
-    method = config.getoption("worker_start_method") or config.getini(
-        "xdist_worker_start_method"
-    )
-    if method not in ("popen", "forkserver"):
-        raise pytest.UsageError(f"Unknown xdist worker start method: {method!r}")
-    if (
-        method == "forkserver"
-        and not val("collectonly")
-        and _is_distribution_mode(config)
-    ):
-        from xdist._forkserver import start_forkserver
-
-        start_forkserver(config)
+    return None
 
 
 # -------------------------------------------------------------------------

@@ -347,7 +347,9 @@ class WorkerController:
         self.gateway._rinfo()
         spec = self.gateway.spec
         args = [str(x) for x in self.config.invocation_params.args or ()]
-        option_dict = {}
+        option_dict: dict[str, object] = {}
+        if self.config.stash.get(forkserver_key, None) is not None:
+            option_dict["forkserver"] = True
         if not spec.popen or spec.chdir:
             args = make_reltoroot(self.nodemanager.roots, args)
         if spec.popen:

@@ -81,10 +81,19 @@ The equivalent configuration is:
 The command-line option overrides the configuration. The default is ``popen``.
 The setting has no effect with ``-n0`` or ``--collect-only``.
 
-The fork server snapshots the controller after initial conftest imports and
-before ``pytest_configure``. Each worker, including replacement workers after
-a crash, forks from that snapshot and configures pytest, collects tests, and
-initializes fixtures independently. Test collection itself is not shared.
+During ``pytest_load_initial_conftests``, xdist starts a fresh interpreter using
+Python's ``multiprocessing`` forkserver. The forkserver loads plugins and initial
+conftests once, before ``pytest_configure``. The xdist controller and all workers,
+including replacements after a crash, are forked from this same preloaded
+interpreter. Each child configures pytest independently; workers also collect
+tests and initialize fixtures independently. Test collection itself is not shared.
+
+The original pytest process acts as a launcher and returns the controller's exit
+status. A helper process owns the forkserver and cleans up its children when the
+session ends. This leaves the launcher's multiprocessing start method and any
+existing forkserver unchanged. Applications invoking ``pytest.main()`` must use
+the usual ``if __name__ == "__main__":`` guard, and pass extra plugins by module
+name rather than as plugin objects.
 
 This experimental mode requires Unix fork support and local workers using the
 current interpreter and the ``main_thread_only`` execution model. Remote and
@@ -93,12 +102,12 @@ priority, or bytecode settings are not supported.
 
 Imports must be safe to fork. Applications can implement
 ``pytest_xdist_before_fork(config)`` in an initial conftest or plugin to stop
-import-time background threads, then initialize process-local clients during
-``pytest_configure``. Xdist rejects active Python background threads before
-creating the server. This check cannot establish that native libraries are safe
-to fork, particularly on macOS; use the default ``popen`` mode for those suites.
-The server is forked from the controller, rather than spawned as a fresh
-interpreter as in Python's ``multiprocessing`` forkserver implementation.
+import-time background threads in the forkserver, then initialize process-local
+clients during ``pytest_configure``. Xdist rejects active Python background
+threads in the forkserver before forking children. Background threads in the
+launcher are not inherited. This check cannot establish that native libraries
+imported by conftests are safe to fork; use the default ``popen`` mode for those
+suites.
 
 Distribution modes
 ------------------

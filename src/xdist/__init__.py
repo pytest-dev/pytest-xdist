@@ -1,3 +1,8 @@
+"""Distributed testing for pytest.
+
+PYTEST_DONT_REWRITE: forkserver preloading imports this package before pytest.
+"""
+
 from xdist._version import version as __version__
 from xdist.plugin import get_xdist_worker_id
 from xdist.plugin import is_xdist_controller

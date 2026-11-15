@@ -429,7 +429,12 @@ if __name__ == "__channelexec__":
     os.environ["PYTEST_XDIST_WORKER"] = workerinput["workerid"]
     os.environ["PYTEST_XDIST_WORKER_COUNT"] = str(workerinput["workercount"])
 
-    config = _prepareconfig(args, None)
+    if option_dict.get("forkserver"):
+        # Local forkserver workers inherit a fully parsed, unconfigured Config.
+        # Re-parsing would explicitly reimport standalone conftest modules.
+        from xdist._forkserver_preload import config
+    else:
+        config = _prepareconfig(args, None)
 
     setup_config(config, option_dict.get("basetemp"))
     config._parser.prog = os.path.basename(workerinput["mainargv"][0])

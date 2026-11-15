@@ -31,11 +31,12 @@ if TYPE_CHECKING:
 
 @pytest.hookspec()
 def pytest_xdist_before_fork(config: pytest.Config) -> None:
-    """Prepare imported state before starting the opt-in local fork server.
+    """Prepare imported state before forking the controller and workers.
 
-    Called once in the controller, after initial conftest imports and before
-    pytest_configure. Applications may stop import-time background threads here
-    and initialize process-local resources during pytest_configure instead.
+    Called once in multiprocessing's forkserver, after initial conftest imports
+    and before forking the controller or any workers. Applications may stop
+    import-time background threads here and initialize process-local resources
+    during pytest_configure instead.
     """
 
 
