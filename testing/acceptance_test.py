@@ -1032,6 +1032,42 @@ class TestNodeFailure:
             ]
         )
 
+    def test_loadfile_does_not_hang_after_restart(
+        self, pytester: pytest.Pytester
+    ) -> None:
+        """Fix test suite never finishing in case a worker has to be restarted
+        after having already finished a work unit (#1417).
+
+        The single worker accumulates several file-scoped work units; when it
+        crashes in the last one, the completed units must not be re-queued
+        ahead of the unfinished one, otherwise the restarted worker is handed
+        an empty unit and the unfinished tests are orphaned forever.
+        """
+        pytester.makepyfile(
+            test_a="""
+            def test_a1(): pass
+            def test_a2(): pass
+        """,
+            test_b="""
+            def test_b1(): pass
+            def test_b2(): pass
+        """,
+            test_c="""
+            import os
+            def test_crash(): os._exit(1)
+            def test_c1(): pass
+            def test_c2(): pass
+        """,
+        )
+        res = pytester.runpytest("-n1", "--dist=loadfile")
+        res.stdout.fnmatch_lines(
+            [
+                "replacing crashed worker gw*",
+                "worker*crashed while running*",
+                "*5 failed*4 passed*",
+            ]
+        )
+
     def test_max_worker_restart(self, pytester: pytest.Pytester) -> None:
         f = pytester.makepyfile(
             """
