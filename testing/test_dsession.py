@@ -18,8 +18,8 @@ from xdist.dsession import TerminalDistReporter
 from xdist.dsession import WorkerStatus
 from xdist.report import report_collection_diff
 from xdist.scheduler import EachScheduling
-from xdist.scheduler import LoadScheduling
 from xdist.scheduler import LoadFileScheduling
+from xdist.scheduler import LoadScheduling
 from xdist.scheduler import LoadScopeScheduling
 from xdist.scheduler import WorkStealingScheduling
 from xdist.workermanage import WorkerController
@@ -699,7 +699,6 @@ def test_get_workers_status_line(
     status_and_items: Sequence[tuple[WorkerStatus, int]], expected: str
 ) -> None:
     assert get_workers_status_line(status_and_items) == expected
-
 
 
 @pytest.mark.parametrize("scheduler_class", [LoadScopeScheduling, LoadFileScheduling])
