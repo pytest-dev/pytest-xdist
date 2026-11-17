@@ -43,6 +43,25 @@ Since version 2.0, the following functions are also available in the ``xdist`` m
 .. autofunction:: xdist.is_xdist_master
 .. autofunction:: xdist.get_xdist_worker_id
 
+These functions accept a ``request``, ``session`` or ``config`` object, so they can
+be used from config-only hooks such as ``pytest_configure`` or
+``pytest_terminal_summary``:
+
+.. code-block:: python
+
+    import xdist
+
+
+    def pytest_configure(config):
+        if xdist.is_xdist_controller(config):
+            ...  # only runs in the controller process when distributing tests
+
+They also work when ``pytest-xdist`` is installed but disabled with ``-p no:xdist``.
+
+Prefer them over checking ``config.pluginmanager.has_plugin("dsession")``:
+the ``dsession`` plugin is registered in a ``trylast`` ``pytest_configure`` hook,
+so it is not visible before ``pytest_sessionstart``.
+
 Identifying workers from the system environment
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

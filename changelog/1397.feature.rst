@@ -1,0 +1,2 @@
+``is_xdist_worker``, ``is_xdist_controller`` and ``get_xdist_worker_id`` now also accept a ``pytest.Config``, so they can be used from config-only hooks such as ``pytest_configure``.
+``is_xdist_controller`` now returns ``False`` instead of raising when xdist is disabled with ``-p no:xdist``.

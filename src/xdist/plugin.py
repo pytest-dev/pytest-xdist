@@ -457,30 +457,43 @@ def pytest_cmdline_main(config: pytest.Config) -> None:
 # -------------------------------------------------------------------------
 
 
+def _get_config(
+    request_or_session: pytest.FixtureRequest | pytest.Session | pytest.Config,
+) -> pytest.Config:
+    # Duck-typed so ``Config`` look-alikes keep working.
+    if hasattr(request_or_session, "config"):
+        config: pytest.Config = request_or_session.config
+        return config
+    return request_or_session
+
+
 def is_xdist_worker(
-    request_or_session: pytest.FixtureRequest | pytest.Session,
+    request_or_session: pytest.FixtureRequest | pytest.Session | pytest.Config,
 ) -> bool:
     """Return `True` if this is an xdist worker, `False` otherwise.
 
-    :param request_or_session: the `pytest` `request` or `session` object
+    :param request_or_session: the `pytest` `request`, `session` or `config` object
     """
-    return hasattr(request_or_session.config, "workerinput")
+    return hasattr(_get_config(request_or_session), "workerinput")
 
 
 def is_xdist_controller(
-    request_or_session: pytest.FixtureRequest | pytest.Session,
+    request_or_session: pytest.FixtureRequest | pytest.Session | pytest.Config,
 ) -> bool:
     """Return `True` if this is the xdist controller, `False` otherwise.
 
     Note: this method also returns `False` when distribution has not been
-    activated at all.
+    activated at all, including when the xdist plugin is disabled
+    (``-p no:xdist``).
 
-    :param request_or_session: the `pytest` `request` or `session` object
+    The result is only reliable from ``pytest_configure`` on: before that,
+    xdist has not yet turned ``-n`` into a distribution mode, so this returns
+    `False` even when tests will be distributed.
+
+    :param request_or_session: the `pytest` `request`, `session` or `config` object
     """
-    return (
-        not is_xdist_worker(request_or_session)
-        and request_or_session.config.option.dist != "no"
-    )
+    config = _get_config(request_or_session)
+    return not is_xdist_worker(config) and getattr(config.option, "dist", "no") != "no"
 
 
 # ALIAS: TODO, deprecate (#592)
@@ -488,7 +501,7 @@ is_xdist_master = is_xdist_controller
 
 
 def get_xdist_worker_id(
-    request_or_session: pytest.FixtureRequest | pytest.Session,
+    request_or_session: pytest.FixtureRequest | pytest.Session | pytest.Config,
 ) -> str:
     """Return the id of the current worker ('gw0', 'gw1', etc) or 'master'
     if running on the controller node.
@@ -496,10 +509,11 @@ def get_xdist_worker_id(
     If not distributing tests (for example passing `-n0` or not passing `-n` at all)
     also return 'master'.
 
-    :param request_or_session: the `pytest` `request` or `session` object
+    :param request_or_session: the `pytest` `request`, `session` or `config` object
     """
-    if hasattr(request_or_session.config, "workerinput"):
-        workerid: str = request_or_session.config.workerinput["workerid"]
+    config = _get_config(request_or_session)
+    if hasattr(config, "workerinput"):
+        workerid: str = config.workerinput["workerid"]
         return workerid
     else:
         # TODO: remove "master", ideally for a None
