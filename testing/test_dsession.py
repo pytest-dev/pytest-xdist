@@ -19,6 +19,8 @@ from xdist.dsession import WorkerStatus
 from xdist.report import report_collection_diff
 from xdist.scheduler import EachScheduling
 from xdist.scheduler import LoadScheduling
+from xdist.scheduler import LoadFileScheduling
+from xdist.scheduler import LoadScopeScheduling
 from xdist.scheduler import WorkStealingScheduling
 from xdist.workermanage import WorkerController
 
@@ -697,3 +699,31 @@ def test_get_workers_status_line(
     status_and_items: Sequence[tuple[WorkerStatus, int]], expected: str
 ) -> None:
     assert get_workers_status_line(status_and_items) == expected
+
+
+
+@pytest.mark.parametrize("scheduler_class", [LoadScopeScheduling, LoadFileScheduling])
+def test_removed_node_collection_does_not_complete_initial_collection(
+    pytester: pytest.Pytester, scheduler_class: type[LoadScopeScheduling]
+) -> None:
+    config = pytester.parseconfig("--tx=3*popen")
+    sched = scheduler_class(config)
+    node1, node2, node3, restarted_node = (MockNode() for _ in range(4))
+    for node in (node1, node2, node3):
+        sched.add_node(node)
+
+    collection = ["test_file.py::test_func"]
+    sched.add_node_collection(node1, collection)
+    sched.add_node_collection(node2, collection)
+    assert not sched.collection_is_completed
+
+    sched.remove_node(node2)
+    sched.add_node(restarted_node)
+    sched.add_node_collection(restarted_node, collection)
+
+    # The stale collection from node2 must not make it appear that node3
+    # has finished collecting.
+    assert not sched.collection_is_completed
+
+    sched.add_node_collection(node3, collection)
+    assert sched.collection_is_completed
