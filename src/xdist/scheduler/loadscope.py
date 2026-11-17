@@ -305,16 +305,25 @@ class LoadScopeScheduling:
         #. Method of a class in a test module.
         #. Doctest in a function in a package.
 
-        This function will group tests with the scope determined by splitting
-        the first ``::`` from the right. That is, classes will be grouped in a
+        This function will group tests with the scope determined by dropping
+        the last name of the nodeid. That is, classes will be grouped in a
         single work unit, and functions from a test module will be grouped by
         their module. In the above example, scopes will be::
 
             example/loadsuite/test/test_beta.py
             example/loadsuite/test/test_delta.py::Delta1
             example/loadsuite/epsilon/__init__.py
+
+        The nodeid is parsed the same way pytest does: the first ``::`` ends
+        the path and the first ``[`` after it starts the parametrization id,
+        so ``::`` or brackets inside a parametrization id (e.g. IPv6
+        addresses) or ``[`` in the path do not change the scope.
         """
-        return nodeid.rsplit("::", 1)[0]
+        path, sep, tail = nodeid.partition("::")
+        if not sep:
+            return nodeid
+        names = tail.partition("[")[0].split("::")
+        return "::".join([path, *names[:-1]])
 
     def _pending_of(self, workload: dict[str, dict[str, bool]]) -> int:
         """Return the number of pending tests in a workload."""
