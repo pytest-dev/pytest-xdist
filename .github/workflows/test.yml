@@ -28,7 +28,8 @@ jobs:
 
     needs: [package]
 
-    runs-on: ${{ matrix.os }}
+    # Python 3.9 binaries are unavailable for newer Ubuntu runner images.
+    runs-on: ${{ matrix.os == 'ubuntu-latest' && startsWith(matrix.tox_env, 'py39-') && 'ubuntu-24.04' || matrix.os }}
 
     strategy:
       fail-fast: false
