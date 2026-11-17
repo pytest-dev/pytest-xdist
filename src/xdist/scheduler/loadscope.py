@@ -179,6 +179,11 @@ class LoadScopeScheduling:
         node has no more pending items.
         """
         workload = self.assigned_work.pop(node)
+        if self.collection is None:
+            # A worker can die after collecting, but before the initial
+            # collection is complete. Its collection must not count toward
+            # the scheduler's initial collection barrier.
+            self.registered_collections.pop(node, None)
         if not self._pending_of(workload):
             return None
 
