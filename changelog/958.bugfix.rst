@@ -1,0 +1,1 @@
+Honor ``--no-header`` when displaying worker startup, collection status, and scheduling information.
