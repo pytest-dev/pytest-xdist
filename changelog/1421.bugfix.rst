@@ -1,0 +1,1 @@
+Fix custom schedulers from ``pytest_xdist_make_scheduler`` whose ``add_node_collection`` takes only ``node`` and ``collection`` failing with a ``TypeError``.
