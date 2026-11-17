@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
 import importlib
-from types import SimpleNamespace
 import threading
 import time
+from types import SimpleNamespace
 from typing import Any
 import warnings
 
