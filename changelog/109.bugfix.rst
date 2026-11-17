@@ -1,0 +1,3 @@
+Propagate usage errors raised during worker collection, such as missing requested
+paths, back to the controller so pytest reports the original error message and
+exit code.
