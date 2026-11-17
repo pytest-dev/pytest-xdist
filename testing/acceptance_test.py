@@ -432,6 +432,41 @@ class TestDistEach:
 
 class TestTerminalReporting:
     @pytest.mark.parametrize("verbosity", ["", "-q", "-v"])
+    def test_no_header(self, pytester: pytest.Pytester, verbosity: str) -> None:
+        pytester.makepyfile(
+            """
+            import pytest
+
+            def test_ok():
+                pass
+
+            def test_skip():
+                pytest.skip("skipped test")
+
+            def test_fail():
+                raise ValueError("test failure")
+        """
+        )
+        args = ["-n1", "--no-header"]
+        if verbosity:
+            args.append(verbosity)
+        result = pytester.runpytest(*args)
+        result.assert_outcomes(passed=1, skipped=1, failed=1)
+        assert result.ret == pytest.ExitCode.TESTS_FAILED
+        out = result.stdout.str()
+        for header in (
+            "created:",
+            "initialized:",
+            "ready:",
+            "collecting:",
+            "1 worker [",
+            "bringing up nodes...",
+            "scheduling tests via",
+        ):
+            assert header not in out
+        assert "ValueError: test failure" in out
+
+    @pytest.mark.parametrize("verbosity", ["", "-q", "-v"])
     def test_output_verbosity(self, pytester: pytest.Pytester, verbosity: str) -> None:
         pytester.makepyfile(
             """

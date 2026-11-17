@@ -34,7 +34,7 @@ class LoadGroupScheduling(LoadScopeScheduling):
             assert len(collection) == len(group_names)
             collection = [
                 f"{nodeid}@{group_name}" if group_name is not None else nodeid
-                for nodeid, group_name in zip(collection, group_names)
+                for nodeid, group_name in zip(collection, group_names, strict=False)
             ]
         super().add_node_collection(node, collection)
 
