@@ -14,7 +14,10 @@ from xdist.dsession import get_workers_status_line
 from xdist.dsession import WorkerStatus
 from xdist.report import report_collection_diff
 from xdist.scheduler import EachScheduling
+from xdist.scheduler import LoadFileScheduling
+from xdist.scheduler import LoadGroupScheduling
 from xdist.scheduler import LoadScheduling
+from xdist.scheduler import LoadScopeScheduling
 from xdist.scheduler import WorkStealingScheduling
 from xdist.workermanage import WorkerController
 
@@ -465,6 +468,51 @@ class TestWorkStealingScheduling:
         rep = collect_hook.reports[0]
         assert isinstance(rep.longrepr, str)
         assert "Different tests were collected between" in rep.longrepr
+
+
+@pytest.mark.parametrize(
+    "scheduler", [LoadScopeScheduling, LoadFileScheduling, LoadGroupScheduling]
+)
+class TestScopeSchedulingOccurrences:
+    def test_duplicate_completion(
+        self, pytester: pytest.Pytester, scheduler: type[LoadScopeScheduling]
+    ) -> None:
+        sched = scheduler(pytester.parseconfig("--tx=popen"))
+        node = MockNode()
+        sched.add_node(node)
+        sched.add_node_collection(node, ["a.py::test_same"] * 2)
+
+        sched.schedule()
+        assert node.sent == [0, 1]
+        sched.mark_test_complete(node, 0)
+        assert bool(sched.has_pending)
+        sched.mark_test_complete(node, 1)
+        assert not sched.has_pending
+        assert sched.tests_finished
+
+    def test_duplicate_restart(
+        self, pytester: pytest.Pytester, scheduler: type[LoadScopeScheduling]
+    ) -> None:
+        sched = scheduler(pytester.parseconfig("--tx=popen"))
+        collection = ["a.py::test_same"] * 3
+        node = MockNode()
+        sched.add_node(node)
+        sched.add_node_collection(node, collection)
+        sched.schedule()
+        assert node.sent == [0, 1, 2]
+        sched.mark_test_complete(node, 0)
+
+        assert sched.remove_node(node) == "a.py::test_same"
+        replacement = MockNode()
+        sched.add_node(replacement)
+        sched.add_node_collection(replacement, collection)
+        sched.schedule()
+        assert replacement.sent == [1, 2]
+        sched.mark_test_complete(replacement, 1)
+        assert bool(sched.has_pending)
+        sched.mark_test_complete(replacement, 2)
+        assert not sched.has_pending
+        assert sched.tests_finished
 
 
 class TestDistReporter:
