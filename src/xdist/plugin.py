@@ -15,7 +15,12 @@ if TYPE_CHECKING:
     from typing import Literal
 
 
-_sys_path = list(sys.path)  # freeze a copy of sys.path at interpreter startup
+# The controller's sys.path[0] as set by the interpreter at startup: the script
+# directory for ``pytest``, the cwd for ``python -m pytest``, or ``None`` when
+# running with ``-P``/``PYTHONSAFEPATH`` (then sys.path[0] is not special).
+_sys_path0: str | None = (
+    None if getattr(sys.flags, "safe_path", False) or not sys.path else sys.path[0]
+)
 
 
 def _auto_num_workers_envvar(config: pytest.Config) -> int | None:
