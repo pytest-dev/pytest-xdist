@@ -1660,6 +1660,35 @@ class TestGroupScope:
         assert result.ret == 0
 
 
+def test_custom_scheduler_with_two_argument_add_node_collection(
+    pytester: pytest.Pytester,
+) -> None:
+    """Custom schedulers written before group names existed keep working."""
+    pytester.makeconftest(
+        """
+        from xdist.scheduler import LoadScheduling
+
+        class OldScheduling(LoadScheduling):
+            def add_node_collection(self, node, collection):
+                super().add_node_collection(node, collection)
+
+        def pytest_xdist_make_scheduler(config, log):
+            return OldScheduling(config, log)
+        """
+    )
+    pytester.makepyfile(
+        """
+        def test_a():
+            pass
+
+        def test_b():
+            pass
+        """
+    )
+    result = pytester.runpytest("-n2")
+    result.assert_outcomes(passed=2)
+
+
 class TestLocking:
     _test_content = """
     class TestClassName%s(object):
