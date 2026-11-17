@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 import re
 import sys
+import threading
 from typing import Any
 from typing import Literal
 from typing import Union
@@ -477,7 +478,16 @@ class WorkerController:
             self.notify_inproc("errordown", node=self, error=excinfo)
 
 
+_warning_deserialization_lock = threading.RLock()
+
+
 def unserialize_warning_message(data: dict[str, Any]) -> warnings.WarningMessage:
+    # Concurrent receiver-thread imports can observe partially initialised modules.
+    with _warning_deserialization_lock:
+        return _unserialize_warning_message(data)
+
+
+def _unserialize_warning_message(data: dict[str, Any]) -> warnings.WarningMessage:
     import importlib
 
     if data["message_module"]:

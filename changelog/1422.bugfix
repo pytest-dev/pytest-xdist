@@ -1,0 +1,1 @@
+Serialise warning deserialisation on the controller to prevent concurrent package imports from causing ``INTERNALERROR`` during distributed test runs.
