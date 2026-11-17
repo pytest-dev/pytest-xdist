@@ -1,0 +1,2 @@
+Workers that finish all their tests are now torn down immediately, freeing
+their subprocess memory instead of keeping them alive until the session ends.
