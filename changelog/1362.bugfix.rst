@@ -1,0 +1,1 @@
+Avoid treating a crashed worker's stale collection as complete when using ``--dist=loadscope`` or ``--dist=loadfile``.
