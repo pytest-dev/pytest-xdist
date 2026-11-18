@@ -1,0 +1,1 @@
+Display lines returned by ``pytest_report_collectionfinish`` hooks (such as the ``--lf`` / ``--last-failed`` summary banner) after distributed collection finishes.
