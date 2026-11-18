@@ -563,6 +563,54 @@ class TestDistReporter:
         dsession.pytest_xdist_rsyncstart(source="hello", gateways=[gw1, gw2])  # type: ignore[attr-defined]
         linecomp.assert_contains_lines(["[X1,X2] rsyncing: hello"])
 
+    @pytest.mark.parametrize("no_header", [False, True])
+    @pytest.mark.parametrize("isatty", [False, True])
+    def test_report_collectionfinish_printing(
+        self, pytester: pytest.Pytester, isatty: bool, no_header: bool
+    ) -> None:
+        class TTYStringIO(StringIO):
+            def isatty(self) -> bool:
+                return isatty
+
+        buf = TTYStringIO()
+        args = ["--tx=2*popen"]
+        if no_header:
+            args.append("--no-header")
+        config = pytester.parseconfig(*args)
+        config.pluginmanager.unregister(name="terminalreporter")
+        rep = TerminalReporter(config, file=buf)
+        config.pluginmanager.register(rep, "terminalreporter")
+
+        dsession = DSession(config)
+        dsession._session = pytest.Session.from_config(config)
+        sched = LoadScheduling(config)
+        dsession.sched = sched
+
+        node1, node2 = MockNode(), MockNode()
+        node1.gateway.spec = execnet.XSpec("id=gw0//popen")
+        node2.gateway.spec = execnet.XSpec("id=gw1//popen")
+        dsession.trdist.pytest_xdist_setupnodes(
+            [node1.gateway.spec, node2.gateway.spec]
+        )
+        sched.add_node(node1)
+        sched.add_node(node2)
+
+        banner = "run-last-failure: rerun previous 1 failure (skipped 1 file)"
+        dsession.worker_collectionfinish(
+            node1, ["a.py::test_1"], report_collectionfinish=[banner]
+        )
+        assert banner not in buf.getvalue()
+
+        # Even if the second worker passes None/empty (or the same banner),
+        # the banner is printed once on its own line.
+        dsession.worker_collectionfinish(node2, ["a.py::test_1"])
+        out = buf.getvalue()
+        assert out.count(banner) == 1
+        if no_header:
+            assert out == f"{banner}\n"
+        else:
+            assert f"\n{banner}\n" in out
+
 
 def test_report_collection_diff_equal() -> None:
     """Test reporting of equal collections."""
