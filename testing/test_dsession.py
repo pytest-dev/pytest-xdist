@@ -19,6 +19,7 @@ from xdist.dsession import WorkerStatus
 from xdist.report import report_collection_diff
 from xdist.scheduler import EachScheduling
 from xdist.scheduler import LoadScheduling
+from xdist.scheduler import LoadScopeScheduling
 from xdist.scheduler import WorkStealingScheduling
 from xdist.workermanage import WorkerController
 
@@ -469,6 +470,88 @@ class TestWorkStealingScheduling:
         rep = collect_hook.reports[0]
         assert isinstance(rep.longrepr, str)
         assert "Different tests were collected between" in rep.longrepr
+
+
+class TestLoadScopeScheduling:
+    def test_replacement_nodes_collecting_one_at_a_time(
+        self, pytester: pytest.Pytester
+    ) -> None:
+        config = pytester.parseconfig("--tx=2*popen")
+        sched = LoadScopeScheduling(config)
+        node1, node2 = MockNode(), MockNode()
+        sched.add_node(node1)
+        sched.add_node(node2)
+        collection = [f"test_{i}.py::test" for i in range(10)]
+        sched.add_node_collection(node1, collection)
+        sched.add_node_collection(node2, collection)
+        sched.schedule()
+        # Both workers crash and are replaced.
+        sched.remove_node(node1)
+        sched.remove_node(node2)
+        node3, node4 = MockNode(), MockNode()
+        sched.add_node(node3)
+        sched.add_node(node4)
+
+        sched.add_node_collection(node3, collection)
+        sched.schedule()
+        assert node3.sent
+        assert not node4.sent
+
+        sched.add_node_collection(node4, collection)
+        sched.schedule()
+        assert node4.sent
+
+    def test_replacement_collecting_during_initial_schedule(
+        self, pytester: pytest.Pytester
+    ) -> None:
+        config = pytester.parseconfig("--tx=2*popen")
+        sched = LoadScopeScheduling(config)
+        node1, node2 = MockNode(), MockNode()
+        sched.add_node(node1)
+        sched.add_node(node2)
+        collection = [f"test_{i}.py::test" for i in range(10)]
+        # The first worker crashes after collecting, while the second is still collecting.
+        sched.add_node_collection(node1, collection)
+        sched.remove_node(node1)
+        node3 = MockNode()
+        sched.add_node(node3)
+
+        sched.add_node_collection(node2, collection)
+        sched.schedule()
+        assert node2.sent
+        assert not node3.sent
+
+        sched.add_node_collection(node3, collection)
+        sched.schedule()
+        assert node3.sent
+
+    def test_replacement_with_different_collection_is_shut_down(
+        self, pytester: pytest.Pytester
+    ) -> None:
+        reports: list[pytest.CollectReport] = []
+
+        class CollectHook:
+            def pytest_collectreport(self, report: pytest.CollectReport) -> None:
+                reports.append(report)
+
+        config = pytester.parseconfig("--tx=popen")
+        config.pluginmanager.register(CollectHook(), "collect_hook")
+        sched = LoadScopeScheduling(config)
+        node1 = MockNode()
+        sched.add_node(node1)
+        sched.add_node_collection(node1, ["a.py::test_1", "b.py::test_1"])
+        sched.schedule()
+        sched.remove_node(node1)
+        node2 = MockNode()
+        sched.add_node(node2)
+
+        sched.add_node_collection(node2, ["a.py::test_1"])
+        sched.schedule()
+        assert node2.shutting_down
+        assert not node2.sent
+        assert len(reports) == 1
+        assert isinstance(reports[0].longrepr, str)
+        assert "Different tests were collected between" in reports[0].longrepr
 
 
 class TestDistReporter:
