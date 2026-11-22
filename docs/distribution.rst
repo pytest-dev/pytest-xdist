@@ -86,7 +86,9 @@ The test distribution algorithm is configured with the ``--dist`` command-line o
   tests with same ``xdist_group`` name run in the same worker. If a test has
   multiple groups, they will be joined together into a new group,
   the order of the marks doesn't matter. This works along with marks from fixtures
-  and from the pytestmark global variable.
+  and from a ``pytestmark`` variable in a test module. To group every test in a
+  module, set ``pytestmark = pytest.mark.xdist_group("group1")`` in that module.
+  Setting ``pytestmark`` in ``conftest.py`` does not apply marks to test modules.
 
   .. code-block:: python
 
