@@ -1,0 +1,2 @@
+Reduce serialization overhead by sending standard test reports in a compact,
+lossless representation.
