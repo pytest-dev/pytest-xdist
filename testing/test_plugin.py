@@ -57,6 +57,31 @@ def test_dist_incompatibility_messages(pytester: pytest.Pytester) -> None:
     assert "incompatible" in result.stderr.str()
 
 
+def test_tx_without_dist_is_a_usage_error(pytester: pytest.Pytester) -> None:
+    """--tx/--px are ignored unless distribution is on, so say so instead of
+    silently running everything in the current process."""
+    result = pytester.runpytest("--tx", "popen")
+    assert result.ret == pytest.ExitCode.USAGE_ERROR
+    result.stderr.fnmatch_lines(["*--tx/--px have no effect without distribution*"])
+
+    result = pytester.runpytest("--px", "id=p//socket=1.2.3.4:1")
+    assert result.ret == pytest.ExitCode.USAGE_ERROR
+    result.stderr.fnmatch_lines(["*--tx/--px have no effect without distribution*"])
+
+
+def test_tx_with_dist_runs_in_workers(pytester: pytest.Pytester) -> None:
+    pytester.makepyfile(
+        """
+        from xdist import is_xdist_worker
+
+        def test_worker(request):
+            assert is_xdist_worker(request)
+        """
+    )
+    result = pytester.runpytest("--tx", "popen", "--dist", "load")
+    result.assert_outcomes(passed=1)
+
+
 def test_dist_options(pytester: pytest.Pytester) -> None:
     from xdist.plugin import pytest_cmdline_main as check_options
 

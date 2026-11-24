@@ -444,6 +444,14 @@ def pytest_cmdline_main(config: pytest.Config) -> None:
     if config.option.numprocesses == 0:
         config.option.dist = "no"
         config.option.tx = []
+    elif (
+        not hasattr(config, "workerinput")
+        and (config.getoption("tx") or config.getoption("px"))
+        and config.option.dist == "no"
+    ):
+        raise pytest.UsageError(
+            "--tx/--px have no effect without distribution; pass -n or --dist"
+        )
 
     val = config.getvalue
     if not val("collectonly") and _is_distribution_mode(config) and usepdb:
