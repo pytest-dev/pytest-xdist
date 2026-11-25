@@ -322,8 +322,15 @@ class LoadScopeScheduling:
             example/loadsuite/test/test_beta.py
             example/loadsuite/test/test_delta.py::Delta1
             example/loadsuite/epsilon/__init__.py
+
+        The parameters of a parametrized test may themselves contain ``::``
+        (for example IPv6 addresses), so they are stripped before splitting::
+
+            example/loadsuite/test/test_beta.py::test_beta0[cafe:cafe::cafe-AAAA]
+
+        still groups with the other tests of ``test_beta.py``.
         """
-        return nodeid.rsplit("::", 1)[0]
+        return nodeid.partition("[")[0].rsplit("::", 1)[0]
 
     def _pending_of(self, workload: dict[str, dict[str, bool]]) -> int:
         """Return the number of pending tests in a workload."""

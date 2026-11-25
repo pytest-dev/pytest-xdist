@@ -1308,6 +1308,22 @@ class TestLoadScope:
             "test_b.py::test", result.outlines
         ) in ({"gw0": 10}, {"gw1": 10})
 
+    def test_by_module_with_colons_in_param_ids(
+        self, pytester: pytest.Pytester
+    ) -> None:
+        pytester.makepyfile(
+            test_a="""
+            import pytest
+            @pytest.mark.parametrize('ip', ['::1', 'cafe:cafe::cafe', 'cafe::'])
+            def test(ip):
+                pass
+        """
+        )
+        result = pytester.runpytest("-n2", "--dist=loadscope", "-v")
+        assert get_workers_and_test_count_by_prefix(
+            "test_a.py::test", result.outlines
+        ) in ({"gw0": 3}, {"gw1": 3})
+
     def test_by_class(self, pytester: pytest.Pytester) -> None:
         pytester.makepyfile(
             test_a="""

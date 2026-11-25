@@ -1,0 +1,3 @@
+Fix ``--dist=loadscope`` splitting parametrized tests of the same module or
+class across workers when a parameter id contains ``::`` (for example IPv6
+addresses). The parameters are now stripped before the scope is determined.
