@@ -28,15 +28,13 @@ jobs:
 
     needs: [package]
 
-    # Python 3.9 binaries are unavailable for newer Ubuntu runner images.
-    runs-on: ${{ matrix.os == 'ubuntu-latest' && startsWith(matrix.tox_env, 'py39-') && 'ubuntu-24.04' || matrix.os }}
+    runs-on: ${{ matrix.os }}
 
     strategy:
       fail-fast: false
       matrix:
         tox_env:
-          - "py39-pytestmin"
-          - "py39-pytestlatest"
+          - "py310-pytestmin"
           - "py310-pytestlatest"
           - "py311-pytestlatest"
           - "py311-pytestmain"
@@ -48,10 +46,8 @@ jobs:
 
         os: [ubuntu-latest, windows-latest]
         include:
-          - tox_env: "py39-pytestmin"
-            python: "3.9"
-          - tox_env: "py39-pytestlatest"
-            python: "3.9"
+          - tox_env: "py310-pytestmin"
+            python: "3.10"
           - tox_env: "py310-pytestlatest"
             python: "3.10"
           - tox_env: "py311-pytestlatest"

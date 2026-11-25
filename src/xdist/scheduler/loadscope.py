@@ -236,6 +236,15 @@ class LoadScopeScheduling:
                     self.collection, collection, other_node.gateway.id, node.gateway.id
                 )
                 self.log(msg)
+                rep = pytest.CollectReport(
+                    nodeid=node.gateway.id,
+                    outcome="failed",
+                    longrepr=msg,
+                    result=[],
+                )
+                self.config.hook.pytest_collectreport(report=rep)
+                # An unregistered node never gets work, so it would block the session from ending
+                node.shutdown()
                 return
 
         self.registered_collections[node] = list(collection)
@@ -331,6 +340,11 @@ class LoadScopeScheduling:
         if node.shutting_down:
             return
 
+        # A replacement still collecting cannot map node ids to indexes yet;
+        # it gets work once its own collection is registered
+        if node not in self.registered_collections:
+            return
+
         # Check that more work is available
         if not self.workqueue:
             node.shutdown()
@@ -398,24 +412,28 @@ class LoadScopeScheduling:
             for scope, nodeids in unsorted_workqueue.items():
                 self.workqueue[scope] = nodeids
 
+        # A replacement for a worker that crashed before scheduling may still be collecting
+        nodes = [node for node in self.nodes if node in self.registered_collections]
+
         # Avoid having more workers than work
-        extra_nodes = len(self.nodes) - len(self.workqueue)
+        extra_nodes = len(nodes) - len(self.workqueue)
 
         if extra_nodes > 0:
             self.log(f"Shutting down {extra_nodes} nodes")
 
-            for _ in range(extra_nodes):
-                unused_node, _assigned = self.assigned_work.popitem()
+            for unused_node in nodes[-extra_nodes:]:
+                del self.assigned_work[unused_node]
 
                 self.log(f"Shutting down unused node {unused_node}")
                 unused_node.shutdown()
+            nodes = nodes[:-extra_nodes]
 
         # Assign initial workload
-        for node in self.nodes:
+        for node in nodes:
             self._assign_work_unit(node)
 
         # Ensure nodes start with at least two work units if possible (#277)
-        for node in self.nodes:
+        for node in nodes:
             self._reschedule(node)
 
         # Initial distribution sent all tests, start node shutdown

@@ -1,14 +1,13 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 import marshal
 import pprint
 from queue import Queue
 import sys
 import time
 from typing import Any
-from typing import Callable
 from typing import cast
-from typing import Union
 import uuid
 
 import execnet
@@ -91,7 +90,7 @@ def worker(request: pytest.FixtureRequest, pytester: pytest.Pytester) -> WorkerS
 
 class TestWorkerInteractor:
     UnserializerReport = Callable[
-        [dict[str, Any]], Union[pytest.CollectReport, pytest.TestReport]
+        [dict[str, Any]], pytest.CollectReport | pytest.TestReport
     ]
 
     def test_ramp_delay_sleeps_once_before_first_test(
@@ -191,6 +190,39 @@ class TestWorkerInteractor:
             "test_loadgroup_collects_group_names_separately.py::test_ungrouped",
         ]
         assert ev.kwargs["group_names"] == ["group", None]
+
+    def test_loadgroup_group_names_follow_late_reorder(
+        self, worker: WorkerSetup
+    ) -> None:
+        worker.pytester.makeconftest(
+            """
+            import pytest
+
+            @pytest.hookimpl(trylast=True)
+            def pytest_collection_modifyitems(items):
+                items.reverse()
+            """
+        )
+        worker.pytester.makepyfile(
+            """
+            import pytest
+
+            @pytest.mark.xdist_group("group")
+            def test_grouped():
+                pass
+
+            def test_ungrouped():
+                pass
+            """
+        )
+        worker.setup("--dist=loadgroup")
+        ev = worker.popevent("collectionfinish")
+
+        assert ev.kwargs["ids"] == [
+            "test_loadgroup_group_names_follow_late_reorder.py::test_ungrouped",
+            "test_loadgroup_group_names_follow_late_reorder.py::test_grouped",
+        ]
+        assert ev.kwargs["group_names"] == [None, "group"]
 
     def test_remote_collect_skip(
         self, worker: WorkerSetup, unserialize_report: UnserializerReport
