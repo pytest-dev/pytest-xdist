@@ -1,0 +1,1 @@
+Fixed an ``INTERNALERROR`` about a partially initialized module when several workers report warnings at once: the controller now decodes worker warnings, which imports their classes, on its main thread instead of in each worker's receiver thread.

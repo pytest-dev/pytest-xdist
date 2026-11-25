@@ -454,12 +454,12 @@ class WorkerController:
                     fslocation=kwargs["nodeid"],
                 )
             elif eventname == "warning_recorded":
-                warning_message = unserialize_warning_message(
-                    kwargs["warning_message_data"]
-                )
+                # Decoding imports the warning's module, so it is left to the
+                # main thread: concurrent imports from several receiver
+                # threads can deadlock on import cycles (#1422).
                 self.notify_inproc(
                     eventname,
-                    warning_message=warning_message,
+                    warning_message_data=kwargs["warning_message_data"],
                     when=kwargs["when"],
                     nodeid=kwargs["nodeid"],
                     location=kwargs["location"],
@@ -481,9 +481,9 @@ def unserialize_warning_message(data: dict[str, Any]) -> warnings.WarningMessage
     import importlib
 
     if data["message_module"]:
-        # Resolving the class imports an arbitrary module, in the controller's
-        # receiver thread. Anything raised here used to kill that thread and fail
-        # the run in the scheduler, naming nothing that led back to this line. The
+        # Resolving the class imports an arbitrary module on the controller.
+        # Anything raised here used to kill the receiver thread and fail the run
+        # in the scheduler, naming nothing that led back to this line. The
         # fallback below already exists for a warning we cannot rebuild.
         cls: type[Warning] | None
         unresolved = ""

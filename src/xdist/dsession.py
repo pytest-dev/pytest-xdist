@@ -7,7 +7,6 @@ from queue import Empty
 from queue import Queue
 import sys
 from typing import Any
-import warnings
 
 import execnet
 import pytest
@@ -22,6 +21,7 @@ from xdist.scheduler import LoadScopeScheduling
 from xdist.scheduler import Scheduling
 from xdist.scheduler import WorkStealingScheduling
 from xdist.workermanage import NodeManager
+from xdist.workermanage import unserialize_warning_message
 from xdist.workermanage import WorkerController
 
 
@@ -383,12 +383,13 @@ class DSession:
 
     def worker_warning_recorded(
         self,
-        warning_message: warnings.WarningMessage,
+        warning_message_data: dict[str, Any],
         when: str,
         nodeid: str,
         location: tuple[str, int, str] | None,
     ) -> None:
         """Emitted when a node calls the pytest_warning_recorded hook."""
+        warning_message = unserialize_warning_message(warning_message_data)
         kwargs = dict(
             warning_message=warning_message, when=when, nodeid=nodeid, location=location
         )

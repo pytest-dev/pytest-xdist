@@ -751,7 +751,7 @@ def test_a_class_missing_from_its_module_does_not_end_the_session() -> None:
 
 
 def test_an_unimportable_message_module_does_not_end_the_session() -> None:
-    """This runs in the controller's receiver thread.
+    """This used to run in the controller's receiver thread.
 
     `importlib.import_module` was called outside every guard, so a package that
     raised on import killed the thread. The node went down mid-test and the run
