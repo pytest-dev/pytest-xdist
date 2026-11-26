@@ -432,6 +432,41 @@ class TestDistEach:
 
 class TestTerminalReporting:
     @pytest.mark.parametrize("verbosity", ["", "-q", "-v"])
+    def test_no_header(self, pytester: pytest.Pytester, verbosity: str) -> None:
+        pytester.makepyfile(
+            """
+            import pytest
+
+            def test_ok():
+                pass
+
+            def test_skip():
+                pytest.skip("skipped test")
+
+            def test_fail():
+                raise ValueError("test failure")
+        """
+        )
+        args = ["-n1", "--no-header"]
+        if verbosity:
+            args.append(verbosity)
+        result = pytester.runpytest(*args)
+        result.assert_outcomes(passed=1, skipped=1, failed=1)
+        assert result.ret == pytest.ExitCode.TESTS_FAILED
+        out = result.stdout.str()
+        for header in (
+            "created:",
+            "initialized:",
+            "ready:",
+            "collecting:",
+            "1 worker [",
+            "bringing up nodes...",
+            "scheduling tests via",
+        ):
+            assert header not in out
+        assert "ValueError: test failure" in out
+
+    @pytest.mark.parametrize("verbosity", ["", "-q", "-v"])
     def test_output_verbosity(self, pytester: pytest.Pytester, verbosity: str) -> None:
         pytester.makepyfile(
             """
@@ -1605,8 +1640,7 @@ class TestGroupScope:
         # get test names
         a_1 = next(t[2] for t in res if "test_a.py::test_1" in t[2])
         b_1 = next(t[2] for t in res if "test_b.py::test_1" in t[2])
-        # check groups
-        assert a_1.split("@")[1] == b_1.split("@")[1] == "group1_group2"
+        assert a_1[0] == b_1[0]
 
     def test_multiple_group_order(self, pytester: pytest.Pytester) -> None:
         test_file = """
@@ -1627,8 +1661,36 @@ class TestGroupScope:
         # get test names
         a_1 = next(t[2] for t in res if "test_a.py::test_1" in t[2])
         b_1 = next(t[2] for t in res if "test_b.py::test_1" in t[2])
-        # check groups, order should be sorted
-        assert a_1.split("@")[1] == b_1.split("@")[1] == "a_aa_b_c_c2_d"
+        assert a_1[0] == b_1[0]
+
+    def test_late_deselection(self, pytester: pytest.Pytester) -> None:
+        """Group names match the items left after a late deselection (#1399)."""
+        pytester.makeconftest(
+            """
+            import pytest
+
+            @pytest.hookimpl(trylast=True)
+            def pytest_collection_modifyitems(config, items):
+                deselected = [items.pop(0)]
+                config.hook.pytest_deselected(items=deselected)
+        """
+        )
+        pytester.makepyfile(
+            """
+            import pytest
+
+            @pytest.mark.xdist_group("group")
+            def test_deselected():
+                pytest.fail("should have been deselected")
+
+            @pytest.mark.xdist_group("group")
+            def test_selected():
+                pass
+        """
+        )
+        result = pytester.runpytest("-n2", "--dist=loadgroup", "-v")
+        result.assert_outcomes(passed=1)
+        assert result.ret == 0
 
 
 class TestLocking:

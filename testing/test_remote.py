@@ -1,14 +1,13 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 import marshal
 import pprint
 from queue import Queue
 import sys
 import time
 from typing import Any
-from typing import Callable
 from typing import cast
-from typing import Union
 import uuid
 
 import execnet
@@ -47,11 +46,11 @@ class WorkerSetup:
         self.use_callback = False
         self.events = Queue()  # type: ignore[var-annotated]
 
-    def setup(self) -> None:
+    def setup(self, *args: str) -> None:
         self.pytester.chdir()
         # import os ; os.environ['EXECNET_DEBUG'] = "2"
         self.gateway = execnet.makegateway("execmodel=main_thread_only//popen")
-        self.config = config = self.pytester.parseconfigure()
+        self.config = config = self.pytester.parseconfigure(*args)
         putevent = self.events.put if self.use_callback else None
 
         class DummyMananger:
@@ -91,7 +90,7 @@ def worker(request: pytest.FixtureRequest, pytester: pytest.Pytester) -> WorkerS
 
 class TestWorkerInteractor:
     UnserializerReport = Callable[
-        [dict[str, Any]], Union[pytest.CollectReport, pytest.TestReport]
+        [dict[str, Any]], pytest.CollectReport | pytest.TestReport
     ]
 
     def test_ramp_delay_sleeps_once_before_first_test(
@@ -167,6 +166,63 @@ class TestWorkerInteractor:
         assert rep.when == "call"
         ev = worker.popevent("workerfinished")
         assert "workeroutput" in ev.kwargs
+
+    def test_loadgroup_collects_group_names_separately(
+        self, worker: WorkerSetup
+    ) -> None:
+        worker.pytester.makepyfile(
+            """
+            import pytest
+
+            @pytest.mark.xdist_group("group")
+            def test_grouped():
+                pass
+
+            def test_ungrouped():
+                pass
+            """
+        )
+        worker.setup("--dist=loadgroup")
+        ev = worker.popevent("collectionfinish")
+
+        assert ev.kwargs["ids"] == [
+            "test_loadgroup_collects_group_names_separately.py::test_grouped",
+            "test_loadgroup_collects_group_names_separately.py::test_ungrouped",
+        ]
+        assert ev.kwargs["group_names"] == ["group", None]
+
+    def test_loadgroup_group_names_follow_late_reorder(
+        self, worker: WorkerSetup
+    ) -> None:
+        worker.pytester.makeconftest(
+            """
+            import pytest
+
+            @pytest.hookimpl(trylast=True)
+            def pytest_collection_modifyitems(items):
+                items.reverse()
+            """
+        )
+        worker.pytester.makepyfile(
+            """
+            import pytest
+
+            @pytest.mark.xdist_group("group")
+            def test_grouped():
+                pass
+
+            def test_ungrouped():
+                pass
+            """
+        )
+        worker.setup("--dist=loadgroup")
+        ev = worker.popevent("collectionfinish")
+
+        assert ev.kwargs["ids"] == [
+            "test_loadgroup_group_names_follow_late_reorder.py::test_ungrouped",
+            "test_loadgroup_group_names_follow_late_reorder.py::test_grouped",
+        ]
+        assert ev.kwargs["group_names"] == [None, "group"]
 
     def test_remote_collect_skip(
         self, worker: WorkerSetup, unserialize_report: UnserializerReport
@@ -365,6 +421,20 @@ class TestWorkerInteractor:
 
         ev = worker.popevent("workerfinished")
         assert "workeroutput" in ev.kwargs
+
+
+def test_remote_explicit_thread_execmodel(pytester: pytest.Pytester) -> None:
+    pytester.makepyfile(
+        """
+        import pytest
+
+        @pytest.mark.parametrize("value", [1, 2])
+        def test_value(value):
+            assert value > 0
+        """
+    )
+    result = pytester.runpytest("-d", "--tx=popen//execmodel=thread")
+    result.assert_outcomes(passed=2)
 
 
 def test_remote_env_vars(pytester: pytest.Pytester) -> None:

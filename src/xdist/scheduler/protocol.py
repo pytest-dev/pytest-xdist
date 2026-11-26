@@ -25,6 +25,7 @@ class Scheduling(Protocol):
         self,
         node: WorkerController,
         collection: Sequence[str],
+        group_names: Sequence[str | None] | None = None,
     ) -> None: ...
 
     def mark_test_complete(

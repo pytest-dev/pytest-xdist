@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from collections.abc import Sequence
 import enum
 import fnmatch
@@ -8,7 +9,6 @@ from pathlib import Path
 import re
 import sys
 from typing import Any
-from typing import Callable
 from typing import Literal
 from typing import Union
 import uuid
@@ -72,7 +72,7 @@ class NodeManager:
         for spec in specs:
             if not isinstance(spec, execnet.XSpec):
                 spec = execnet.XSpec(spec)
-            if getattr(spec, "execmodel", None) != "main_thread_only":
+            if getattr(spec, "execmodel", None) is None:
                 spec = execnet.XSpec(f"execmodel=main_thread_only//{spec}")
             if not spec.chdir and not spec.popen:
                 spec.chdir = defaultchdir
@@ -105,7 +105,7 @@ class NodeManager:
         putevent: Callable[[tuple[str, dict[str, Any]]], None],
         worker_index: int = 0,
     ) -> WorkerController:
-        if getattr(spec, "execmodel", None) != "main_thread_only":
+        if getattr(spec, "execmodel", None) is None:
             spec = execnet.XSpec(f"execmodel=main_thread_only//{spec}")
         gw = self.group.makegateway(spec)
         self.config.hook.pytest_xdist_newgateway(gateway=gw)
@@ -420,9 +420,7 @@ class WorkerController:
             eventname, kwargs = eventcall
             if eventname in ("collectionstart",):
                 self.log(f"ignoring {eventname}({kwargs})")
-            elif eventname == "workerready":
-                self.notify_inproc(eventname, node=self, **kwargs)
-            elif eventname == "internal_error":
+            elif eventname in {"workerready", "internal_error"}:
                 self.notify_inproc(eventname, node=self, **kwargs)
             elif eventname == "workerfinished":
                 self._down = True
@@ -439,10 +437,13 @@ class WorkerController:
                     rep.item_index = item_index
                 self.notify_inproc(eventname, node=self, rep=rep)
             elif eventname == "collectionfinish":
-                self.notify_inproc(eventname, node=self, ids=kwargs["ids"])
-            elif eventname == "runtest_protocol_complete":
-                self.notify_inproc(eventname, node=self, **kwargs)
-            elif eventname == "unscheduled":
+                self.notify_inproc(
+                    eventname,
+                    node=self,
+                    ids=kwargs["ids"],
+                    group_names=kwargs.get("group_names"),
+                )
+            elif eventname in {"runtest_protocol_complete", "unscheduled"}:
                 self.notify_inproc(eventname, node=self, **kwargs)
             elif eventname == "logwarning":
                 self.notify_inproc(

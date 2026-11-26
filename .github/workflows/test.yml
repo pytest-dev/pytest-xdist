@@ -34,23 +34,21 @@ jobs:
       fail-fast: false
       matrix:
         tox_env:
-          - "py39-pytestmin"
-          - "py39-pytestlatest"
+          - "py310-pytestmin"
           - "py310-pytestlatest"
           - "py311-pytestlatest"
           - "py311-pytestmain"
           - "py312-pytestlatest"
           - "py313-pytestlatest"
           - "py314-pytestlatest"
+          - "py315-pytestlatest"
           - "py310-psutil"
           - "py310-setproctitle"
 
         os: [ubuntu-latest, windows-latest]
         include:
-          - tox_env: "py39-pytestmin"
-            python: "3.9"
-          - tox_env: "py39-pytestlatest"
-            python: "3.9"
+          - tox_env: "py310-pytestmin"
+            python: "3.10"
           - tox_env: "py310-pytestlatest"
             python: "3.10"
           - tox_env: "py311-pytestlatest"
@@ -62,7 +60,9 @@ jobs:
           - tox_env: "py313-pytestlatest"
             python: "3.13"
           - tox_env: "py314-pytestlatest"
-            python: "~3.14.0-0"
+            python: "3.14"
+          - tox_env: "py315-pytestlatest"
+            python: "3.15"
           - tox_env: "py310-psutil"
             python: "3.10"
           - tox_env: "py310-setproctitle"
