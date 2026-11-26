@@ -1,0 +1,2 @@
+Fix ``KeyError`` with ``--dist=loadscope``, ``loadfile`` and ``loadgroup`` when a crashed worker's replacement is still collecting.
+A replacement that collects different tests is now reported as a collection error instead of hanging the session.
