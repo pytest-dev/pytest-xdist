@@ -55,6 +55,7 @@ class DSession:
         self.maxfail: int = config.getvalue("maxfail")
         self.queue: Queue[tuple[str, dict[str, Any]]] = Queue()
         self._session: pytest.Session | None = None
+        self._collection_failed = False
         self._failed_collection_errors: dict[object, bool] = {}
         self._active_nodes: set[WorkerController] = set()
         self._failed_nodes_count = 0
@@ -313,6 +314,11 @@ class DSession:
                 node.gateway.spec, WorkerStatus.CollectionDone, tests_collected=len(ids)
             )
         if self.sched.collection_is_completed:
+            if self._collection_failed and not self.config.getoption(
+                "continue_on_collection_errors"
+            ):
+                self.shouldstop = "errors during collection"
+                return
             if (
                 self.terminal
                 and not self.sched.has_pending
@@ -386,6 +392,7 @@ class DSession:
         we only expect to receive failed/skipped reports from workers (#330).
         """
         assert not rep.passed
+        self._collection_failed = self._collection_failed or rep.failed
         self._failed_worker_collectreport(node, rep)
 
     def worker_warning_recorded(
