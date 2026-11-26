@@ -211,6 +211,7 @@ class DSession:
             messages = node.workeroutput.get("usage_error")
             if messages is None:
                 messages = [f"{node} exited with a usage error"]
+            self.triggershutdown()
             raise pytest.UsageError(*messages)
         if node.workeroutput["exitstatus"] == 2:  # keyboard-interrupt
             self.shouldstop = f"{node} received keyboard-interrupt"
