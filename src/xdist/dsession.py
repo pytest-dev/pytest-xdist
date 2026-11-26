@@ -61,6 +61,8 @@ class DSession:
         self._max_worker_restart = get_default_max_worker_restart(self.config)
         # summary message to print at the end of the session
         self._summary_report: str | None = None
+        # lines from the workers' pytest_report_collectionfinish, printed once
+        self._report_collectionfinish: Sequence[str] | None = None
         self.terminal = config.pluginmanager.getplugin("terminalreporter")
         if self.terminal:
             self.trdist = TerminalDistReporter(config)
@@ -283,6 +285,7 @@ class DSession:
         node: WorkerController,
         ids: Sequence[str],
         group_names: Sequence[str | None] | None = None,
+        report_collectionfinish: Sequence[str] | None = None,
     ) -> None:
         """Worker has finished test collection.
 
@@ -301,22 +304,24 @@ class DSession:
         self._session.testscollected = len(ids)
         assert self.sched is not None
         self.sched.add_node_collection(node, ids, group_names)
+        if self._report_collectionfinish is None:
+            self._report_collectionfinish = report_collectionfinish or ()
         if self.terminal:
             self.trdist.setstatus(
                 node.gateway.spec, WorkerStatus.CollectionDone, tests_collected=len(ids)
             )
         if self.sched.collection_is_completed:
-            if (
-                self.terminal
-                and not self.sched.has_pending
-                and not self.config.option.no_header
-            ):
+            if self.terminal and not self.sched.has_pending:
                 self.trdist.ensure_show_status()
-                self.terminal.write_line("")
-                if self.config.option.verbose > 0:
-                    self.terminal.write_line(
-                        f"scheduling tests via {self.sched.__class__.__name__}"
-                    )
+                if self._report_collectionfinish:
+                    self.trdist.write_report_lines(self._report_collectionfinish)
+                    self._report_collectionfinish = ()
+                if not self.config.option.no_header:
+                    self.terminal.write_line("")
+                    if self.config.option.verbose > 0:
+                        self.terminal.write_line(
+                            f"scheduling tests via {self.sched.__class__.__name__}"
+                        )
             self.sched.schedule()
 
     def worker_logstart(
@@ -496,6 +501,13 @@ class TerminalDistReporter:
     def ensure_show_status(self) -> None:
         if not self._isatty and not self.config.option.no_header:
             self.write_line(self.getstatus())
+
+    def write_report_lines(self, lines: Sequence[str]) -> None:
+        if self._isatty and not self.config.option.no_header:
+            # end the status line that setstatus() keeps rewriting
+            self.write_line("")
+        for line in lines:
+            self.write_line(line)
 
     def setstatus(
         self,

@@ -120,6 +120,7 @@ class WorkerInteractor:
         self.channel = channel
         self.torun = TestQueue(self.channel.gateway.execmodel)
         self.nextitem_index: int | Literal[Marker.SHUTDOWN] | None = None
+        self.report_collectionfinish_lines: list[str] = []
         config.pluginmanager.register(self)
 
     def sendevent(self, name: str, **kwargs: object) -> None:
@@ -256,7 +257,25 @@ class WorkerInteractor:
             return None
         return "_".join(sorted(gnames))
 
-    @pytest.hookimpl
+    @pytest.hookimpl(wrapper=True)
+    def pytest_report_collectionfinish(
+        self,
+    ) -> Generator[None, list[str | list[str]], list[str | list[str]]]:
+        # The controller does not collect, so it never calls this hook itself.
+        # Keep what the worker's terminal reporter got, to forward it.
+        results = yield
+        # Same order as TerminalReporter._write_report_lines_from_hooks.
+        lines: list[str] = []
+        for line_or_lines in reversed(results):
+            if isinstance(line_or_lines, str):
+                lines.append(line_or_lines)
+            else:
+                lines.extend(line_or_lines)
+        self.report_collectionfinish_lines = lines
+        return results
+
+    # trylast: run after the terminal reporter called pytest_report_collectionfinish.
+    @pytest.hookimpl(trylast=True)
     def pytest_collection_finish(self, session: pytest.Session) -> None:
         # Send group names separately so pytest owns test node IDs. They are computed
         # from the final session.items, after every pytest_collection_modifyitems hook
@@ -269,6 +288,7 @@ class WorkerInteractor:
             topdir=str(self.config.rootpath),
             ids=[item.nodeid for item in session.items],
             group_names=group_names,
+            report_collectionfinish=self.report_collectionfinish_lines,
         )
 
     @pytest.hookimpl
