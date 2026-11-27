@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import re
 import shutil
+import threading
 from typing import cast
 
 import pytest
@@ -892,6 +893,47 @@ class TestWarnings:
         result = pytester.runpytest(n)
         result.stdout.fnmatch_lines(["*this is a warning*", "*1 passed, 1 warning*"])
 
+    def test_warning_class_imported_on_controller_main_thread(
+        self, pytester: pytest.Pytester
+    ) -> None:
+        """The controller decodes worker warnings on its main thread (#1422).
+
+        Decoding imports the warning's module; doing that from several
+        execnet receiver threads at once can deadlock on import cycles.
+        """
+        pytester.makepyfile(
+            warnmod="""
+            import os, threading
+
+            with open("import-threads.txt", "a") as f:
+                f.write(f"{os.getpid()} {threading.current_thread().name}\\n")
+
+            class MyWarning(UserWarning):
+                pass
+            """
+        )
+        pytester.makepyfile(
+            """
+            import warnings
+            from warnmod import MyWarning
+
+            def test_func():
+                warnings.warn(MyWarning("from the worker"))
+            """
+        )
+        pytester.syspathinsert()
+        result = pytester.runpytest("-n1")
+        result.stdout.fnmatch_lines(
+            ["*MyWarning: from the worker*", "*1 passed, 1 warning*"]
+        )
+        # The worker imports the module too; only the controller (this process,
+        # as runpytest runs in-process) matters here.
+        imports = (pytester.path / "import-threads.txt").read_text().splitlines()
+        assert f"{os.getpid()} {threading.main_thread().name}" in imports
+        assert [line for line in imports if line.startswith(f"{os.getpid()} ")] == [
+            f"{os.getpid()} {threading.main_thread().name}"
+        ]
+
     def test_warning_captured_deprecated_in_pytest_6(
         self, pytester: pytest.Pytester
     ) -> None:
@@ -947,6 +989,73 @@ class TestWarnings:
         pytester.syspathinsert()
         result = pytester.runpytest(n)
         result.stdout.fnmatch_lines(["*MyWarning*", "*1 passed, 1 warning*"])
+
+    @pytest.mark.parametrize("n", ["-n0", "-n1"])
+    def test_state_beyond_args_survives(
+        self, pytester: pytest.Pytester, n: str
+    ) -> None:
+        """A warning keeping state beside its args must report the same either way.
+
+        `-n0` is the reference: no serialization happens, so whatever it prints is
+        what the warning says. `-n1` must match it. The class below renders its
+        message from `self.code`, which `args` does not carry, so rebuilding it by
+        calling the class reports the default instead — and reads like a real
+        message while doing it.
+        """
+        pytester.makepyfile(
+            """
+            import warnings
+
+            class CodeWarning(UserWarning):
+
+                def __init__(self, code=None):
+                    self.code = code
+                    super().__init__()
+
+                def __str__(self):
+                    return "code {} tripped".format(self.code or "unknown")
+
+            def test_func():
+                warnings.warn(CodeWarning(42))
+        """
+        )
+        pytester.syspathinsert()
+        result = pytester.runpytest(n)
+        result.stdout.fnmatch_lines(["*code 42 tripped*", "*1 passed, 1 warning*"])
+        result.stdout.no_fnmatch_line("*code unknown tripped*")
+
+    @pytest.mark.parametrize("n", ["-n0", "-n1"])
+    def test_state_in_slots_survives(self, pytester: pytest.Pytester, n: str) -> None:
+        """A warning keeping its state in slots must report the same either way.
+
+        `BaseException.__reduce__` reports only the instance dictionary, so slots
+        read as "this warning keeps nothing". Rebuilding the class without running
+        `__init__` then leaves the slot unset, and the `AttributeError` lands where
+        the controller renders the warning -- an INTERNALERROR, not a wrong message.
+        """
+        pytester.makepyfile(
+            """
+            import warnings
+
+            class SlotsWarning(UserWarning):
+
+                __slots__ = ("code",)
+
+                def __init__(self, code=None):
+                    self.code = code
+                    super().__init__()
+
+                def __str__(self):
+                    return "code {} tripped".format(self.code or "unknown")
+
+            def test_func():
+                warnings.warn(SlotsWarning(11))
+        """
+        )
+        pytester.syspathinsert()
+        result = pytester.runpytest(n)
+        result.stdout.fnmatch_lines(["*code 11 tripped*", "*1 passed, 1 warning*"])
+        result.stdout.no_fnmatch_line("*INTERNALERROR*")
 
     @pytest.mark.parametrize("n", ["-n0", "-n1"])
     def test_unserializable_arguments(self, pytester: pytest.Pytester, n: str) -> None:

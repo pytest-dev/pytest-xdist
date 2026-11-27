@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 import shutil
 import textwrap
+from typing import Any
 import warnings
 
 import execnet
@@ -547,6 +549,145 @@ def test_unserialize_warning_msg(w_cls: type[Warning] | str) -> None:
             assert v1 == v2
 
 
+class WarningWithFieldFirst(UserWarning):
+    """First argument is a field; the message is rendered from it."""
+
+    def __init__(self, resource: str) -> None:
+        self.resource = resource
+        super().__init__(f"{resource!r} is not available")
+
+
+class WarningWithSlots(UserWarning):
+    """Keeps its state in slots, which `BaseException.__reduce__` never reports."""
+
+    __slots__ = ("code",)
+
+    def __init__(self, code: int | None = None) -> None:
+        self.code = code
+        super().__init__()
+
+    def __str__(self) -> str:
+        return f"code {self.code or 'unknown'} tripped"
+
+
+class WarningWithoutArgs(UserWarning):
+    """No args at all; the text is derived from state."""
+
+    def __init__(self, code: int | None = None) -> None:
+        self.code = code
+        super().__init__()
+
+    def __str__(self) -> str:
+        return f"code {self.code or 'unknown'} tripped"
+
+
+def _rebuild_with_own_callable(code: int) -> WarningWithCustomReduce:
+    return WarningWithCustomReduce(code)
+
+
+class WarningWithCustomReduce(UserWarning):
+    """Replaces `__reduce__`, and carries its state inside the *args*."""
+
+    def __init__(self, code: int | None = None) -> None:
+        self.code = code
+        super().__init__()
+
+    def __str__(self) -> str:
+        return f"code {self.code or 'unknown'} tripped"
+
+    def __reduce__(self) -> tuple[Any, ...]:
+        return (_rebuild_with_own_callable, (self.code,))
+
+
+@pytest.mark.parametrize(
+    ("factory", "expected_text", "attribute", "expected_value"),
+    [
+        (
+            lambda: WarningWithFieldFirst("gpu"),
+            "'gpu' is not available",
+            "resource",
+            "gpu",
+        ),
+        (lambda: WarningWithoutArgs(42), "code 42 tripped", "code", 42),
+        (lambda: WarningWithSlots(11), "code 11 tripped", "code", 11),
+        (lambda: WarningWithCustomReduce(7), "code 7 tripped", "code", 7),
+    ],
+    ids=["field-first", "state-only", "slots", "custom-reduce"],
+)
+def test_warning_state_survives_the_round_trip(
+    factory: Callable[[], UserWarning],
+    expected_text: str,
+    attribute: str,
+    expected_value: object,
+) -> None:
+    """The rebuilt warning must be the same warning, not one that reads like it.
+
+    Calling the class with its own `args` re-runs `__init__`, which for these two
+    shapes either renders around the rendered text or falls back to a default.
+    Both survive `pickle` and `copy` untouched, so the loss was ours.
+    """
+    with pytest.warns(UserWarning) as w:
+        warnings.warn(factory())
+
+    assert len(w) == 1
+    w_msg = w[0]
+    assert str(w_msg.message) == expected_text
+
+    data = serialize_warning_message(w_msg)
+    rebuilt = unserialize_warning_message(data).message
+
+    assert type(rebuilt) is type(w_msg.message)
+    assert str(rebuilt) == expected_text
+    assert getattr(rebuilt, attribute) == expected_value
+
+
+class WarningWithUntransferableState(UserWarning):
+    """Keeps something `execnet.dumps` will not carry."""
+
+    def __init__(self, code: int | None = None) -> None:
+        self.code = code
+        self.handle = lambda: None
+        super().__init__()
+
+    def __str__(self) -> str:
+        return f"code {self.code or 'unknown'} tripped"
+
+
+def test_state_that_cannot_transfer_falls_back_to_a_plain_warning() -> None:
+    """Rebuilding the class without its state is worse than not rebuilding it.
+
+    This shape keeps state its own `__str__` reads, and that state is not
+    serializable. Rebuilding the class and applying no state produces an instance
+    missing the attribute, and the controller raises `AttributeError` the moment it
+    renders the warning -- a failure introduced while fixing a rendering defect.
+    So the class is dropped and the text is reported once.
+    """
+    with pytest.warns(UserWarning) as w:
+        warnings.warn(WarningWithUntransferableState(9))
+
+    original = w[0].message
+    rebuilt = unserialize_warning_message(serialize_warning_message(w[0])).message
+
+    assert type(rebuilt) is Warning
+    assert str(original) in str(rebuilt)
+
+
+def test_a_warning_keeping_no_state_is_still_rebuilt_exactly() -> None:
+    """The fallback must not widen to warnings that have nothing to lose.
+
+    A warning holding nothing beside its `args` reduces to a two-tuple. There is
+    no state, so there is nothing to fail to transfer, and dropping its class
+    would cost the caller its type for no reason.
+    """
+    with pytest.warns(UserWarning) as w:
+        warnings.warn(UserWarning("plain text"))
+
+    rebuilt = unserialize_warning_message(serialize_warning_message(w[0])).message
+
+    assert type(rebuilt) is UserWarning
+    assert str(rebuilt) == "plain text"
+
+
 class MyWarningUnknown(UserWarning):
     # Changing the __module__ attribute is only safe if class can be imported
     # from there
@@ -554,7 +695,21 @@ class MyWarningUnknown(UserWarning):
 
 
 def test_warning_serialization_tweaked_module() -> None:
-    """Test for GH#404."""
+    """Test for GH#404.
+
+    This used to assert `pytest.raises(ModuleNotFoundError)`, which characterised
+    the defect rather than fixing it: the exception escaped into the controller's
+    receiver thread and ended the session. GH#404 is what that looks like from the
+    outside -- a run dying on `'module' object has no attribute 'GtkWarning'` --
+    and the second report on that issue names this exact line:
+
+        INTERNALERROR>   File "xdist/workermanage.py", ...
+        INTERNALERROR>     cls = getattr(mod, data["message_class_name"])
+
+    A warning nobody can rebuild is not a reason to lose the run. It degrades to
+    the generic `Warning` this function already builds, and the reason travels
+    with it so a genuinely broken package stays diagnosable.
+    """
     # Create a test warning message
     with pytest.warns(UserWarning) as w:
         warnings.warn("hello", MyWarningUnknown)
@@ -566,6 +721,75 @@ def test_warning_serialization_tweaked_module() -> None:
     # Serialize and deserialize
     data = serialize_warning_message(w_msg)
 
-    # __module__ cannot be found!
-    with pytest.raises(ModuleNotFoundError):
-        unserialize_warning_message(data)
+    # __module__ cannot be found, and that is now survivable.
+    message = unserialize_warning_message(data).message
+
+    assert type(message) is Warning
+    assert "hello" in str(message)
+    assert "class not resolved" in str(message)
+
+
+def test_a_class_missing_from_its_module_does_not_end_the_session() -> None:
+    """The other half of GH#404: the module imports, the attribute is not there.
+
+    This is what the 2022 report on that issue hit, by setting `__module__` on a
+    warning class so its name would read nicely. The import succeeds and the
+    `getattr` raises `AttributeError`, which is not `ModuleNotFoundError` and was
+    equally fatal.
+    """
+    with pytest.warns(UserWarning) as w:
+        warnings.warn(UserWarning("the original text"))
+
+    data = serialize_warning_message(w[0])
+    data["message_class_name"] = "NoSuchWarningInThisModule"
+
+    message = unserialize_warning_message(data).message
+
+    assert type(message) is Warning
+    assert "the original text" in str(message)
+    assert "AttributeError" in str(message)
+
+
+def test_an_unimportable_message_module_does_not_end_the_session() -> None:
+    """This used to run in the controller's receiver thread.
+
+    `importlib.import_module` was called outside every guard, so a package that
+    raised on import killed the thread. The node went down mid-test and the run
+    failed in the scheduler with `KeyError: <WorkerController gwN>` -- a
+    different subsystem, naming nothing that leads back to the import.
+    """
+    with pytest.warns(UserWarning) as w:
+        warnings.warn(UserWarning("the original text"))
+
+    data = serialize_warning_message(w[0])
+    data["message_module"] = "xdist_no_such_module_for_this_test"
+
+    rebuilt = unserialize_warning_message(data).message
+
+    assert type(rebuilt) is Warning
+    assert "the original text" in str(rebuilt)
+    # The reason survives, or a genuinely broken package becomes a warning nobody
+    # can explain.
+    assert "class not resolved" in str(rebuilt)
+    assert "ModuleNotFoundError" in str(rebuilt)
+
+
+def test_an_unimportable_category_degrades_to_the_message_class() -> None:
+    """The category resolution had no guard at all, and no test either.
+
+    It must not degrade to `None`: pytest renders a warning through
+    `warnings.formatwarning`, which reads `category.__name__`, so a `None` category
+    ends the run just as surely as the unguarded `getattr` it replaces.
+    """
+    with pytest.warns(UserWarning) as w:
+        warnings.warn(UserWarning("the original text"))
+
+    data = serialize_warning_message(w[0])
+    data["category_module"] = "xdist_no_such_module_for_this_test"
+
+    unserialized = unserialize_warning_message(data)
+
+    assert unserialized.category is UserWarning
+    assert str(unserialized.message) == "the original text"
+    # What pytest does with it, and the reason `None` will not do.
+    warnings.formatwarning(str(unserialized.message), unserialized.category, "f.py", 1)

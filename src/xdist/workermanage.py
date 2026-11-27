@@ -454,12 +454,12 @@ class WorkerController:
                     fslocation=kwargs["nodeid"],
                 )
             elif eventname == "warning_recorded":
-                warning_message = unserialize_warning_message(
-                    kwargs["warning_message_data"]
-                )
+                # Decoding imports the warning's module, so it is left to the
+                # main thread: concurrent imports from several receiver
+                # threads can deadlock on import cycles (#1422).
                 self.notify_inproc(
                     eventname,
-                    warning_message=warning_message,
+                    warning_message_data=kwargs["warning_message_data"],
                     when=kwargs["when"],
                     nodeid=kwargs["nodeid"],
                     location=kwargs["location"],
@@ -481,14 +481,37 @@ def unserialize_warning_message(data: dict[str, Any]) -> warnings.WarningMessage
     import importlib
 
     if data["message_module"]:
-        mod = importlib.import_module(data["message_module"])
-        cls = getattr(mod, data["message_class_name"])
+        # Resolving the class imports an arbitrary module on the controller.
+        # Anything raised here used to kill the receiver thread and fail the run
+        # in the scheduler, naming nothing that led back to this line. The
+        # fallback below already exists for a warning we cannot rebuild.
+        cls: type[Warning] | None
+        unresolved = ""
+        try:
+            mod = importlib.import_module(data["message_module"])
+            cls = getattr(mod, data["message_class_name"])
+        except Exception as exc:
+            cls = None
+            unresolved = f"{type(exc).__name__}: {exc}"
         message = None
-        if data["message_args"] is not None:
+        if (
+            cls is not None
+            and data["message_args"] is not None
+            and not data["message_state_lost"]
+        ):
+            # Rebuilt without running `__init__`: a warning is free to derive its
+            # message from its own fields, and calling the class with the args would
+            # hand it back its own rendered text as if it were input.
             try:
-                message = cls(*data["message_args"])
-            except TypeError:
-                pass
+                message = cls.__new__(cls)
+                BaseException.__init__(message, *data["message_args"])
+                state = data["message_state"]
+                if state is not None:
+                    # `__setstate__` sets one attribute per key, which reaches
+                    # slots as well as the instance dictionary.
+                    message.__setstate__(state)
+            except Exception:
+                message = None
         if message is None:
             # could not recreate the original warning instance;
             # create a generic Warning instance with the original
@@ -498,13 +521,24 @@ def unserialize_warning_message(data: dict[str, Any]) -> warnings.WarningMessage
                 cls=data["message_class_name"],
                 msg=data["message_str"],
             )
+            if cls is None:
+                # Say why. Widening a guard around an import is how a genuinely
+                # broken package turns into a warning nobody can explain.
+                message_text = f"{message_text} (class not resolved: {unresolved})"
             message = Warning(message_text)
     else:
         message = data["message_str"]
 
     if data["category_module"]:
-        mod = importlib.import_module(data["category_module"])
-        category = getattr(mod, data["category_class_name"])
+        # Same exposure, and no guard at all until now. It degrades to the
+        # message's own class, not to `None`: pytest renders a warning through
+        # `warnings.formatwarning`, which reads `category.__name__`, so `None`
+        # would end the run just as surely as the unguarded `getattr` did.
+        try:
+            mod = importlib.import_module(data["category_module"])
+            category = getattr(mod, data["category_class_name"])
+        except Exception:
+            category = type(message) if isinstance(message, Warning) else Warning
     else:
         category = None
 
