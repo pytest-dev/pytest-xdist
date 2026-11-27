@@ -63,6 +63,27 @@ class MockNode(BaseOfMockNode):
         return self._shutdown
 
 
+def test_worker_usage_error_shuts_down_other_workers(
+    pytester: pytest.Pytester,
+) -> None:
+    config = pytester.parseconfig("--tx=2*popen")
+    session = DSession(config)
+    scheduler = EachScheduling(config)
+    session.sched = scheduler
+    failed_worker, other_worker = MockNode(), MockNode()
+    failed_worker.workeroutput = {
+        "exitstatus": pytest.ExitCode.USAGE_ERROR,
+        "usage_error": ["invalid worker option"],
+    }
+    session._active_nodes.update([failed_worker, other_worker])
+    scheduler.add_node(other_worker)
+
+    with pytest.raises(pytest.UsageError, match="invalid worker option"):
+        session.worker_workerfinished(failed_worker)
+
+    assert other_worker.shutting_down
+
+
 class TestEachScheduling:
     def test_schedule_load_simple(self, pytester: pytest.Pytester) -> None:
         config = pytester.parseconfig("--tx=2*popen")
