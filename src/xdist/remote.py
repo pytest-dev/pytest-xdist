@@ -172,9 +172,22 @@ class WorkerInteractor:
                 "usage_error",
                 [str(message) for message in error.args],
             )
-        result = yield
-        self.sendevent("workerfinished", workeroutput=workeroutput)
-        return result
+        try:
+            return (yield)
+        except pytest.exit.Exception as exc:
+            # pytest turns this into the session's exit status after our hook
+            # has run, so record it here for the controller.
+            workeroutput["exitstatus"] = (
+                pytest.ExitCode.INTERRUPTED
+                if exc.returncode is None
+                else exc.returncode
+            )
+            workeroutput[_TERMINAL_ERROR_KEY] = ("exit", (exc.msg, exc.returncode))
+            raise
+        finally:
+            # Always report back, even if another sessionfinish hook raised,
+            # otherwise the controller treats this worker as crashed.
+            self.sendevent("workerfinished", workeroutput=workeroutput)
 
     @pytest.hookimpl
     def pytest_collection(self) -> None:

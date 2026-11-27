@@ -99,6 +99,44 @@ class TestDistribution:
         result.stdout.fnmatch_lines(["*Exit: bad collection*"])
         assert "INTERNALERROR>" not in result.stdout.str()
 
+    def test_worker_pytest_exit_in_sessionfinish(
+        self, pytester: pytest.Pytester
+    ) -> None:
+        pytester.makepyfile("def test_a(): pass\ndef test_b(): pass")
+        pytester.makeconftest(
+            """
+            import pytest
+
+            def pytest_sessionfinish(session):
+                if hasattr(session.config, "workerinput"):
+                    pytest.exit("late exit", 7)
+            """
+        )
+
+        result = pytester.runpytest("-n2")
+
+        assert result.ret == 7
+        result.stdout.fnmatch_lines(["*Exit: late exit*"])
+        assert "Not properly terminated" not in result.stdout.str()
+
+    def test_worker_sessionfinish_error_still_reports_back(
+        self, pytester: pytest.Pytester
+    ) -> None:
+        pytester.makepyfile("def test_a(): pass\ndef test_b(): pass")
+        pytester.makeconftest(
+            """
+            def pytest_sessionfinish(session):
+                if hasattr(session.config, "workerinput"):
+                    raise RuntimeError("boom in sessionfinish")
+            """
+        )
+
+        result = pytester.runpytest("-n2")
+
+        result.stdout.fnmatch_lines(["*2 passed*"])
+        assert "Not properly terminated" not in result.stdout.str()
+        assert "replacing crashed worker" not in result.stdout.str()
+
     def test_n1_pass(self, pytester: pytest.Pytester) -> None:
         p1 = pytester.makepyfile(
             """
