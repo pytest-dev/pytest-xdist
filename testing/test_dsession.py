@@ -634,6 +634,12 @@ class TestDistReporter:
             assert "[gw0] Python worker version" in header
             assert "1 worker [1 item]" in header
 
+        reporter.write_report_lines(["banner"])
+        lines = output.getvalue()[len(header) :]
+        # The banner must not share a line with the (rewritten) status line.
+        assert lines == ("banner\n" if no_header or not isatty else "\nbanner\n")
+        header += lines
+
         reporter.pytest_testnodedown(node, "worker failure")
         assert "[gw0] node down: worker failure" in output.getvalue()[len(header) :]
 

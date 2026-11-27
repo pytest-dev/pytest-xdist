@@ -1,0 +1,1 @@
+Lines returned by ``pytest_report_collectionfinish`` hooks on the workers, such as the ``--lf`` ``run-last-failure:`` banner, are now shown on the controller.

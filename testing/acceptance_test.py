@@ -595,6 +595,60 @@ class TestTerminalReporting:
         result = pytester.runpytest("-n1", "-s")
         result.stdout.fnmatch_lines(["*pytest_runtest_logfinish hook called*"])
 
+    def test_last_failed_banner(self, pytester: pytest.Pytester) -> None:
+        """The --lf banner from the workers is shown once (#880)."""
+        pytester.makepyfile(
+            test_a="def test_fail(): assert False",
+            test_b="def test_pass(): pass",
+        )
+        pytester.runpytest().assert_outcomes(failed=1, passed=1)
+        banner = "run-last-failure: rerun previous 1 failure (skipped 1 file)"
+
+        result = pytester.runpytest("-n2", "--lf")
+        result.assert_outcomes(failed=1)
+        result.stdout.fnmatch_lines(["2 workers [1 item]", banner, ""])
+        assert result.stdout.str().count(banner) == 1
+
+        result = pytester.runpytest("-n2", "--lf", "--no-header")
+        result.assert_outcomes(failed=1)
+        assert result.stdout.str().count(banner) == 1
+
+        result = pytester.runpytest("-n2", "--lf", "-q")
+        result.assert_outcomes(failed=1)
+        assert "run-last-failure" not in result.stdout.str()
+
+    def test_report_collectionfinish_lines(self, pytester: pytest.Pytester) -> None:
+        pytester.makeconftest(
+            """
+            import pytest
+
+            def pytest_report_collectionfinish(items):
+                return ["second", "third"]
+
+            class Early:
+                @pytest.hookimpl(trylast=True)
+                def pytest_report_collectionfinish(self):
+                    return "first"
+
+            def pytest_configure(config):
+                config.pluginmanager.register(Early())
+            """
+        )
+        pytester.makepyfile("def test_ok(): pass")
+        result = pytester.runpytest("-n2", "-v")
+        result.assert_outcomes(passed=1)
+        result.stdout.fnmatch_lines(
+            [
+                "2 workers [1 item]",
+                "first",
+                "second",
+                "third",
+                "",
+                "scheduling tests via LoadScheduling",
+            ]
+        )
+        assert result.stdout.str().count("second") == 1
+
 
 def test_teardownfails_one_function(pytester: pytest.Pytester) -> None:
     p = pytester.makepyfile(
