@@ -57,6 +57,48 @@ class TestDistribution:
         )
         assert "INTERNALERROR>" not in result.stdout.str()
 
+    @pytest.mark.parametrize("dist", ["load", "worksteal", "loadscope"])
+    @pytest.mark.parametrize("returncode", [None, 0, 3])
+    def test_worker_pytest_exit_in_test(
+        self, pytester: pytest.Pytester, dist: str, returncode: int | None
+    ) -> None:
+        pytester.makepyfile(
+            f"""
+            import pytest
+
+            @pytest.mark.parametrize("i", range(20))
+            def test_me(i):
+                if i == 5:
+                    pytest.exit("stop the session", {returncode})
+            """
+        )
+
+        result = pytester.runpytest("-n2", f"--dist={dist}")
+
+        expected = pytest.ExitCode.INTERRUPTED if returncode is None else returncode
+        assert result.ret == expected
+        result.stdout.fnmatch_lines(["*Exit: stop the session*"])
+        assert "INTERNALERROR>" not in result.stdout.str()
+        assert "keyboard-interrupt" not in result.stdout.str()
+
+    def test_worker_pytest_exit_in_collection(self, pytester: pytest.Pytester) -> None:
+        pytester.makepyfile("def test_a(): pass\ndef test_b(): pass")
+        pytester.makeconftest(
+            """
+            import pytest
+
+            def pytest_collection_modifyitems(config):
+                if hasattr(config, "workerinput"):
+                    pytest.exit("bad collection", 7)
+            """
+        )
+
+        result = pytester.runpytest("-n2")
+
+        assert result.ret == 7
+        result.stdout.fnmatch_lines(["*Exit: bad collection*"])
+        assert "INTERNALERROR>" not in result.stdout.str()
+
     def test_n1_pass(self, pytester: pytest.Pytester) -> None:
         p1 = pytester.makepyfile(
             """

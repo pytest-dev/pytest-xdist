@@ -206,13 +206,17 @@ class DSession:
         workerready before shutdown was triggered.
         """
         self.config.hook.pytest_testnodedown(node=node, error=None)
-        if node.workeroutput["exitstatus"] == pytest.ExitCode.USAGE_ERROR:
+        terminal_error = self._terminal_worker_error(node)
+        if terminal_error is not None:
+            # The worker ended the whole session (usage error or pytest.exit()):
+            # drop its pending tests, stop the other workers and let pytest
+            # report the original error with its exit code.
             self._active_nodes.remove(node)
-            messages = node.workeroutput.get("usage_error")
-            if messages is None:
-                messages = [f"{node} exited with a usage error"]
+            assert self.sched is not None
+            if node in self.sched.nodes:
+                self.sched.remove_node(node)
             self.triggershutdown()
-            raise pytest.UsageError(*messages)
+            raise terminal_error
         if node.workeroutput["exitstatus"] == 2:  # keyboard-interrupt
             self.shouldstop = f"{node} received keyboard-interrupt"
             self.worker_errordown(node, "keyboard-interrupt")
@@ -230,6 +234,21 @@ class DSession:
                 crashitem = self.sched.remove_node(node)
                 assert not crashitem, (crashitem, node)
         self._active_nodes.remove(node)
+
+    @staticmethod
+    def _terminal_worker_error(node: WorkerController) -> BaseException | None:
+        """Return the error to re-raise when a worker ended the session itself."""
+        workeroutput = node.workeroutput
+        if "exit_reason" in workeroutput:
+            return pytest.exit.Exception(
+                workeroutput["exit_reason"], workeroutput["exit_returncode"]
+            )
+        if workeroutput["exitstatus"] == pytest.ExitCode.USAGE_ERROR:
+            messages = workeroutput.get("usage_error")
+            if messages is None:
+                messages = [f"{node} exited with a usage error"]
+            return pytest.UsageError(*messages)
+        return None
 
     def worker_internal_error(
         self, node: WorkerController, formatted_error: str

@@ -134,6 +134,16 @@ class WorkerInteractor:
         interactor.sendevent("internal_error", formatted_error=formatted_error)
 
     @pytest.hookimpl
+    def pytest_keyboard_interrupt(
+        self, excinfo: pytest.ExceptionInfo[BaseException]
+    ) -> None:
+        # pytest.exit() ends up here; record it so the controller can re-raise it.
+        if isinstance(excinfo.value, pytest.exit.Exception):
+            workeroutput: dict[str, Any] = self.config.workeroutput  # type: ignore[attr-defined]
+            workeroutput["exit_reason"] = excinfo.value.msg
+            workeroutput["exit_returncode"] = excinfo.value.returncode
+
+    @pytest.hookimpl
     def pytest_sessionstart(self, session: pytest.Session) -> None:
         self.session = session
         workerinfo = getinfodict()
