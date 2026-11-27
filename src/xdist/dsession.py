@@ -239,10 +239,9 @@ class DSession:
     def _terminal_worker_error(node: WorkerController) -> BaseException | None:
         """Return the error to re-raise when a worker ended the session itself."""
         workeroutput = node.workeroutput
-        if "exit_reason" in workeroutput:
-            return pytest.exit.Exception(
-                workeroutput["exit_reason"], workeroutput["exit_returncode"]
-            )
+        if "_exit" in workeroutput:
+            reason, returncode = workeroutput["_exit"]
+            return pytest.exit.Exception(reason, returncode)
         if workeroutput["exitstatus"] == pytest.ExitCode.USAGE_ERROR:
             messages = workeroutput.get("usage_error")
             if messages is None:
