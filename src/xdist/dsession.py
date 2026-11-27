@@ -12,6 +12,7 @@ import warnings
 import execnet
 import pytest
 
+from xdist.remote import _TERMINAL_ERROR_KEY
 from xdist.remote import Producer
 from xdist.remote import WorkerInfo
 from xdist.scheduler import EachScheduling
@@ -239,14 +240,16 @@ class DSession:
     def _terminal_worker_error(node: WorkerController) -> BaseException | None:
         """Return the error to re-raise when a worker ended the session itself."""
         workeroutput = node.workeroutput
-        if "_exit" in workeroutput:
-            reason, returncode = workeroutput["_exit"]
-            return pytest.exit.Exception(reason, returncode)
+        terminal = workeroutput.get(_TERMINAL_ERROR_KEY)
+        if terminal is not None:
+            kind, payload = terminal
+            if kind == "exit":
+                reason, returncode = payload
+                return pytest.exit.Exception(reason, returncode)
+            if kind == "usage_error":
+                return pytest.UsageError(*payload)
         if workeroutput["exitstatus"] == pytest.ExitCode.USAGE_ERROR:
-            messages = workeroutput.get("usage_error")
-            if messages is None:
-                messages = [f"{node} exited with a usage error"]
-            return pytest.UsageError(*messages)
+            return pytest.UsageError(f"{node} exited with a usage error")
         return None
 
     def worker_internal_error(

@@ -35,6 +35,12 @@ except ImportError:
         pass
 
 
+#: ``workeroutput`` key for the error that ended a worker's session early
+#: (``pytest.exit()`` or a usage error); the controller re-raises it.
+#: The value is ``(kind, payload)`` with kind ``"exit"`` or ``"usage_error"``.
+_TERMINAL_ERROR_KEY = "_xdist_terminal_error"
+
+
 class Producer:
     """
     Simplified implementation of the same interface as py.log, for backward compatibility
@@ -140,7 +146,10 @@ class WorkerInteractor:
         # pytest.exit() ends up here; record it so the controller can re-raise it.
         if isinstance(excinfo.value, pytest.exit.Exception):
             workeroutput: dict[str, Any] = self.config.workeroutput  # type: ignore[attr-defined]
-            workeroutput["_exit"] = (excinfo.value.msg, excinfo.value.returncode)
+            workeroutput[_TERMINAL_ERROR_KEY] = (
+                "exit",
+                (excinfo.value.msg, excinfo.value.returncode),
+            )
 
     @pytest.hookimpl
     def pytest_sessionstart(self, session: pytest.Session) -> None:
@@ -159,7 +168,10 @@ class WorkerInteractor:
         if exitstatus == pytest.ExitCode.USAGE_ERROR and isinstance(
             error, pytest.UsageError
         ):
-            workeroutput["usage_error"] = [str(message) for message in error.args]
+            workeroutput[_TERMINAL_ERROR_KEY] = (
+                "usage_error",
+                [str(message) for message in error.args],
+            )
         result = yield
         self.sendevent("workerfinished", workeroutput=workeroutput)
         return result
