@@ -35,6 +35,45 @@ except ImportError:
         pass
 
 
+# Encoding known report layouts positionally saves execnet from repeatedly
+# encoding the same keys. Other pytest versions and plugin-defined layouts
+# use the original dictionary.
+_TEST_REPORT_FIELDS = (
+    "location",
+    "keywords",
+    "outcome",
+    "longrepr",
+    "when",
+    "user_properties",
+    "sections",
+    "duration",
+    "start",
+    "stop",
+)
+_TEST_REPORT_METADATA = ("$report_type", "item_index", "worker_id", "testrun_uid")
+_TEST_REPORT_LAYOUTS = (
+    ("nodeid", *_TEST_REPORT_FIELDS, *_TEST_REPORT_METADATA),
+    # Pytest 9.2 appends nodeid when serializing its internal structured ID.
+    (*_TEST_REPORT_FIELDS, "nodeid", *_TEST_REPORT_METADATA),
+)
+_TEST_REPORT_LAYOUT_IDS = {
+    keys: index for index, keys in enumerate(_TEST_REPORT_LAYOUTS)
+}
+
+
+def pack_test_report(data: dict[str, Any]) -> tuple[Any, ...] | None:
+    if type(data) is not dict:
+        return None
+    layout_id = _TEST_REPORT_LAYOUT_IDS.get(tuple(data))
+    if layout_id is None:
+        return None
+    return (layout_id, *data.values())
+
+
+def unpack_test_report(data: tuple[Any, ...]) -> dict[str, Any]:
+    return dict(zip(_TEST_REPORT_LAYOUTS[data[0]], data[1:], strict=True))
+
+
 class Producer:
     """
     Simplified implementation of the same interface as py.log, for backward compatibility
@@ -302,7 +341,11 @@ class WorkerInteractor:
         data["worker_id"] = self.workerid
         data["testrun_uid"] = self.testrunuid
         assert self.session.items[self.item_index].nodeid == report.nodeid
-        self.sendevent("testreport", data=data)
+        packed = pack_test_report(data)
+        if packed is None:
+            self.sendevent("testreport", data=data)
+        else:
+            self.sendevent("testreport", packed=packed)
 
     @pytest.hookimpl
     def pytest_collectreport(self, report: pytest.CollectReport) -> None:

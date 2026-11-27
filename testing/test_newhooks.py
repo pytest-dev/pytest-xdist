@@ -61,6 +61,31 @@ class TestHooks:
         )
         res.stdout.fnmatch_lines(["*3 passed*"])
 
+    def test_serialized_report_with_plugin_fields(
+        self, pytester: pytest.Pytester
+    ) -> None:
+        pytester.makeconftest(
+            """
+            import pytest
+
+            @pytest.hookimpl(hookwrapper=True)
+            def pytest_report_to_serializable(report):
+                outcome = yield
+                if isinstance(report, pytest.TestReport) and report.when == "teardown":
+                    outcome.get_result()["plugin_metadata"] = {"values": (b"tag", 1)}
+
+            def pytest_runtest_logreport(report):
+                if hasattr(report, "node") and report.when == "teardown":
+                    assert report.plugin_metadata == {"values": (b"tag", 1)}
+                    print("received metadata", report.nodeid)
+            """
+        )
+        res = pytester.runpytest("-n1", "-s")
+        res.assert_outcomes(passed=3)
+        res.stdout.fnmatch_lines(
+            [f"*received metadata*::test_{name}" for name in "abc"]
+        )
+
 
 class TestCrashItem:
     @pytest.fixture(autouse=True)

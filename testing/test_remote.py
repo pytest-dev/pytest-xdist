@@ -13,12 +13,52 @@ import uuid
 import execnet
 import pytest
 
+from xdist.remote import pack_test_report
+from xdist.remote import unpack_test_report
 from xdist.remote import WorkerInteractor
 from xdist.workermanage import NodeManager
 from xdist.workermanage import WorkerController
 
 
 WAIT_TIMEOUT = 10.0
+
+
+@pytest.mark.parametrize("nodeid_first", [True, False])
+def test_pack_test_report(nodeid_first: bool) -> None:
+    nodeid = {"nodeid": "test.py::test_example"}
+    fields = {
+        "location": ("test.py", 1, "test_example"),
+        "keywords": {"test_example": 1},
+        "outcome": "passed",
+        "longrepr": None,
+        "when": "teardown",
+        "user_properties": [("sample", "value")],
+        "sections": [("Captured stdout call", "output")],
+        "duration": 0.1,
+        "start": 1.0,
+        "stop": 1.1,
+    }
+    fields = {**nodeid, **fields} if nodeid_first else {**fields, **nodeid}
+    fields.update(
+        {
+            "$report_type": "TestReport",
+            "item_index": 0,
+            "worker_id": "gw0",
+            "testrun_uid": "run",
+        }
+    )
+    packed = pack_test_report(fields)
+    assert isinstance(packed, tuple)
+    wire = execnet.dumps(packed)
+    assert len(wire) < len(execnet.dumps(fields))
+    restored = unpack_test_report(execnet.loads(wire))
+    assert list(restored.items()) == list(fields.items())
+
+    for other_fields in (
+        {**fields, "plugin_metadata": {"sample": b"value"}},
+        dict(reversed(list(fields.items()))),
+    ):
+        assert pack_test_report(other_fields) is None
 
 
 def check_marshallable(d: object) -> None:
@@ -125,8 +165,13 @@ class TestWorkerInteractor:
     @pytest.fixture
     def unserialize_report(self, pytestconfig: pytest.Config) -> UnserializerReport:
         def unserialize(
-            data: dict[str, Any],
+            payload: dict[str, Any],
         ) -> pytest.CollectReport | pytest.TestReport:
+            data = (
+                payload["data"]
+                if "data" in payload
+                else unpack_test_report(payload["packed"])
+            )
             return pytestconfig.hook.pytest_report_from_serializable(  # type: ignore[no-any-return]
                 config=pytestconfig, data=data
             )
@@ -160,7 +205,7 @@ class TestWorkerInteractor:
         ev = worker.popevent("testreport")  # setup
         ev = worker.popevent("testreport")
         assert ev.name == "testreport"
-        rep = unserialize_report(ev.kwargs["data"])
+        rep = unserialize_report(ev.kwargs)
         assert rep.nodeid.endswith("::test_func")
         assert rep.passed
         assert rep.when == "call"
@@ -238,7 +283,7 @@ class TestWorkerInteractor:
         assert not ev.kwargs
         ev = worker.popevent()
         assert ev.name == "collectreport"
-        rep = unserialize_report(ev.kwargs["data"])
+        rep = unserialize_report(ev.kwargs)
         assert rep.skipped
         assert isinstance(rep.longrepr, tuple)
         assert rep.longrepr[2] == "Skipped: hello"
@@ -254,7 +299,7 @@ class TestWorkerInteractor:
         assert not ev.kwargs
         ev = worker.popevent()
         assert ev.name == "collectreport"
-        rep = unserialize_report(ev.kwargs["data"])
+        rep = unserialize_report(ev.kwargs)
         assert rep.failed
         ev = worker.popevent("collectionfinish")
         assert not ev.kwargs["ids"]
@@ -283,7 +328,7 @@ class TestWorkerInteractor:
             for _ in range(3):  # setup/call/teardown
                 ev = worker.popevent("testreport")
                 assert ev.name == "testreport"
-                rep = unserialize_report(ev.kwargs["data"])
+                rep = unserialize_report(ev.kwargs)
                 assert rep.nodeid.endswith(func)
         ev = worker.popevent("workerfinished")
         assert "workeroutput" in ev.kwargs
@@ -347,7 +392,7 @@ class TestWorkerInteractor:
 
         # wait for test_func setup
         ev = worker.popevent("testreport")
-        rep = unserialize_report(ev.kwargs["data"])
+        rep = unserialize_report(ev.kwargs)
         assert rep.nodeid.endswith("::test_func")
         assert rep.when == "setup"
 
@@ -371,7 +416,7 @@ class TestWorkerInteractor:
 
         for func, when in reports:
             ev = worker.popevent("testreport")
-            rep = unserialize_report(ev.kwargs["data"])
+            rep = unserialize_report(ev.kwargs)
             assert rep.nodeid.endswith(f"::{func}")
             assert rep.when == when
 
@@ -379,7 +424,7 @@ class TestWorkerInteractor:
 
         for when in ["setup", "call", "teardown"]:
             ev = worker.popevent("testreport")
-            rep = unserialize_report(ev.kwargs["data"])
+            rep = unserialize_report(ev.kwargs)
             assert rep.nodeid.endswith("::test_func4")
             assert rep.when == when
 
@@ -403,7 +448,7 @@ class TestWorkerInteractor:
 
         for when in ["setup", "call", "teardown"]:
             ev = worker.popevent("testreport")
-            rep = unserialize_report(ev.kwargs["data"])
+            rep = unserialize_report(ev.kwargs)
             assert rep.nodeid.endswith("::test_func")
             assert rep.when == when
 
@@ -415,7 +460,7 @@ class TestWorkerInteractor:
 
         for when in ["setup", "call", "teardown"]:
             ev = worker.popevent("testreport")
-            rep = unserialize_report(ev.kwargs["data"])
+            rep = unserialize_report(ev.kwargs)
             assert rep.nodeid.endswith("::test_func2")
             assert rep.when == when
 

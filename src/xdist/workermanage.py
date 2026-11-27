@@ -430,8 +430,12 @@ class WorkerController:
                 self.notify_inproc(eventname, node=self, **kwargs)
             elif eventname in ("testreport", "collectreport", "teardownreport"):
                 item_index = kwargs.pop("item_index", None)
+                if eventname == "testreport" and "data" not in kwargs:
+                    data = xdist.remote.unpack_test_report(kwargs["packed"])
+                else:
+                    data = kwargs["data"]
                 rep = self.config.hook.pytest_report_from_serializable(
-                    config=self.config, data=kwargs["data"]
+                    config=self.config, data=data
                 )
                 if item_index is not None:
                     rep.item_index = item_index
