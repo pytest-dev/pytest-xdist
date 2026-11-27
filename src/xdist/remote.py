@@ -177,7 +177,7 @@ class WorkerInteractor:
         except pytest.exit.Exception as exc:
             # pytest turns this into the session's exit status after our hook
             # has run, so record it here for the controller.
-            workeroutput["exitstatus"] = (
+            workeroutput["exitstatus"] = int(
                 pytest.ExitCode.INTERRUPTED
                 if exc.returncode is None
                 else exc.returncode
