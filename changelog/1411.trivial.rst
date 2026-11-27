@@ -1,0 +1,1 @@
+Hide the PR template guidance in HTML comments so it no longer ends up in PR descriptions.
