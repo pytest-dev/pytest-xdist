@@ -307,7 +307,11 @@ class DSession:
         assert self._session is not None
         self._session.testscollected = len(ids)
         assert self.sched is not None
-        self.sched.add_node_collection(node, ids, group_names)
+        if group_names is None:
+            # Keep custom schedulers with the old two-argument signature working.
+            self.sched.add_node_collection(node, ids)
+        else:
+            self.sched.add_node_collection(node, ids, group_names)
         if self.terminal:
             self.trdist.setstatus(
                 node.gateway.spec, WorkerStatus.CollectionDone, tests_collected=len(ids)
