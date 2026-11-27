@@ -77,6 +77,7 @@ class MockNode(BaseOfMockNode):
 )
 def test_worker_terminal_error_shuts_down_other_workers(
     pytester: pytest.Pytester,
+    monkeypatch: pytest.MonkeyPatch,
     exitstatus: int,
     terminal: tuple[str, Any],
     expected: type[BaseException],
@@ -84,20 +85,33 @@ def test_worker_terminal_error_shuts_down_other_workers(
     config = pytester.parseconfig("--tx=2*popen")
     session = DSession(config)
     scheduler = EachScheduling(config)
-    session.sched = scheduler
+    monkeypatch.setattr(
+        config.hook, "pytest_xdist_make_scheduler", lambda **kwargs: scheduler
+    )
     failed_worker, other_worker = MockNode(), MockNode()
     failed_worker.workeroutput = {
         "exitstatus": exitstatus,
         _TERMINAL_ERROR_KEY: terminal,
     }
+    other_worker.workeroutput = {
+        "exitstatus": 0,
+        "shouldfail": False,
+        "shouldstop": False,
+    }
     session._active_nodes.update([failed_worker, other_worker])
+    scheduler.add_node(failed_worker)
     scheduler.add_node(other_worker)
+    session.queue.put(("workerfinished", {"node": failed_worker}))
+    session.queue.put(("workerfinished", {"node": other_worker}))
 
+    # The error is raised only after the other workers have reported back.
     with pytest.raises(expected) as excinfo:
-        session.worker_workerfinished(failed_worker)
+        session.pytest_runtestloop()
 
     assert "worker" in str(excinfo.value)
     assert other_worker.shutting_down
+    assert session.queue.empty()
+    assert not session._active_nodes
 
 
 class TestEachScheduling:
