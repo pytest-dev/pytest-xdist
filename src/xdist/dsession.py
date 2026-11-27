@@ -12,6 +12,7 @@ import warnings
 import execnet
 import pytest
 
+from xdist.remote import _TERMINAL_ERROR_KEY
 from xdist.remote import Producer
 from xdist.remote import WorkerInfo
 from xdist.scheduler import EachScheduling
@@ -57,6 +58,7 @@ class DSession:
         self._session: pytest.Session | None = None
         self._failed_collection_errors: dict[object, bool] = {}
         self._active_nodes: set[WorkerController] = set()
+        self._terminal_error: BaseException | None = None
         self._failed_nodes_count = 0
         self._max_worker_restart = get_default_max_worker_restart(self.config)
         # summary message to print at the end of the session
@@ -146,6 +148,10 @@ class DSession:
             if self.shouldstop:
                 self.triggershutdown()
                 pending_exception = Interrupted(str(self.shouldstop))
+            if self._terminal_error is not None:
+                self.triggershutdown()
+        if self._terminal_error is not None:
+            raise self._terminal_error
         if pending_exception:
             raise pending_exception
         return True
@@ -206,13 +212,18 @@ class DSession:
         workerready before shutdown was triggered.
         """
         self.config.hook.pytest_testnodedown(node=node, error=None)
-        if node.workeroutput["exitstatus"] == pytest.ExitCode.USAGE_ERROR:
+        terminal_error = self._terminal_worker_error(node)
+        if terminal_error is not None:
+            # The worker ended the whole session (usage error or pytest.exit()):
+            # drop its pending tests, stop the other workers and let pytest
+            # report the original error with its exit code.
             self._active_nodes.remove(node)
-            messages = node.workeroutput.get("usage_error")
-            if messages is None:
-                messages = [f"{node} exited with a usage error"]
-            self.triggershutdown()
-            raise pytest.UsageError(*messages)
+            assert self.sched is not None
+            if node in self.sched.nodes:
+                self.sched.remove_node(node)
+            if self._terminal_error is None:
+                self._terminal_error = terminal_error
+            return
         if node.workeroutput["exitstatus"] == 2:  # keyboard-interrupt
             self.shouldstop = f"{node} received keyboard-interrupt"
             self.worker_errordown(node, "keyboard-interrupt")
@@ -231,6 +242,27 @@ class DSession:
                 assert not crashitem, (crashitem, node)
         self._active_nodes.remove(node)
 
+    @staticmethod
+    def _terminal_worker_error(node: WorkerController) -> BaseException | None:
+        """Return the error to re-raise when a worker ended the session itself."""
+        workeroutput = node.workeroutput
+        terminal = workeroutput.get(_TERMINAL_ERROR_KEY)
+        if terminal is not None:
+            kind, payload = terminal
+            if kind == "exit":
+                reason, returncode = payload
+                return pytest.exit.Exception(reason, returncode)
+            if kind == "usage_error":
+                return pytest.UsageError(*payload)
+        if workeroutput["exitstatus"] == pytest.ExitCode.USAGE_ERROR:
+            return pytest.UsageError(f"{node} exited with a usage error")
+        if workeroutput["exitstatus"] == pytest.ExitCode.INTERNAL_ERROR:
+            return pytest.exit.Exception(
+                f"{node} exited with an internal error",
+                pytest.ExitCode.INTERNAL_ERROR,
+            )
+        return None
+
     def worker_internal_error(
         self, node: WorkerController, formatted_error: str
     ) -> None:
@@ -240,8 +272,9 @@ class DSession:
         pytest_internalerror() arguments are an excinfo and an excrepr, which can't
         be serialized, so we go with a poor man's solution of raising an exception
         here ourselves using the formatted message.
+
+        The worker stays active until workerfinished or errordown arrives.
         """
-        self._active_nodes.remove(node)
         try:
             assert False, formatted_error
         except AssertionError:

@@ -16,6 +16,7 @@ from xdist.dsession import get_default_max_worker_restart
 from xdist.dsession import get_workers_status_line
 from xdist.dsession import TerminalDistReporter
 from xdist.dsession import WorkerStatus
+from xdist.remote import _TERMINAL_ERROR_KEY
 from xdist.report import report_collection_diff
 from xdist.scheduler import EachScheduling
 from xdist.scheduler import LoadScheduling
@@ -63,25 +64,54 @@ class MockNode(BaseOfMockNode):
         return self._shutdown
 
 
-def test_worker_usage_error_shuts_down_other_workers(
+@pytest.mark.parametrize(
+    ("exitstatus", "terminal", "expected"),
+    [
+        (
+            pytest.ExitCode.USAGE_ERROR,
+            ("usage_error", ["invalid worker option"]),
+            pytest.UsageError,
+        ),
+        (7, ("exit", ("worker asked to stop", 7)), pytest.exit.Exception),
+    ],
+)
+def test_worker_terminal_error_shuts_down_other_workers(
     pytester: pytest.Pytester,
+    monkeypatch: pytest.MonkeyPatch,
+    exitstatus: int,
+    terminal: tuple[str, Any],
+    expected: type[BaseException],
 ) -> None:
     config = pytester.parseconfig("--tx=2*popen")
     session = DSession(config)
     scheduler = EachScheduling(config)
-    session.sched = scheduler
+    monkeypatch.setattr(
+        config.hook, "pytest_xdist_make_scheduler", lambda **kwargs: scheduler
+    )
     failed_worker, other_worker = MockNode(), MockNode()
     failed_worker.workeroutput = {
-        "exitstatus": pytest.ExitCode.USAGE_ERROR,
-        "usage_error": ["invalid worker option"],
+        "exitstatus": exitstatus,
+        _TERMINAL_ERROR_KEY: terminal,
+    }
+    other_worker.workeroutput = {
+        "exitstatus": 0,
+        "shouldfail": False,
+        "shouldstop": False,
     }
     session._active_nodes.update([failed_worker, other_worker])
+    scheduler.add_node(failed_worker)
     scheduler.add_node(other_worker)
+    session.queue.put(("workerfinished", {"node": failed_worker}))
+    session.queue.put(("workerfinished", {"node": other_worker}))
 
-    with pytest.raises(pytest.UsageError, match="invalid worker option"):
-        session.worker_workerfinished(failed_worker)
+    # The error is raised only after the other workers have reported back.
+    with pytest.raises(expected) as excinfo:
+        session.pytest_runtestloop()
 
+    assert "worker" in str(excinfo.value)
     assert other_worker.shutting_down
+    assert session.queue.empty()
+    assert not session._active_nodes
 
 
 class TestEachScheduling:

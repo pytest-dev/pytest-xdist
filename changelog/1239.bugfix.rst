@@ -1,0 +1,3 @@
+``pytest.exit()`` raised on a worker now ends the session with its message and return code
+instead of an internal error. Worker usage errors and ``pytest.exit()`` share one code path
+in the controller. The approach follows #1346.

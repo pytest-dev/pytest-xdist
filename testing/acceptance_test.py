@@ -57,6 +57,86 @@ class TestDistribution:
         )
         assert "INTERNALERROR>" not in result.stdout.str()
 
+    @pytest.mark.parametrize("dist", ["load", "worksteal", "loadscope"])
+    @pytest.mark.parametrize("returncode", [None, 0, 3])
+    def test_worker_pytest_exit_in_test(
+        self, pytester: pytest.Pytester, dist: str, returncode: int | None
+    ) -> None:
+        pytester.makepyfile(
+            f"""
+            import pytest
+
+            @pytest.mark.parametrize("i", range(20))
+            def test_me(i):
+                if i == 5:
+                    pytest.exit("stop the session", {returncode})
+            """
+        )
+
+        result = pytester.runpytest("-n2", f"--dist={dist}")
+
+        expected = pytest.ExitCode.INTERRUPTED if returncode is None else returncode
+        assert result.ret == expected
+        result.stdout.fnmatch_lines(["*Exit: stop the session*"])
+        assert "INTERNALERROR>" not in result.stdout.str()
+        assert "keyboard-interrupt" not in result.stdout.str()
+
+    def test_worker_pytest_exit_in_collection(self, pytester: pytest.Pytester) -> None:
+        pytester.makepyfile("def test_a(): pass\ndef test_b(): pass")
+        pytester.makeconftest(
+            """
+            import pytest
+
+            def pytest_collection_modifyitems(config):
+                if hasattr(config, "workerinput"):
+                    pytest.exit("bad collection", 7)
+            """
+        )
+
+        result = pytester.runpytest("-n2")
+
+        assert result.ret == 7
+        result.stdout.fnmatch_lines(["*Exit: bad collection*"])
+        assert "INTERNALERROR>" not in result.stdout.str()
+
+    def test_worker_pytest_exit_in_sessionfinish(
+        self, pytester: pytest.Pytester
+    ) -> None:
+        pytester.makepyfile("def test_a(): pass\ndef test_b(): pass")
+        pytester.makeconftest(
+            """
+            import pytest
+
+            def pytest_sessionfinish(session):
+                if hasattr(session.config, "workerinput"):
+                    pytest.exit("late exit", 7)
+            """
+        )
+
+        result = pytester.runpytest("-n2")
+
+        assert result.ret == 7
+        result.stdout.fnmatch_lines(["*Exit: late exit*"])
+        assert "Not properly terminated" not in result.stdout.str()
+
+    def test_worker_sessionfinish_error_still_reports_back(
+        self, pytester: pytest.Pytester
+    ) -> None:
+        pytester.makepyfile("def test_a(): pass\ndef test_b(): pass")
+        pytester.makeconftest(
+            """
+            def pytest_sessionfinish(session):
+                if hasattr(session.config, "workerinput"):
+                    raise RuntimeError("boom in sessionfinish")
+            """
+        )
+
+        result = pytester.runpytest("-n2")
+
+        result.stdout.fnmatch_lines(["*2 passed*"])
+        assert "Not properly terminated" not in result.stdout.str()
+        assert "replacing crashed worker" not in result.stdout.str()
+
     def test_n1_pass(self, pytester: pytest.Pytester) -> None:
         p1 = pytester.makepyfile(
             """
@@ -1325,16 +1405,129 @@ def test_maxfail_causes_early_termination(pytester: pytest.Pytester) -> None:
     result.assert_outcomes(failed=1)
 
 
-def test_internal_errors_propagate_to_controller(pytester: pytest.Pytester) -> None:
+@pytest.mark.parametrize("n", [1, 2])
+@pytest.mark.parametrize(
+    "when, exitstatus",
+    [
+        ("collection", pytest.ExitCode.INTERNAL_ERROR),
+        ("sessionfinish", pytest.ExitCode.OK),
+    ],
+)
+def test_internal_error_notifications_wait_for_worker_finish(
+    pytester: pytest.Pytester, n: int, when: str, exitstatus: pytest.ExitCode
+) -> None:
     pytester.makeconftest(
+        f"""
+        import pytest
+
+        def notify(config, message):
+            try:
+                raise RuntimeError(message)
+            except RuntimeError:
+                config.notify_exception(pytest.ExceptionInfo.from_current())
+
+        @pytest.hookimpl(tryfirst=True)
+        def pytest_collect_file(file_path, parent):
+            if "{when}" == "collection" and file_path.name.startswith("test_"):
+                notify(parent.config, f"Notification for {{file_path.name}}")
+
+        def pytest_sessionfinish(session):
+            if "{when}" == "sessionfinish":
+                notify(session.config, "Notification during session finish")
+
+        def pytest_testnodedown(node, error):
+            assert error is None
+            print(f"worker {{node.gateway.id}} finished: {{node.workeroutput['exitstatus']}}")
         """
-        def pytest_collection_modifyitems():
-            raise RuntimeError("Some runtime error")
+    )
+    pytester.makepyfile(test_a="def test_a(): pass", test_b="def test_b(): pass")
+    result = pytester.runpytest_subprocess("-n", str(n), timeout=30)
+    if when == "collection":
+        # Native pytest stops capture on internal errors and cannot continue collection.
+        result.stdout.fnmatch_lines_random(
+            [
+                "*RuntimeError: Notification for test_a.py*",
+                "*RuntimeError: Notification for test_b.py*",
+            ]
+        )
+        result.assert_outcomes()
+    else:
+        result.stdout.fnmatch_lines(
+            ["*RuntimeError: Notification during session finish*"]
+        )
+        result.assert_outcomes(passed=2)
+    output = result.stdout.str() + result.stderr.str()
+    assert "KeyError" not in output
+    assert "Unexpectedly no active workers available" not in output
+    assert result.ret == exitstatus
+    result.stdout.fnmatch_lines_random(
+        [f"*worker gw{i} finished: {exitstatus}" for i in range(n)]
+    )
+
+
+@pytest.mark.parametrize("n", [1, 2])
+@pytest.mark.parametrize(
+    "hook", ["pytest_collection_modifyitems", "pytest_runtestloop"]
+)
+def test_internal_errors_propagate_to_controller(
+    pytester: pytest.Pytester, n: int, hook: str
+) -> None:
+    pytester.makeconftest(
+        f"""
+        import pytest
+
+        @pytest.hookimpl(tryfirst=True)
+        def {hook}(session):
+            if getattr(session.config, "workerinput", {{}}).get("workerid") == "gw0":
+                raise RuntimeError("Some runtime error")
+
+        def pytest_testnodedown(node, error):
+            assert error is None
+            print(f"worker {{node.gateway.id}} finished: {{node.workeroutput['exitstatus']}}")
         """
     )
     pytester.makepyfile("def test(): pass")
-    result = pytester.runpytest("-n1")
+    result = pytester.runpytest_subprocess("-n", str(n), timeout=30)
     result.stdout.fnmatch_lines(["*RuntimeError: Some runtime error*"])
+    output = result.stdout.str() + result.stderr.str()
+    assert "KeyError" not in output
+    assert "Unexpectedly no active workers available" not in output
+    assert result.ret == pytest.ExitCode.INTERNAL_ERROR
+    result.stdout.fnmatch_lines_random(
+        [f"*worker gw{i} finished: {3 if i == 0 else 0}" for i in range(n)]
+    )
+
+
+def test_internal_error_notification_before_worker_crash(
+    pytester: pytest.Pytester,
+) -> None:
+    pytester.makeconftest(
+        """
+        import os
+        import pytest
+
+        def pytest_collection_modifyitems(config):
+            if config.workerinput["workerid"] == "gw0":
+                try:
+                    raise RuntimeError("Notification before crash")
+                except RuntimeError:
+                    config.notify_exception(pytest.ExceptionInfo.from_current())
+                os._exit(1)
+        """
+    )
+    pytester.makepyfile("def test(): pass")
+    result = pytester.runpytest_subprocess("-n1", "--max-worker-restart=1", timeout=30)
+    result.stdout.fnmatch_lines(
+        [
+            "*RuntimeError: Notification before crash*",
+            "replacing crashed worker gw0",
+        ]
+    )
+    output = result.stdout.str() + result.stderr.str()
+    assert "KeyError" not in output
+    assert "Unexpectedly no active workers available" not in output
+    assert result.ret == pytest.ExitCode.OK
+    result.assert_outcomes(passed=1)
 
 
 class TestLoadScope:
