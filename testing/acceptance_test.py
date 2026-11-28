@@ -138,12 +138,9 @@ class TestDistribution:
         """
         )
         result = pytester.runpytest(p1, "-n1")
-        if pytest.version_tuple >= (10,):
-            # pytest 10 interrupts the session after collection errors
-            # (pytest-dev/pytest#15028).
-            assert result.ret == pytest.ExitCode.INTERRUPTED
-        else:
-            assert result.ret == 1
+        # Once pytest-dev/pytest#15384 is in, pytest interrupts the session after
+        # collection errors, so the exit code is INTERRUPTED instead of 1.
+        assert result.ret in (1, pytest.ExitCode.INTERRUPTED)
         result.stdout.fnmatch_lines(
             ["E   *Error: No module named *__import_of_missing_module*"]
         )
@@ -160,10 +157,11 @@ class TestDistribution:
         )
         result1 = pytester.runpytest(p1, "-n2")
         result2 = pytester.runpytest(p1, "-n1")
-        if pytest.version_tuple >= (10,):
-            # The session now stops after the first collection error, possibly
-            # before every worker reported its collection, so the outputs can
-            # differ slightly. Check that the error is still reported only once.
+        if result1.ret == pytest.ExitCode.INTERRUPTED:
+            # With pytest-dev/pytest#15384 the session stops after the first
+            # collection error, possibly before every worker reported its
+            # collection, so the outputs can differ slightly. Check that the
+            # error is still reported only once.
             for result in (result1, result2):
                 assert result.stdout.str().count("ERROR collecting") == 1
         else:
@@ -1883,12 +1881,9 @@ def test_collection_crash(pytester: pytest.Pytester) -> None:
     """
     )
     result = pytester.runpytest(p1, "-n1")
-    if pytest.version_tuple >= (10,):
-        # pytest 10 interrupts the session after collection errors
-        # (pytest-dev/pytest#15028).
-        assert result.ret == pytest.ExitCode.INTERRUPTED
-    else:
-        assert result.ret == 1
+    # Once pytest-dev/pytest#15384 is in, pytest interrupts the session after
+    # collection errors, so the exit code is INTERRUPTED instead of 1.
+    assert result.ret in (1, pytest.ExitCode.INTERRUPTED)
     result.stdout.fnmatch_lines(
         [
             "created: 1/1 worker",

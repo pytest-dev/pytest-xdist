@@ -1,0 +1,1 @@
+Stop the session cleanly when a worker is interrupted after collection errors (with pytest 10), instead of restarting workers until the maximum is reached and reporting scheduled tests as crashed.
