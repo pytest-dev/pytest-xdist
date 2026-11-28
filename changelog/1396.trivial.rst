@@ -1,0 +1,1 @@
+Re-harden ``test_remote_usage_prog`` so it again checks that the worker's usage ``prog`` is not ``-c`` (originally by @blueyed in #507).
