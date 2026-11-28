@@ -104,7 +104,7 @@ class TestDistribution:
         """
         )
         result = pytester.runpytest(p1, "-n1")
-        assert result.ret == 1
+        assert result.ret == pytest.ExitCode.INTERRUPTED
         result.stdout.fnmatch_lines(
             ["E   *Error: No module named *__import_of_missing_module*"]
         )
@@ -1836,7 +1836,7 @@ def test_collection_crash(pytester: pytest.Pytester) -> None:
         assert 0
     """
     )
-    result = pytester.runpytest(p1, "-n1")
+    result = pytester.runpytest(p1, "-n1", "--continue-on-collection-errors")
     assert result.ret == 1
     result.stdout.fnmatch_lines(
         [
@@ -1847,6 +1847,42 @@ def test_collection_crash(pytester: pytest.Pytester) -> None:
             "*= 1 error in *",
         ]
     )
+
+
+@pytest.mark.parametrize(
+    "options, expected_exit, expected_passed",
+    [
+        ((), pytest.ExitCode.INTERRUPTED, 0),
+        (("--lf", "--last-failed-no-failures", "none"), pytest.ExitCode.INTERRUPTED, 0),
+        (("--continue-on-collection-errors",), pytest.ExitCode.TESTS_FAILED, 1),
+    ],
+)
+def test_collection_errors_stop_test_execution(
+    pytester: pytest.Pytester,
+    options: tuple[str, ...],
+    expected_exit: pytest.ExitCode,
+    expected_passed: int,
+) -> None:
+    pytester.makepyfile(
+        test_broken="raise RuntimeError('collection failed')",
+        test_ok="def test_ok(): pass",
+    )
+    result = pytester.runpytest("-n2", *options)
+    assert result.ret == expected_exit
+    assert result.parseoutcomes().get("passed", 0) == expected_passed
+    result.stdout.fnmatch_lines(["*RuntimeError: collection failed*"])
+    if expected_exit == pytest.ExitCode.INTERRUPTED:
+        result.stdout.fnmatch_lines(["*Interrupted: 1 error during collection*"])
+
+
+def test_collection_stop_counts_distinct_errors(pytester: pytest.Pytester) -> None:
+    pytester.makepyfile(
+        test_first="raise RuntimeError('first collection failure')",
+        test_second="raise RuntimeError('second collection failure')",
+    )
+    result = pytester.runpytest("-n2")
+    assert result.ret == pytest.ExitCode.INTERRUPTED
+    result.stdout.fnmatch_lines(["*Interrupted: 2 errors during collection*"])
 
 
 def test_dist_in_addopts(pytester: pytest.Pytester) -> None:

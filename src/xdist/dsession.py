@@ -55,7 +55,8 @@ class DSession:
         self.maxfail: int = config.getvalue("maxfail")
         self.queue: Queue[tuple[str, dict[str, Any]]] = Queue()
         self._session: pytest.Session | None = None
-        self._failed_collection_errors: dict[object, bool] = {}
+        self._collection_error_count = 0
+        self._failed_collection_errors: set[tuple[str, str]] = set()
         self._active_nodes: set[WorkerController] = set()
         self._failed_nodes_count = 0
         self._max_worker_restart = get_default_max_worker_restart(self.config)
@@ -313,6 +314,14 @@ class DSession:
                 node.gateway.spec, WorkerStatus.CollectionDone, tests_collected=len(ids)
             )
         if self.sched.collection_is_completed:
+            if self._collection_error_count and not self.config.getoption(
+                "continue_on_collection_errors"
+            ):
+                errors = "error" if self._collection_error_count == 1 else "errors"
+                self.shouldstop = (
+                    f"{self._collection_error_count} {errors} during collection"
+                )
+                return
             if (
                 self.terminal
                 and not self.sched.has_pending
@@ -422,10 +431,13 @@ class DSession:
         node: WorkerController,
         rep: pytest.CollectReport | pytest.TestReport,
     ) -> None:
-        # Check we haven't already seen this report (from
-        # another worker).
-        if rep.longrepr not in self._failed_collection_errors:
-            self._failed_collection_errors[rep.longrepr] = True
+        # Workers can send separately deserialized traceback objects for the
+        # same error. Use the report contents to recognize duplicate reports.
+        key = (rep.nodeid, rep.longreprtext)
+        if key not in self._failed_collection_errors:
+            self._failed_collection_errors.add(key)
+            if rep.failed:
+                self._collection_error_count += 1
             self.config.hook.pytest_collectreport(report=rep)
             self._handlefailures(rep)
 
