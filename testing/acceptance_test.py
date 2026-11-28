@@ -57,6 +57,40 @@ class TestDistribution:
         )
         assert "INTERNALERROR>" not in result.stdout.str()
 
+    @pytest.mark.parametrize("workers", [1, 2])
+    def test_worker_collection_errors_abort(
+        self, pytester: pytest.Pytester, workers: int
+    ) -> None:
+        pytester.makepyfile(
+            test_ok="def test_ok(): pass",
+            test_broken="import this_module_does_not_exist",
+        )
+        # Simulate pytest-dev/pytest#15028: the session is interrupted
+        # from pytest_collection when there were collection errors.
+        pytester.makeconftest(
+            """
+            import pytest
+
+            @pytest.hookimpl(wrapper=True)
+            def pytest_collection(session):
+                result = yield
+                if (
+                    session.testsfailed
+                    and not session.config.option.continue_on_collection_errors
+                ):
+                    raise session.Interrupted("1 error during collection")
+                return result
+            """
+        )
+
+        result = pytester.runpytest(f"-n{workers}")
+
+        assert result.ret == pytest.ExitCode.INTERRUPTED
+        result.stdout.fnmatch_lines(["*1 error during collection*"])
+        assert "replacing crashed worker" not in result.stdout.str()
+        assert "keyboard-interrupt" not in result.stdout.str()
+        assert "crashed while running" not in result.stdout.str()
+
     def test_n1_pass(self, pytester: pytest.Pytester) -> None:
         p1 = pytester.makepyfile(
             """
@@ -104,7 +138,9 @@ class TestDistribution:
         """
         )
         result = pytester.runpytest(p1, "-n1")
-        assert result.ret == 1
+        # Once pytest-dev/pytest#15384 is in, pytest interrupts the session after
+        # collection errors, so the exit code is INTERRUPTED instead of 1.
+        assert result.ret in (1, pytest.ExitCode.INTERRUPTED)
         result.stdout.fnmatch_lines(
             ["E   *Error: No module named *__import_of_missing_module*"]
         )
@@ -121,7 +157,15 @@ class TestDistribution:
         )
         result1 = pytester.runpytest(p1, "-n2")
         result2 = pytester.runpytest(p1, "-n1")
-        assert len(result1.stdout.lines) == len(result2.stdout.lines)
+        if result1.ret == pytest.ExitCode.INTERRUPTED:
+            # With pytest-dev/pytest#15384 the session stops after the first
+            # collection error, possibly before every worker reported its
+            # collection, so the outputs can differ slightly. Check that the
+            # error is still reported only once.
+            for result in (result1, result2):
+                assert result.stdout.str().count("ERROR collecting") == 1
+        else:
+            assert len(result1.stdout.lines) == len(result2.stdout.lines)
 
     def test_n1_skip(self, pytester: pytest.Pytester) -> None:
         p1 = pytester.makepyfile(
@@ -1837,7 +1881,9 @@ def test_collection_crash(pytester: pytest.Pytester) -> None:
     """
     )
     result = pytester.runpytest(p1, "-n1")
-    assert result.ret == 1
+    # Once pytest-dev/pytest#15384 is in, pytest interrupts the session after
+    # collection errors, so the exit code is INTERRUPTED instead of 1.
+    assert result.ret in (1, pytest.ExitCode.INTERRUPTED)
     result.stdout.fnmatch_lines(
         [
             "created: 1/1 worker",

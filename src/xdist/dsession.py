@@ -213,7 +213,17 @@ class DSession:
                 messages = [f"{node} exited with a usage error"]
             self.triggershutdown()
             raise pytest.UsageError(*messages)
-        if node.workeroutput["exitstatus"] == 2:  # keyboard-interrupt
+        if node.workeroutput["exitstatus"] == 2:
+            interrupted = node.workeroutput.get("interrupted")
+            if interrupted is not None:
+                # The worker stopped the session on purpose (for instance after
+                # collection errors): stop cleanly instead of restarting it.
+                self._active_nodes.remove(node)
+                if not self.shouldstop:
+                    self.shouldstop = interrupted
+                self.triggershutdown()
+                return
+            # keyboard-interrupt
             self.shouldstop = f"{node} received keyboard-interrupt"
             self.worker_errordown(node, "keyboard-interrupt")
             return

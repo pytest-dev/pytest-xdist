@@ -156,6 +156,16 @@ class WorkerInteractor:
         return result
 
     @pytest.hookimpl
+    def pytest_keyboard_interrupt(
+        self, excinfo: pytest.ExceptionInfo[BaseException]
+    ) -> None:
+        # pytest.Session.Interrupted is raised on purpose, for instance after
+        # collection errors; a real Ctrl+C raises a plain KeyboardInterrupt.
+        if isinstance(excinfo.value, pytest.Session.Interrupted):
+            workeroutput: dict[str, Any] = self.config.workeroutput  # type: ignore[attr-defined]
+            workeroutput["interrupted"] = str(excinfo.value)
+
+    @pytest.hookimpl
     def pytest_collection(self) -> None:
         self.sendevent("collectionstart")
 
