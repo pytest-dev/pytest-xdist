@@ -1,2 +1,0 @@
-Stop distributed test execution on collection errors by default, matching serial pytest.
-Pass ``--continue-on-collection-errors`` to run the tests that were collected successfully.

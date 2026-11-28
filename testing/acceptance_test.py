@@ -1871,6 +1871,18 @@ def test_collection_errors_stop_test_execution(
     assert result.ret == expected_exit
     assert result.parseoutcomes().get("passed", 0) == expected_passed
     result.stdout.fnmatch_lines(["*RuntimeError: collection failed*"])
+    if expected_exit == pytest.ExitCode.INTERRUPTED:
+        result.stdout.fnmatch_lines(["*Interrupted: 1 error during collection*"])
+
+
+def test_collection_stop_counts_distinct_errors(pytester: pytest.Pytester) -> None:
+    pytester.makepyfile(
+        test_first="raise RuntimeError('first collection failure')",
+        test_second="raise RuntimeError('second collection failure')",
+    )
+    result = pytester.runpytest("-n2")
+    assert result.ret == pytest.ExitCode.INTERRUPTED
+    result.stdout.fnmatch_lines(["*Interrupted: 2 errors during collection*"])
 
 
 def test_dist_in_addopts(pytester: pytest.Pytester) -> None:

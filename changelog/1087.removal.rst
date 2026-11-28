@@ -1,0 +1,2 @@
+Distributed runs with collection errors now skip test execution and exit with code 2 (interrupted) by default, matching serial pytest.
+Pass ``--continue-on-collection-errors`` to restore the previous behavior of running successfully collected tests and exiting with code 1.
