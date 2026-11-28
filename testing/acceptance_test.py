@@ -12,6 +12,52 @@ from xdist.scheduler.loadscope import LoadScopeScheduling
 
 
 class TestDistribution:
+    @pytest.mark.parametrize("dist", ["load", "worksteal"])
+    @pytest.mark.parametrize("workers", [1, 2])
+    @pytest.mark.parametrize(
+        "hook", ["pytest_collection_modifyitems", "pytest_runtestloop"]
+    )
+    def test_worker_usage_error(
+        self, pytester: pytest.Pytester, dist: str, workers: int, hook: str
+    ) -> None:
+        pytester.makepyfile("def test_example(): pass")
+        pytester.makeconftest(
+            f"""
+            import pytest
+
+            @pytest.hookimpl(tryfirst=True)
+            def {hook}(session):
+                if hasattr(session.config, "workerinput"):
+                    raise pytest.UsageError("first usage problem", "second usage problem")
+            """
+        )
+
+        result = pytester.runpytest(f"-n{workers}", f"--dist={dist}")
+
+        assert result.ret == pytest.ExitCode.USAGE_ERROR
+        result.stderr.fnmatch_lines(
+            ["ERROR: first usage problem", "ERROR: second usage problem"]
+        )
+        assert "INTERNALERROR>" not in result.stdout.str()
+
+    @pytest.mark.skipif(pytest.version_tuple < (9, 2), reason="requires pytest 9.2")
+    @pytest.mark.parametrize("dist", ["load", "worksteal"])
+    @pytest.mark.parametrize("workers", [1, 2])
+    def test_unknown_marker_usage_error(
+        self, pytester: pytest.Pytester, dist: str, workers: int
+    ) -> None:
+        pytester.makepyfile("def test_example(): pass")
+
+        result = pytester.runpytest(
+            f"-n{workers}", f"--dist={dist}", "--strict-markers", "-m", "unknown_marker"
+        )
+
+        assert result.ret == pytest.ExitCode.USAGE_ERROR
+        result.stderr.fnmatch_lines(
+            ["ERROR: Unknown marker(s) in '-m' expression: unknown_marker.*"]
+        )
+        assert "INTERNALERROR>" not in result.stdout.str()
+
     def test_n1_pass(self, pytester: pytest.Pytester) -> None:
         p1 = pytester.makepyfile(
             """
@@ -432,6 +478,41 @@ class TestDistEach:
 
 
 class TestTerminalReporting:
+    @pytest.mark.parametrize("verbosity", ["", "-q", "-v"])
+    def test_no_header(self, pytester: pytest.Pytester, verbosity: str) -> None:
+        pytester.makepyfile(
+            """
+            import pytest
+
+            def test_ok():
+                pass
+
+            def test_skip():
+                pytest.skip("skipped test")
+
+            def test_fail():
+                raise ValueError("test failure")
+        """
+        )
+        args = ["-n1", "--no-header"]
+        if verbosity:
+            args.append(verbosity)
+        result = pytester.runpytest(*args)
+        result.assert_outcomes(passed=1, skipped=1, failed=1)
+        assert result.ret == pytest.ExitCode.TESTS_FAILED
+        out = result.stdout.str()
+        for header in (
+            "created:",
+            "initialized:",
+            "ready:",
+            "collecting:",
+            "1 worker [",
+            "bringing up nodes...",
+            "scheduling tests via",
+        ):
+            assert header not in out
+        assert "ValueError: test failure" in out
+
     @pytest.mark.parametrize("verbosity", ["", "-q", "-v"])
     def test_output_verbosity(self, pytester: pytest.Pytester, verbosity: str) -> None:
         pytester.makepyfile(
@@ -1634,6 +1715,35 @@ class TestGroupScope:
         a_1 = next(t[2] for t in res if "test_a.py::test_1" in t[2])
         b_1 = next(t[2] for t in res if "test_b.py::test_1" in t[2])
         assert a_1[0] == b_1[0]
+
+    def test_late_deselection(self, pytester: pytest.Pytester) -> None:
+        """Group names match the items left after a late deselection (#1399)."""
+        pytester.makeconftest(
+            """
+            import pytest
+
+            @pytest.hookimpl(trylast=True)
+            def pytest_collection_modifyitems(config, items):
+                deselected = [items.pop(0)]
+                config.hook.pytest_deselected(items=deselected)
+        """
+        )
+        pytester.makepyfile(
+            """
+            import pytest
+
+            @pytest.mark.xdist_group("group")
+            def test_deselected():
+                pytest.fail("should have been deselected")
+
+            @pytest.mark.xdist_group("group")
+            def test_selected():
+                pass
+        """
+        )
+        result = pytester.runpytest("-n2", "--dist=loadgroup", "-v")
+        result.assert_outcomes(passed=1)
+        assert result.ret == 0
 
 
 class TestLocking:

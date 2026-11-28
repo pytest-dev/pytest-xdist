@@ -20,7 +20,6 @@ import time
 from typing import Any
 from typing import Literal
 from typing import TypedDict
-from typing import Union
 import warnings
 
 from _pytest.config import _prepareconfig
@@ -74,7 +73,7 @@ class Marker(enum.Enum):
 class TestQueue:
     """A simple queue that can be inspected and modified while the lock is held via the ``lock()`` method."""
 
-    Item = Union[int, Literal[Marker.SHUTDOWN]]
+    Item = int | Literal[Marker.SHUTDOWN]
 
     def __init__(self, execmodel: execnet.gateway_base.ExecModel):
         self._items: collections.deque[TestQueue.Item] = collections.deque()
@@ -140,15 +139,21 @@ class WorkerInteractor:
         workerinfo = getinfodict()
         self.sendevent("workerready", workerinfo=workerinfo)
 
-    @pytest.hookimpl(hookwrapper=True)
-    def pytest_sessionfinish(self, exitstatus: int) -> Generator[None, object, None]:
+    @pytest.hookimpl(wrapper=True)
+    def pytest_sessionfinish(self, exitstatus: int) -> Generator[None, object, object]:
         workeroutput: dict[str, Any] = self.config.workeroutput  # type: ignore[attr-defined]
         # in pytest 5.0+, exitstatus is an IntEnum object
         workeroutput["exitstatus"] = int(exitstatus)
         workeroutput["shouldfail"] = self.session.shouldfail
         workeroutput["shouldstop"] = self.session.shouldstop
-        yield
+        error = sys.exc_info()[1]
+        if exitstatus == pytest.ExitCode.USAGE_ERROR and isinstance(
+            error, pytest.UsageError
+        ):
+            workeroutput["usage_error"] = [str(message) for message in error.args]
+        result = yield
         self.sendevent("workerfinished", workeroutput=workeroutput)
+        return result
 
     @pytest.hookimpl
     def pytest_collection(self) -> None:
@@ -243,35 +248,33 @@ class WorkerInteractor:
         if self.rampdelay > 0:
             time.sleep(self.rampdelay)
 
-    def pytest_collection_modifyitems(
-        self,
-        config: pytest.Config,
-        items: list[pytest.Item],
-    ) -> None:
-        # Send group names separately so pytest owns test node IDs.
-        if config.getvalue("loadgroup"):
-            self._group_names: list[str | None] = []
-            for item in items:
-                gnames: set[str] = set()
-                for mark in item.iter_markers("xdist_group"):
-                    name = (
-                        mark.args[0]
-                        if len(mark.args) > 0
-                        else mark.kwargs.get("name", "default")
-                    )
-                    gnames.add(str(name))
-                if not gnames:
-                    self._group_names.append(None)
-                    continue
-                self._group_names.append("_".join(sorted(gnames)))
+    @staticmethod
+    def _group_name(item: pytest.Item) -> str | None:
+        gnames: set[str] = set()
+        for mark in item.iter_markers("xdist_group"):
+            name = (
+                mark.args[0]
+                if len(mark.args) > 0
+                else mark.kwargs.get("name", "default")
+            )
+            gnames.add(str(name))
+        if not gnames:
+            return None
+        return "_".join(sorted(gnames))
 
     @pytest.hookimpl
     def pytest_collection_finish(self, session: pytest.Session) -> None:
+        # Send group names separately so pytest owns test node IDs. They are computed
+        # from the final session.items, after every pytest_collection_modifyitems hook
+        # (including trylast ones that deselect items) has run.
+        group_names = None
+        if self.config.getvalue("loadgroup"):
+            group_names = [self._group_name(item) for item in session.items]
         self.sendevent(
             "collectionfinish",
             topdir=str(self.config.rootpath),
             ids=[item.nodeid for item in session.items],
-            group_names=getattr(self, "_group_names", None),
+            group_names=group_names,
         )
 
     @pytest.hookimpl

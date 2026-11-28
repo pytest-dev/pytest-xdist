@@ -1,0 +1,1 @@
+Fix ``--dist=loadgroup`` failing with an ``INTERNALERROR``, or giving tests the wrong group, when a later ``pytest_collection_modifyitems`` hook (such as one with ``trylast=True``) deselects or reorders tests.

@@ -206,6 +206,13 @@ class DSession:
         workerready before shutdown was triggered.
         """
         self.config.hook.pytest_testnodedown(node=node, error=None)
+        if node.workeroutput["exitstatus"] == pytest.ExitCode.USAGE_ERROR:
+            self._active_nodes.remove(node)
+            messages = node.workeroutput.get("usage_error")
+            if messages is None:
+                messages = [f"{node} exited with a usage error"]
+            self.triggershutdown()
+            raise pytest.UsageError(*messages)
         if node.workeroutput["exitstatus"] == 2:  # keyboard-interrupt
             self.shouldstop = f"{node} received keyboard-interrupt"
             self.worker_errordown(node, "keyboard-interrupt")
@@ -306,7 +313,11 @@ class DSession:
                 node.gateway.spec, WorkerStatus.CollectionDone, tests_collected=len(ids)
             )
         if self.sched.collection_is_completed:
-            if self.terminal and not self.sched.has_pending:
+            if (
+                self.terminal
+                and not self.sched.has_pending
+                and not self.config.option.no_header
+            ):
                 self.trdist.ensure_show_status()
                 self.terminal.write_line("")
                 if self.config.option.verbose > 0:
@@ -490,7 +501,7 @@ class TerminalDistReporter:
         self.tr.write_line(msg)
 
     def ensure_show_status(self) -> None:
-        if not self._isatty:
+        if not self._isatty and not self.config.option.no_header:
             self.write_line(self.getstatus())
 
     def setstatus(
@@ -514,6 +525,8 @@ class TerminalDistReporter:
         return "bringing up nodes..."
 
     def rewrite(self, line: str, newline: bool = False) -> None:
+        if self.config.option.no_header:
+            return
         pline = line + " " * max(self._lastlen - len(line), 0)
         if newline:
             self._lastlen = 0
